@@ -51,6 +51,8 @@ internal sealed class UiConfig
         writer.WriteLine($"rainbow_borders = {Style.RainbowBorders.ToString().ToLowerInvariant()}");
         writer.WriteLine($"button_style = \"{Style.ButtonStyle.ToLowerInvariant()}\"");
         writer.WriteLine($"border_effect = \"{Style.BorderEffect.ToLowerInvariant()}\"");
+        writer.WriteLine($"effect_speed = {Style.EffectSpeed.ToString(CultureInfo.InvariantCulture)}");
+        writer.WriteLine($"effect_strength = {Style.EffectStrength.ToString(CultureInfo.InvariantCulture)}");
         writer.WriteLine($"border_thickness = {Style.BorderThickness.ToString(CultureInfo.InvariantCulture)}");
         writer.WriteLine();
 
@@ -134,6 +136,12 @@ internal sealed class UiConfig
                     break;
                 case "border_effect":
                     Style.BorderEffect = ParseBorderEffect(value, Style.BorderEffect);
+                    break;
+                case "effect_speed":
+                    Style.EffectSpeed = Math.Clamp(ParseInt(value, Style.EffectSpeed), 1, 4);
+                    break;
+                case "effect_strength":
+                    Style.EffectStrength = Math.Clamp(ParseInt(value, Style.EffectStrength), 1, 4);
                     break;
                 case "border_thickness":
                     Style.BorderThickness = Math.Clamp(ParseInt(value, Style.BorderThickness), 1, 4);
@@ -283,5 +291,7 @@ internal sealed class UiStyleConfig
     public bool RainbowBorders { get; set; } = true;
     public string ButtonStyle { get; set; } = "flat";
     public string BorderEffect { get; set; } = "glow";
+    public int EffectSpeed { get; set; } = 1;
+    public int EffectStrength { get; set; } = 1;
     public int BorderThickness { get; set; } = 1;
 }

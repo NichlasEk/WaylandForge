@@ -525,6 +525,22 @@ internal sealed unsafe class ForgeApp : IDisposable
         DrawButtonStyleToggle(ref styleRow, "loud", "LOUD");
         column = column with { NextY = column.NextY + 34 };
 
+        _ui.Text(column.X, column.NextY, "EFFECT SPEED", UiTextKind.Muted); column = column with { NextY = column.NextY + 14 };
+        var speedRow = new UiRow(column.X, column.NextY, 18, 6);
+        DrawLevelToggle(ref speedRow, "style.speed", 1, "SLOW", _config.Style.EffectSpeed, value => _config.Style.EffectSpeed = value);
+        DrawLevelToggle(ref speedRow, "style.speed", 2, "CALM", _config.Style.EffectSpeed, value => _config.Style.EffectSpeed = value);
+        DrawLevelToggle(ref speedRow, "style.speed", 3, "MOVE", _config.Style.EffectSpeed, value => _config.Style.EffectSpeed = value);
+        DrawLevelToggle(ref speedRow, "style.speed", 4, "FAST", _config.Style.EffectSpeed, value => _config.Style.EffectSpeed = value);
+        column = column with { NextY = column.NextY + 34 };
+
+        _ui.Text(column.X, column.NextY, "EFFECT STRENGTH", UiTextKind.Muted); column = column with { NextY = column.NextY + 14 };
+        var strengthRow = new UiRow(column.X, column.NextY, 18, 6);
+        DrawLevelToggle(ref strengthRow, "style.strength", 1, "LOW", _config.Style.EffectStrength, value => _config.Style.EffectStrength = value);
+        DrawLevelToggle(ref strengthRow, "style.strength", 2, "MID", _config.Style.EffectStrength, value => _config.Style.EffectStrength = value);
+        DrawLevelToggle(ref strengthRow, "style.strength", 3, "HIGH", _config.Style.EffectStrength, value => _config.Style.EffectStrength = value);
+        DrawLevelToggle(ref strengthRow, "style.strength", 4, "LOUD", _config.Style.EffectStrength, value => _config.Style.EffectStrength = value);
+        column = column with { NextY = column.NextY + 34 };
+
         _ui.Text(column.X, column.NextY, "BORDER", UiTextKind.Muted); column = column with { NextY = column.NextY + 14 };
         var borderRow = new UiRow(column.X, column.NextY, 18, 6);
         for (int thickness = 1; thickness <= 4; thickness++)
@@ -539,14 +555,14 @@ internal sealed unsafe class ForgeApp : IDisposable
         column = column with { NextY = column.NextY + 38 };
 
         _ui.Text(column.X, column.NextY, "PREVIEW", UiTextKind.Muted); column = column with { NextY = column.NextY + 16 };
-        DrawButtonPreview(new RectI(column.X, column.NextY, Math.Min(210, column.Width), 64));
-        column = column with { NextY = column.NextY + 78 };
+        DrawButtonPreview(new RectI(column.X, column.NextY, Math.Min(210, column.Width), 52));
+        column = column with { NextY = column.NextY + 64 };
 
         DrawMetric(column.X, column.NextY, "TOML", "[ui]"); column = column with { NextY = column.NextY + 18 };
         DrawMetric(column.X, column.NextY, "BLING", _config.Style.Bling.ToString().ToLowerInvariant()); column = column with { NextY = column.NextY + 18 };
         DrawMetric(column.X, column.NextY, "EFFECT", _config.Style.BorderEffect.ToUpperInvariant()); column = column with { NextY = column.NextY + 18 };
-        DrawMetric(column.X, column.NextY, "BUTTON", _config.Style.ButtonStyle.ToUpperInvariant()); column = column with { NextY = column.NextY + 18 };
-        DrawMetric(column.X, column.NextY, "BORDER", _config.Style.BorderThickness.ToString());
+        DrawMetric(column.X, column.NextY, "SPEED", _config.Style.EffectSpeed.ToString()); column = column with { NextY = column.NextY + 18 };
+        DrawMetric(column.X, column.NextY, "POWER", _config.Style.EffectStrength.ToString());
 
         DrawBlingWindowBorder(window.Rect, 23);
     }
@@ -567,6 +583,16 @@ internal sealed unsafe class ForgeApp : IDisposable
         if (_ui.ToggleButton(new UiId("style.effect." + value), rect, label, string.Equals(_config.Style.BorderEffect, value, StringComparison.OrdinalIgnoreCase)))
         {
             _config.Style.BorderEffect = value;
+            MarkConfigDirty();
+        }
+    }
+
+    private void DrawLevelToggle(ref UiRow row, string idPrefix, int value, string label, int current, Action<int> set)
+    {
+        row = row.Next(50, out RectI rect);
+        if (_ui.ToggleButton(new UiId(idPrefix + "." + value), rect, label, current == value))
+        {
+            set(value);
             MarkConfigDirty();
         }
     }
@@ -628,9 +654,11 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         uint baseColor = _ui.Theme.Button.Colors.BorderHot;
         int thickness = Math.Clamp(_config.Style.BorderThickness, 1, 4);
-        double breathe = 0.18 + 0.07 * (Math.Sin(((double)_hostFrameIndex + seed * 17.0) / 720.0) + 1.0) * 0.5;
-        uint color = WithAlpha(SoftFadeColor(seed, baseColor, 0.34), 118);
-        uint haze = WithAlpha(SoftFadeColor(seed + 3, baseColor, breathe), 42);
+        double speed = EffectSpeedFactor();
+        double strength = EffectStrengthFactor();
+        double breathe = (0.08 + 0.035 * strength) + (0.025 * strength) * (Math.Sin((((double)_hostFrameIndex * speed) + seed * 17.0) / 1440.0) + 1.0) * 0.5;
+        uint color = WithAlpha(SoftFadeColor(seed, baseColor, 0.16 + 0.10 * strength), (int)Math.Round(70 + 28 * strength));
+        uint haze = WithAlpha(SoftFadeColor(seed + 3, baseColor, breathe), (int)Math.Round(20 + 18 * strength));
 
         for (int i = thickness + 3; i >= thickness; i--)
         {
@@ -658,13 +686,13 @@ internal sealed unsafe class ForgeApp : IDisposable
         uint baseColor = _ui.Theme.Button.Colors.BorderHot;
         RectI expanded = Expand(rect, thickness);
         int perimeter = Math.Max(1, expanded.Width * 2 + expanded.Height * 2 - 4);
-        double phase = animated ? (_hostFrameIndex / 2400.0) : 0.0;
+        double phase = animated ? (_hostFrameIndex * EffectSpeedFactor() / 7200.0) : 0.0;
         phase += seed * 0.013;
 
         for (int layer = 0; layer < thickness; layer++)
         {
             RectI r = Expand(rect, layer + 1);
-            int alpha = Math.Max(52, 150 - layer * 24);
+            int alpha = Math.Max(28, (int)Math.Round(66 + 44 * EffectStrengthFactor()) - layer * 20);
             DrawFlowEdge(r.X, r.Y, r.Width, 1, 0, perimeter, segment, phase, baseColor, alpha);
             DrawFlowEdge(r.Right - 1, r.Y, 1, r.Height, r.Width, perimeter, segment, phase, baseColor, alpha);
             DrawFlowEdge(r.X, r.Bottom - 1, r.Width, 1, r.Width + r.Height, perimeter, segment, phase, baseColor, alpha, reverse: true);
@@ -694,7 +722,7 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private uint SoftFadeColor(int offset, uint baseColor, double strength)
     {
-        double t = ((_hostFrameIndex / 1800.0) + offset * 0.04) % 1.0;
+        double t = (((double)_hostFrameIndex * EffectSpeedFactor() / 5400.0) + offset * 0.04) % 1.0;
         uint faded = GradientBorderColor(t, baseColor);
         return LerpColor(baseColor, faded, Math.Clamp(strength, 0.0, 1.0));
     }
@@ -707,6 +735,28 @@ internal sealed unsafe class ForgeApp : IDisposable
         int next = (index + 1) % colors.Length;
         double local = SmoothStep(scaled - index);
         return LerpColor(baseColor, LerpColor(colors[index], colors[next], local), 0.52);
+    }
+
+    private double EffectSpeedFactor()
+    {
+        return _config.Style.EffectSpeed switch
+        {
+            2 => 0.65,
+            3 => 1.0,
+            4 => 1.6,
+            _ => 0.32,
+        };
+    }
+
+    private double EffectStrengthFactor()
+    {
+        return _config.Style.EffectStrength switch
+        {
+            2 => 0.7,
+            3 => 1.0,
+            4 => 1.35,
+            _ => 0.38,
+        };
     }
 
     private static double SmoothStep(double value)
@@ -846,43 +896,61 @@ internal sealed unsafe class ForgeApp : IDisposable
     private RectI TiledWindowRect(ForgeLayout layout, AppWindow window)
     {
         RectI work = TileWorkArea(layout);
-        UiWindowConfig settingsConfig = _config.Window("settings");
-        bool settingsOpen = _settingsWindow.IsOpen;
-        int gap = settingsOpen ? 8 : 0;
-        string slot = NormalizeTileSlot(settingsConfig.Slot);
-
-        int defaultSettingsWidth = Math.Min(360, Math.Max(260, work.Width / 3));
-        int settingsWidth = settingsOpen ? Math.Clamp(settingsConfig.Width > 0 ? settingsConfig.Width : defaultSettingsWidth, 220, Math.Max(220, work.Width - 260)) : 0;
-        int defaultSettingsHeight = Math.Min(330, Math.Max(170, work.Height / 3));
-        int settingsHeight = settingsOpen ? Math.Clamp(settingsConfig.Height > 0 ? settingsConfig.Height : defaultSettingsHeight, 150, Math.Max(150, work.Height - 180)) : 0;
-
-        if (window == AppWindow.Settings || window == AppWindow.Style)
+        AppWindow[] open = OpenTiledWindows();
+        int index = Array.IndexOf(open, window);
+        if (index < 0)
         {
-            UiWindowConfig windowConfig = _config.Window(WindowKey(window));
-            string windowSlot = window == AppWindow.Settings ? slot : NormalizeTileSlot(windowConfig.Slot);
-            int width = window == AppWindow.Settings ? settingsWidth : Math.Clamp(windowConfig.Width > 0 ? windowConfig.Width : defaultSettingsWidth, 220, Math.Max(220, work.Width - 260));
-            int height = window == AppWindow.Settings ? settingsHeight : Math.Clamp(windowConfig.Height > 0 ? windowConfig.Height : defaultSettingsHeight, 150, Math.Max(150, work.Height - 180));
-            return windowSlot switch
-            {
-                "left" => new RectI(work.X, work.Y, width, work.Height),
-                "top" => new RectI(work.X, work.Y, work.Width, height),
-                "bottom" => new RectI(work.X, work.Bottom - height, work.Width, height),
-                _ => new RectI(work.Right - width, work.Y, width, work.Height),
-            };
+            return work;
         }
 
-        if (window == AppWindow.Rom)
+        const int gap = 8;
+        if (open.Length == 1)
         {
-            return slot switch
-            {
-                "left" => new RectI(work.X + settingsWidth + gap, work.Y, Math.Max(240, work.Width - settingsWidth - gap), work.Height),
-                "top" => new RectI(work.X, work.Y + settingsHeight + gap, work.Width, Math.Max(180, work.Height - settingsHeight - gap)),
-                "bottom" => new RectI(work.X, work.Y, work.Width, Math.Max(180, work.Height - settingsHeight - gap)),
-                _ => new RectI(work.X, work.Y, Math.Max(240, work.Width - settingsWidth - gap), work.Height),
-            };
+            return work;
         }
 
-        throw new ArgumentOutOfRangeException(nameof(window));
+        if (open.Length == 2)
+        {
+            int primaryWidth = open.Contains(AppWindow.Rom) ? Math.Clamp((int)Math.Round(work.Width * 0.64), 320, Math.Max(320, work.Width - 240)) : (work.Width - gap) / 2;
+            return index == 0
+                ? new RectI(work.X, work.Y, primaryWidth, work.Height)
+                : new RectI(work.X + primaryWidth + gap, work.Y, Math.Max(220, work.Width - primaryWidth - gap), work.Height);
+        }
+
+        if (open[0] == AppWindow.Rom)
+        {
+            int primaryHeight = Math.Clamp((int)Math.Round(work.Height * 0.60), 220, Math.Max(220, work.Height - 180));
+            if (window == AppWindow.Rom)
+            {
+                return new RectI(work.X, work.Y, work.Width, primaryHeight);
+            }
+
+            RectI rest = new(work.X, work.Y + primaryHeight + gap, work.Width, Math.Max(160, work.Height - primaryHeight - gap));
+            return GridTileRect(rest, index - 1, open.Length - 1, gap);
+        }
+
+        return GridTileRect(work, index, open.Length, gap);
+    }
+
+    private AppWindow[] OpenTiledWindows()
+    {
+        AppWindow[] preferred = [AppWindow.Rom, AppWindow.Settings, AppWindow.Style];
+        return preferred.Where(window => WindowState(window).IsOpen).ToArray();
+    }
+
+    private static RectI GridTileRect(RectI area, int index, int count, int gap)
+    {
+        int columns = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(count)));
+        int rows = Math.Max(1, (int)Math.Ceiling(count / (double)columns));
+        int row = index / columns;
+        int column = index % columns;
+        int cellWidth = Math.Max(1, (area.Width - gap * (columns - 1)) / columns);
+        int cellHeight = Math.Max(1, (area.Height - gap * (rows - 1)) / rows);
+        int x = area.X + column * (cellWidth + gap);
+        int y = area.Y + row * (cellHeight + gap);
+        int width = column == columns - 1 ? Math.Max(1, area.Right - x) : cellWidth;
+        int height = row == rows - 1 ? Math.Max(1, area.Bottom - y) : cellHeight;
+        return new RectI(x, y, width, height);
     }
 
 

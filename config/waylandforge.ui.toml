@@ -8,6 +8,8 @@ bling = false # opens style effects when enabled
 rainbow_borders = true
 button_style = "flat" # flat | edge | loud
 border_effect = "glow" # still | glow | flow
+effect_speed = 1 # 1 slow | 2 calm | 3 active | 4 fast
+effect_strength = 1 # 1 subtle | 2 normal | 3 bright | 4 loud
 border_thickness = 1
 
 [ui.tile]
