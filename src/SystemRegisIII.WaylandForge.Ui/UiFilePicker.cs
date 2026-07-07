@@ -8,7 +8,11 @@ public sealed class UiFilePicker
     private string _currentDirectory;
     private string? _selectedPath;
     private string? _error;
-    private FileEntry[] _entries = [];
+    private DirectoryEntry[] _directories = [];
+    private FileEntry[] _files = [];
+    private bool _entriesLoaded;
+    private FileSortMode _sortMode = FileSortMode.Name;
+    private bool _sortDescending;
 
     public UiFilePicker()
     {
@@ -47,31 +51,14 @@ public sealed class UiFilePicker
             NavigateTo(pathBox.Text, ui);
         }
 
-        int listY = content.Y + 25;
-        int listHeight = Math.Max(50, content.Height - 72);
-        RectI listRect = new(content.X, listY, content.Width, listHeight);
-        using (UiScrollArea scroll = ui.BeginScrollArea(new UiId("filepicker.scroll"), listRect, Math.Max(listHeight, _entries.Length * 20 + 4)))
-        {
-            int y = scroll.Content.Y + 2;
-            foreach (FileEntry entry in _entries)
-            {
-                RectI row = new(scroll.Content.X + 2, y, scroll.Content.Width - 4, 17);
-                bool active = string.Equals(_selectedPath, entry.Path, StringComparison.Ordinal);
-                string prefix = entry.IsDirectory ? "[D]" : "[F]";
-                if (ui.Button(new UiId("filepicker.entry:" + entry.Path), row, $"{prefix} {Truncate(entry.Name, Math.Max(8, row.Width / 6 - 4))}", active).Clicked)
-                {
-                    if (entry.IsDirectory)
-                    {
-                        NavigateTo(entry.Path, ui);
-                    }
-                    else
-                    {
-                        _selectedPath = entry.Path;
-                    }
-                }
-                y += 20;
-            }
-        }
+        int bodyY = content.Y + 25;
+        int bodyHeight = Math.Max(58, content.Height - 78);
+        int sideWidth = Math.Min(190, Math.Max(132, content.Width / 3));
+        RectI sideRect = new(content.X, bodyY, sideWidth, bodyHeight);
+        RectI fileRect = new(sideRect.Right + 8, bodyY, Math.Max(80, content.Right - sideRect.Right - 8), bodyHeight);
+
+        DrawDirectoryPane(ui, sideRect);
+        DrawFilePane(ui, fileRect);
 
         int footerY = content.Bottom - 38;
         if (!string.IsNullOrEmpty(_selectedPath))
@@ -90,6 +77,109 @@ public sealed class UiFilePicker
         bool cancelled = ui.Button(new UiId("filepicker.cancel"), cancelRect, "CANCEL").Clicked;
 
         return new UiFilePickerResult(!accepted && !cancelled, accepted, cancelled, _selectedPath);
+    }
+
+    private void DrawDirectoryPane(UiContext ui, RectI rect)
+    {
+        RectI content = ui.Panel(rect, "FOLDERS");
+        int rowHeight = 19;
+        int fixedRows = 4;
+        int listHeight = Math.Max(content.Height, (fixedRows + _directories.Length) * rowHeight + 4);
+        using UiScrollArea scroll = ui.BeginScrollArea(new UiId("filepicker.folders.scroll"), content, listHeight);
+
+        int y = scroll.Content.Y + 2;
+        DrawPlaceButton(ui, "filepicker.place.home", new RectI(scroll.Content.X + 2, y, scroll.Content.Width - 4, 17), "HOME", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+        y += rowHeight;
+        DrawPlaceButton(ui, "filepicker.place.cwd", new RectI(scroll.Content.X + 2, y, scroll.Content.Width - 4, 17), "APP CWD", Directory.GetCurrentDirectory());
+        y += rowHeight;
+        DrawPlaceButton(ui, "filepicker.place.root", new RectI(scroll.Content.X + 2, y, scroll.Content.Width - 4, 17), "ROOT", Path.GetPathRoot(_currentDirectory) ?? "/");
+        y += rowHeight;
+        string parent = Directory.GetParent(_currentDirectory)?.FullName ?? _currentDirectory;
+        DrawPlaceButton(ui, "filepicker.place.up", new RectI(scroll.Content.X + 2, y, scroll.Content.Width - 4, 17), "..", parent);
+        y += rowHeight + 4;
+
+        foreach (DirectoryEntry entry in _directories)
+        {
+            RectI row = new(scroll.Content.X + 2, y, scroll.Content.Width - 4, 17);
+            bool active = string.Equals(_currentDirectory, entry.Path, StringComparison.Ordinal);
+            string label = "> " + Truncate(entry.Name, Math.Max(8, row.Width / 6 - 2));
+            if (ui.Button(new UiId("filepicker.dir:" + entry.Path), row, label, active).Clicked)
+            {
+                NavigateTo(entry.Path, ui);
+            }
+            y += rowHeight;
+        }
+    }
+
+    private void DrawFilePane(UiContext ui, RectI rect)
+    {
+        RectI content = ui.Panel(rect, "FILES");
+        int sortY = content.Y;
+        var sort = new UiRow(content.X, sortY, 18, 5);
+        sort = sort.Next(60, out RectI nameRect);
+        if (ui.Button(new UiId("filepicker.sort.name"), nameRect, SortLabel("NAME", FileSortMode.Name), _sortMode == FileSortMode.Name).Clicked)
+        {
+            SetSort(FileSortMode.Name);
+        }
+
+        sort = sort.Next(58, out RectI typeRect);
+        if (ui.Button(new UiId("filepicker.sort.type"), typeRect, SortLabel("TYPE", FileSortMode.Type), _sortMode == FileSortMode.Type).Clicked)
+        {
+            SetSort(FileSortMode.Type);
+        }
+
+        sort = sort.Next(62, out RectI dateRect);
+        if (ui.Button(new UiId("filepicker.sort.date"), dateRect, SortLabel("DATE", FileSortMode.Modified), _sortMode == FileSortMode.Modified).Clicked)
+        {
+            SetSort(FileSortMode.Modified);
+        }
+
+        RectI listRect = new(content.X, content.Y + 24, content.Width, Math.Max(20, content.Height - 24));
+        int rowHeight = 20;
+        int listHeight = Math.Max(listRect.Height, _files.Length * rowHeight + 4);
+        using UiScrollArea scroll = ui.BeginScrollArea(new UiId("filepicker.files.scroll"), listRect, listHeight);
+
+        if (_files.Length == 0)
+        {
+            ui.Text(scroll.Content.X + 4, scroll.Content.Y + 4, "NO FILES", UiTextKind.Muted);
+            return;
+        }
+
+        int y = scroll.Content.Y + 2;
+        foreach (FileEntry entry in _files)
+        {
+            RectI row = new(scroll.Content.X + 2, y, scroll.Content.Width - 4, 17);
+            bool active = string.Equals(_selectedPath, entry.Path, StringComparison.Ordinal);
+            string label = FormatFileLabel(entry, Math.Max(8, row.Width / 6 - 2));
+            if (ui.Button(new UiId("filepicker.file:" + entry.Path), row, label, active).Clicked)
+            {
+                _selectedPath = entry.Path;
+            }
+            y += rowHeight;
+        }
+    }
+
+    private void DrawPlaceButton(UiContext ui, string id, RectI rect, string label, string path)
+    {
+        if (ui.Button(new UiId(id), rect, Truncate(label, Math.Max(4, rect.Width / 6 - 1)), string.Equals(_currentDirectory, path, StringComparison.Ordinal)).Clicked)
+        {
+            NavigateTo(path, ui);
+        }
+    }
+
+    private void SetSort(FileSortMode mode)
+    {
+        if (_sortMode == mode)
+        {
+            _sortDescending = !_sortDescending;
+        }
+        else
+        {
+            _sortMode = mode;
+            _sortDescending = mode == FileSortMode.Modified;
+        }
+
+        _files = SortFiles(_files).ToArray();
     }
 
     private void NavigateTo(string path, UiContext ui)
@@ -112,7 +202,9 @@ public sealed class UiFilePicker
 
             _currentDirectory = fullPath;
             _selectedPath = null;
-            _entries = [];
+            _directories = [];
+            _files = [];
+            _entriesLoaded = false;
             _error = null;
             ui.SetText(_pathBoxId, _currentDirectory);
             EnsureEntries();
@@ -125,32 +217,73 @@ public sealed class UiFilePicker
 
     private void EnsureEntries()
     {
-        if (_entries.Length > 0)
+        if (_entriesLoaded)
         {
             return;
         }
 
         try
         {
-            var entries = new List<FileEntry>();
+            var directories = new List<DirectoryEntry>();
             foreach (string directory in Directory.EnumerateDirectories(_currentDirectory).Order(StringComparer.OrdinalIgnoreCase))
             {
-                entries.Add(new FileEntry(Path.GetFileName(directory), directory, true));
+                directories.Add(new DirectoryEntry(Path.GetFileName(directory), directory));
             }
 
+            var files = new List<FileEntry>();
             foreach (string file in Directory.EnumerateFiles(_currentDirectory).Order(StringComparer.OrdinalIgnoreCase))
             {
-                entries.Add(new FileEntry(Path.GetFileName(file), file, false));
+                var info = new FileInfo(file);
+                files.Add(new FileEntry(info.Name, file, info.Extension, info.LastWriteTime));
             }
 
-            _entries = entries.ToArray();
+            _directories = directories.ToArray();
+            _files = SortFiles(files).ToArray();
+            _entriesLoaded = true;
             _error = null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            _entries = [];
+            _directories = [];
+            _files = [];
+            _entriesLoaded = true;
             _error = ex.Message;
         }
+    }
+
+    private IEnumerable<FileEntry> SortFiles(IEnumerable<FileEntry> files)
+    {
+        IOrderedEnumerable<FileEntry> ordered = _sortMode switch
+        {
+            FileSortMode.Type => _sortDescending
+                ? files.OrderByDescending(static entry => entry.Extension, StringComparer.OrdinalIgnoreCase).ThenByDescending(static entry => entry.Name, StringComparer.OrdinalIgnoreCase)
+                : files.OrderBy(static entry => entry.Extension, StringComparer.OrdinalIgnoreCase).ThenBy(static entry => entry.Name, StringComparer.OrdinalIgnoreCase),
+            FileSortMode.Modified => _sortDescending
+                ? files.OrderByDescending(static entry => entry.Modified).ThenBy(static entry => entry.Name, StringComparer.OrdinalIgnoreCase)
+                : files.OrderBy(static entry => entry.Modified).ThenBy(static entry => entry.Name, StringComparer.OrdinalIgnoreCase),
+            _ => _sortDescending
+                ? files.OrderByDescending(static entry => entry.Name, StringComparer.OrdinalIgnoreCase)
+                : files.OrderBy(static entry => entry.Name, StringComparer.OrdinalIgnoreCase),
+        };
+        return ordered;
+    }
+
+    private string SortLabel(string label, FileSortMode mode)
+    {
+        if (_sortMode != mode)
+        {
+            return label;
+        }
+
+        return _sortDescending ? label + " v" : label + " ^";
+    }
+
+    private static string FormatFileLabel(FileEntry entry, int maxChars)
+    {
+        string extension = string.IsNullOrEmpty(entry.Extension) ? "file" : entry.Extension.TrimStart('.').ToLowerInvariant();
+        string date = entry.Modified.ToString("yyyy-MM-dd");
+        int nameChars = Math.Max(6, maxChars - extension.Length - 13);
+        return $"{Truncate(entry.Name, nameChars)}  {extension}  {date}";
     }
 
     private static string Truncate(string text, int maxChars)
@@ -163,5 +296,12 @@ public sealed class UiFilePicker
         return maxChars <= 3 ? text[..maxChars] : text[..(maxChars - 3)] + "...";
     }
 
-    private readonly record struct FileEntry(string Name, string Path, bool IsDirectory);
+    private readonly record struct DirectoryEntry(string Name, string Path);
+    private readonly record struct FileEntry(string Name, string Path, string Extension, DateTime Modified);
+    private enum FileSortMode
+    {
+        Name,
+        Type,
+        Modified,
+    }
 }

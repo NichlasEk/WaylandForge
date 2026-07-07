@@ -104,6 +104,9 @@ internal sealed class UiWidgetState
     public bool IsOpen { get; set; } = true;
     public string Text { get; set; } = string.Empty;
     public int ScrollOffset { get; set; }
+    public bool IsDraggingScroll { get; set; }
+    public int ScrollDragStartY { get; set; }
+    public int ScrollDragStartOffset { get; set; }
 }
 
 public sealed class UiContext
@@ -343,11 +346,63 @@ public sealed class UiContext
 
         if (maxOffset > 0)
         {
-            int trackX = viewport.Right - 5;
-            _canvas.FillRect(trackX, viewport.Y, 4, viewport.Height, Theme.Button.Colors.Surface);
             int thumbHeight = Math.Max(12, viewport.Height * viewport.Height / contentHeight);
+            int trackTravel = Math.Max(1, viewport.Height - thumbHeight);
+            int trackX = viewport.Right - 7;
             int thumbY = viewport.Y + state.ScrollOffset * Math.Max(1, viewport.Height - thumbHeight) / maxOffset;
-            _canvas.FillRect(trackX, thumbY, 4, thumbHeight, hovered ? Theme.Button.Colors.BorderHot : Theme.Button.Colors.Border);
+            RectI track = new(trackX, viewport.Y, 6, viewport.Height);
+            RectI thumb = new(trackX, thumbY, 6, thumbHeight);
+            bool thumbHovered = _pointer.IsInside && thumb.Contains(_pointer.X, _pointer.Y);
+            bool trackHovered = _pointer.IsInside && track.Contains(_pointer.X, _pointer.Y);
+            string scrollId = id.Value + ".scrollbar";
+
+            if (thumbHovered || state.IsDraggingScroll)
+            {
+                _hot = scrollId;
+            }
+
+            if (_pointer.LeftPressed && !_previousPointer.LeftPressed && thumbHovered)
+            {
+                _active = scrollId;
+                state.IsDraggingScroll = true;
+                state.ScrollDragStartY = _pointer.Y;
+                state.ScrollDragStartOffset = state.ScrollOffset;
+            }
+            else if (_pointer.LeftPressed && !_previousPointer.LeftPressed && trackHovered)
+            {
+                _active = scrollId;
+                state.ScrollOffset = Math.Clamp((_pointer.Y - viewport.Y - thumbHeight / 2) * maxOffset / trackTravel, 0, maxOffset);
+                state.IsDraggingScroll = true;
+                state.ScrollDragStartY = _pointer.Y;
+                state.ScrollDragStartOffset = state.ScrollOffset;
+            }
+
+            if (state.IsDraggingScroll)
+            {
+                if (_pointer.LeftPressed)
+                {
+                    _active = scrollId;
+                    int deltaY = _pointer.Y - state.ScrollDragStartY;
+                    state.ScrollOffset = Math.Clamp(state.ScrollDragStartOffset + deltaY * maxOffset / trackTravel, 0, maxOffset);
+                }
+                else
+                {
+                    state.IsDraggingScroll = false;
+                }
+            }
+
+            thumbY = viewport.Y + state.ScrollOffset * trackTravel / maxOffset;
+            _canvas.FillRect(track.X, track.Y, track.Width, track.Height, Theme.Button.Colors.Surface);
+            uint thumbColor = state.IsDraggingScroll
+                ? Theme.Button.Colors.BorderActive
+                : thumbHovered || hovered
+                    ? Theme.Button.Colors.BorderHot
+                    : Theme.Button.Colors.Border;
+            _canvas.FillRect(track.X, thumbY, track.Width, thumbHeight, thumbColor);
+        }
+        else
+        {
+            state.IsDraggingScroll = false;
         }
 
         IDisposable clip = _canvas.PushClip(viewport);
