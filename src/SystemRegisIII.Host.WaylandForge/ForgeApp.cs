@@ -8,18 +8,25 @@ internal sealed unsafe class ForgeApp : IDisposable
     private const int MinimumWidthForSidePanel = 560;
 
     private readonly SoftwareCanvas _canvas = new();
+    private readonly FakeSaturnCore _core = new();
+    private readonly ForgeInputSource _inputSource = new();
+    private readonly FrameStore _frameStore = new();
+    private readonly EmulatorViewport _viewport = new();
     private ForgeInput _lastInput;
 
     public void Render(uint* pixels, int width, int height, int stridePixels, ulong frameIndex, ForgeInput input)
     {
         _lastInput = input;
+        _inputSource.Update(input);
+        _core.StepFrame(_inputSource, _frameStore);
+
         _canvas.Bind(pixels, width, height, stridePixels);
 
         _canvas.Clear(0xff111318);
         var layout = ForgeLayout.Calculate(width, height);
 
         DrawChrome(layout, frameIndex);
-        DrawViewport(layout, frameIndex);
+        DrawViewport(layout);
         if (layout.HasSidePanel)
         {
             DrawDebugPanel(layout, frameIndex);
@@ -59,37 +66,15 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
     }
 
-    private void DrawViewport(ForgeLayout layout, ulong frameIndex)
+    private void DrawViewport(ForgeLayout layout)
     {
-        const int sourceW = 320;
-        const int sourceH = 224;
+        var area = new RectI(layout.ViewAreaX, layout.ViewAreaY, layout.ViewAreaW, layout.ViewAreaH);
+        _viewport.Draw(_canvas, area, _frameStore.Pixels, _frameStore.Width, _frameStore.Height, _frameStore.StridePixels);
 
-        _canvas.FillRect(layout.ViewAreaX, layout.ViewAreaY, layout.ViewAreaW, layout.ViewAreaH, 0xff090b0d);
-        _canvas.DrawRect(layout.ViewAreaX, layout.ViewAreaY, layout.ViewAreaW, layout.ViewAreaH, 0xff2c343c);
-
-        if (layout.ViewportW <= 0 || layout.ViewportH <= 0)
+        RectI content = _viewport.ContentRect;
+        if (content.Bottom + 18 < layout.Height - StatusBarHeight)
         {
-            return;
-        }
-
-        for (int y = 0; y < layout.ViewportH; y++)
-        {
-            int sourceY = y * sourceH / layout.ViewportH;
-            for (int x = 0; x < layout.ViewportW; x++)
-            {
-                int sourceX = x * sourceW / layout.ViewportW;
-                uint r = (uint)(((ulong)sourceX + frameIndex * 2) & 0xff);
-                uint g = (uint)((sourceY * 255) / (sourceH - 1));
-                uint b = (uint)(((sourceX / 12) ^ (sourceY / 10) ^ (int)(frameIndex / 8)) & 1) == 0 ? 0x36u : 0xc8u;
-                uint color = 0xff000000u | (r << 16) | (g << 8) | b;
-                _canvas.PutPixel(layout.ViewportX + x, layout.ViewportY + y, color);
-            }
-        }
-
-        _canvas.DrawRect(layout.ViewportX - 1, layout.ViewportY - 1, layout.ViewportW + 2, layout.ViewportH + 2, 0xffd7e0e7);
-        if (layout.ViewportY + layout.ViewportH + 18 < layout.Height - StatusBarHeight)
-        {
-            _canvas.DrawText(layout.ViewportX, layout.ViewportY + layout.ViewportH + 8, "EMULATOR VIEWPORT 320X224 FIT SCALE", 0xff91a1ad);
+            _canvas.DrawText(content.X, content.Bottom + 8, $"EMULATOR VIEWPORT {_frameStore.Width}X{_frameStore.Height} FIT SCALE", 0xff91a1ad);
         }
     }
 
@@ -103,6 +88,8 @@ internal sealed unsafe class ForgeApp : IDisposable
         DrawMetric(x, y, "BACKEND", "WAYLAND"); y += 18;
         DrawMetric(x, y, "BUFFER", "WL_SHM X2"); y += 18;
         DrawMetric(x, y, "FORMAT", "ARGB8888"); y += 18;
+        DrawMetric(x, y, "CORE", "FAKE SATURN"); y += 18;
+        DrawMetric(x, y, "SOURCE", $"{_frameStore.Width}X{_frameStore.Height}"); y += 18;
         DrawMetric(x, y, "FRAME", frameIndex.ToString()); y += 26;
 
         _canvas.DrawText(x, y, "INPUT", 0xffe8edf2, 2);
@@ -152,17 +139,10 @@ internal sealed unsafe class ForgeApp : IDisposable
         int ViewAreaX,
         int ViewAreaY,
         int ViewAreaW,
-        int ViewAreaH,
-        int ViewportX,
-        int ViewportY,
-        int ViewportW,
-        int ViewportH)
+        int ViewAreaH)
     {
         public static ForgeLayout Calculate(int width, int height)
         {
-            const int sourceW = 320;
-            const int sourceH = 224;
-
             bool hasSidePanel = width >= MinimumWidthForSidePanel;
             int sidePanelX = hasSidePanel ? width - SidePanelWidth : width;
             int pad = width >= 520 ? 16 : 8;
@@ -170,12 +150,6 @@ internal sealed unsafe class ForgeApp : IDisposable
             int viewAreaY = TopBarHeight + pad;
             int viewAreaW = Math.Max(1, sidePanelX - pad * 2);
             int viewAreaH = Math.Max(1, height - TopBarHeight - StatusBarHeight - pad * 2);
-
-            double scale = Math.Min(viewAreaW / (double)sourceW, viewAreaH / (double)sourceH);
-            int viewportW = Math.Max(1, (int)Math.Floor(sourceW * scale));
-            int viewportH = Math.Max(1, (int)Math.Floor(sourceH * scale));
-            int viewportX = viewAreaX + (viewAreaW - viewportW) / 2;
-            int viewportY = viewAreaY + (viewAreaH - viewportH) / 2;
 
             return new ForgeLayout(
                 width,
@@ -185,11 +159,7 @@ internal sealed unsafe class ForgeApp : IDisposable
                 viewAreaX,
                 viewAreaY,
                 viewAreaW,
-                viewAreaH,
-                viewportX,
-                viewportY,
-                viewportW,
-                viewportH);
+                viewAreaH);
         }
     }
 }

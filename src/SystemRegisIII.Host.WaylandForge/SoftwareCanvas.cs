@@ -93,6 +93,46 @@ internal sealed unsafe class SoftwareCanvas
         }
     }
 
+    public void BlitArgbScaled(
+        ReadOnlySpan<uint> source,
+        int sourceWidth,
+        int sourceHeight,
+        int sourceStride,
+        int destX,
+        int destY,
+        int destWidth,
+        int destHeight)
+    {
+        if (sourceWidth <= 0 || sourceHeight <= 0 || sourceStride < sourceWidth || destWidth <= 0 || destHeight <= 0)
+        {
+            return;
+        }
+
+        int clippedX = destX;
+        int clippedY = destY;
+        int clippedW = destWidth;
+        int clippedH = destHeight;
+        Clip(ref clippedX, ref clippedY, ref clippedW, ref clippedH);
+        if (clippedW <= 0 || clippedH <= 0)
+        {
+            return;
+        }
+
+        for (int y = 0; y < clippedH; y++)
+        {
+            int destRow = clippedY + y;
+            int sourceY = (destRow - destY) * sourceHeight / destHeight;
+            uint* dst = _pixels + (destRow * _stridePixels) + clippedX;
+
+            for (int x = 0; x < clippedW; x++)
+            {
+                int destCol = clippedX + x;
+                int sourceX = (destCol - destX) * sourceWidth / destWidth;
+                dst[x] = source[(sourceY * sourceStride) + sourceX];
+            }
+        }
+    }
+
     private void DrawGlyph(int x, int y, char ch, uint color, int scale)
     {
         ReadOnlySpan<byte> glyph = Font5x7.Get(ch);

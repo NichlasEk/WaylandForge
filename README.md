@@ -11,6 +11,8 @@ M1 is still intentionally narrow:
 - resize the shm framebuffers from `xdg_toplevel.configure`
 - repaint only from Wayland frame callbacks / buffer release
 - render a small custom software UI from managed code
+- run a fake Saturn core that produces a 320x224 ARGB8888 framebuffer
+- blit the core framebuffer through a dedicated emulator viewport
 - track keyboard state for emulator-style buttons
 - close on ESC or compositor close
 
@@ -21,6 +23,8 @@ Current keyboard mapping:
 - Z/X/C: A/B/C
 - A/S/D: X/Y/Z
 - ESC: quit
+
+The fake core draws a controllable blob so every mapped button has visible output before a real emulator core is wired in.
 
 ## Run
 
