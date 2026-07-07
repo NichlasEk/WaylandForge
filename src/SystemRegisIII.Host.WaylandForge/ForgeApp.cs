@@ -381,7 +381,8 @@ internal sealed unsafe class ForgeApp : IDisposable
         using IDisposable inputScope = _ui.PushInputEnabled(inputEnabled);
         RectI content = window.Content;
         _ui.Panel(content);
-        var column = new UiColumn(content.X + 10, content.Y + 10, Math.Max(1, content.Width - 20), 8);
+        using UiScrollArea scroll = _ui.BeginScrollArea(new UiId("settings.scroll"), content, 330);
+        var column = new UiColumn(scroll.Content.X + 10, scroll.Content.Y + 10, Math.Max(1, scroll.Content.Width - 20), 8);
 
         _ui.Text(column.X, column.NextY, "WINDOW MODE", UiTextKind.Muted); column = column with { NextY = column.NextY + 14 };
         var modeRow = new UiRow(column.X, column.NextY, 18, 6);
@@ -490,7 +491,8 @@ internal sealed unsafe class ForgeApp : IDisposable
         using IDisposable inputScope = _ui.PushInputEnabled(inputEnabled);
         RectI content = window.Content;
         _ui.Panel(content);
-        var column = new UiColumn(content.X + 10, content.Y + 10, Math.Max(1, content.Width - 20), 8);
+        using UiScrollArea scroll = _ui.BeginScrollArea(new UiId("style.scroll"), content, 380);
+        var column = new UiColumn(scroll.Content.X + 10, scroll.Content.Y + 10, Math.Max(1, scroll.Content.Width - 20), 8);
 
         _ui.Text(column.X, column.NextY, "EFFECTS", UiTextKind.Muted); column = column with { NextY = column.NextY + 14 };
         var effectRow = new UiRow(column.X, column.NextY, 18, 6);
