@@ -285,7 +285,11 @@ internal sealed unsafe class ForgeApp : IDisposable
     private void DrawChildWindows(ForgeLayout layout)
     {
         HandleTileEdit(layout);
-        AppWindow? inputWindow = HitTestTopWindow();
+        if (!_pointer.LeftPressed && _tileDragWindow is not null)
+        {
+            _tileDragWindow = null;
+        }
+        AppWindow? inputWindow = CapturedInputWindow() ?? HitTestTopWindow();
         foreach (AppWindow window in _windowOrder.ToArray())
         {
             bool inputEnabled = inputWindow is null || inputWindow == window;
@@ -1213,6 +1217,16 @@ internal sealed unsafe class ForgeApp : IDisposable
         AppWindow.Style => _styleWindow,
         _ => throw new ArgumentOutOfRangeException(nameof(window)),
     };
+
+    private AppWindow? CapturedInputWindow()
+    {
+        if (_tileDragWindow is AppWindow window && _pointer.LeftPressed && IsTileEditModifierDown() && WindowState(window).IsOpen)
+        {
+            return window;
+        }
+
+        return null;
+    }
 
     private AppWindow? HitTestTopWindow()
     {
