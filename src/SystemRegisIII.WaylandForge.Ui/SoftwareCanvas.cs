@@ -8,6 +8,12 @@ public sealed unsafe class SoftwareCanvas
     private int _stridePixels;
     private RectI _clip;
     private readonly Stack<RectI> _clipStack = new();
+    private int[] _scaleXMap = [];
+    private int _scaleXMapDestX;
+    private int _scaleXMapClippedX;
+    private int _scaleXMapWidth;
+    private int _scaleXMapSourceWidth;
+    private int _scaleXMapDestWidth;
 
     public int Width => _width;
     public int Height => _height;
@@ -38,10 +44,7 @@ public sealed unsafe class SoftwareCanvas
         for (int row = 0; row < height; row++)
         {
             uint* dst = _pixels + ((y + row) * _stridePixels) + x;
-            for (int col = 0; col < width; col++)
-            {
-                dst[col] = color;
-            }
+            new Span<uint>(dst, width).Fill(color);
         }
     }
 
@@ -169,16 +172,44 @@ public sealed unsafe class SoftwareCanvas
             int sourceY = (destRow - destY) * sourceHeight / destHeight;
             int sourceRow = sourceY * sourceStride;
             uint* dst = _pixels + (destRow * _stridePixels) + clippedX;
-            long sourceXFixed = ((long)(clippedX - destX) * sourceWidth << 16) / destWidth;
-            long sourceXStep = ((long)sourceWidth << 16) / destWidth;
+            int[] sourceXMap = GetScaleXMap(sourceWidth, destX, destWidth, clippedX, clippedW);
 
             for (int x = 0; x < clippedW; x++)
             {
-                int sourceX = (int)(sourceXFixed >> 16);
-                dst[x] = source[sourceRow + sourceX];
-                sourceXFixed += sourceXStep;
+                dst[x] = source[sourceRow + sourceXMap[x]];
             }
         }
+    }
+
+    private int[] GetScaleXMap(int sourceWidth, int destX, int destWidth, int clippedX, int clippedWidth)
+    {
+        if (_scaleXMap.Length >= clippedWidth &&
+            _scaleXMapSourceWidth == sourceWidth &&
+            _scaleXMapDestX == destX &&
+            _scaleXMapDestWidth == destWidth &&
+            _scaleXMapClippedX == clippedX &&
+            _scaleXMapWidth == clippedWidth)
+        {
+            return _scaleXMap;
+        }
+
+        if (_scaleXMap.Length < clippedWidth)
+        {
+            _scaleXMap = new int[clippedWidth];
+        }
+
+        _scaleXMapSourceWidth = sourceWidth;
+        _scaleXMapDestX = destX;
+        _scaleXMapDestWidth = destWidth;
+        _scaleXMapClippedX = clippedX;
+        _scaleXMapWidth = clippedWidth;
+
+        for (int x = 0; x < clippedWidth; x++)
+        {
+            _scaleXMap[x] = (clippedX + x - destX) * sourceWidth / destWidth;
+        }
+
+        return _scaleXMap;
     }
 
     public IDisposable PushClip(RectI rect)

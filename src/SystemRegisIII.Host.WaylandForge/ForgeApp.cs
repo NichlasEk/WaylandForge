@@ -276,8 +276,8 @@ internal sealed unsafe class ForgeApp : IDisposable
         closeRect = new(window.Right - 28, window.Y + 4, 20, 16);
 
         DrawFloatingWindowBackplate(window);
-        _canvas.BlendRect(window.X, window.Y, window.Width, window.Height, _draggingFilePicker ? 0xee111820 : 0xf6111318);
-        _canvas.BlendRect(titleBar.X, titleBar.Y, titleBar.Width, titleBar.Height, _draggingFilePicker ? 0xd6355c7d : 0xee181d22);
+        _canvas.FillRect(window.X, window.Y, window.Width, window.Height, _ui.Theme.Panel.Colors.Panel);
+        _canvas.FillRect(titleBar.X, titleBar.Y, titleBar.Width, titleBar.Height, _draggingFilePicker ? _ui.Theme.Button.Colors.SurfaceActive : _ui.Theme.Button.Colors.Surface);
         _canvas.DrawRect(window.X, window.Y, window.Width, window.Height, _ui.Theme.Button.Colors.BorderHot);
         _canvas.DrawLine(window.X, titleBar.Bottom, window.Right - 1, titleBar.Bottom, _ui.Theme.Button.Colors.Border);
         _ui.Text(titleBar.X + 10, titleBar.Y + 8, "ROM PICKER", _draggingFilePicker ? UiTextKind.Accent : UiTextKind.Normal);
@@ -314,9 +314,8 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private void DrawFloatingWindowBackplate(RectI window)
     {
-        _canvas.BlendRect(window.X - 14, window.Y - 10, window.Width + 28, window.Height + 24, 0x55000000);
-        _canvas.BlendRect(window.X - 8, window.Y - 6, window.Width + 16, window.Height + 14, 0x66000000);
-        _canvas.BlendRect(window.X - 3, window.Y - 3, window.Width + 6, window.Height + 6, 0x77283f52);
+        _canvas.FillRect(window.X - 9, window.Y + 7, window.Width + 18, window.Height + 10, 0xff050607);
+        _canvas.FillRect(window.X - 4, window.Y - 4, window.Width + 8, window.Height + 8, 0xff233241);
     }
 
     private void HandleFilePickerDrag(ForgeLayout layout, RectI titleBar, RectI closeRect, RectI window)
