@@ -568,13 +568,13 @@ internal sealed unsafe class ForgeApp : IDisposable
         uint surface = active ? colors.Accent : colors.Surface;
         if (string.Equals(_config.Style.ButtonStyle, "loud", StringComparison.OrdinalIgnoreCase))
         {
-            surface = active ? RainbowColor(2) : 0xff263746;
+            surface = active ? SoftFadeColor(2, colors.SurfaceActive, 0.35) : 0xff263746;
         }
         _canvas.FillRect(rect.X, rect.Y, rect.Width, rect.Height, surface);
         int thickness = Math.Clamp(_config.Style.BorderThickness, 1, 4);
         for (int i = 0; i < thickness; i++)
         {
-            uint border = string.Equals(_config.Style.ButtonStyle, "loud", StringComparison.OrdinalIgnoreCase) ? RainbowColor(i) : colors.BorderHot;
+            uint border = string.Equals(_config.Style.ButtonStyle, "loud", StringComparison.OrdinalIgnoreCase) ? SoftFadeColor(i, colors.BorderHot, 0.55) : colors.BorderHot;
             _canvas.DrawRect(rect.X + i, rect.Y + i, rect.Width - i * 2, rect.Height - i * 2, border);
         }
         if (string.Equals(_config.Style.ButtonStyle, "edge", StringComparison.OrdinalIgnoreCase))
@@ -594,15 +594,41 @@ internal sealed unsafe class ForgeApp : IDisposable
         int thickness = Math.Clamp(_config.Style.BorderThickness, 1, 4);
         for (int i = 0; i < thickness + 1; i++)
         {
-            _canvas.DrawRect(rect.X - i - 1, rect.Y - i - 1, rect.Width + (i + 1) * 2, rect.Height + (i + 1) * 2, RainbowColor(seed + i));
+            _canvas.DrawRect(rect.X - i - 1, rect.Y - i - 1, rect.Width + (i + 1) * 2, rect.Height + (i + 1) * 2, SoftFadeColor(seed + i, _ui.Theme.Button.Colors.BorderHot, 0.48));
         }
     }
 
-    private uint RainbowColor(int offset)
+    private uint SoftFadeColor(int offset, uint baseColor, double strength)
     {
-        ReadOnlySpan<uint> colors = stackalloc uint[] { 0xffff4d6d, 0xffffc857, 0xff5efc8d, 0xff48cae4, 0xff7b61ff, 0xffff4fd8 };
-        int index = (int)((_hostFrameIndex / 5 + (ulong)Math.Abs(offset)) % (ulong)colors.Length);
-        return colors[index];
+        ReadOnlySpan<uint> colors = stackalloc uint[] { 0xff6f8fb5, 0xff7f77b8, 0xff9b6f9f, 0xff6faaa0, 0xffb0916a };
+        double t = ((_hostFrameIndex / 180.0) + offset * 0.17) % colors.Length;
+        int index = (int)Math.Floor(t);
+        int next = (index + 1) % colors.Length;
+        double local = SmoothStep(t - index);
+        uint faded = LerpColor(colors[index], colors[next], local);
+        double pulse = 0.28 + 0.18 * (Math.Sin(((double)_hostFrameIndex + offset * 31.0) / 150.0) + 1.0) * 0.5;
+        return LerpColor(baseColor, faded, Math.Clamp(strength * pulse, 0.0, 1.0));
+    }
+
+    private static double SmoothStep(double value)
+    {
+        value = Math.Clamp(value, 0.0, 1.0);
+        return value * value * (3.0 - 2.0 * value);
+    }
+
+    private static uint LerpColor(uint from, uint to, double amount)
+    {
+        amount = Math.Clamp(amount, 0.0, 1.0);
+        int a = LerpChannel((from >> 24) & 0xff, (to >> 24) & 0xff, amount);
+        int r = LerpChannel((from >> 16) & 0xff, (to >> 16) & 0xff, amount);
+        int g = LerpChannel((from >> 8) & 0xff, (to >> 8) & 0xff, amount);
+        int b = LerpChannel(from & 0xff, to & 0xff, amount);
+        return (uint)((a << 24) | (r << 16) | (g << 8) | b);
+    }
+
+    private static int LerpChannel(uint from, uint to, double amount)
+    {
+        return (int)Math.Round(from + (to - from) * amount);
     }
 
 
