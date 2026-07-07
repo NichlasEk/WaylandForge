@@ -568,13 +568,13 @@ internal sealed unsafe class ForgeApp : IDisposable
         uint surface = active ? colors.Accent : colors.Surface;
         if (string.Equals(_config.Style.ButtonStyle, "loud", StringComparison.OrdinalIgnoreCase))
         {
-            surface = active ? SoftFadeColor(2, colors.SurfaceActive, 0.35) : 0xff263746;
+            surface = active ? SoftFadeColor(2, colors.SurfaceActive, 0.22) : 0xff263746;
         }
         _canvas.FillRect(rect.X, rect.Y, rect.Width, rect.Height, surface);
         int thickness = Math.Clamp(_config.Style.BorderThickness, 1, 4);
         for (int i = 0; i < thickness; i++)
         {
-            uint border = string.Equals(_config.Style.ButtonStyle, "loud", StringComparison.OrdinalIgnoreCase) ? SoftFadeColor(i, colors.BorderHot, 0.55) : colors.BorderHot;
+            uint border = string.Equals(_config.Style.ButtonStyle, "loud", StringComparison.OrdinalIgnoreCase) ? SoftFadeColor(0, colors.BorderHot, 0.28) : colors.BorderHot;
             _canvas.DrawRect(rect.X + i, rect.Y + i, rect.Width - i * 2, rect.Height - i * 2, border);
         }
         if (string.Equals(_config.Style.ButtonStyle, "edge", StringComparison.OrdinalIgnoreCase))
@@ -594,20 +594,19 @@ internal sealed unsafe class ForgeApp : IDisposable
         int thickness = Math.Clamp(_config.Style.BorderThickness, 1, 4);
         for (int i = 0; i < thickness + 1; i++)
         {
-            _canvas.DrawRect(rect.X - i - 1, rect.Y - i - 1, rect.Width + (i + 1) * 2, rect.Height + (i + 1) * 2, SoftFadeColor(seed + i, _ui.Theme.Button.Colors.BorderHot, 0.48));
+            _canvas.DrawRect(rect.X - i - 1, rect.Y - i - 1, rect.Width + (i + 1) * 2, rect.Height + (i + 1) * 2, SoftFadeColor(seed, _ui.Theme.Button.Colors.BorderHot, 0.26));
         }
     }
 
     private uint SoftFadeColor(int offset, uint baseColor, double strength)
     {
         ReadOnlySpan<uint> colors = stackalloc uint[] { 0xff6f8fb5, 0xff7f77b8, 0xff9b6f9f, 0xff6faaa0, 0xffb0916a };
-        double t = ((_hostFrameIndex / 180.0) + offset * 0.17) % colors.Length;
+        double t = ((_hostFrameIndex / 1200.0) + offset * 0.04) % colors.Length;
         int index = (int)Math.Floor(t);
         int next = (index + 1) % colors.Length;
         double local = SmoothStep(t - index);
         uint faded = LerpColor(colors[index], colors[next], local);
-        double pulse = 0.28 + 0.18 * (Math.Sin(((double)_hostFrameIndex + offset * 31.0) / 150.0) + 1.0) * 0.5;
-        return LerpColor(baseColor, faded, Math.Clamp(strength * pulse, 0.0, 1.0));
+        return LerpColor(baseColor, faded, Math.Clamp(strength, 0.0, 1.0));
     }
 
     private static double SmoothStep(double value)
