@@ -1,4 +1,5 @@
 using SystemRegisIII.WaylandForge.Ui;
+using System.Diagnostics;
 
 namespace SystemRegisIII.Host.WaylandForge;
 
@@ -46,7 +47,9 @@ internal sealed unsafe class ForgeApp : IDisposable
         Update(input, pointer, textInput, scrollInput, frameIndex);
 
         _canvas.Bind(pixels, width, height, stridePixels);
+        long drawStart = Stopwatch.GetTimestamp();
         Draw(width, height);
+        _clock.RecordDraw(Stopwatch.GetElapsedTime(drawStart).TotalMilliseconds);
         _previousPointer = pointer;
     }
 
@@ -184,7 +187,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         {
             var column = new UiColumn(scroll.Content.X, scroll.Content.Y, scroll.Content.Width, 5);
 
-            if (_ui.Collapsible(new UiId("debug.host"), ref column, "HOST", 168, out RectI hostSection))
+            if (_ui.Collapsible(new UiId("debug.host"), ref column, "HOST", 222, out RectI hostSection))
             {
                 int x = hostSection.X;
                 int y = hostSection.Y;
@@ -197,6 +200,9 @@ internal sealed unsafe class ForgeApp : IDisposable
                 DrawMetric(x, y, "CFRAME", _core.FrameIndex.ToString()); y += 18;
                 DrawMetric(x, y, "SCALE", _viewport.ScaleMode.ToString().ToUpperInvariant()); y += 18;
                 DrawMetric(x, y, "FPS", _clock.FramesPerSecond.ToString("0.0")); y += 18;
+                DrawMetric(x, y, "FRAME MS", _clock.FrameMilliseconds.ToString("0.0")); y += 18;
+                DrawMetric(x, y, "HZ", (_clock.FrameMilliseconds > 0 ? 1000.0 / _clock.FrameMilliseconds : 0).ToString("0.0")); y += 18;
+                DrawMetric(x, y, "DRAW MS", _clock.DrawMilliseconds.ToString("0.0")); y += 18;
             }
 
             if (_ui.Collapsible(new UiId("debug.input"), ref column, "INPUT", 142, out RectI inputSection))

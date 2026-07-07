@@ -8,11 +8,13 @@ internal sealed class FrameClock
     private double _lastSeconds;
     private double _fpsWindowStart;
     private int _fpsWindowFrames;
+    private double _drawMilliseconds;
 
     public double DeltaSeconds { get; private set; }
     public double ElapsedSeconds { get; private set; }
     public double FramesPerSecond { get; private set; }
     public double FrameMilliseconds => DeltaSeconds * 1000.0;
+    public double DrawMilliseconds => _drawMilliseconds;
 
     public void Tick()
     {
@@ -28,5 +30,10 @@ internal sealed class FrameClock
             _fpsWindowFrames = 0;
             _fpsWindowStart = ElapsedSeconds;
         }
+    }
+
+    public void RecordDraw(double milliseconds)
+    {
+        _drawMilliseconds = _drawMilliseconds == 0 ? milliseconds : _drawMilliseconds * 0.85 + milliseconds * 0.15;
     }
 }
