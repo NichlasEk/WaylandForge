@@ -12,33 +12,50 @@ internal sealed unsafe class ForgeApp : IDisposable
     private readonly ForgeInputSource _inputSource = new();
     private readonly FrameStore _frameStore = new();
     private readonly EmulatorViewport _viewport = new();
+    private readonly FrameClock _clock = new();
     private ForgeInput _lastInput;
+    private ForgeInput _previousInput;
+    private ulong _hostFrameIndex;
 
     public void Render(uint* pixels, int width, int height, int stridePixels, ulong frameIndex, ForgeInput input)
     {
-        _lastInput = input;
-        _inputSource.Update(input);
-        _core.StepFrame(_inputSource, _frameStore);
+        Update(input, frameIndex);
 
         _canvas.Bind(pixels, width, height, stridePixels);
+        Draw(width, height);
+    }
 
+    private void Update(ForgeInput input, ulong frameIndex)
+    {
+        _clock.Tick();
+        _lastInput = input;
+        _hostFrameIndex = frameIndex;
+        HandleHostShortcuts(input);
+
+        _inputSource.Update(input);
+        _core.StepFrame(_inputSource, _frameStore);
+        _previousInput = input;
+    }
+
+    private void Draw(int width, int height)
+    {
         _canvas.Clear(0xff111318);
         var layout = ForgeLayout.Calculate(width, height);
 
-        DrawChrome(layout, frameIndex);
+        DrawChrome(layout);
         DrawViewport(layout);
         if (layout.HasSidePanel)
         {
-            DrawDebugPanel(layout, frameIndex);
+            DrawDebugPanel(layout);
         }
-        DrawStatusBar(layout, input);
+        DrawStatusBar(layout);
     }
 
     public void Dispose()
     {
     }
 
-    private void DrawChrome(ForgeLayout layout, ulong frameIndex)
+    private void DrawChrome(ForgeLayout layout)
     {
         _canvas.FillRect(0, 0, layout.Width, TopBarHeight, 0xff1f252b);
         _canvas.FillRect(0, layout.Height - StatusBarHeight, layout.Width, StatusBarHeight, 0xff1f252b);
@@ -62,7 +79,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
         if (layout.Width >= 760)
         {
-            _canvas.DrawText(layout.Width - 174, 11, $"FRAME {frameIndex}", 0xff91a1ad);
+            _canvas.DrawText(layout.Width - 174, 11, $"FRAME {_hostFrameIndex}", 0xff91a1ad);
         }
     }
 
@@ -74,11 +91,11 @@ internal sealed unsafe class ForgeApp : IDisposable
         RectI content = _viewport.ContentRect;
         if (content.Bottom + 18 < layout.Height - StatusBarHeight)
         {
-            _canvas.DrawText(content.X, content.Bottom + 8, $"EMULATOR VIEWPORT {_frameStore.Width}X{_frameStore.Height} FIT SCALE", 0xff91a1ad);
+            _canvas.DrawText(content.X, content.Bottom + 8, $"EMULATOR VIEWPORT {_frameStore.Width}X{_frameStore.Height} {_viewport.ScaleMode.ToString().ToUpperInvariant()}", 0xff91a1ad);
         }
     }
 
-    private void DrawDebugPanel(ForgeLayout layout, ulong frameIndex)
+    private void DrawDebugPanel(ForgeLayout layout)
     {
         int x = layout.SidePanelX + 16;
         int y = 48;
@@ -90,7 +107,10 @@ internal sealed unsafe class ForgeApp : IDisposable
         DrawMetric(x, y, "FORMAT", "ARGB8888"); y += 18;
         DrawMetric(x, y, "CORE", "FAKE SATURN"); y += 18;
         DrawMetric(x, y, "SOURCE", $"{_frameStore.Width}X{_frameStore.Height}"); y += 18;
-        DrawMetric(x, y, "FRAME", frameIndex.ToString()); y += 26;
+        DrawMetric(x, y, "SCALE", _viewport.ScaleMode.ToString().ToUpperInvariant()); y += 18;
+        DrawMetric(x, y, "FPS", _clock.FramesPerSecond.ToString("0.0")); y += 18;
+        DrawMetric(x, y, "MS", _clock.FrameMilliseconds.ToString("0.00")); y += 18;
+        DrawMetric(x, y, "FRAME", _hostFrameIndex.ToString()); y += 26;
 
         _canvas.DrawText(x, y, "INPUT", 0xffe8edf2, 2);
         y += 28;
@@ -106,14 +126,35 @@ internal sealed unsafe class ForgeApp : IDisposable
         _canvas.DrawText(x, layout.Height - 60, "NO GTK QT SDL", 0xff91a1ad);
     }
 
-    private void DrawStatusBar(ForgeLayout layout, ForgeInput input)
+    private void DrawStatusBar(ForgeLayout layout)
     {
-        string inputText = input == ForgeInput.None ? "INPUT: NONE" : $"INPUT: {input}";
+        string inputText = _lastInput == ForgeInput.None ? "INPUT: NONE" : $"INPUT: {_lastInput}";
         _canvas.DrawText(12, layout.Height - 16, inputText.ToUpperInvariant(), 0xffc7d1d9);
         if (layout.Width >= 520)
         {
-            _canvas.DrawText(layout.Width - 235, layout.Height - 16, "WAYLAND FRAME CALLBACK DRIVEN", 0xff91a1ad);
+            _canvas.DrawText(layout.Width - 283, layout.Height - 16, "1 FIT 2 INTEGER 3 STRETCH", 0xff91a1ad);
         }
+    }
+
+    private void HandleHostShortcuts(ForgeInput input)
+    {
+        if (Pressed(input, ForgeInput.ScaleFit))
+        {
+            _viewport.ScaleMode = ViewportScaleMode.Fit;
+        }
+        else if (Pressed(input, ForgeInput.ScaleInteger))
+        {
+            _viewport.ScaleMode = ViewportScaleMode.Integer;
+        }
+        else if (Pressed(input, ForgeInput.ScaleStretch))
+        {
+            _viewport.ScaleMode = ViewportScaleMode.Stretch;
+        }
+    }
+
+    private bool Pressed(ForgeInput input, ForgeInput button)
+    {
+        return (input & button) != 0 && (_previousInput & button) == 0;
     }
 
     private void DrawMetric(int x, int y, string label, string value)

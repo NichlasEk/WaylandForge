@@ -8,7 +8,21 @@ internal sealed class ForgeInputSource : IInputSource
 
     public void Update(ForgeInput input)
     {
-        _state = new SaturnInputState((SaturnButtons)(uint)input);
+        const ForgeInput coreMask =
+            ForgeInput.Escape |
+            ForgeInput.Up |
+            ForgeInput.Down |
+            ForgeInput.Left |
+            ForgeInput.Right |
+            ForgeInput.Start |
+            ForgeInput.A |
+            ForgeInput.B |
+            ForgeInput.C |
+            ForgeInput.X |
+            ForgeInput.Y |
+            ForgeInput.Z;
+
+        _state = new SaturnInputState((SaturnButtons)(uint)(input & coreMask));
     }
 
     public SaturnInputState Poll() => _state;

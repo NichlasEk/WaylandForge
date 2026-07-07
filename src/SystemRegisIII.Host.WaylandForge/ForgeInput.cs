@@ -16,4 +16,7 @@ internal enum ForgeInput : uint
     X = 1 << 9,
     Y = 1 << 10,
     Z = 1 << 11,
+    ScaleFit = 1 << 12,
+    ScaleInteger = 1 << 13,
+    ScaleStretch = 1 << 14,
 }
