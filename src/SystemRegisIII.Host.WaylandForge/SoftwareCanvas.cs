@@ -109,7 +109,7 @@ internal sealed unsafe class SoftwareCanvas
         }
     }
 
-    private void PutPixel(int x, int y, uint color)
+    public void PutPixel(int x, int y, uint color)
     {
         if ((uint)x >= (uint)_width || (uint)y >= (uint)_height)
         {
