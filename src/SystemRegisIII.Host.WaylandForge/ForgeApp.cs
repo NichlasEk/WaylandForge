@@ -285,10 +285,6 @@ internal sealed unsafe class ForgeApp : IDisposable
     private void DrawChildWindows(ForgeLayout layout)
     {
         HandleTileEdit(layout);
-        if (!_pointer.LeftPressed && _tileDragWindow is not null)
-        {
-            _tileDragWindow = null;
-        }
         AppWindow? inputWindow = CapturedInputWindow() ?? HitTestTopWindow();
         foreach (AppWindow window in _windowOrder.ToArray())
         {
