@@ -33,6 +33,9 @@ internal sealed unsafe class ForgeApp : IDisposable
     private int _filePickerDragStartY;
     private int _filePickerDragWindowX;
     private int _filePickerDragWindowY;
+    private bool _filePickerVisualInitialized;
+    private double _filePickerVisualX;
+    private double _filePickerVisualY;
     private string? _romPath;
     private int _themeIndex;
 
@@ -260,18 +263,20 @@ internal sealed unsafe class ForgeApp : IDisposable
 
         int width = Math.Min(980, Math.Max(360, layout.Width - (layout.HasSidePanel ? SidePanelWidth + 80 : 48)));
         int height = Math.Min(680, Math.Max(320, layout.Height - 96));
-        RectI window = ResolveFilePickerWindow(layout, width, height);
-        RectI titleBar = new(window.X, window.Y, window.Width, 24);
-        RectI closeRect = new(window.Right - 28, window.Y + 4, 20, 16);
+        RectI targetWindow = ResolveFilePickerWindow(layout, width, height);
+        RectI hitWindow = CurrentFilePickerVisualWindow(targetWindow);
+        RectI titleBar = new(hitWindow.X, hitWindow.Y, hitWindow.Width, 24);
+        RectI closeRect = new(hitWindow.Right - 28, hitWindow.Y + 4, 20, 16);
 
-        HandleFilePickerDrag(layout, titleBar, closeRect, window);
-        window = _filePickerWindowRect ?? window;
+        HandleFilePickerDrag(layout, titleBar, closeRect, hitWindow);
+        targetWindow = _filePickerWindowRect ?? targetWindow;
+        RectI window = SmoothFilePickerVisualWindow(targetWindow);
         titleBar = new(window.X, window.Y, window.Width, 24);
         closeRect = new(window.Right - 28, window.Y + 4, 20, 16);
 
-        _canvas.FillRect(window.X - 8, window.Y - 8, window.Width + 16, window.Height + 16, 0xdd000000);
-        _canvas.FillRect(window.X, window.Y, window.Width, window.Height, _ui.Theme.Panel.Colors.Panel);
-        _canvas.FillRect(titleBar.X, titleBar.Y, titleBar.Width, titleBar.Height, _ui.Theme.Button.Colors.Surface);
+        DrawFloatingWindowBackplate(window);
+        _canvas.BlendRect(window.X, window.Y, window.Width, window.Height, _draggingFilePicker ? 0xee111820 : 0xf6111318);
+        _canvas.BlendRect(titleBar.X, titleBar.Y, titleBar.Width, titleBar.Height, _draggingFilePicker ? 0xd6355c7d : 0xee181d22);
         _canvas.DrawRect(window.X, window.Y, window.Width, window.Height, _ui.Theme.Button.Colors.BorderHot);
         _canvas.DrawLine(window.X, titleBar.Bottom, window.Right - 1, titleBar.Bottom, _ui.Theme.Button.Colors.Border);
         _ui.Text(titleBar.X + 10, titleBar.Y + 8, "ROM PICKER", _draggingFilePicker ? UiTextKind.Accent : UiTextKind.Normal);
@@ -304,6 +309,49 @@ internal sealed unsafe class ForgeApp : IDisposable
         window = ClampChildWindow(layout, window);
         _filePickerWindowRect = window;
         return window;
+    }
+
+    private RectI CurrentFilePickerVisualWindow(RectI target)
+    {
+        if (!_filePickerVisualInitialized)
+        {
+            _filePickerVisualX = target.X;
+            _filePickerVisualY = target.Y;
+            _filePickerVisualInitialized = true;
+        }
+
+        return target with { X = (int)Math.Round(_filePickerVisualX), Y = (int)Math.Round(_filePickerVisualY) };
+    }
+
+    private RectI SmoothFilePickerVisualWindow(RectI target)
+    {
+        if (!_filePickerVisualInitialized)
+        {
+            _filePickerVisualX = target.X;
+            _filePickerVisualY = target.Y;
+            _filePickerVisualInitialized = true;
+        }
+
+        double follow = _draggingFilePicker ? 0.46 : 0.28;
+        _filePickerVisualX += (target.X - _filePickerVisualX) * follow;
+        _filePickerVisualY += (target.Y - _filePickerVisualY) * follow;
+        if (Math.Abs(target.X - _filePickerVisualX) < 0.35)
+        {
+            _filePickerVisualX = target.X;
+        }
+        if (Math.Abs(target.Y - _filePickerVisualY) < 0.35)
+        {
+            _filePickerVisualY = target.Y;
+        }
+
+        return target with { X = (int)Math.Round(_filePickerVisualX), Y = (int)Math.Round(_filePickerVisualY) };
+    }
+
+    private void DrawFloatingWindowBackplate(RectI window)
+    {
+        _canvas.BlendRect(window.X - 14, window.Y - 10, window.Width + 28, window.Height + 24, 0x55000000);
+        _canvas.BlendRect(window.X - 8, window.Y - 6, window.Width + 16, window.Height + 14, 0x66000000);
+        _canvas.BlendRect(window.X - 3, window.Y - 3, window.Width + 6, window.Height + 6, 0x77283f52);
     }
 
     private void HandleFilePickerDrag(ForgeLayout layout, RectI titleBar, RectI closeRect, RectI window)

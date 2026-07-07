@@ -45,6 +45,44 @@ public sealed unsafe class SoftwareCanvas
         }
     }
 
+    public void BlendRect(int x, int y, int width, int height, uint color)
+    {
+        Clip(ref x, ref y, ref width, ref height);
+        if (width <= 0 || height <= 0)
+        {
+            return;
+        }
+
+        uint alpha = color >> 24;
+        if (alpha == 0)
+        {
+            return;
+        }
+
+        if (alpha == 255)
+        {
+            FillRect(x, y, width, height, color);
+            return;
+        }
+
+        uint invAlpha = 255 - alpha;
+        uint srcR = (color >> 16) & 0xff;
+        uint srcG = (color >> 8) & 0xff;
+        uint srcB = color & 0xff;
+        for (int row = 0; row < height; row++)
+        {
+            uint* dst = _pixels + ((y + row) * _stridePixels) + x;
+            for (int col = 0; col < width; col++)
+            {
+                uint dest = dst[col];
+                uint r = (srcR * alpha + ((dest >> 16) & 0xff) * invAlpha) / 255;
+                uint g = (srcG * alpha + ((dest >> 8) & 0xff) * invAlpha) / 255;
+                uint b = (srcB * alpha + (dest & 0xff) * invAlpha) / 255;
+                dst[col] = 0xff000000 | (r << 16) | (g << 8) | b;
+            }
+        }
+    }
+
     public void DrawRect(int x, int y, int width, int height, uint color)
     {
         DrawLine(x, y, x + width - 1, y, color);
