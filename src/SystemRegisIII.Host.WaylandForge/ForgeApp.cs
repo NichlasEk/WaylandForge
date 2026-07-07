@@ -40,6 +40,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     private bool _configDirty;
     private double _lastConfigSaveSeconds;
     private bool _resizingTileSplit;
+    private bool _resizingTileStackSplit;
     private AppWindow? _tileDragWindow;
     private RectI _tileDragRect;
     private int _tileResizeStartX;
@@ -798,6 +799,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         if (_config.WindowMode != UiWindowMode.Tiled || !IsTileEditModifierDown())
         {
             _resizingTileSplit = false;
+            _resizingTileStackSplit = false;
             return;
         }
 
@@ -805,6 +807,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         if (open.Length < 2)
         {
             _resizingTileSplit = false;
+            _resizingTileStackSplit = false;
             return;
         }
 
@@ -813,26 +816,55 @@ internal sealed unsafe class ForgeApp : IDisposable
         bool verticalSplit = open.Length == 2;
         int primaryWidth = TilePrimaryWidth(open[0], work, (int)Math.Round(work.Width * 0.64));
         int primaryHeight = TilePrimaryHeight(open[0], work, (int)Math.Round(work.Height * 0.60));
-        RectI divider = verticalSplit
+        RectI primaryDivider = verticalSplit
             ? new RectI(work.X + primaryWidth - 4, work.Y, 8 + gap, work.Height)
             : new RectI(work.X, work.Y + primaryHeight - 4, work.Width, 8 + gap);
 
-        if (_pointer.IsInside && divider.Contains(_pointer.X, _pointer.Y) && _pointer.LeftPressed && !_previousPointer.LeftPressed)
+        RectI rest = new(work.X, work.Y + primaryHeight + gap, work.Width, Math.Max(160, work.Height - primaryHeight - gap));
+        int stackWidth = open.Length == 3 ? TileStackWidth(open[1], rest, (rest.Width - gap) / 2) : 0;
+        RectI stackDivider = open.Length == 3
+            ? new RectI(rest.X + stackWidth - 4, rest.Y, 8 + gap, rest.Height)
+            : default;
+
+        if (_pointer.IsInside && _pointer.LeftPressed && !_previousPointer.LeftPressed)
         {
-            _resizingTileSplit = true;
-            _tileResizeStartX = _pointer.X;
-            _tileResizeStartY = _pointer.Y;
-            _tileResizeStartWidth = primaryWidth;
-            _tileResizeStartHeight = primaryHeight;
+            if (open.Length == 3 && stackDivider.Contains(_pointer.X, _pointer.Y))
+            {
+                _resizingTileSplit = true;
+                _resizingTileStackSplit = true;
+                _tileResizeStartX = _pointer.X;
+                _tileResizeStartY = _pointer.Y;
+                _tileResizeStartWidth = stackWidth;
+                _tileResizeStartHeight = primaryHeight;
+            }
+            else if (primaryDivider.Contains(_pointer.X, _pointer.Y))
+            {
+                _resizingTileSplit = true;
+                _resizingTileStackSplit = false;
+                _tileResizeStartX = _pointer.X;
+                _tileResizeStartY = _pointer.Y;
+                _tileResizeStartWidth = primaryWidth;
+                _tileResizeStartHeight = primaryHeight;
+            }
         }
 
         if (!_pointer.LeftPressed)
         {
             _resizingTileSplit = false;
+            _resizingTileStackSplit = false;
         }
 
         if (!_resizingTileSplit)
         {
+            return;
+        }
+
+        if (_resizingTileStackSplit && open.Length == 3)
+        {
+            UiWindowConfig stackConfig = _config.Window(WindowKey(open[1]));
+            int width = _tileResizeStartWidth + (_pointer.X - _tileResizeStartX);
+            stackConfig.Width = Math.Clamp(width, 220, Math.Max(220, rest.Width - 220));
+            MarkConfigDirty();
             return;
         }
 
@@ -920,6 +952,10 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
 
         RectI rest = new(work.X, work.Y + primaryHeight + gap, work.Width, Math.Max(160, work.Height - primaryHeight - gap));
+        if (open.Length == 3)
+        {
+            return StackPairTileRect(rest, index - 1, open[1], gap);
+        }
         return GridTileRect(rest, index - 1, open.Length - 1, gap);
     }
 
@@ -935,6 +971,21 @@ internal sealed unsafe class ForgeApp : IDisposable
         UiWindowConfig config = _config.Window(WindowKey(window));
         int preferred = config.Height > 0 ? config.Height : fallback;
         return Math.Clamp(preferred, 180, Math.Max(180, work.Height - 180));
+    }
+
+    private int TileStackWidth(AppWindow window, RectI area, int fallback)
+    {
+        UiWindowConfig config = _config.Window(WindowKey(window));
+        int preferred = config.Width > 0 ? config.Width : fallback;
+        return Math.Clamp(preferred, 220, Math.Max(220, area.Width - 220));
+    }
+
+    private RectI StackPairTileRect(RectI area, int index, AppWindow firstStackWindow, int gap)
+    {
+        int firstWidth = TileStackWidth(firstStackWindow, area, (area.Width - gap) / 2);
+        return index == 0
+            ? new RectI(area.X, area.Y, firstWidth, area.Height)
+            : new RectI(area.X + firstWidth + gap, area.Y, Math.Max(220, area.Width - firstWidth - gap), area.Height);
     }
 
     private AppWindow[] OpenTiledWindows()
@@ -1039,6 +1090,11 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
 
         RectI rest = new(work.X, work.Y + primaryHeight + gap, work.Width, Math.Max(160, work.Height - primaryHeight - gap));
+        AppWindow[] open = OpenTiledWindows();
+        if (openCount == 3 && open.Length >= 2)
+        {
+            return StackPairTileRect(rest, index - 1, open[1], gap);
+        }
         return GridTileRect(rest, index - 1, openCount - 1, gap);
     }
 
