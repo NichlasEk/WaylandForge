@@ -21,6 +21,8 @@ M1 is still intentionally narrow:
 - draw buttons through a reusable custom UI/style layer
 - draw panels/text through the same reusable UI layer
 - provide dark-first theme variants and simple row/column layout helpers
+- keep persistent widget state by `UiId`
+- expose collapsible UI sections and a tiny style-inspector section
 - expose toolbar controls for pause/run, reset, and single-step
 - close on ESC or compositor close
 

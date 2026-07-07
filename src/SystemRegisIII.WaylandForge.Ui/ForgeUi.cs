@@ -74,9 +74,20 @@ public sealed class UiTheme
 
 public readonly record struct UiButtonResult(bool Hovered, bool Pressed, bool Clicked);
 
+public readonly record struct UiId(string Value);
+
+internal sealed class UiWidgetState
+{
+    public bool IsOpen { get; set; } = true;
+}
+
 public sealed class UiContext
 {
     private readonly SoftwareCanvas _canvas;
+    private readonly Dictionary<string, UiWidgetState> _state = [];
+    private string? _hot;
+    private string? _active;
+    private string? _focused;
     private PointerState _pointer;
     private PointerState _previousPointer;
 
@@ -87,19 +98,40 @@ public sealed class UiContext
     }
 
     public UiTheme Theme { get; set; }
+    public string? Hot => _hot;
+    public string? Active => _active;
+    public string? Focused => _focused;
 
     public void BeginFrame(PointerState pointer, PointerState previousPointer)
     {
+        _hot = null;
         _pointer = pointer;
         _previousPointer = previousPointer;
     }
 
     public UiButtonResult Button(RectI rect, string label, bool active = false)
     {
+        return Button(new UiId(label), rect, label, active);
+    }
+
+    public UiButtonResult Button(UiId id, RectI rect, string label, bool active = false)
+    {
         UiButtonStyle style = Theme.Button;
         bool hovered = _pointer.IsInside && rect.Contains(_pointer.X, _pointer.Y);
         bool pressed = hovered && _pointer.LeftPressed;
         bool clicked = hovered && _pointer.LeftPressed && !_previousPointer.LeftPressed;
+        if (hovered)
+        {
+            _hot = id.Value;
+        }
+        if (pressed)
+        {
+            _active = id.Value;
+        }
+        if (clicked)
+        {
+            _focused = id.Value;
+        }
 
         uint fill = active ? style.Colors.SurfaceActive : hovered ? style.Colors.SurfaceHot : style.Colors.Surface;
         uint border = active ? style.Colors.BorderActive : hovered ? style.Colors.BorderHot : style.Colors.Border;
@@ -125,6 +157,11 @@ public sealed class UiContext
     public bool ToggleButton(RectI rect, string label, bool active)
     {
         return Button(rect, label, active).Clicked;
+    }
+
+    public bool ToggleButton(UiId id, RectI rect, string label, bool active)
+    {
+        return Button(id, rect, label, active).Clicked;
     }
 
     public RectI Panel(RectI rect, string? title = null)
@@ -158,6 +195,38 @@ public sealed class UiContext
             _ => style.Colors.Text,
         };
         _canvas.DrawText(x, y, text, color, scale ?? style.Scale);
+    }
+
+    public bool Collapsible(UiId id, ref UiColumn column, string title, int openHeight, out RectI content)
+    {
+        UiWidgetState state = GetState(id);
+        int headerHeight = 17;
+        column = column.Next(headerHeight, out RectI header);
+        string glyph = state.IsOpen ? "-" : "+";
+        if (Button(id, header, $"{glyph} {title}", state.IsOpen).Clicked)
+        {
+            state.IsOpen = !state.IsOpen;
+        }
+
+        if (!state.IsOpen)
+        {
+            content = new RectI(header.X, header.Bottom, header.Width, 0);
+            return false;
+        }
+
+        column = column.Next(openHeight, out content);
+        return true;
+    }
+
+    private UiWidgetState GetState(UiId id)
+    {
+        if (!_state.TryGetValue(id.Value, out UiWidgetState? state))
+        {
+            state = new UiWidgetState();
+            _state[id.Value] = state;
+        }
+
+        return state;
     }
 }
 

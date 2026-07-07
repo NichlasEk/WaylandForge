@@ -159,35 +159,53 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         RectI content = _ui.Panel(
             new RectI(layout.SidePanelX + 8, TopBarHeight + 8, SidePanelWidth - 16, layout.Height - TopBarHeight - StatusBarHeight - 16),
-            "HOST");
-        int x = content.X;
-        int y = content.Y;
-        DrawMetric(x, y, "BACKEND", "WAYLAND"); y += 18;
-        DrawMetric(x, y, "BUFFER", "WL_SHM X2"); y += 18;
-        DrawMetric(x, y, "FORMAT", "ARGB8888"); y += 18;
-        DrawMetric(x, y, "CORE", "FAKE SATURN"); y += 18;
-        DrawMetric(x, y, "RUN", _paused ? "PAUSED" : "RUNNING"); y += 18;
-        DrawMetric(x, y, "SOURCE", $"{_frameStore.Width}X{_frameStore.Height}"); y += 18;
-        DrawMetric(x, y, "CFRAME", _core.FrameIndex.ToString()); y += 18;
-        DrawMetric(x, y, "SCALE", _viewport.ScaleMode.ToString().ToUpperInvariant()); y += 18;
-        DrawMetric(x, y, "FPS", _clock.FramesPerSecond.ToString("0.0")); y += 18;
-        DrawMetric(x, y, "MS", _clock.FrameMilliseconds.ToString("0.00")); y += 18;
-        DrawMetric(x, y, "PTR", _pointer.IsInside ? $"{_pointer.X},{_pointer.Y}" : "OUT"); y += 18;
-        DrawMetric(x, y, "MBTN", _pointer.Buttons.ToString().ToUpperInvariant()); y += 18;
-        DrawMetric(x, y, "FRAME", _hostFrameIndex.ToString()); y += 26;
+            "DEBUG");
+        var column = new UiColumn(content.X, content.Y, content.Width, 5);
 
-        _ui.Text(x, y, "INPUT", scale: 2);
-        y += 28;
-        DrawInputLamp(x, y, "UP", ForgeInput.Up); y += 16;
-        DrawInputLamp(x, y, "DOWN", ForgeInput.Down); y += 16;
-        DrawInputLamp(x, y, "LEFT", ForgeInput.Left); y += 16;
-        DrawInputLamp(x, y, "RIGHT", ForgeInput.Right); y += 16;
-        DrawInputLamp(x, y, "START", ForgeInput.Start); y += 16;
-        DrawInputLamp(x, y, "A B C", ForgeInput.A | ForgeInput.B | ForgeInput.C); y += 16;
-        DrawInputLamp(x, y, "X Y Z", ForgeInput.X | ForgeInput.Y | ForgeInput.Z);
+        if (_ui.Collapsible(new UiId("debug.host"), ref column, "HOST", 168, out RectI hostSection))
+        {
+            int x = hostSection.X;
+            int y = hostSection.Y;
+            DrawMetric(x, y, "BACKEND", "WAYLAND"); y += 18;
+            DrawMetric(x, y, "BUFFER", "WL_SHM X2"); y += 18;
+            DrawMetric(x, y, "FORMAT", "ARGB8888"); y += 18;
+            DrawMetric(x, y, "CORE", "FAKE SATURN"); y += 18;
+            DrawMetric(x, y, "RUN", _paused ? "PAUSED" : "RUNNING"); y += 18;
+            DrawMetric(x, y, "SOURCE", $"{_frameStore.Width}X{_frameStore.Height}"); y += 18;
+            DrawMetric(x, y, "CFRAME", _core.FrameIndex.ToString()); y += 18;
+            DrawMetric(x, y, "SCALE", _viewport.ScaleMode.ToString().ToUpperInvariant()); y += 18;
+            DrawMetric(x, y, "FPS", _clock.FramesPerSecond.ToString("0.0")); y += 18;
+        }
 
-        _ui.Text(x, layout.Height - 78, "ESC CLOSES", UiTextKind.Accent);
-        _ui.Text(x, layout.Height - 60, "NO GTK QT SDL", UiTextKind.Muted);
+        if (_ui.Collapsible(new UiId("debug.input"), ref column, "INPUT", 142, out RectI inputSection))
+        {
+            int x = inputSection.X;
+            int y = inputSection.Y;
+            DrawMetric(x, y, "PTR", _pointer.IsInside ? $"{_pointer.X},{_pointer.Y}" : "OUT"); y += 18;
+            DrawMetric(x, y, "MBTN", _pointer.Buttons.ToString().ToUpperInvariant()); y += 20;
+            DrawInputLamp(x, y, "UP", ForgeInput.Up); y += 16;
+            DrawInputLamp(x, y, "DOWN", ForgeInput.Down); y += 16;
+            DrawInputLamp(x, y, "LEFT", ForgeInput.Left); y += 16;
+            DrawInputLamp(x, y, "RIGHT", ForgeInput.Right); y += 16;
+            DrawInputLamp(x, y, "START", ForgeInput.Start); y += 16;
+            DrawInputLamp(x, y, "A B C", ForgeInput.A | ForgeInput.B | ForgeInput.C); y += 16;
+            DrawInputLamp(x, y, "X Y Z", ForgeInput.X | ForgeInput.Y | ForgeInput.Z);
+        }
+
+        if (_ui.Collapsible(new UiId("debug.style"), ref column, "STYLE", 78, out RectI styleSection))
+        {
+            int x = styleSection.X;
+            int y = styleSection.Y;
+            DrawMetric(x, y, "THEME", _ui.Theme.Name); y += 18;
+            DrawMetric(x, y, "BORDER", _ui.Theme.Button.BorderThickness.ToString()); y += 18;
+            DrawMetric(x, y, "HOT", _ui.Hot ?? "-"); y += 18;
+            DrawMetric(x, y, "ACTIVE", _ui.Active ?? "-"); y += 18;
+            _canvas.FillRect(x + 112, styleSection.Y + 18, 18, 10, _ui.Theme.Button.Colors.Accent);
+            _canvas.DrawRect(x + 112, styleSection.Y + 18, 18, 10, _ui.Theme.Button.Colors.BorderHot);
+        }
+
+        _ui.Text(content.X, layout.Height - 78, "ESC CLOSES", UiTextKind.Accent);
+        _ui.Text(content.X, layout.Height - 60, "NO GTK QT SDL", UiTextKind.Muted);
     }
 
     private void DrawStatusBar(ForgeLayout layout)
