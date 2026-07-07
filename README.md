@@ -23,6 +23,8 @@ M1 is still intentionally narrow:
 - provide dark-first theme variants and simple row/column layout helpers
 - keep persistent widget state by `UiId`
 - expose collapsible UI sections and a tiny style-inspector section
+- expose text boxes with focus, cursor, numeric/password options, and basic editing
+- expose clipped scroll areas with wheel input and a scrollbar
 - expose toolbar controls for pause/run, reset, and single-step
 - close on ESC or compositor close
 
@@ -34,6 +36,8 @@ Current keyboard mapping:
 - A/S/D: X/Y/Z
 - 1/2/3: viewport scale mode fit/integer/stretch
 - T: cycle UI theme
+- text boxes: click to focus, type, backspace, enter to submit
+- mouse wheel: scroll clipped panels
 - mouse: hover/click the scale toggles
 - mouse: use the toolbar buttons for pause/run, reset, and step
 - ESC: quit

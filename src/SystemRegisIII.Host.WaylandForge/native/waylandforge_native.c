@@ -23,7 +23,11 @@ typedef void (*waylandforge_render_callback)(
     int32_t pointer_x,
     int32_t pointer_y,
     uint32_t pointer_buttons,
-    uint32_t pointer_inside);
+    uint32_t pointer_inside,
+    uint32_t key_code,
+    uint32_t key_serial,
+    int32_t scroll_delta,
+    uint32_t scroll_serial);
 
 enum {
     WAYLANDFORGE_INPUT_ESCAPE = 1u << 0,
@@ -81,6 +85,10 @@ struct waylandforge_app {
     int32_t pointer_y;
     uint32_t pointer_buttons;
     uint32_t pointer_inside;
+    uint32_t key_code;
+    uint32_t key_serial;
+    int32_t scroll_delta;
+    uint32_t scroll_serial;
     uint64_t frame_index;
     waylandforge_render_callback render;
 };
@@ -197,7 +205,12 @@ static void draw_and_commit(struct waylandforge_app *app)
         app->pointer_x,
         app->pointer_y,
         app->pointer_buttons,
-        app->pointer_inside);
+        app->pointer_inside,
+        app->key_code,
+        app->key_serial,
+        app->scroll_delta,
+        app->scroll_serial);
+    app->scroll_delta = 0;
     target->busy = 1;
 
     wl_surface_attach(app->surface, target->buffer, 0, 0);
@@ -367,6 +380,11 @@ static void keyboard_key(void *data, struct wl_keyboard *keyboard, uint32_t seri
         }
     }
 
+    if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
+        app->key_code = key;
+        app->key_serial++;
+    }
+
     if (key == KEY_ESC && state == WL_KEYBOARD_KEY_STATE_PRESSED) {
         app->running = 0;
     }
@@ -466,11 +484,18 @@ static void pointer_button(void *data, struct wl_pointer *pointer, uint32_t seri
 
 static void pointer_axis(void *data, struct wl_pointer *pointer, uint32_t time_ms, uint32_t axis, wl_fixed_t value)
 {
-    (void)data;
     (void)pointer;
     (void)time_ms;
-    (void)axis;
-    (void)value;
+
+    struct waylandforge_app *app = data;
+    if (axis == WL_POINTER_AXIS_VERTICAL_SCROLL) {
+        int delta = wl_fixed_to_int(value);
+        if (delta == 0) {
+            delta = value > 0 ? 1 : -1;
+        }
+        app->scroll_delta += delta * 18;
+        app->scroll_serial++;
+    }
 }
 
 static void pointer_frame(void *data, struct wl_pointer *pointer)

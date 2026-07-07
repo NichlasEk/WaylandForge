@@ -20,6 +20,8 @@ internal sealed unsafe class ForgeApp : IDisposable
     private ForgeInput _previousInput;
     private PointerState _pointer;
     private PointerState _previousPointer;
+    private TextInputEvent _textInput;
+    private ScrollInputEvent _scrollInput;
     private ulong _hostFrameIndex;
     private bool _paused;
     private bool _stepRequested;
@@ -30,20 +32,22 @@ internal sealed unsafe class ForgeApp : IDisposable
         _ui = new UiContext(_canvas, UiTheme.Default);
     }
 
-    public void Render(uint* pixels, int width, int height, int stridePixels, ulong frameIndex, ForgeInput input, PointerState pointer)
+    public void Render(uint* pixels, int width, int height, int stridePixels, ulong frameIndex, ForgeInput input, PointerState pointer, TextInputEvent textInput, ScrollInputEvent scrollInput)
     {
-        Update(input, pointer, frameIndex);
+        Update(input, pointer, textInput, scrollInput, frameIndex);
 
         _canvas.Bind(pixels, width, height, stridePixels);
         Draw(width, height);
         _previousPointer = pointer;
     }
 
-    private void Update(ForgeInput input, PointerState pointer, ulong frameIndex)
+    private void Update(ForgeInput input, PointerState pointer, TextInputEvent textInput, ScrollInputEvent scrollInput, ulong frameIndex)
     {
         _clock.Tick();
         _lastInput = input;
         _pointer = pointer;
+        _textInput = textInput;
+        _scrollInput = scrollInput;
         _hostFrameIndex = frameIndex;
         HandleHostShortcuts(input);
 
@@ -59,7 +63,7 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private void Draw(int width, int height)
     {
-        _ui.BeginFrame(_pointer, _previousPointer);
+        _ui.BeginFrame(_pointer, _previousPointer, _textInput, _scrollInput);
         _canvas.Clear(_ui.Theme.Panel.Colors.Panel);
         var layout = ForgeLayout.Calculate(width, height);
 
@@ -160,48 +164,56 @@ internal sealed unsafe class ForgeApp : IDisposable
         RectI content = _ui.Panel(
             new RectI(layout.SidePanelX + 8, TopBarHeight + 8, SidePanelWidth - 16, layout.Height - TopBarHeight - StatusBarHeight - 16),
             "DEBUG");
-        var column = new UiColumn(content.X, content.Y, content.Width, 5);
-
-        if (_ui.Collapsible(new UiId("debug.host"), ref column, "HOST", 168, out RectI hostSection))
+        using (UiScrollArea scroll = _ui.BeginScrollArea(new UiId("debug.scroll"), content, 520))
         {
-            int x = hostSection.X;
-            int y = hostSection.Y;
-            DrawMetric(x, y, "BACKEND", "WAYLAND"); y += 18;
-            DrawMetric(x, y, "BUFFER", "WL_SHM X2"); y += 18;
-            DrawMetric(x, y, "FORMAT", "ARGB8888"); y += 18;
-            DrawMetric(x, y, "CORE", "FAKE SATURN"); y += 18;
-            DrawMetric(x, y, "RUN", _paused ? "PAUSED" : "RUNNING"); y += 18;
-            DrawMetric(x, y, "SOURCE", $"{_frameStore.Width}X{_frameStore.Height}"); y += 18;
-            DrawMetric(x, y, "CFRAME", _core.FrameIndex.ToString()); y += 18;
-            DrawMetric(x, y, "SCALE", _viewport.ScaleMode.ToString().ToUpperInvariant()); y += 18;
-            DrawMetric(x, y, "FPS", _clock.FramesPerSecond.ToString("0.0")); y += 18;
-        }
+            var column = new UiColumn(scroll.Content.X, scroll.Content.Y, scroll.Content.Width, 5);
 
-        if (_ui.Collapsible(new UiId("debug.input"), ref column, "INPUT", 142, out RectI inputSection))
-        {
-            int x = inputSection.X;
-            int y = inputSection.Y;
-            DrawMetric(x, y, "PTR", _pointer.IsInside ? $"{_pointer.X},{_pointer.Y}" : "OUT"); y += 18;
-            DrawMetric(x, y, "MBTN", _pointer.Buttons.ToString().ToUpperInvariant()); y += 20;
-            DrawInputLamp(x, y, "UP", ForgeInput.Up); y += 16;
-            DrawInputLamp(x, y, "DOWN", ForgeInput.Down); y += 16;
-            DrawInputLamp(x, y, "LEFT", ForgeInput.Left); y += 16;
-            DrawInputLamp(x, y, "RIGHT", ForgeInput.Right); y += 16;
-            DrawInputLamp(x, y, "START", ForgeInput.Start); y += 16;
-            DrawInputLamp(x, y, "A B C", ForgeInput.A | ForgeInput.B | ForgeInput.C); y += 16;
-            DrawInputLamp(x, y, "X Y Z", ForgeInput.X | ForgeInput.Y | ForgeInput.Z);
-        }
+            if (_ui.Collapsible(new UiId("debug.host"), ref column, "HOST", 168, out RectI hostSection))
+            {
+                int x = hostSection.X;
+                int y = hostSection.Y;
+                DrawMetric(x, y, "BACKEND", "WAYLAND"); y += 18;
+                DrawMetric(x, y, "BUFFER", "WL_SHM X2"); y += 18;
+                DrawMetric(x, y, "FORMAT", "ARGB8888"); y += 18;
+                DrawMetric(x, y, "CORE", "FAKE SATURN"); y += 18;
+                DrawMetric(x, y, "RUN", _paused ? "PAUSED" : "RUNNING"); y += 18;
+                DrawMetric(x, y, "SOURCE", $"{_frameStore.Width}X{_frameStore.Height}"); y += 18;
+                DrawMetric(x, y, "CFRAME", _core.FrameIndex.ToString()); y += 18;
+                DrawMetric(x, y, "SCALE", _viewport.ScaleMode.ToString().ToUpperInvariant()); y += 18;
+                DrawMetric(x, y, "FPS", _clock.FramesPerSecond.ToString("0.0")); y += 18;
+            }
 
-        if (_ui.Collapsible(new UiId("debug.style"), ref column, "STYLE", 78, out RectI styleSection))
-        {
-            int x = styleSection.X;
-            int y = styleSection.Y;
-            DrawMetric(x, y, "THEME", _ui.Theme.Name); y += 18;
-            DrawMetric(x, y, "BORDER", _ui.Theme.Button.BorderThickness.ToString()); y += 18;
-            DrawMetric(x, y, "HOT", _ui.Hot ?? "-"); y += 18;
-            DrawMetric(x, y, "ACTIVE", _ui.Active ?? "-"); y += 18;
-            _canvas.FillRect(x + 112, styleSection.Y + 18, 18, 10, _ui.Theme.Button.Colors.Accent);
-            _canvas.DrawRect(x + 112, styleSection.Y + 18, 18, 10, _ui.Theme.Button.Colors.BorderHot);
+            if (_ui.Collapsible(new UiId("debug.input"), ref column, "INPUT", 142, out RectI inputSection))
+            {
+                int x = inputSection.X;
+                int y = inputSection.Y;
+                DrawMetric(x, y, "PTR", _pointer.IsInside ? $"{_pointer.X},{_pointer.Y}" : "OUT"); y += 18;
+                DrawMetric(x, y, "MBTN", _pointer.Buttons.ToString().ToUpperInvariant()); y += 20;
+                DrawInputLamp(x, y, "UP", ForgeInput.Up); y += 16;
+                DrawInputLamp(x, y, "DOWN", ForgeInput.Down); y += 16;
+                DrawInputLamp(x, y, "LEFT", ForgeInput.Left); y += 16;
+                DrawInputLamp(x, y, "RIGHT", ForgeInput.Right); y += 16;
+                DrawInputLamp(x, y, "START", ForgeInput.Start); y += 16;
+                DrawInputLamp(x, y, "A B C", ForgeInput.A | ForgeInput.B | ForgeInput.C); y += 16;
+                DrawInputLamp(x, y, "X Y Z", ForgeInput.X | ForgeInput.Y | ForgeInput.Z);
+            }
+
+            if (_ui.Collapsible(new UiId("debug.style"), ref column, "STYLE", 136, out RectI styleSection))
+            {
+                int x = styleSection.X;
+                int y = styleSection.Y;
+                DrawMetric(x, y, "THEME", _ui.Theme.Name); y += 18;
+                DrawMetric(x, y, "BORDER", _ui.Theme.Button.BorderThickness.ToString()); y += 18;
+                DrawMetric(x, y, "HOT", _ui.Hot ?? "-"); y += 18;
+                DrawMetric(x, y, "ACTIVE", _ui.Active ?? "-"); y += 18;
+                DrawMetric(x, y, "FOCUS", _ui.Focused ?? "-"); y += 22;
+                _ui.Text(x, y, "LABEL", UiTextKind.Muted); y += 12;
+                _ui.TextBox(new UiId("style.label"), new RectI(x, y, styleSection.Width - 4, 18), "saturn", "label", new UiTextBoxOptions(MaxLength: 18)); y += 24;
+                _ui.Text(x, y, "NUM", UiTextKind.Muted); y += 12;
+                _ui.TextBox(new UiId("style.numeric"), new RectI(x, y, 72, 18), "320", "0", new UiTextBoxOptions(Numeric: true, MaxLength: 6));
+                _canvas.FillRect(x + 112, y + 4, 18, 10, _ui.Theme.Button.Colors.Accent);
+                _canvas.DrawRect(x + 112, y + 4, 18, 10, _ui.Theme.Button.Colors.BorderHot);
+            }
         }
 
         _ui.Text(content.X, layout.Height - 78, "ESC CLOSES", UiTextKind.Accent);

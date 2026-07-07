@@ -4,7 +4,7 @@ using SystemRegisIII.WaylandForge.Ui;
 
 namespace SystemRegisIII.Host.WaylandForge;
 
-internal unsafe delegate void RenderFrame(uint* pixels, int width, int height, int stridePixels, ulong frameIndex, ForgeInput input, PointerState pointer);
+internal unsafe delegate void RenderFrame(uint* pixels, int width, int height, int stridePixels, ulong frameIndex, ForgeInput input, PointerState pointer, TextInputEvent textInput, ScrollInputEvent scrollInput);
 
 internal static unsafe class WaylandWindow
 {
@@ -34,10 +34,16 @@ internal static unsafe class WaylandWindow
         int pointerX,
         int pointerY,
         uint pointerButtons,
-        uint pointerInside)
+        uint pointerInside,
+        uint keyCode,
+        uint keySerial,
+        int scrollDelta,
+        uint scrollSerial)
     {
         var pointer = new PointerState(pointerX, pointerY, (PointerButtons)pointerButtons, pointerInside != 0);
-        s_render?.Invoke(pixels, width, height, stridePixels, frameIndex, (ForgeInput)inputMask, pointer);
+        var textInput = new TextInputEvent(keyCode, keySerial);
+        var scrollInput = new ScrollInputEvent(scrollDelta, scrollSerial);
+        s_render?.Invoke(pixels, width, height, stridePixels, frameIndex, (ForgeInput)inputMask, pointer, textInput, scrollInput);
     }
 }
 
@@ -48,5 +54,5 @@ internal static unsafe partial class Native
         int width,
         int height,
         string title,
-        delegate* unmanaged[Cdecl]<uint*, int, int, int, ulong, uint, int, int, uint, uint, void> render);
+        delegate* unmanaged[Cdecl]<uint*, int, int, int, ulong, uint, int, int, uint, uint, uint, uint, int, uint, void> render);
 }

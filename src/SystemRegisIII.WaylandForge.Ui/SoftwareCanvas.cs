@@ -6,6 +6,8 @@ public sealed unsafe class SoftwareCanvas
     private int _width;
     private int _height;
     private int _stridePixels;
+    private RectI _clip;
+    private readonly Stack<RectI> _clipStack = new();
 
     public int Width => _width;
     public int Height => _height;
@@ -16,6 +18,8 @@ public sealed unsafe class SoftwareCanvas
         _width = width;
         _height = height;
         _stridePixels = stridePixels;
+        _clip = new RectI(0, 0, width, height);
+        _clipStack.Clear();
     }
 
     public void Clear(uint color)
@@ -136,6 +140,17 @@ public sealed unsafe class SoftwareCanvas
         }
     }
 
+    public IDisposable PushClip(RectI rect)
+    {
+        _clipStack.Push(_clip);
+        int x = Math.Max(_clip.X, rect.X);
+        int y = Math.Max(_clip.Y, rect.Y);
+        int right = Math.Min(_clip.Right, rect.Right);
+        int bottom = Math.Min(_clip.Bottom, rect.Bottom);
+        _clip = new RectI(x, y, Math.Max(0, right - x), Math.Max(0, bottom - y));
+        return new ClipScope(this);
+    }
+
     private void DrawGlyph(int x, int y, char ch, uint color, int scale)
     {
         ReadOnlySpan<byte> glyph = Font5x7.Get(ch);
@@ -154,7 +169,7 @@ public sealed unsafe class SoftwareCanvas
 
     public void PutPixel(int x, int y, uint color)
     {
-        if ((uint)x >= (uint)_width || (uint)y >= (uint)_height)
+        if ((uint)x >= (uint)_width || (uint)y >= (uint)_height || !_clip.Contains(x, y))
         {
             return;
         }
@@ -164,26 +179,47 @@ public sealed unsafe class SoftwareCanvas
 
     private void Clip(ref int x, ref int y, ref int width, ref int height)
     {
-        if (x < 0)
+        if (x < _clip.X)
         {
-            width += x;
-            x = 0;
+            width -= _clip.X - x;
+            x = _clip.X;
         }
 
-        if (y < 0)
+        if (y < _clip.Y)
         {
-            height += y;
-            y = 0;
+            height -= _clip.Y - y;
+            y = _clip.Y;
         }
 
-        if (x + width > _width)
+        if (x + width > _clip.Right)
         {
-            width = _width - x;
+            width = _clip.Right - x;
         }
 
-        if (y + height > _height)
+        if (y + height > _clip.Bottom)
         {
-            height = _height - y;
+            height = _clip.Bottom - y;
+        }
+    }
+
+    private void PopClip()
+    {
+        _clip = _clipStack.Count > 0 ? _clipStack.Pop() : new RectI(0, 0, _width, _height);
+    }
+
+    private sealed class ClipScope : IDisposable
+    {
+        private SoftwareCanvas? _canvas;
+
+        public ClipScope(SoftwareCanvas canvas)
+        {
+            _canvas = canvas;
+        }
+
+        public void Dispose()
+        {
+            _canvas?.PopClip();
+            _canvas = null;
         }
     }
 }
