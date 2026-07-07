@@ -1,0 +1,30 @@
+# WaylandForge UI defaults. Runtime changes are written to waylandforge.ui.local.toml.
+
+[ui]
+window_mode = "tiled" # tiled | floating | mixed
+theme = "dark"
+scale = "fit" # fit | integer | stretch
+
+[ui.tile]
+primary = "viewport"
+right_stack = "debug,settings"
+bottom_stack = ""
+rom_picker = "center" # floating | right | bottom | center
+
+[ui.windows.settings]
+open = false
+slot = "right"
+order = 10
+x = 0
+y = 0
+width = 360
+height = 330
+
+[ui.windows.rom_picker]
+open = false
+slot = "center"
+order = 20
+x = 0
+y = 0
+width = 980
+height = 680

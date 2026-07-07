@@ -9,6 +9,8 @@ internal sealed unsafe class ForgeApp : IDisposable
     private const int StatusBarHeight = 24;
     private const int SidePanelWidth = 184;
     private const int MinimumWidthForSidePanel = 560;
+    private const string DefaultConfigPath = "config/waylandforge.ui.toml";
+    private const string LocalConfigPath = "config/waylandforge.ui.local.toml";
 
     private readonly SoftwareCanvas _canvas = new();
     private readonly FakeSaturnCore _core = new();
@@ -18,6 +20,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     private readonly FrameClock _clock = new();
     private readonly UiContext _ui;
     private readonly UiFilePicker _filePicker = new();
+    private readonly UiConfig _config;
     private ForgeInput _lastInput;
     private ForgeInput _previousInput;
     private PointerState _pointer;
@@ -32,10 +35,14 @@ internal sealed unsafe class ForgeApp : IDisposable
     private readonly List<AppWindow> _windowOrder = [AppWindow.Settings, AppWindow.Rom];
     private string? _romPath;
     private int _themeIndex;
+    private bool _configDirty;
+    private double _lastConfigSaveSeconds;
 
     public ForgeApp()
     {
         _ui = new UiContext(_canvas, UiTheme.Default);
+        _config = UiConfig.Load(DefaultConfigPath, LocalConfigPath);
+        ApplyConfig();
     }
 
     public void Render(uint* pixels, int width, int height, int stridePixels, ulong frameIndex, ForgeInput input, PointerState pointer, TextInputEvent textInput, ScrollInputEvent scrollInput)
@@ -66,6 +73,7 @@ internal sealed unsafe class ForgeApp : IDisposable
             _stepRequested = false;
         }
 
+        SaveConfigIfDue();
         _previousInput = input;
     }
 
@@ -89,6 +97,7 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     public void Dispose()
     {
+        SaveConfig(force: false);
     }
 
     private void DrawChrome(ForgeLayout layout)
@@ -292,6 +301,10 @@ internal sealed unsafe class ForgeApp : IDisposable
         {
             BringToFront(AppWindow.Rom);
         }
+        if (window.Dragging)
+        {
+            MarkConfigDirty();
+        }
         if (!window.IsOpen || window.Closed)
         {
             return;
@@ -304,10 +317,12 @@ internal sealed unsafe class ForgeApp : IDisposable
             {
                 _romPath = result.SelectedPath;
                 _filePickerWindow.IsOpen = false;
+                MarkConfigDirty();
             }
             else if (result.Cancelled)
             {
                 _filePickerWindow.IsOpen = false;
+                MarkConfigDirty();
             }
         }
     }
@@ -327,6 +342,10 @@ internal sealed unsafe class ForgeApp : IDisposable
         {
             BringToFront(AppWindow.Settings);
         }
+        if (window.Dragging)
+        {
+            MarkConfigDirty();
+        }
         if (!window.IsOpen || window.Closed)
         {
             return;
@@ -337,22 +356,41 @@ internal sealed unsafe class ForgeApp : IDisposable
         _ui.Panel(content);
         var column = new UiColumn(content.X + 10, content.Y + 10, Math.Max(1, content.Width - 20), 8);
 
+        _ui.Text(column.X, column.NextY, "WINDOW MODE", UiTextKind.Muted); column = column with { NextY = column.NextY + 14 };
+        var modeRow = new UiRow(column.X, column.NextY, 18, 6);
+        modeRow = modeRow.Next(62, out RectI tiledRect);
+        if (_ui.ToggleButton(new UiId("settings.mode.tiled"), tiledRect, "TILE", _config.WindowMode == UiWindowMode.Tiled))
+        {
+            SetWindowMode(UiWindowMode.Tiled);
+        }
+        modeRow = modeRow.Next(62, out RectI floatRect);
+        if (_ui.ToggleButton(new UiId("settings.mode.float"), floatRect, "FLOAT", _config.WindowMode == UiWindowMode.Floating))
+        {
+            SetWindowMode(UiWindowMode.Floating);
+        }
+        modeRow = modeRow.Next(58, out RectI mixedRect);
+        if (_ui.ToggleButton(new UiId("settings.mode.mixed"), mixedRect, "MIX", _config.WindowMode == UiWindowMode.Mixed))
+        {
+            SetWindowMode(UiWindowMode.Mixed);
+        }
+        column = column with { NextY = column.NextY + 34 };
+
         _ui.Text(column.X, column.NextY, "SCALE", UiTextKind.Muted); column = column with { NextY = column.NextY + 14 };
         var scaleRow = new UiRow(column.X, column.NextY, 18, 6);
         scaleRow = scaleRow.Next(58, out RectI fitRect);
         if (_ui.ToggleButton(new UiId("settings.scale.fit"), fitRect, "FIT", _viewport.ScaleMode == ViewportScaleMode.Fit))
         {
-            _viewport.ScaleMode = ViewportScaleMode.Fit;
+            SetScaleMode(ViewportScaleMode.Fit);
         }
         scaleRow = scaleRow.Next(58, out RectI intRect);
         if (_ui.ToggleButton(new UiId("settings.scale.int"), intRect, "INT", _viewport.ScaleMode == ViewportScaleMode.Integer))
         {
-            _viewport.ScaleMode = ViewportScaleMode.Integer;
+            SetScaleMode(ViewportScaleMode.Integer);
         }
         scaleRow = scaleRow.Next(58, out RectI stretchRect);
         if (_ui.ToggleButton(new UiId("settings.scale.str"), stretchRect, "STR", _viewport.ScaleMode == ViewportScaleMode.Stretch))
         {
-            _viewport.ScaleMode = ViewportScaleMode.Stretch;
+            SetScaleMode(ViewportScaleMode.Stretch);
         }
         column = column with { NextY = column.NextY + 34 };
 
@@ -364,8 +402,7 @@ internal sealed unsafe class ForgeApp : IDisposable
             themeRow = themeRow.Next(58, out RectI themeRect);
             if (_ui.ToggleButton(new UiId("settings.theme." + theme.Name), themeRect, theme.Name, _themeIndex == i))
             {
-                _themeIndex = i;
-                _ui.Theme = UiTheme.BuiltIns[_themeIndex];
+                SetTheme(i);
             }
         }
         column = column with { NextY = column.NextY + 36 };
@@ -376,6 +413,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         DrawMetric(column.X, column.NextY, "DRAW MS", _clock.DrawMilliseconds.ToString("0.0")); column = column with { NextY = column.NextY + 28 };
 
         _ui.Text(column.X, column.NextY, "WINDOWS", UiTextKind.Muted); column = column with { NextY = column.NextY + 16 };
+        DrawMetric(column.X, column.NextY, "MODE", _config.WindowMode.ToString().ToUpperInvariant()); column = column with { NextY = column.NextY + 18 };
         DrawMetric(column.X, column.NextY, "ACTIVE", TopOpenWindow()?.ToString().ToUpperInvariant() ?? "-"); column = column with { NextY = column.NextY + 18 };
         DrawMetric(column.X, column.NextY, "ROM", _romPath is null ? "NONE" : TruncateMiddle(_romPath, 28));
     }
@@ -389,6 +427,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         WindowState(window).IsOpen = true;
         BringToFront(window);
+        MarkConfigDirty();
     }
 
     private UiWindowState WindowState(AppWindow window) => window switch
@@ -441,7 +480,131 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         _windowOrder.Remove(window);
         _windowOrder.Add(window);
+        MarkConfigDirty();
     }
+
+
+    private void ApplyConfig()
+    {
+        SetTheme(FindThemeIndex(_config.Theme), markDirty: false);
+        SetScaleMode(ParseScaleMode(_config.Scale), markDirty: false);
+        ApplyWindowConfig(AppWindow.Rom, "rom_picker");
+        ApplyWindowConfig(AppWindow.Settings, "settings");
+        _windowOrder.Clear();
+        _windowOrder.AddRange(Enum.GetValues<AppWindow>().OrderBy(window => _config.Window(WindowKey(window)).Order));
+    }
+
+    private void ApplyWindowConfig(AppWindow window, string key)
+    {
+        UiWindowConfig windowConfig = _config.Window(key);
+        UiWindowState state = WindowState(window);
+        state.IsOpen = windowConfig.Open;
+        if (windowConfig.HasRect)
+        {
+            state.Rect = windowConfig.ToRect();
+        }
+    }
+
+    private void SnapshotConfig()
+    {
+        _config.Theme = _ui.Theme.Name.ToLowerInvariant();
+        _config.Scale = FormatScaleMode(_viewport.ScaleMode);
+        SnapshotWindow(AppWindow.Rom, "rom_picker");
+        SnapshotWindow(AppWindow.Settings, "settings");
+        for (int i = 0; i < _windowOrder.Count; i++)
+        {
+            _config.Window(WindowKey(_windowOrder[i])).Order = i * 10;
+        }
+    }
+
+    private void SnapshotWindow(AppWindow window, string key)
+    {
+        _config.Window(key).FromWindow(WindowState(window));
+    }
+
+    private void MarkConfigDirty()
+    {
+        _configDirty = true;
+    }
+
+    private void SaveConfigIfDue()
+    {
+        if (!_configDirty || _clock.ElapsedSeconds - _lastConfigSaveSeconds < 0.5)
+        {
+            return;
+        }
+        SaveConfig(force: false);
+    }
+
+    private void SaveConfig(bool force)
+    {
+        if (!_configDirty && !force)
+        {
+            return;
+        }
+        SnapshotConfig();
+        _config.Save(LocalConfigPath);
+        _configDirty = false;
+        _lastConfigSaveSeconds = _clock.ElapsedSeconds;
+    }
+
+    private void SetTheme(int index, bool markDirty = true)
+    {
+        _themeIndex = Math.Clamp(index, 0, UiTheme.BuiltIns.Count - 1);
+        _ui.Theme = UiTheme.BuiltIns[_themeIndex];
+        if (markDirty)
+        {
+            MarkConfigDirty();
+        }
+    }
+
+    private void SetScaleMode(ViewportScaleMode scaleMode, bool markDirty = true)
+    {
+        _viewport.ScaleMode = scaleMode;
+        if (markDirty)
+        {
+            MarkConfigDirty();
+        }
+    }
+
+    private void SetWindowMode(UiWindowMode mode)
+    {
+        _config.WindowMode = mode;
+        MarkConfigDirty();
+    }
+
+    private static int FindThemeIndex(string themeName)
+    {
+        for (int i = 0; i < UiTheme.BuiltIns.Count; i++)
+        {
+            if (string.Equals(UiTheme.BuiltIns[i].Name, themeName, StringComparison.OrdinalIgnoreCase))
+            {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    private static ViewportScaleMode ParseScaleMode(string scale) => scale.Trim().ToLowerInvariant() switch
+    {
+        "integer" or "int" => ViewportScaleMode.Integer,
+        "stretch" or "str" => ViewportScaleMode.Stretch,
+        _ => ViewportScaleMode.Fit,
+    };
+
+    private static string FormatScaleMode(ViewportScaleMode scaleMode) => scaleMode switch
+    {
+        ViewportScaleMode.Integer => "integer",
+        ViewportScaleMode.Stretch => "stretch",
+        _ => "fit",
+    };
+
+    private static string WindowKey(AppWindow window) => window switch
+    {
+        AppWindow.Rom => "rom_picker",
+        AppWindow.Settings => "settings",
+        _ => throw new ArgumentOutOfRangeException(nameof(window)),
+    };
 
     private void DrawScaleToggles(ForgeLayout layout)
     {
@@ -456,17 +619,17 @@ internal sealed unsafe class ForgeApp : IDisposable
         row = row.Next(48, out RectI fitRect);
         if (_ui.ToggleButton(fitRect, "FIT", _viewport.ScaleMode == ViewportScaleMode.Fit))
         {
-            _viewport.ScaleMode = ViewportScaleMode.Fit;
+            SetScaleMode(ViewportScaleMode.Fit);
         }
         row = row.Next(48, out RectI intRect);
         if (_ui.ToggleButton(intRect, "INT", _viewport.ScaleMode == ViewportScaleMode.Integer))
         {
-            _viewport.ScaleMode = ViewportScaleMode.Integer;
+            SetScaleMode(ViewportScaleMode.Integer);
         }
         row = row.Next(48, out RectI stretchRect);
         if (_ui.ToggleButton(stretchRect, "STR", _viewport.ScaleMode == ViewportScaleMode.Stretch))
         {
-            _viewport.ScaleMode = ViewportScaleMode.Stretch;
+            SetScaleMode(ViewportScaleMode.Stretch);
         }
     }
 
@@ -474,15 +637,15 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         if (Pressed(input, ForgeInput.ScaleFit))
         {
-            _viewport.ScaleMode = ViewportScaleMode.Fit;
+            SetScaleMode(ViewportScaleMode.Fit);
         }
         else if (Pressed(input, ForgeInput.ScaleInteger))
         {
-            _viewport.ScaleMode = ViewportScaleMode.Integer;
+            SetScaleMode(ViewportScaleMode.Integer);
         }
         else if (Pressed(input, ForgeInput.ScaleStretch))
         {
-            _viewport.ScaleMode = ViewportScaleMode.Stretch;
+            SetScaleMode(ViewportScaleMode.Stretch);
         }
         else if (Pressed(input, ForgeInput.ThemeNext))
         {
@@ -514,8 +677,7 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private void NextTheme()
     {
-        _themeIndex = (_themeIndex + 1) % UiTheme.BuiltIns.Count;
-        _ui.Theme = UiTheme.BuiltIns[_themeIndex];
+        SetTheme((_themeIndex + 1) % UiTheme.BuiltIns.Count);
     }
 
     private static string TruncateMiddle(string text, int maxChars)

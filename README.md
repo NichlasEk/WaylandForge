@@ -26,7 +26,8 @@ M1 is still intentionally narrow:
 - expose text boxes with focus, cursor, numeric/password options, and basic editing
 - expose clipped scroll areas with wheel input and a scrollbar
 - expose a native WaylandForge file picker for ROM/file selection
-- expose toolbar controls for pause/run, reset, and single-step
+- expose toolbar controls for pause/run, reset, single-step, ROM picker, and settings
+- persist UI defaults/state through a small repo-local TOML configuration layer
 - close on ESC or compositor close
 
 Current keyboard mapping:
@@ -47,6 +48,10 @@ Current keyboard mapping:
 The reusable UI style skeleton lives in `SystemRegisIII.WaylandForge.Ui`: canvas, rectangles, pointer state, panels, text, row/column helpers, button colors, border thickness, padding, hover/active states, and click state are theme-driven so other WaylandForge apps can use the same low-level controls. Dark is the default theme.
 
 The fake core draws a controllable blob so every mapped button has visible output before a real emulator core is wired in.
+
+## UI Config
+
+Default UI configuration lives in `config/waylandforge.ui.toml`. Runtime changes are written to `config/waylandforge.ui.local.toml`, which is gitignored. The config currently persists theme, viewport scale, internal window mode, z-order, open state, and floating window rectangles.
 
 ## Run
 
