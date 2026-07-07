@@ -922,19 +922,14 @@ internal sealed unsafe class ForgeApp : IDisposable
                 : new RectI(work.X + primaryWidth + gap, work.Y, Math.Max(220, work.Width - primaryWidth - gap), work.Height);
         }
 
-        if (open[0] == AppWindow.Rom)
+        int primaryHeight = TilePrimaryHeight(open[0], work, (int)Math.Round(work.Height * 0.60));
+        if (index == 0)
         {
-            int primaryHeight = TilePrimaryHeight(open[0], work, (int)Math.Round(work.Height * 0.60));
-            if (window == AppWindow.Rom)
-            {
-                return new RectI(work.X, work.Y, work.Width, primaryHeight);
-            }
-
-            RectI rest = new(work.X, work.Y + primaryHeight + gap, work.Width, Math.Max(160, work.Height - primaryHeight - gap));
-            return GridTileRect(rest, index - 1, open.Length - 1, gap);
+            return new RectI(work.X, work.Y, work.Width, primaryHeight);
         }
 
-        return GridTileRect(work, index, open.Length, gap);
+        RectI rest = new(work.X, work.Y + primaryHeight + gap, work.Width, Math.Max(160, work.Height - primaryHeight - gap));
+        return GridTileRect(rest, index - 1, open.Length - 1, gap);
     }
 
     private int TilePrimaryWidth(AppWindow window, RectI work, int fallback)
@@ -969,8 +964,39 @@ internal sealed unsafe class ForgeApp : IDisposable
             return;
         }
 
-        int targetIndex = TileDropIndex(layout, draggedRect, open.Length);
-        MoveTileWindow(window, targetIndex);
+        int? swapIndex = TileDropSwapIndex(layout, window, draggedRect, open);
+        if (swapIndex is int targetIndex)
+        {
+            SwapTileWindow(window, open[targetIndex]);
+            return;
+        }
+
+        MoveTileWindow(window, TileDropIndex(layout, draggedRect, open.Length));
+    }
+
+    private int? TileDropSwapIndex(ForgeLayout layout, AppWindow dragged, RectI draggedRect, AppWindow[] open)
+    {
+        int pointerX = _pointer.IsInside ? _pointer.X : draggedRect.X + draggedRect.Width / 2;
+        int pointerY = _pointer.IsInside ? _pointer.Y : draggedRect.Y + draggedRect.Height / 2;
+        int centerX = draggedRect.X + draggedRect.Width / 2;
+        int centerY = draggedRect.Y + draggedRect.Height / 2;
+
+        for (int i = 0; i < open.Length; i++)
+        {
+            AppWindow target = open[i];
+            if (target == dragged)
+            {
+                continue;
+            }
+
+            RectI targetRect = TiledWindowRect(layout, target);
+            if (targetRect.Contains(pointerX, pointerY) || targetRect.Contains(centerX, centerY))
+            {
+                return i;
+            }
+        }
+
+        return null;
     }
 
     private int TileDropIndex(ForgeLayout layout, RectI draggedRect, int openCount)
@@ -1005,6 +1031,19 @@ internal sealed unsafe class ForgeApp : IDisposable
         _tileOrder.Remove(window);
         targetIndex = Math.Clamp(targetIndex, 0, _tileOrder.Count);
         _tileOrder.Insert(targetIndex, window);
+        MarkConfigDirty();
+    }
+
+    private void SwapTileWindow(AppWindow first, AppWindow second)
+    {
+        int firstIndex = _tileOrder.IndexOf(first);
+        int secondIndex = _tileOrder.IndexOf(second);
+        if (firstIndex < 0 || secondIndex < 0 || firstIndex == secondIndex)
+        {
+            return;
+        }
+
+        (_tileOrder[firstIndex], _tileOrder[secondIndex]) = (_tileOrder[secondIndex], _tileOrder[firstIndex]);
         MarkConfigDirty();
     }
 
