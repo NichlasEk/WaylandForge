@@ -97,6 +97,18 @@ public readonly record struct UiScrollArea(RectI Content, IDisposable Clip) : ID
     }
 }
 
+public sealed class UiWindowState
+{
+    public bool IsOpen { get; set; }
+    public RectI? Rect { get; set; }
+    public bool IsDragging { get; set; }
+    public int DragStartX { get; set; }
+    public int DragStartY { get; set; }
+    public int DragWindowX { get; set; }
+    public int DragWindowY { get; set; }
+}
+
+public readonly record struct UiWindowResult(bool IsOpen, bool Closed, bool Dragging, RectI Rect, RectI Content);
 public readonly record struct UiId(string Value);
 
 internal sealed class UiWidgetState
@@ -227,6 +239,93 @@ public sealed class UiContext
             rect.Y + style.Padding + (string.IsNullOrEmpty(title) ? 0 : 26),
             Math.Max(1, rect.Width - style.Padding * 2),
             Math.Max(1, rect.Height - style.Padding * 2 - (string.IsNullOrEmpty(title) ? 0 : 26)));
+    }
+
+    public UiWindowResult BeginWindow(UiId id, UiWindowState state, RectI preferredRect, RectI bounds, string title)
+    {
+        const int titleBarHeight = 24;
+        RectI rect = state.Rect ?? preferredRect;
+        rect = rect with { Width = preferredRect.Width, Height = preferredRect.Height };
+        rect = ClampWindow(rect, bounds);
+        state.Rect = rect;
+
+        RectI titleBar = new(rect.X, rect.Y, rect.Width, titleBarHeight);
+        RectI closeRect = new(rect.Right - 28, rect.Y + 4, 20, 16);
+        HandleWindowDrag(id, state, bounds, titleBar, closeRect, rect);
+        rect = state.Rect ?? rect;
+        titleBar = new(rect.X, rect.Y, rect.Width, titleBarHeight);
+        closeRect = new(rect.Right - 28, rect.Y + 4, 20, 16);
+
+        DrawWindowBackplate(rect);
+        _canvas.FillRect(rect.X, rect.Y, rect.Width, rect.Height, Theme.Panel.Colors.Panel);
+        _canvas.FillRect(titleBar.X, titleBar.Y, titleBar.Width, titleBar.Height, state.IsDragging ? Theme.Button.Colors.SurfaceActive : Theme.Button.Colors.Surface);
+        _canvas.DrawRect(rect.X, rect.Y, rect.Width, rect.Height, Theme.Button.Colors.BorderHot);
+        _canvas.DrawLine(rect.X, titleBar.Bottom, rect.Right - 1, titleBar.Bottom, Theme.Button.Colors.Border);
+        Text(titleBar.X + 10, titleBar.Y + 8, title, state.IsDragging ? UiTextKind.Accent : UiTextKind.Normal);
+
+        bool closed = Button(new UiId(id.Value + ".close"), closeRect, "X").Clicked;
+        if (closed)
+        {
+            state.IsOpen = false;
+            state.IsDragging = false;
+        }
+
+        RectI content = new(rect.X, titleBar.Bottom, rect.Width, Math.Max(1, rect.Height - titleBarHeight));
+        return new UiWindowResult(state.IsOpen, closed, state.IsDragging, rect, content);
+    }
+
+    private void HandleWindowDrag(UiId id, UiWindowState state, RectI bounds, RectI titleBar, RectI closeRect, RectI rect)
+    {
+        bool titleHovered = _pointer.IsInside && titleBar.Contains(_pointer.X, _pointer.Y) && !closeRect.Contains(_pointer.X, _pointer.Y);
+        if (titleHovered)
+        {
+            _hot = id.Value + ".title";
+        }
+
+        if (titleHovered && _pointer.LeftPressed && !_previousPointer.LeftPressed)
+        {
+            _active = id.Value + ".title";
+            _focused = id.Value;
+            state.IsDragging = true;
+            state.DragStartX = _pointer.X;
+            state.DragStartY = _pointer.Y;
+            state.DragWindowX = rect.X;
+            state.DragWindowY = rect.Y;
+        }
+
+        if (!_pointer.LeftPressed)
+        {
+            state.IsDragging = false;
+            return;
+        }
+
+        if (state.IsDragging)
+        {
+            _active = id.Value + ".title";
+            int x = state.DragWindowX + _pointer.X - state.DragStartX;
+            int y = state.DragWindowY + _pointer.Y - state.DragStartY;
+            state.Rect = ClampWindow(rect with { X = x, Y = y }, bounds);
+        }
+    }
+
+    private void DrawWindowBackplate(RectI rect)
+    {
+        _canvas.FillRect(rect.X - 9, rect.Y + 7, rect.Width + 18, rect.Height + 10, 0xff050607);
+        _canvas.FillRect(rect.X - 4, rect.Y - 4, rect.Width + 8, rect.Height + 8, 0xff233241);
+    }
+
+    private static RectI ClampWindow(RectI rect, RectI bounds)
+    {
+        int minVisible = Math.Min(96, Math.Max(32, rect.Width / 4));
+        int minX = bounds.X - (rect.Width - minVisible);
+        int maxX = bounds.Right - minVisible;
+        int minY = bounds.Y;
+        int maxY = Math.Max(bounds.Y, bounds.Bottom - 24);
+        return rect with
+        {
+            X = Math.Clamp(rect.X, minX, maxX),
+            Y = Math.Clamp(rect.Y, minY, maxY),
+        };
     }
 
     public void Text(int x, int y, string text, UiTextKind kind = UiTextKind.Normal, int? scale = null)

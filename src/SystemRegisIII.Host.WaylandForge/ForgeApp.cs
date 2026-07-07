@@ -27,13 +27,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     private ulong _hostFrameIndex;
     private bool _paused;
     private bool _stepRequested;
-    private bool _filePickerOpen;
-    private RectI? _filePickerWindowRect;
-    private bool _draggingFilePicker;
-    private int _filePickerDragStartX;
-    private int _filePickerDragStartY;
-    private int _filePickerDragWindowX;
-    private int _filePickerDragWindowY;
+    private readonly UiWindowState _filePickerWindow = new();
     private string? _romPath;
     private int _themeIndex;
 
@@ -160,9 +154,9 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
 
         row = row.Next(42, out RectI romRect);
-        if (_ui.Button(new UiId("toolbar.rom"), romRect, "ROM", _filePickerOpen).Clicked)
+        if (_ui.Button(new UiId("toolbar.rom"), romRect, "ROM", _filePickerWindow.IsOpen).Clicked)
         {
-            _filePickerOpen = true;
+            _filePickerWindow.IsOpen = true;
         }
     }
 
@@ -258,104 +252,31 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private void DrawFilePicker(ForgeLayout layout)
     {
-        if (!_filePickerOpen)
+        if (!_filePickerWindow.IsOpen)
         {
-            _draggingFilePicker = false;
             return;
         }
 
         int width = Math.Min(980, Math.Max(360, layout.Width - (layout.HasSidePanel ? SidePanelWidth + 80 : 48)));
         int height = Math.Min(680, Math.Max(320, layout.Height - 96));
-        RectI window = ResolveFilePickerWindow(layout, width, height);
-        RectI titleBar = new(window.X, window.Y, window.Width, 24);
-        RectI closeRect = new(window.Right - 28, window.Y + 4, 20, 16);
-
-        HandleFilePickerDrag(layout, titleBar, closeRect, window);
-        window = _filePickerWindowRect ?? window;
-        titleBar = new(window.X, window.Y, window.Width, 24);
-        closeRect = new(window.Right - 28, window.Y + 4, 20, 16);
-
-        DrawFloatingWindowBackplate(window);
-        _canvas.FillRect(window.X, window.Y, window.Width, window.Height, _ui.Theme.Panel.Colors.Panel);
-        _canvas.FillRect(titleBar.X, titleBar.Y, titleBar.Width, titleBar.Height, _draggingFilePicker ? _ui.Theme.Button.Colors.SurfaceActive : _ui.Theme.Button.Colors.Surface);
-        _canvas.DrawRect(window.X, window.Y, window.Width, window.Height, _ui.Theme.Button.Colors.BorderHot);
-        _canvas.DrawLine(window.X, titleBar.Bottom, window.Right - 1, titleBar.Bottom, _ui.Theme.Button.Colors.Border);
-        _ui.Text(titleBar.X + 10, titleBar.Y + 8, "ROM PICKER", _draggingFilePicker ? UiTextKind.Accent : UiTextKind.Normal);
-
-        if (_ui.Button(new UiId("filepicker.window.close"), closeRect, "X").Clicked)
+        RectI preferredRect = new((layout.Width - width) / 2, (layout.Height - height) / 2, width, height);
+        RectI bounds = new(0, TopBarHeight, layout.Width, Math.Max(1, layout.Height - TopBarHeight - StatusBarHeight));
+        UiWindowResult window = _ui.BeginWindow(new UiId("filepicker.window"), _filePickerWindow, preferredRect, bounds, "ROM PICKER");
+        if (!window.IsOpen || window.Closed)
         {
-            _filePickerOpen = false;
-            _draggingFilePicker = false;
             return;
         }
 
-        UiFilePickerResult result = _filePicker.Draw(_ui, new RectI(window.X, titleBar.Bottom, window.Width, window.Height - titleBar.Height), "");
+        UiFilePickerResult result = _filePicker.Draw(_ui, window.Content, "");
         if (result.Accepted && result.SelectedPath is not null)
         {
             _romPath = result.SelectedPath;
-            _filePickerOpen = false;
-            _draggingFilePicker = false;
+            _filePickerWindow.IsOpen = false;
         }
         else if (result.Cancelled)
         {
-            _filePickerOpen = false;
-            _draggingFilePicker = false;
+            _filePickerWindow.IsOpen = false;
         }
-    }
-
-    private RectI ResolveFilePickerWindow(ForgeLayout layout, int width, int height)
-    {
-        RectI window = _filePickerWindowRect ?? new RectI((layout.Width - width) / 2, (layout.Height - height) / 2, width, height);
-        window = window with { Width = width, Height = height };
-        window = ClampChildWindow(layout, window);
-        _filePickerWindowRect = window;
-        return window;
-    }
-
-    private void DrawFloatingWindowBackplate(RectI window)
-    {
-        _canvas.FillRect(window.X - 9, window.Y + 7, window.Width + 18, window.Height + 10, 0xff050607);
-        _canvas.FillRect(window.X - 4, window.Y - 4, window.Width + 8, window.Height + 8, 0xff233241);
-    }
-
-    private void HandleFilePickerDrag(ForgeLayout layout, RectI titleBar, RectI closeRect, RectI window)
-    {
-        bool titleHovered = _pointer.IsInside && titleBar.Contains(_pointer.X, _pointer.Y) && !closeRect.Contains(_pointer.X, _pointer.Y);
-        if (titleHovered && _pointer.LeftPressed && !_previousPointer.LeftPressed)
-        {
-            _draggingFilePicker = true;
-            _filePickerDragStartX = _pointer.X;
-            _filePickerDragStartY = _pointer.Y;
-            _filePickerDragWindowX = window.X;
-            _filePickerDragWindowY = window.Y;
-        }
-
-        if (!_pointer.LeftPressed)
-        {
-            _draggingFilePicker = false;
-            return;
-        }
-
-        if (_draggingFilePicker)
-        {
-            int x = _filePickerDragWindowX + _pointer.X - _filePickerDragStartX;
-            int y = _filePickerDragWindowY + _pointer.Y - _filePickerDragStartY;
-            _filePickerWindowRect = ClampChildWindow(layout, window with { X = x, Y = y });
-        }
-    }
-
-    private static RectI ClampChildWindow(ForgeLayout layout, RectI window)
-    {
-        int minVisible = Math.Min(96, Math.Max(32, window.Width / 4));
-        int minX = -(window.Width - minVisible);
-        int maxX = layout.Width - minVisible;
-        int minY = TopBarHeight;
-        int maxY = Math.Max(TopBarHeight, layout.Height - StatusBarHeight - 24);
-        return window with
-        {
-            X = Math.Clamp(window.X, minX, maxX),
-            Y = Math.Clamp(window.Y, minY, maxY),
-        };
     }
 
     private void DrawScaleToggles(ForgeLayout layout)
