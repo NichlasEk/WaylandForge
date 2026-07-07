@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <WaylandProtocolsDir Condition="'$(WaylandProtocolsDir)' == ''">/usr/share/wayland-protocols</WaylandProtocolsDir>
+    <WaylandForgeNativeDir>$(MSBuildThisFileDirectory)native</WaylandForgeNativeDir>
+    <WaylandForgeGeneratedDir>$(MSBuildProjectDirectory)/obj/$(Configuration)/$(TargetFramework)/wayland-generated</WaylandForgeGeneratedDir>
+    <WaylandForgeOutputDir>$(MSBuildProjectDirectory)/bin/$(Configuration)/$(TargetFramework)/</WaylandForgeOutputDir>
+    <WaylandForgeNativeOutput>$(WaylandForgeOutputDir)libwaylandforge_native.so</WaylandForgeNativeOutput>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../SystemRegisIII.Core/SystemRegisIII.Core.csproj" />
+  </ItemGroup>
+
+  <Target Name="BuildWaylandForgeNative" BeforeTargets="Build">
+    <MakeDir Directories="$(WaylandForgeGeneratedDir)" />
+    <MakeDir Directories="$(WaylandForgeOutputDir)" />
+    <Exec Command="wayland-scanner client-header &quot;$(WaylandProtocolsDir)/stable/xdg-shell/xdg-shell.xml&quot; &quot;$(WaylandForgeGeneratedDir)/xdg-shell-client-protocol.h&quot;" />
+    <Exec Command="wayland-scanner private-code &quot;$(WaylandProtocolsDir)/stable/xdg-shell/xdg-shell.xml&quot; &quot;$(WaylandForgeGeneratedDir)/xdg-shell-protocol.c&quot;" />
+    <Exec Command="cc -std=c11 -O2 -g -Wall -Wextra -fPIC -I&quot;$(WaylandForgeGeneratedDir)&quot; &quot;$(WaylandForgeNativeDir)/waylandforge_native.c&quot; &quot;$(WaylandForgeGeneratedDir)/xdg-shell-protocol.c&quot; -shared -o &quot;$(WaylandForgeNativeOutput)&quot; -lwayland-client -lm" />
+  </Target>
+
+</Project>

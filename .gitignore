@@ -1,0 +1,10 @@
+bin/
+obj/
+wayland-generated/
+**/wayland-generated/
+*.user
+*.suo
+*.swp
+*.so
+src/SystemRegisIII.Host.WaylandForge/libwaylandforge_native.so
+core
