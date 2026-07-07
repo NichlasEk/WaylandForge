@@ -176,7 +176,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         row = row.Next(44, out RectI settingsRect);
         if (_ui.Button(new UiId("toolbar.settings"), settingsRect, "SET", _settingsWindow.IsOpen).Clicked)
         {
-            OpenWindow(AppWindow.Settings);
+            ToggleWindow(AppWindow.Settings);
         }
     }
 
