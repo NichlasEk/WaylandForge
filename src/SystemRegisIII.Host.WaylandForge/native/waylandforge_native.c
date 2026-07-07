@@ -13,7 +13,32 @@
 
 #include "xdg-shell-client-protocol.h"
 
-typedef void (*waylandforge_render_callback)(uint32_t *pixels, int width, int height, int stride_pixels, uint64_t frame_index);
+typedef void (*waylandforge_render_callback)(uint32_t *pixels, int width, int height, int stride_pixels, uint64_t frame_index, uint32_t input_mask);
+
+enum {
+    WAYLANDFORGE_INPUT_ESCAPE = 1u << 0,
+    WAYLANDFORGE_INPUT_UP = 1u << 1,
+    WAYLANDFORGE_INPUT_DOWN = 1u << 2,
+    WAYLANDFORGE_INPUT_LEFT = 1u << 3,
+    WAYLANDFORGE_INPUT_RIGHT = 1u << 4,
+    WAYLANDFORGE_INPUT_START = 1u << 5,
+    WAYLANDFORGE_INPUT_A = 1u << 6,
+    WAYLANDFORGE_INPUT_B = 1u << 7,
+    WAYLANDFORGE_INPUT_C = 1u << 8,
+    WAYLANDFORGE_INPUT_X = 1u << 9,
+    WAYLANDFORGE_INPUT_Y = 1u << 10,
+    WAYLANDFORGE_INPUT_Z = 1u << 11,
+};
+
+struct waylandforge_app;
+
+struct waylandforge_shm_buffer {
+    struct wl_buffer *buffer;
+    uint32_t *pixels;
+    struct waylandforge_app *owner;
+    int busy;
+    int bytes;
+};
 
 struct waylandforge_app {
     struct wl_display *display;
@@ -26,15 +51,14 @@ struct waylandforge_app {
     struct wl_surface *surface;
     struct xdg_surface *xdg_surface;
     struct xdg_toplevel *toplevel;
-    struct wl_buffer *buffer;
     struct wl_callback *frame_callback;
-    uint32_t *pixels;
+    struct waylandforge_shm_buffer buffers[2];
     int width;
     int height;
     int stride_pixels;
-    int buffer_bytes;
     int configured;
     int running;
+    uint32_t input_mask;
     uint64_t frame_index;
     waylandforge_render_callback render;
 };
@@ -58,6 +82,20 @@ static int make_shm_file(size_t size)
 
 static void draw_and_commit(struct waylandforge_app *app);
 
+static void buffer_release(void *data, struct wl_buffer *buffer)
+{
+    (void)buffer;
+    struct waylandforge_shm_buffer *shm_buffer = data;
+    shm_buffer->busy = 0;
+    if (shm_buffer->owner != NULL && shm_buffer->owner->running && shm_buffer->owner->configured && shm_buffer->owner->frame_callback == NULL) {
+        draw_and_commit(shm_buffer->owner);
+    }
+}
+
+static const struct wl_buffer_listener buffer_listener = {
+    .release = buffer_release,
+};
+
 static void frame_done(void *data, struct wl_callback *callback, uint32_t time_ms)
 {
     (void)time_ms;
@@ -77,9 +115,22 @@ static void draw_and_commit(struct waylandforge_app *app)
         return;
     }
 
-    app->render(app->pixels, app->width, app->height, app->stride_pixels, app->frame_index++);
+    struct waylandforge_shm_buffer *target = NULL;
+    for (size_t i = 0; i < sizeof(app->buffers) / sizeof(app->buffers[0]); i++) {
+        if (!app->buffers[i].busy) {
+            target = &app->buffers[i];
+            break;
+        }
+    }
 
-    wl_surface_attach(app->surface, app->buffer, 0, 0);
+    if (target == NULL) {
+        return;
+    }
+
+    app->render(target->pixels, app->width, app->height, app->stride_pixels, app->frame_index++, app->input_mask);
+    target->busy = 1;
+
+    wl_surface_attach(app->surface, target->buffer, 0, 0);
     wl_surface_damage_buffer(app->surface, 0, 0, app->width, app->height);
     app->frame_callback = wl_surface_frame(app->surface);
     wl_callback_add_listener(app->frame_callback, &frame_listener, app);
@@ -167,6 +218,56 @@ static void keyboard_key(void *data, struct wl_keyboard *keyboard, uint32_t seri
     (void)time_ms;
 
     struct waylandforge_app *app = data;
+    uint32_t bit = 0;
+    switch (key) {
+    case KEY_ESC:
+        bit = WAYLANDFORGE_INPUT_ESCAPE;
+        break;
+    case KEY_UP:
+        bit = WAYLANDFORGE_INPUT_UP;
+        break;
+    case KEY_DOWN:
+        bit = WAYLANDFORGE_INPUT_DOWN;
+        break;
+    case KEY_LEFT:
+        bit = WAYLANDFORGE_INPUT_LEFT;
+        break;
+    case KEY_RIGHT:
+        bit = WAYLANDFORGE_INPUT_RIGHT;
+        break;
+    case KEY_ENTER:
+        bit = WAYLANDFORGE_INPUT_START;
+        break;
+    case KEY_Z:
+        bit = WAYLANDFORGE_INPUT_A;
+        break;
+    case KEY_X:
+        bit = WAYLANDFORGE_INPUT_B;
+        break;
+    case KEY_C:
+        bit = WAYLANDFORGE_INPUT_C;
+        break;
+    case KEY_A:
+        bit = WAYLANDFORGE_INPUT_X;
+        break;
+    case KEY_S:
+        bit = WAYLANDFORGE_INPUT_Y;
+        break;
+    case KEY_D:
+        bit = WAYLANDFORGE_INPUT_Z;
+        break;
+    default:
+        break;
+    }
+
+    if (bit != 0) {
+        if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
+            app->input_mask |= bit;
+        } else {
+            app->input_mask &= ~bit;
+        }
+    }
+
     if (key == KEY_ESC && state == WL_KEYBOARD_KEY_STATE_PRESSED) {
         app->running = 0;
     }
@@ -256,31 +357,34 @@ static const struct wl_registry_listener registry_listener = {
     .global_remove = registry_global_remove,
 };
 
-static int create_shm_buffer(struct waylandforge_app *app)
+static int create_shm_buffer(struct waylandforge_app *app, struct waylandforge_shm_buffer *target)
 {
-    app->stride_pixels = app->width;
     int stride_bytes = app->stride_pixels * 4;
-    app->buffer_bytes = stride_bytes * app->height;
+    target->owner = app;
+    target->bytes = stride_bytes * app->height;
 
-    int fd = make_shm_file((size_t)app->buffer_bytes);
+    int fd = make_shm_file((size_t)target->bytes);
     if (fd < 0) {
         return -1;
     }
 
-    app->pixels = mmap(NULL, (size_t)app->buffer_bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if (app->pixels == MAP_FAILED) {
+    target->pixels = mmap(NULL, (size_t)target->bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (target->pixels == MAP_FAILED) {
         perror("mmap");
-        app->pixels = NULL;
+        target->pixels = NULL;
         close(fd);
         return -1;
     }
 
-    struct wl_shm_pool *pool = wl_shm_create_pool(app->shm, fd, app->buffer_bytes);
-    app->buffer = wl_shm_pool_create_buffer(pool, 0, app->width, app->height, stride_bytes, WL_SHM_FORMAT_ARGB8888);
+    struct wl_shm_pool *pool = wl_shm_create_pool(app->shm, fd, target->bytes);
+    target->buffer = wl_shm_pool_create_buffer(pool, 0, app->width, app->height, stride_bytes, WL_SHM_FORMAT_ARGB8888);
+    if (target->buffer != NULL) {
+        wl_buffer_add_listener(target->buffer, &buffer_listener, target);
+    }
     wl_shm_pool_destroy(pool);
     close(fd);
 
-    return app->buffer == NULL ? -1 : 0;
+    return target->buffer == NULL ? -1 : 0;
 }
 
 static void cleanup(struct waylandforge_app *app)
@@ -288,11 +392,13 @@ static void cleanup(struct waylandforge_app *app)
     if (app->frame_callback) {
         wl_callback_destroy(app->frame_callback);
     }
-    if (app->buffer) {
-        wl_buffer_destroy(app->buffer);
-    }
-    if (app->pixels) {
-        munmap(app->pixels, (size_t)app->buffer_bytes);
+    for (size_t i = 0; i < sizeof(app->buffers) / sizeof(app->buffers[0]); i++) {
+        if (app->buffers[i].buffer) {
+            wl_buffer_destroy(app->buffers[i].buffer);
+        }
+        if (app->buffers[i].pixels) {
+            munmap(app->buffers[i].pixels, (size_t)app->buffers[i].bytes);
+        }
     }
     if (app->keyboard) {
         wl_keyboard_destroy(app->keyboard);
@@ -357,9 +463,13 @@ int waylandforge_run(int width, int height, const char *title, waylandforge_rend
         return 11;
     }
 
-    if (create_shm_buffer(&app) != 0) {
-        cleanup(&app);
-        return 12;
+    app.stride_pixels = app.width;
+
+    for (size_t i = 0; i < sizeof(app.buffers) / sizeof(app.buffers[0]); i++) {
+        if (create_shm_buffer(&app, &app.buffers[i]) != 0) {
+            cleanup(&app);
+            return 12;
+        }
     }
 
     app.surface = wl_compositor_create_surface(app.compositor);

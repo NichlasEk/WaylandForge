@@ -2,15 +2,24 @@
 
 Low-level Wayland host experiments for SystemRegisIII.
 
-M0 is intentionally narrow:
+M1 is still intentionally narrow:
 
 - connect to the Wayland display
 - bind `wl_compositor`, `wl_shm`, `wl_seat`, and `xdg_wm_base`
 - create `wl_surface`, `xdg_surface`, and `xdg_toplevel`
-- allocate a `wl_shm` ARGB8888 framebuffer
-- render a moving gradient from managed code
-- repaint from Wayland frame callbacks
+- allocate double-buffered `wl_shm` ARGB8888 framebuffers
+- repaint only from Wayland frame callbacks / buffer release
+- render a small custom software UI from managed code
+- track keyboard state for emulator-style buttons
 - close on ESC or compositor close
+
+Current keyboard mapping:
+
+- arrows: d-pad
+- enter: start
+- Z/X/C: A/B/C
+- A/S/D: X/Y/Z
+- ESC: quit
 
 ## Run
 
