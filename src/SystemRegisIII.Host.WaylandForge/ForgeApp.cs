@@ -16,6 +16,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     private readonly EmulatorViewport _viewport = new();
     private readonly FrameClock _clock = new();
     private readonly UiContext _ui;
+    private readonly UiFilePicker _filePicker = new();
     private ForgeInput _lastInput;
     private ForgeInput _previousInput;
     private PointerState _pointer;
@@ -25,6 +26,8 @@ internal sealed unsafe class ForgeApp : IDisposable
     private ulong _hostFrameIndex;
     private bool _paused;
     private bool _stepRequested;
+    private bool _filePickerOpen;
+    private string? _romPath;
     private int _themeIndex;
 
     public ForgeApp()
@@ -76,6 +79,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
         DrawScaleToggles(layout);
         DrawStatusBar(layout);
+        DrawFilePicker(layout);
     }
 
     public void Dispose()
@@ -144,6 +148,12 @@ internal sealed unsafe class ForgeApp : IDisposable
         if (_ui.Button(themeRect, _ui.Theme.Name).Clicked)
         {
             NextTheme();
+        }
+
+        row = row.Next(42, out RectI romRect);
+        if (_ui.Button(new UiId("toolbar.rom"), romRect, "ROM", _filePickerOpen).Clicked)
+        {
+            _filePickerOpen = true;
         }
     }
 
@@ -224,9 +234,37 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         string inputText = _lastInput == ForgeInput.None ? "INPUT: NONE" : $"INPUT: {_lastInput}";
         _ui.Text(12, layout.Height - 16, inputText.ToUpperInvariant());
-        if (layout.Width >= 760)
+        if (!string.IsNullOrEmpty(_romPath) && layout.Width >= 620)
+        {
+            _ui.Text(210, layout.Height - 16, TruncateMiddle(_romPath, 46), UiTextKind.Muted);
+        }
+        if (layout.Width >= 900)
         {
             _ui.Text(layout.Width - 438, layout.Height - 16, "1/2/3 SCALE  T THEME", UiTextKind.Muted);
+        }
+    }
+
+    private void DrawFilePicker(ForgeLayout layout)
+    {
+        if (!_filePickerOpen)
+        {
+            return;
+        }
+
+        int width = Math.Min(620, Math.Max(320, layout.Width - 96));
+        int height = Math.Min(460, Math.Max(260, layout.Height - 96));
+        int x = (layout.Width - width) / 2;
+        int y = (layout.Height - height) / 2;
+        _canvas.FillRect(x - 8, y - 8, width + 16, height + 16, 0xdd000000);
+        UiFilePickerResult result = _filePicker.Draw(_ui, new RectI(x, y, width, height), "ROM PICKER");
+        if (result.Accepted && result.SelectedPath is not null)
+        {
+            _romPath = result.SelectedPath;
+            _filePickerOpen = false;
+        }
+        else if (result.Cancelled)
+        {
+            _filePickerOpen = false;
         }
     }
 
@@ -303,6 +341,17 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         _themeIndex = (_themeIndex + 1) % UiTheme.BuiltIns.Count;
         _ui.Theme = UiTheme.BuiltIns[_themeIndex];
+    }
+
+    private static string TruncateMiddle(string text, int maxChars)
+    {
+        if (text.Length <= maxChars)
+        {
+            return text;
+        }
+
+        int keep = Math.Max(2, (maxChars - 3) / 2);
+        return text[..keep] + "..." + text[^keep..];
     }
 
     private readonly record struct ForgeLayout(

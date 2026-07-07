@@ -25,6 +25,7 @@ M1 is still intentionally narrow:
 - expose collapsible UI sections and a tiny style-inspector section
 - expose text boxes with focus, cursor, numeric/password options, and basic editing
 - expose clipped scroll areas with wheel input and a scrollbar
+- expose a native WaylandForge file picker for ROM/file selection
 - expose toolbar controls for pause/run, reset, and single-step
 - close on ESC or compositor close
 
@@ -38,6 +39,7 @@ Current keyboard mapping:
 - T: cycle UI theme
 - text boxes: click to focus, type, backspace, enter to submit
 - mouse wheel: scroll clipped panels
+- ROM toolbar button: open the file picker
 - mouse: hover/click the scale toggles
 - mouse: use the toolbar buttons for pause/run, reset, and step
 - ESC: quit

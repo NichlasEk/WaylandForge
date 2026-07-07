@@ -315,6 +315,16 @@ public sealed class UiContext
         return new UiTextBoxResult(state.Text, hovered, focused, changed, submitted);
     }
 
+    public void SetText(UiId id, string text)
+    {
+        GetState(id).Text = text;
+    }
+
+    public string GetText(UiId id)
+    {
+        return GetState(id).Text;
+    }
+
     public UiScrollArea BeginScrollArea(UiId id, RectI viewport, int contentHeight)
     {
         UiWidgetState state = GetState(id);
