@@ -28,6 +28,8 @@ internal sealed unsafe class ForgeApp : IDisposable
     private bool _paused;
     private bool _stepRequested;
     private readonly UiWindowState _filePickerWindow = new();
+    private readonly UiWindowState _settingsWindow = new();
+    private readonly List<AppWindow> _windowOrder = [AppWindow.Settings, AppWindow.Rom];
     private string? _romPath;
     private int _themeIndex;
 
@@ -82,7 +84,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
         DrawScaleToggles(layout);
         DrawStatusBar(layout);
-        DrawFilePicker(layout);
+        DrawChildWindows(layout);
     }
 
     public void Dispose()
@@ -156,7 +158,13 @@ internal sealed unsafe class ForgeApp : IDisposable
         row = row.Next(42, out RectI romRect);
         if (_ui.Button(new UiId("toolbar.rom"), romRect, "ROM", _filePickerWindow.IsOpen).Clicked)
         {
-            _filePickerWindow.IsOpen = true;
+            OpenWindow(AppWindow.Rom);
+        }
+
+        row = row.Next(44, out RectI settingsRect);
+        if (_ui.Button(new UiId("toolbar.settings"), settingsRect, "SET", _settingsWindow.IsOpen).Clicked)
+        {
+            OpenWindow(AppWindow.Settings);
         }
     }
 
@@ -250,7 +258,26 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
     }
 
-    private void DrawFilePicker(ForgeLayout layout)
+    private void DrawChildWindows(ForgeLayout layout)
+    {
+        AppWindow? inputWindow = HitTestTopWindow();
+        foreach (AppWindow window in _windowOrder.ToArray())
+        {
+            bool inputEnabled = inputWindow is null || inputWindow == window;
+            bool active = IsTopOpenWindow(window);
+            switch (window)
+            {
+                case AppWindow.Rom:
+                    DrawFilePicker(layout, active, inputEnabled);
+                    break;
+                case AppWindow.Settings:
+                    DrawSettingsWindow(layout, active, inputEnabled);
+                    break;
+            }
+        }
+    }
+
+    private void DrawFilePicker(ForgeLayout layout, bool active, bool inputEnabled)
     {
         if (!_filePickerWindow.IsOpen)
         {
@@ -260,23 +287,160 @@ internal sealed unsafe class ForgeApp : IDisposable
         int width = Math.Min(980, Math.Max(360, layout.Width - (layout.HasSidePanel ? SidePanelWidth + 80 : 48)));
         int height = Math.Min(680, Math.Max(320, layout.Height - 96));
         RectI preferredRect = new((layout.Width - width) / 2, (layout.Height - height) / 2, width, height);
-        RectI bounds = new(0, TopBarHeight, layout.Width, Math.Max(1, layout.Height - TopBarHeight - StatusBarHeight));
-        UiWindowResult window = _ui.BeginWindow(new UiId("filepicker.window"), _filePickerWindow, preferredRect, bounds, "ROM PICKER");
+        UiWindowResult window = _ui.BeginWindow(new UiId("filepicker.window"), _filePickerWindow, preferredRect, ChildWindowBounds(layout), "ROM PICKER", active, inputEnabled);
+        if (window.Activated)
+        {
+            BringToFront(AppWindow.Rom);
+        }
         if (!window.IsOpen || window.Closed)
         {
             return;
         }
 
-        UiFilePickerResult result = _filePicker.Draw(_ui, window.Content, "");
-        if (result.Accepted && result.SelectedPath is not null)
+        using (_ui.PushInputEnabled(inputEnabled))
         {
-            _romPath = result.SelectedPath;
-            _filePickerWindow.IsOpen = false;
+            UiFilePickerResult result = _filePicker.Draw(_ui, window.Content, "");
+            if (result.Accepted && result.SelectedPath is not null)
+            {
+                _romPath = result.SelectedPath;
+                _filePickerWindow.IsOpen = false;
+            }
+            else if (result.Cancelled)
+            {
+                _filePickerWindow.IsOpen = false;
+            }
         }
-        else if (result.Cancelled)
+    }
+
+    private void DrawSettingsWindow(ForgeLayout layout, bool active, bool inputEnabled)
+    {
+        if (!_settingsWindow.IsOpen)
         {
-            _filePickerWindow.IsOpen = false;
+            return;
         }
+
+        int width = Math.Min(360, Math.Max(300, layout.Width - 72));
+        int height = Math.Min(330, Math.Max(260, layout.Height - 112));
+        RectI preferredRect = new(Math.Max(16, layout.Width - width - (layout.HasSidePanel ? SidePanelWidth + 28 : 28)), TopBarHeight + 40, width, height);
+        UiWindowResult window = _ui.BeginWindow(new UiId("settings.window"), _settingsWindow, preferredRect, ChildWindowBounds(layout), "DISPLAY SETTINGS", active, inputEnabled);
+        if (window.Activated)
+        {
+            BringToFront(AppWindow.Settings);
+        }
+        if (!window.IsOpen || window.Closed)
+        {
+            return;
+        }
+
+        using IDisposable inputScope = _ui.PushInputEnabled(inputEnabled);
+        RectI content = window.Content;
+        _ui.Panel(content);
+        var column = new UiColumn(content.X + 10, content.Y + 10, Math.Max(1, content.Width - 20), 8);
+
+        _ui.Text(column.X, column.NextY, "SCALE", UiTextKind.Muted); column = column with { NextY = column.NextY + 14 };
+        var scaleRow = new UiRow(column.X, column.NextY, 18, 6);
+        scaleRow = scaleRow.Next(58, out RectI fitRect);
+        if (_ui.ToggleButton(new UiId("settings.scale.fit"), fitRect, "FIT", _viewport.ScaleMode == ViewportScaleMode.Fit))
+        {
+            _viewport.ScaleMode = ViewportScaleMode.Fit;
+        }
+        scaleRow = scaleRow.Next(58, out RectI intRect);
+        if (_ui.ToggleButton(new UiId("settings.scale.int"), intRect, "INT", _viewport.ScaleMode == ViewportScaleMode.Integer))
+        {
+            _viewport.ScaleMode = ViewportScaleMode.Integer;
+        }
+        scaleRow = scaleRow.Next(58, out RectI stretchRect);
+        if (_ui.ToggleButton(new UiId("settings.scale.str"), stretchRect, "STR", _viewport.ScaleMode == ViewportScaleMode.Stretch))
+        {
+            _viewport.ScaleMode = ViewportScaleMode.Stretch;
+        }
+        column = column with { NextY = column.NextY + 34 };
+
+        _ui.Text(column.X, column.NextY, "THEME", UiTextKind.Muted); column = column with { NextY = column.NextY + 14 };
+        var themeRow = new UiRow(column.X, column.NextY, 18, 6);
+        for (int i = 0; i < UiTheme.BuiltIns.Count; i++)
+        {
+            UiTheme theme = UiTheme.BuiltIns[i];
+            themeRow = themeRow.Next(58, out RectI themeRect);
+            if (_ui.ToggleButton(new UiId("settings.theme." + theme.Name), themeRect, theme.Name, _themeIndex == i))
+            {
+                _themeIndex = i;
+                _ui.Theme = UiTheme.BuiltIns[_themeIndex];
+            }
+        }
+        column = column with { NextY = column.NextY + 36 };
+
+        _ui.Text(column.X, column.NextY, "HOST", UiTextKind.Muted); column = column with { NextY = column.NextY + 16 };
+        DrawMetric(column.X, column.NextY, "FPS", _clock.FramesPerSecond.ToString("0.0")); column = column with { NextY = column.NextY + 18 };
+        DrawMetric(column.X, column.NextY, "FRAME MS", _clock.FrameMilliseconds.ToString("0.0")); column = column with { NextY = column.NextY + 18 };
+        DrawMetric(column.X, column.NextY, "DRAW MS", _clock.DrawMilliseconds.ToString("0.0")); column = column with { NextY = column.NextY + 28 };
+
+        _ui.Text(column.X, column.NextY, "WINDOWS", UiTextKind.Muted); column = column with { NextY = column.NextY + 16 };
+        DrawMetric(column.X, column.NextY, "ACTIVE", TopOpenWindow()?.ToString().ToUpperInvariant() ?? "-"); column = column with { NextY = column.NextY + 18 };
+        DrawMetric(column.X, column.NextY, "ROM", _romPath is null ? "NONE" : TruncateMiddle(_romPath, 28));
+    }
+
+    private RectI ChildWindowBounds(ForgeLayout layout)
+    {
+        return new RectI(0, TopBarHeight, layout.Width, Math.Max(1, layout.Height - TopBarHeight - StatusBarHeight));
+    }
+
+    private void OpenWindow(AppWindow window)
+    {
+        WindowState(window).IsOpen = true;
+        BringToFront(window);
+    }
+
+    private UiWindowState WindowState(AppWindow window) => window switch
+    {
+        AppWindow.Rom => _filePickerWindow,
+        AppWindow.Settings => _settingsWindow,
+        _ => throw new ArgumentOutOfRangeException(nameof(window)),
+    };
+
+    private AppWindow? HitTestTopWindow()
+    {
+        if (!_pointer.IsInside)
+        {
+            return null;
+        }
+
+        for (int i = _windowOrder.Count - 1; i >= 0; i--)
+        {
+            AppWindow window = _windowOrder[i];
+            UiWindowState state = WindowState(window);
+            if (state.IsOpen && state.Rect is RectI rect && rect.Contains(_pointer.X, _pointer.Y))
+            {
+                return window;
+            }
+        }
+
+        return null;
+    }
+
+    private bool IsTopOpenWindow(AppWindow window)
+    {
+        return TopOpenWindow() == window;
+    }
+
+    private AppWindow? TopOpenWindow()
+    {
+        for (int i = _windowOrder.Count - 1; i >= 0; i--)
+        {
+            AppWindow window = _windowOrder[i];
+            if (WindowState(window).IsOpen)
+            {
+                return window;
+            }
+        }
+
+        return null;
+    }
+
+    private void BringToFront(AppWindow window)
+    {
+        _windowOrder.Remove(window);
+        _windowOrder.Add(window);
     }
 
     private void DrawScaleToggles(ForgeLayout layout)
@@ -363,6 +527,13 @@ internal sealed unsafe class ForgeApp : IDisposable
 
         int keep = Math.Max(2, (maxChars - 3) / 2);
         return text[..keep] + "..." + text[^keep..];
+    }
+
+
+    private enum AppWindow
+    {
+        Settings,
+        Rom,
     }
 
     private readonly record struct ForgeLayout(

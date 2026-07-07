@@ -108,7 +108,7 @@ public sealed class UiWindowState
     public int DragWindowY { get; set; }
 }
 
-public readonly record struct UiWindowResult(bool IsOpen, bool Closed, bool Dragging, RectI Rect, RectI Content);
+public readonly record struct UiWindowResult(bool IsOpen, bool Closed, bool Dragging, bool Activated, RectI Rect, RectI Content);
 public readonly record struct UiId(string Value);
 
 internal sealed class UiWidgetState
@@ -132,6 +132,8 @@ public sealed class UiContext
     private PointerState _previousPointer;
     private TextInputEvent _textInput;
     private ScrollInputEvent _scrollInput;
+    private bool _inputEnabled = true;
+    private readonly Stack<bool> _inputEnabledStack = new();
     private uint _handledTextSerial;
     private uint _handledScrollSerial;
 
@@ -163,6 +165,15 @@ public sealed class UiContext
         _previousPointer = previousPointer;
         _textInput = textInput;
         _scrollInput = scrollInput;
+        _inputEnabled = true;
+        _inputEnabledStack.Clear();
+    }
+
+    public IDisposable PushInputEnabled(bool enabled)
+    {
+        _inputEnabledStack.Push(_inputEnabled);
+        _inputEnabled = _inputEnabled && enabled;
+        return new InputScope(this);
     }
 
     public UiButtonResult Button(RectI rect, string label, bool active = false)
@@ -173,7 +184,7 @@ public sealed class UiContext
     public UiButtonResult Button(UiId id, RectI rect, string label, bool active = false)
     {
         UiButtonStyle style = Theme.Button;
-        bool hovered = _pointer.IsInside && rect.Contains(_pointer.X, _pointer.Y);
+        bool hovered = _inputEnabled && _pointer.IsInside && rect.Contains(_pointer.X, _pointer.Y);
         bool pressed = hovered && _pointer.LeftPressed;
         bool clicked = hovered && _pointer.LeftPressed && !_previousPointer.LeftPressed;
         if (hovered)
@@ -241,7 +252,7 @@ public sealed class UiContext
             Math.Max(1, rect.Height - style.Padding * 2 - (string.IsNullOrEmpty(title) ? 0 : 26)));
     }
 
-    public UiWindowResult BeginWindow(UiId id, UiWindowState state, RectI preferredRect, RectI bounds, string title)
+    public UiWindowResult BeginWindow(UiId id, UiWindowState state, RectI preferredRect, RectI bounds, string title, bool active = true, bool inputEnabled = true)
     {
         const int titleBarHeight = 24;
         RectI rect = state.Rect ?? preferredRect;
@@ -251,19 +262,29 @@ public sealed class UiContext
 
         RectI titleBar = new(rect.X, rect.Y, rect.Width, titleBarHeight);
         RectI closeRect = new(rect.Right - 28, rect.Y + 4, 20, 16);
-        HandleWindowDrag(id, state, bounds, titleBar, closeRect, rect);
+        bool activated = inputEnabled && _pointer.IsInside && rect.Contains(_pointer.X, _pointer.Y) && _pointer.LeftPressed && !_previousPointer.LeftPressed;
+        if (inputEnabled)
+        {
+            HandleWindowDrag(id, state, bounds, titleBar, closeRect, rect);
+        }
+        else
+        {
+            state.IsDragging = false;
+        }
         rect = state.Rect ?? rect;
         titleBar = new(rect.X, rect.Y, rect.Width, titleBarHeight);
         closeRect = new(rect.Right - 28, rect.Y + 4, 20, 16);
 
         DrawWindowBackplate(rect);
         _canvas.FillRect(rect.X, rect.Y, rect.Width, rect.Height, Theme.Panel.Colors.Panel);
-        _canvas.FillRect(titleBar.X, titleBar.Y, titleBar.Width, titleBar.Height, state.IsDragging ? Theme.Button.Colors.SurfaceActive : Theme.Button.Colors.Surface);
-        _canvas.DrawRect(rect.X, rect.Y, rect.Width, rect.Height, Theme.Button.Colors.BorderHot);
+        uint titleFill = active ? Theme.Button.Colors.Surface : Theme.Panel.Colors.Panel;
+        _canvas.FillRect(titleBar.X, titleBar.Y, titleBar.Width, titleBar.Height, state.IsDragging ? Theme.Button.Colors.SurfaceActive : titleFill);
+        _canvas.DrawRect(rect.X, rect.Y, rect.Width, rect.Height, active ? Theme.Button.Colors.BorderHot : Theme.Button.Colors.Border);
         _canvas.DrawLine(rect.X, titleBar.Bottom, rect.Right - 1, titleBar.Bottom, Theme.Button.Colors.Border);
         Text(titleBar.X + 10, titleBar.Y + 8, title, state.IsDragging ? UiTextKind.Accent : UiTextKind.Normal);
 
-        bool closed = Button(new UiId(id.Value + ".close"), closeRect, "X").Clicked;
+        UiButtonResult closeButton = Button(new UiId(id.Value + ".close"), closeRect, "X");
+        bool closed = inputEnabled && closeButton.Clicked;
         if (closed)
         {
             state.IsOpen = false;
@@ -271,7 +292,7 @@ public sealed class UiContext
         }
 
         RectI content = new(rect.X, titleBar.Bottom, rect.Width, Math.Max(1, rect.Height - titleBarHeight));
-        return new UiWindowResult(state.IsOpen, closed, state.IsDragging, rect, content);
+        return new UiWindowResult(state.IsOpen, closed, state.IsDragging, activated, rect, content);
     }
 
     private void HandleWindowDrag(UiId id, UiWindowState state, RectI bounds, RectI titleBar, RectI closeRect, RectI rect)
@@ -370,7 +391,7 @@ public sealed class UiContext
         }
 
         UiTextBoxStyle style = Theme.TextBox;
-        bool hovered = _pointer.IsInside && rect.Contains(_pointer.X, _pointer.Y);
+        bool hovered = _inputEnabled && _pointer.IsInside && rect.Contains(_pointer.X, _pointer.Y);
         bool clicked = hovered && _pointer.LeftPressed && !_previousPointer.LeftPressed;
         if (hovered)
         {
@@ -380,7 +401,7 @@ public sealed class UiContext
         {
             _focused = id.Value;
         }
-        else if (_pointer.IsInside && _pointer.LeftPressed && !_previousPointer.LeftPressed && !hovered && _focused == id.Value)
+        else if (_inputEnabled && _pointer.IsInside && _pointer.LeftPressed && !_previousPointer.LeftPressed && !hovered && _focused == id.Value)
         {
             _focused = null;
         }
@@ -388,7 +409,7 @@ public sealed class UiContext
         bool focused = _focused == id.Value;
         bool changed = false;
         bool submitted = false;
-        if (focused && !options.ReadOnly && _textInput.Serial != 0 && _textInput.Serial != _handledTextSerial)
+        if (_inputEnabled && focused && !options.ReadOnly && _textInput.Serial != 0 && _textInput.Serial != _handledTextSerial)
         {
             _handledTextSerial = _textInput.Serial;
             changed = ApplyTextInput(state, options, out submitted);
@@ -430,7 +451,7 @@ public sealed class UiContext
     public UiScrollArea BeginScrollArea(UiId id, RectI viewport, int contentHeight)
     {
         UiWidgetState state = GetState(id);
-        bool hovered = _pointer.IsInside && viewport.Contains(_pointer.X, _pointer.Y);
+        bool hovered = _inputEnabled && _pointer.IsInside && viewport.Contains(_pointer.X, _pointer.Y);
         int maxOffset = Math.Max(0, contentHeight - viewport.Height);
         if (hovered)
         {
@@ -451,8 +472,8 @@ public sealed class UiContext
             int thumbY = viewport.Y + state.ScrollOffset * Math.Max(1, viewport.Height - thumbHeight) / maxOffset;
             RectI track = new(trackX, viewport.Y, 6, viewport.Height);
             RectI thumb = new(trackX, thumbY, 6, thumbHeight);
-            bool thumbHovered = _pointer.IsInside && thumb.Contains(_pointer.X, _pointer.Y);
-            bool trackHovered = _pointer.IsInside && track.Contains(_pointer.X, _pointer.Y);
+            bool thumbHovered = _inputEnabled && _pointer.IsInside && thumb.Contains(_pointer.X, _pointer.Y);
+            bool trackHovered = _inputEnabled && _pointer.IsInside && track.Contains(_pointer.X, _pointer.Y);
             string scrollId = id.Value + ".scrollbar";
 
             if (thumbHovered || state.IsDraggingScroll)
@@ -507,6 +528,28 @@ public sealed class UiContext
         IDisposable clip = _canvas.PushClip(viewport);
         var content = new RectI(viewport.X, viewport.Y - state.ScrollOffset, Math.Max(1, viewport.Width - (maxOffset > 0 ? 8 : 0)), contentHeight);
         return new UiScrollArea(content, clip);
+    }
+
+
+    private void PopInputEnabled()
+    {
+        _inputEnabled = _inputEnabledStack.Count > 0 ? _inputEnabledStack.Pop() : true;
+    }
+
+    private sealed class InputScope : IDisposable
+    {
+        private UiContext? _context;
+
+        public InputScope(UiContext context)
+        {
+            _context = context;
+        }
+
+        public void Dispose()
+        {
+            _context?.PopInputEnabled();
+            _context = null;
+        }
     }
 
     private bool ApplyTextInput(UiWidgetState state, UiTextBoxOptions options, out bool submitted)
