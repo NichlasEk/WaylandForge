@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../SystemRegisIII.Core/SystemRegisIII.Core.csproj" />
+    <ProjectReference Include="../SystemRegisIII.WaylandForge.Ui/SystemRegisIII.WaylandForge.Ui.csproj" />
   </ItemGroup>
 
   <Target Name="BuildWaylandForgeNative" BeforeTargets="Build">

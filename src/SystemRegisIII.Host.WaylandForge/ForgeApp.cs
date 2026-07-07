@@ -1,3 +1,5 @@
+using SystemRegisIII.WaylandForge.Ui;
+
 namespace SystemRegisIII.Host.WaylandForge;
 
 internal sealed unsafe class ForgeApp : IDisposable

@@ -1,6 +1,6 @@
-namespace SystemRegisIII.Host.WaylandForge;
+namespace SystemRegisIII.WaylandForge.Ui;
 
-internal sealed unsafe class SoftwareCanvas
+public sealed unsafe class SoftwareCanvas
 {
     private uint* _pixels;
     private int _width;

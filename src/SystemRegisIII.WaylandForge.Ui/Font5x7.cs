@@ -1,4 +1,4 @@
-namespace SystemRegisIII.Host.WaylandForge;
+namespace SystemRegisIII.WaylandForge.Ui;
 
 internal static class Font5x7
 {

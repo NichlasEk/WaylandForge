@@ -33,7 +33,7 @@ Current keyboard mapping:
 - mouse: use the toolbar buttons for pause/run, reset, and step
 - ESC: quit
 
-The UI style skeleton lives in `ForgeUi.cs`: button colors, border thickness, padding, hover/active states, and click state are theme-driven so other WaylandForge apps can reuse the same low-level controls.
+The reusable UI style skeleton lives in `SystemRegisIII.WaylandForge.Ui`: canvas, rectangles, pointer state, button colors, border thickness, padding, hover/active states, and click state are theme-driven so other WaylandForge apps can use the same low-level controls.
 
 The fake core draws a controllable blob so every mapped button has visible output before a real emulator core is wired in.
 

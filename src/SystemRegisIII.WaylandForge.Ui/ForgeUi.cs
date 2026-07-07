@@ -1,6 +1,6 @@
-namespace SystemRegisIII.Host.WaylandForge;
+namespace SystemRegisIII.WaylandForge.Ui;
 
-internal readonly record struct UiColors(
+public readonly record struct UiColors(
     uint Text,
     uint MutedText,
     uint Surface,
@@ -11,13 +11,13 @@ internal readonly record struct UiColors(
     uint BorderActive,
     uint Accent);
 
-internal readonly record struct UiButtonStyle(
+public readonly record struct UiButtonStyle(
     int BorderThickness,
     int PaddingX,
     int PaddingY,
     UiColors Colors);
 
-internal sealed class UiTheme
+public sealed class UiTheme
 {
     public static UiTheme Default { get; } = new(
         new UiButtonStyle(
@@ -43,9 +43,9 @@ internal sealed class UiTheme
     public UiButtonStyle Button { get; }
 }
 
-internal readonly record struct UiButtonResult(bool Hovered, bool Pressed, bool Clicked);
+public readonly record struct UiButtonResult(bool Hovered, bool Pressed, bool Clicked);
 
-internal sealed class UiContext
+public sealed class UiContext
 {
     private readonly SoftwareCanvas _canvas;
     private readonly UiTheme _theme;
