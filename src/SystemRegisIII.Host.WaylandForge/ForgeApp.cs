@@ -37,6 +37,9 @@ internal sealed unsafe class ForgeApp : IDisposable
     private int _themeIndex;
     private bool _configDirty;
     private double _lastConfigSaveSeconds;
+    private bool _resizingTileSplit;
+    private int _tileResizeStartX;
+    private int _tileResizeStartWidth;
 
     public ForgeApp()
     {
@@ -167,7 +170,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         row = row.Next(42, out RectI romRect);
         if (_ui.Button(new UiId("toolbar.rom"), romRect, "ROM", _filePickerWindow.IsOpen).Clicked)
         {
-            OpenWindow(AppWindow.Rom);
+            ToggleWindow(AppWindow.Rom);
         }
 
         row = row.Next(44, out RectI settingsRect);
@@ -269,6 +272,7 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private void DrawChildWindows(ForgeLayout layout)
     {
+        HandleTileEdit(layout);
         AppWindow? inputWindow = HitTestTopWindow();
         foreach (AppWindow window in _windowOrder.ToArray())
         {
@@ -294,7 +298,8 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
 
         RectI preferredRect = PreferredWindowRect(layout, AppWindow.Rom);
-        bool movable = _config.WindowMode != UiWindowMode.Tiled;
+        bool tileEdit = IsTileEditModifierDown();
+        bool movable = _config.WindowMode != UiWindowMode.Tiled || tileEdit;
         if (!movable)
         {
             _filePickerWindow.Rect = preferredRect;
@@ -310,6 +315,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
         if (!window.IsOpen || window.Closed)
         {
+            MarkConfigDirty();
             return;
         }
 
@@ -338,7 +344,8 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
 
         RectI preferredRect = PreferredWindowRect(layout, AppWindow.Settings);
-        bool movable = _config.WindowMode != UiWindowMode.Tiled;
+        bool tileEdit = IsTileEditModifierDown();
+        bool movable = _config.WindowMode != UiWindowMode.Tiled || tileEdit;
         if (!movable)
         {
             _settingsWindow.Rect = preferredRect;
@@ -354,6 +361,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
         if (!window.IsOpen || window.Closed)
         {
+            MarkConfigDirty();
             return;
         }
 
@@ -425,6 +433,58 @@ internal sealed unsafe class ForgeApp : IDisposable
     }
 
 
+
+    private void HandleTileEdit(ForgeLayout layout)
+    {
+        if (_config.WindowMode != UiWindowMode.Tiled || !_settingsWindow.IsOpen || !IsTileEditModifierDown())
+        {
+            _resizingTileSplit = false;
+            return;
+        }
+
+        RectI work = TileWorkArea(layout);
+        RectI settings = TiledWindowRect(layout, AppWindow.Settings);
+        UiWindowConfig settingsConfig = _config.Window("settings");
+        bool settingsLeft = string.Equals(settingsConfig.Slot, "left", StringComparison.OrdinalIgnoreCase);
+        int dividerX = settingsLeft ? settings.Right : settings.X;
+        RectI divider = new(dividerX - 5, work.Y, 10, work.Height);
+
+        if (_pointer.IsInside && divider.Contains(_pointer.X, _pointer.Y) && _pointer.LeftPressed && !_previousPointer.LeftPressed)
+        {
+            _resizingTileSplit = true;
+            _tileResizeStartX = _pointer.X;
+            _tileResizeStartWidth = Math.Max(260, settings.Width);
+        }
+
+        if (!_pointer.LeftPressed)
+        {
+            _resizingTileSplit = false;
+        }
+
+        if (_resizingTileSplit)
+        {
+            int delta = _pointer.X - _tileResizeStartX;
+            int width = settingsLeft ? _tileResizeStartWidth + delta : _tileResizeStartWidth - delta;
+            settingsConfig.Width = Math.Clamp(width, 220, Math.Max(220, work.Width - 260));
+            MarkConfigDirty();
+        }
+
+        if (_settingsWindow.IsDragging && _settingsWindow.Rect is RectI dragged)
+        {
+            string newSlot = dragged.X + dragged.Width / 2 < work.X + work.Width / 2 ? "left" : "right";
+            if (!string.Equals(settingsConfig.Slot, newSlot, StringComparison.OrdinalIgnoreCase))
+            {
+                settingsConfig.Slot = newSlot;
+                MarkConfigDirty();
+            }
+        }
+    }
+
+    private bool IsTileEditModifierDown()
+    {
+        return (_lastInput & (ForgeInput.Super | ForgeInput.Shift)) == (ForgeInput.Super | ForgeInput.Shift);
+    }
+
     private RectI PreferredWindowRect(ForgeLayout layout, AppWindow window)
     {
         if (_config.WindowMode == UiWindowMode.Tiled)
@@ -456,15 +516,28 @@ internal sealed unsafe class ForgeApp : IDisposable
     private RectI TiledWindowRect(ForgeLayout layout, AppWindow window)
     {
         RectI work = TileWorkArea(layout);
+        UiWindowConfig settingsConfig = _config.Window("settings");
         bool settingsOpen = _settingsWindow.IsOpen;
-        int settingsWidth = settingsOpen ? Math.Min(360, Math.Max(260, work.Width / 3)) : 0;
+        int defaultSettingsWidth = Math.Min(360, Math.Max(260, work.Width / 3));
+        int settingsWidth = settingsOpen ? Math.Clamp(settingsConfig.Width > 0 ? settingsConfig.Width : defaultSettingsWidth, 220, Math.Max(220, work.Width - 260)) : 0;
         int gap = settingsOpen ? 8 : 0;
-        return window switch
+        bool settingsLeft = string.Equals(settingsConfig.Slot, "left", StringComparison.OrdinalIgnoreCase);
+
+        if (window == AppWindow.Settings)
         {
-            AppWindow.Settings => new RectI(work.Right - settingsWidth, work.Y, settingsWidth, work.Height),
-            AppWindow.Rom => new RectI(work.X, work.Y, Math.Max(240, work.Width - settingsWidth - gap), work.Height),
-            _ => throw new ArgumentOutOfRangeException(nameof(window)),
-        };
+            return settingsLeft
+                ? new RectI(work.X, work.Y, settingsWidth, work.Height)
+                : new RectI(work.Right - settingsWidth, work.Y, settingsWidth, work.Height);
+        }
+
+        if (window == AppWindow.Rom)
+        {
+            return settingsLeft
+                ? new RectI(work.X + settingsWidth + gap, work.Y, Math.Max(240, work.Width - settingsWidth - gap), work.Height)
+                : new RectI(work.X, work.Y, Math.Max(240, work.Width - settingsWidth - gap), work.Height);
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(window));
     }
 
     private RectI TileWorkArea(ForgeLayout layout)
@@ -486,6 +559,17 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         WindowState(window).IsOpen = true;
         BringToFront(window);
+        MarkConfigDirty();
+    }
+
+    private void ToggleWindow(AppWindow window)
+    {
+        UiWindowState state = WindowState(window);
+        state.IsOpen = !state.IsOpen;
+        if (state.IsOpen)
+        {
+            BringToFront(window);
+        }
         MarkConfigDirty();
     }
 

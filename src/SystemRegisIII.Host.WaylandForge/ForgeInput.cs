@@ -20,4 +20,6 @@ internal enum ForgeInput : uint
     ScaleInteger = 1 << 13,
     ScaleStretch = 1 << 14,
     ThemeNext = 1 << 15,
+    Shift = 1 << 16,
+    Super = 1 << 17,
 }
