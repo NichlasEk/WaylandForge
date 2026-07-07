@@ -39,7 +39,9 @@ internal sealed unsafe class ForgeApp : IDisposable
     private double _lastConfigSaveSeconds;
     private bool _resizingTileSplit;
     private int _tileResizeStartX;
+    private int _tileResizeStartY;
     private int _tileResizeStartWidth;
+    private int _tileResizeStartHeight;
 
     public ForgeApp()
     {
@@ -445,15 +447,17 @@ internal sealed unsafe class ForgeApp : IDisposable
         RectI work = TileWorkArea(layout);
         RectI settings = TiledWindowRect(layout, AppWindow.Settings);
         UiWindowConfig settingsConfig = _config.Window("settings");
-        bool settingsLeft = string.Equals(settingsConfig.Slot, "left", StringComparison.OrdinalIgnoreCase);
-        int dividerX = settingsLeft ? settings.Right : settings.X;
-        RectI divider = new(dividerX - 5, work.Y, 10, work.Height);
+        string slot = NormalizeTileSlot(settingsConfig.Slot);
+        bool horizontalSplit = slot is "left" or "right";
+        RectI divider = TileDividerRect(work, settings, slot);
 
         if (_pointer.IsInside && divider.Contains(_pointer.X, _pointer.Y) && _pointer.LeftPressed && !_previousPointer.LeftPressed)
         {
             _resizingTileSplit = true;
             _tileResizeStartX = _pointer.X;
-            _tileResizeStartWidth = Math.Max(260, settings.Width);
+            _tileResizeStartY = _pointer.Y;
+            _tileResizeStartWidth = Math.Max(220, settings.Width);
+            _tileResizeStartHeight = Math.Max(160, settings.Height);
         }
 
         if (!_pointer.LeftPressed)
@@ -463,16 +467,25 @@ internal sealed unsafe class ForgeApp : IDisposable
 
         if (_resizingTileSplit)
         {
-            int delta = _pointer.X - _tileResizeStartX;
-            int width = settingsLeft ? _tileResizeStartWidth + delta : _tileResizeStartWidth - delta;
-            settingsConfig.Width = Math.Clamp(width, 220, Math.Max(220, work.Width - 260));
+            if (horizontalSplit)
+            {
+                int delta = _pointer.X - _tileResizeStartX;
+                int width = slot == "left" ? _tileResizeStartWidth + delta : _tileResizeStartWidth - delta;
+                settingsConfig.Width = Math.Clamp(width, 220, Math.Max(220, work.Width - 260));
+            }
+            else
+            {
+                int delta = _pointer.Y - _tileResizeStartY;
+                int height = slot == "top" ? _tileResizeStartHeight + delta : _tileResizeStartHeight - delta;
+                settingsConfig.Height = Math.Clamp(height, 150, Math.Max(150, work.Height - 180));
+            }
             MarkConfigDirty();
         }
 
         if (_settingsWindow.IsDragging && _settingsWindow.Rect is RectI dragged)
         {
-            string newSlot = dragged.X + dragged.Width / 2 < work.X + work.Width / 2 ? "left" : "right";
-            if (!string.Equals(settingsConfig.Slot, newSlot, StringComparison.OrdinalIgnoreCase))
+            string newSlot = NearestTileSlot(work, dragged);
+            if (!string.Equals(slot, newSlot, StringComparison.OrdinalIgnoreCase))
             {
                 settingsConfig.Slot = newSlot;
                 MarkConfigDirty();
@@ -518,26 +531,80 @@ internal sealed unsafe class ForgeApp : IDisposable
         RectI work = TileWorkArea(layout);
         UiWindowConfig settingsConfig = _config.Window("settings");
         bool settingsOpen = _settingsWindow.IsOpen;
+        int gap = settingsOpen ? 8 : 0;
+        string slot = NormalizeTileSlot(settingsConfig.Slot);
+
         int defaultSettingsWidth = Math.Min(360, Math.Max(260, work.Width / 3));
         int settingsWidth = settingsOpen ? Math.Clamp(settingsConfig.Width > 0 ? settingsConfig.Width : defaultSettingsWidth, 220, Math.Max(220, work.Width - 260)) : 0;
-        int gap = settingsOpen ? 8 : 0;
-        bool settingsLeft = string.Equals(settingsConfig.Slot, "left", StringComparison.OrdinalIgnoreCase);
+        int defaultSettingsHeight = Math.Min(330, Math.Max(170, work.Height / 3));
+        int settingsHeight = settingsOpen ? Math.Clamp(settingsConfig.Height > 0 ? settingsConfig.Height : defaultSettingsHeight, 150, Math.Max(150, work.Height - 180)) : 0;
 
         if (window == AppWindow.Settings)
         {
-            return settingsLeft
-                ? new RectI(work.X, work.Y, settingsWidth, work.Height)
-                : new RectI(work.Right - settingsWidth, work.Y, settingsWidth, work.Height);
+            return slot switch
+            {
+                "left" => new RectI(work.X, work.Y, settingsWidth, work.Height),
+                "top" => new RectI(work.X, work.Y, work.Width, settingsHeight),
+                "bottom" => new RectI(work.X, work.Bottom - settingsHeight, work.Width, settingsHeight),
+                _ => new RectI(work.Right - settingsWidth, work.Y, settingsWidth, work.Height),
+            };
         }
 
         if (window == AppWindow.Rom)
         {
-            return settingsLeft
-                ? new RectI(work.X + settingsWidth + gap, work.Y, Math.Max(240, work.Width - settingsWidth - gap), work.Height)
-                : new RectI(work.X, work.Y, Math.Max(240, work.Width - settingsWidth - gap), work.Height);
+            return slot switch
+            {
+                "left" => new RectI(work.X + settingsWidth + gap, work.Y, Math.Max(240, work.Width - settingsWidth - gap), work.Height),
+                "top" => new RectI(work.X, work.Y + settingsHeight + gap, work.Width, Math.Max(180, work.Height - settingsHeight - gap)),
+                "bottom" => new RectI(work.X, work.Y, work.Width, Math.Max(180, work.Height - settingsHeight - gap)),
+                _ => new RectI(work.X, work.Y, Math.Max(240, work.Width - settingsWidth - gap), work.Height),
+            };
         }
 
         throw new ArgumentOutOfRangeException(nameof(window));
+    }
+
+
+    private static RectI TileDividerRect(RectI work, RectI settings, string slot)
+    {
+        return slot switch
+        {
+            "left" => new RectI(settings.Right - 5, work.Y, 10, work.Height),
+            "top" => new RectI(work.X, settings.Bottom - 5, work.Width, 10),
+            "bottom" => new RectI(work.X, settings.Y - 5, work.Width, 10),
+            _ => new RectI(settings.X - 5, work.Y, 10, work.Height),
+        };
+    }
+
+    private static string NearestTileSlot(RectI work, RectI rect)
+    {
+        int centerX = rect.X + rect.Width / 2;
+        int centerY = rect.Y + rect.Height / 2;
+        int left = Math.Abs(centerX - work.X);
+        int right = Math.Abs(work.Right - centerX);
+        int top = Math.Abs(centerY - work.Y);
+        int bottom = Math.Abs(work.Bottom - centerY);
+        int min = Math.Min(Math.Min(left, right), Math.Min(top, bottom));
+        if (min == top)
+        {
+            return "top";
+        }
+        if (min == bottom)
+        {
+            return "bottom";
+        }
+        return min == left ? "left" : "right";
+    }
+
+    private static string NormalizeTileSlot(string slot)
+    {
+        return slot.Trim().ToLowerInvariant() switch
+        {
+            "left" => "left",
+            "top" => "top",
+            "bottom" => "bottom",
+            _ => "right",
+        };
     }
 
     private RectI TileWorkArea(ForgeLayout layout)

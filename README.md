@@ -44,7 +44,7 @@ Current keyboard mapping:
 - mouse: hover/click the scale toggles
 - mouse: use the toolbar buttons for pause/run, reset, step, ROM, and settings
 - ROM toolbar button: toggles the ROM picker open/closed
-- Super+Shift in tiled mode: drag the internal tile split to resize, drag the Settings title across the midpoint to swap sides
+- Super+Shift in tiled mode: drag the internal tile split to resize in X/Y, drag the Settings title toward an edge to dock left/right/top/bottom
 - ESC: quit
 
 The reusable UI style skeleton lives in `SystemRegisIII.WaylandForge.Ui`: canvas, rectangles, pointer state, panels, text, row/column helpers, button colors, border thickness, padding, hover/active states, and click state are theme-driven so other WaylandForge apps can use the same low-level controls. Dark is the default theme.
@@ -53,7 +53,7 @@ The fake core draws a controllable blob so every mapped button has visible outpu
 
 ## UI Config
 
-Default UI configuration lives in `config/waylandforge.ui.toml`. Runtime changes are written to `config/waylandforge.ui.local.toml`, which is gitignored. The config currently persists theme, viewport scale, internal window mode, z-order, open state, floating window rectangles, and the tiled Settings split/side.
+Default UI configuration lives in `config/waylandforge.ui.toml`. Runtime changes are written to `config/waylandforge.ui.local.toml`, which is gitignored. The config currently persists theme, viewport scale, internal window mode, z-order, open state, floating window rectangles, and the tiled Settings split and dock side.
 
 ## Run
 

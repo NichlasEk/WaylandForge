@@ -13,7 +13,7 @@ rom_picker = "center" # floating | right | bottom | center
 
 [ui.windows.settings]
 open = false
-slot = "right"
+slot = "right" # left | right | top | bottom
 order = 10
 x = 0
 y = 0
