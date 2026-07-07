@@ -300,7 +300,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         RectI preferredRect = PreferredWindowRect(layout, AppWindow.Rom);
         bool tileEdit = IsTileEditModifierDown();
         bool movable = _config.WindowMode != UiWindowMode.Tiled || tileEdit;
-        if (!movable)
+        if (!movable || (_config.WindowMode == UiWindowMode.Tiled && !_filePickerWindow.IsDragging))
         {
             _filePickerWindow.Rect = preferredRect;
         }
@@ -346,7 +346,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         RectI preferredRect = PreferredWindowRect(layout, AppWindow.Settings);
         bool tileEdit = IsTileEditModifierDown();
         bool movable = _config.WindowMode != UiWindowMode.Tiled || tileEdit;
-        if (!movable)
+        if (!movable || (_config.WindowMode == UiWindowMode.Tiled && !_settingsWindow.IsDragging))
         {
             _settingsWindow.Rect = preferredRect;
         }
