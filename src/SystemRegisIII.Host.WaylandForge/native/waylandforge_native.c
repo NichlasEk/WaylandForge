@@ -13,7 +13,17 @@
 
 #include "xdg-shell-client-protocol.h"
 
-typedef void (*waylandforge_render_callback)(uint32_t *pixels, int width, int height, int stride_pixels, uint64_t frame_index, uint32_t input_mask);
+typedef void (*waylandforge_render_callback)(
+    uint32_t *pixels,
+    int width,
+    int height,
+    int stride_pixels,
+    uint64_t frame_index,
+    uint32_t input_mask,
+    int32_t pointer_x,
+    int32_t pointer_y,
+    uint32_t pointer_buttons,
+    uint32_t pointer_inside);
 
 enum {
     WAYLANDFORGE_INPUT_ESCAPE = 1u << 0,
@@ -51,6 +61,7 @@ struct waylandforge_app {
     struct wl_shm *shm;
     struct wl_seat *seat;
     struct wl_keyboard *keyboard;
+    struct wl_pointer *pointer;
     struct xdg_wm_base *wm_base;
     struct wl_surface *surface;
     struct xdg_surface *xdg_surface;
@@ -65,6 +76,10 @@ struct waylandforge_app {
     int configured;
     int running;
     uint32_t input_mask;
+    int32_t pointer_x;
+    int32_t pointer_y;
+    uint32_t pointer_buttons;
+    uint32_t pointer_inside;
     uint64_t frame_index;
     waylandforge_render_callback render;
 };
@@ -171,7 +186,17 @@ static void draw_and_commit(struct waylandforge_app *app)
         return;
     }
 
-    app->render(target->pixels, app->width, app->height, app->stride_pixels, app->frame_index++, app->input_mask);
+    app->render(
+        target->pixels,
+        app->width,
+        app->height,
+        app->stride_pixels,
+        app->frame_index++,
+        app->input_mask,
+        app->pointer_x,
+        app->pointer_y,
+        app->pointer_buttons,
+        app->pointer_inside);
     target->busy = 1;
 
     wl_surface_attach(app->surface, target->buffer, 0, 0);
@@ -371,6 +396,120 @@ static const struct wl_keyboard_listener keyboard_listener = {
     .repeat_info = keyboard_repeat_info,
 };
 
+static void pointer_enter(void *data, struct wl_pointer *pointer, uint32_t serial, struct wl_surface *surface, wl_fixed_t surface_x, wl_fixed_t surface_y)
+{
+    (void)pointer;
+    (void)serial;
+    (void)surface;
+
+    struct waylandforge_app *app = data;
+    app->pointer_inside = 1;
+    app->pointer_x = wl_fixed_to_int(surface_x);
+    app->pointer_y = wl_fixed_to_int(surface_y);
+}
+
+static void pointer_leave(void *data, struct wl_pointer *pointer, uint32_t serial, struct wl_surface *surface)
+{
+    (void)pointer;
+    (void)serial;
+    (void)surface;
+
+    struct waylandforge_app *app = data;
+    app->pointer_inside = 0;
+    app->pointer_buttons = 0;
+}
+
+static void pointer_motion(void *data, struct wl_pointer *pointer, uint32_t time_ms, wl_fixed_t surface_x, wl_fixed_t surface_y)
+{
+    (void)pointer;
+    (void)time_ms;
+
+    struct waylandforge_app *app = data;
+    app->pointer_x = wl_fixed_to_int(surface_x);
+    app->pointer_y = wl_fixed_to_int(surface_y);
+}
+
+static void pointer_button(void *data, struct wl_pointer *pointer, uint32_t serial, uint32_t time_ms, uint32_t button, uint32_t state)
+{
+    (void)pointer;
+    (void)serial;
+    (void)time_ms;
+
+    struct waylandforge_app *app = data;
+    uint32_t bit = 0;
+    switch (button) {
+    case BTN_LEFT:
+        bit = 1u << 0;
+        break;
+    case BTN_RIGHT:
+        bit = 1u << 1;
+        break;
+    case BTN_MIDDLE:
+        bit = 1u << 2;
+        break;
+    default:
+        break;
+    }
+
+    if (bit != 0) {
+        if (state == WL_POINTER_BUTTON_STATE_PRESSED) {
+            app->pointer_buttons |= bit;
+        } else {
+            app->pointer_buttons &= ~bit;
+        }
+    }
+}
+
+static void pointer_axis(void *data, struct wl_pointer *pointer, uint32_t time_ms, uint32_t axis, wl_fixed_t value)
+{
+    (void)data;
+    (void)pointer;
+    (void)time_ms;
+    (void)axis;
+    (void)value;
+}
+
+static void pointer_frame(void *data, struct wl_pointer *pointer)
+{
+    (void)data;
+    (void)pointer;
+}
+
+static void pointer_axis_source(void *data, struct wl_pointer *pointer, uint32_t axis_source)
+{
+    (void)data;
+    (void)pointer;
+    (void)axis_source;
+}
+
+static void pointer_axis_stop(void *data, struct wl_pointer *pointer, uint32_t time_ms, uint32_t axis)
+{
+    (void)data;
+    (void)pointer;
+    (void)time_ms;
+    (void)axis;
+}
+
+static void pointer_axis_discrete(void *data, struct wl_pointer *pointer, uint32_t axis, int32_t discrete)
+{
+    (void)data;
+    (void)pointer;
+    (void)axis;
+    (void)discrete;
+}
+
+static const struct wl_pointer_listener pointer_listener = {
+    .enter = pointer_enter,
+    .leave = pointer_leave,
+    .motion = pointer_motion,
+    .button = pointer_button,
+    .axis = pointer_axis,
+    .frame = pointer_frame,
+    .axis_source = pointer_axis_source,
+    .axis_stop = pointer_axis_stop,
+    .axis_discrete = pointer_axis_discrete,
+};
+
 static void seat_capabilities(void *data, struct wl_seat *seat, uint32_t capabilities)
 {
     struct waylandforge_app *app = data;
@@ -381,6 +520,16 @@ static void seat_capabilities(void *data, struct wl_seat *seat, uint32_t capabil
     } else if (!(capabilities & WL_SEAT_CAPABILITY_KEYBOARD) && app->keyboard != NULL) {
         wl_keyboard_destroy(app->keyboard);
         app->keyboard = NULL;
+    }
+
+    if ((capabilities & WL_SEAT_CAPABILITY_POINTER) && app->pointer == NULL) {
+        app->pointer = wl_seat_get_pointer(seat);
+        wl_pointer_add_listener(app->pointer, &pointer_listener, app);
+    } else if (!(capabilities & WL_SEAT_CAPABILITY_POINTER) && app->pointer != NULL) {
+        wl_pointer_destroy(app->pointer);
+        app->pointer = NULL;
+        app->pointer_inside = 0;
+        app->pointer_buttons = 0;
     }
 }
 
@@ -529,6 +678,9 @@ static void cleanup(struct waylandforge_app *app)
     }
     if (app->keyboard) {
         wl_keyboard_destroy(app->keyboard);
+    }
+    if (app->pointer) {
+        wl_pointer_destroy(app->pointer);
     }
     if (app->seat) {
         wl_seat_destroy(app->seat);

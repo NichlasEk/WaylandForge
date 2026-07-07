@@ -16,6 +16,8 @@ M1 is still intentionally narrow:
 - track host frame timing and show FPS/frame milliseconds
 - keep host update and UI rendering as separate steps
 - track keyboard state for emulator-style buttons
+- track Wayland pointer position/buttons
+- expose clickable scale toggles in the custom UI
 - close on ESC or compositor close
 
 Current keyboard mapping:
@@ -25,6 +27,7 @@ Current keyboard mapping:
 - Z/X/C: A/B/C
 - A/S/D: X/Y/Z
 - 1/2/3: viewport scale mode fit/integer/stretch
+- mouse: hover/click the scale toggles
 - ESC: quit
 
 The fake core draws a controllable blob so every mapped button has visible output before a real emulator core is wired in.

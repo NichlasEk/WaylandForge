@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace SystemRegisIII.Host.WaylandForge;
 
-internal unsafe delegate void RenderFrame(uint* pixels, int width, int height, int stridePixels, ulong frameIndex, ForgeInput input);
+internal unsafe delegate void RenderFrame(uint* pixels, int width, int height, int stridePixels, ulong frameIndex, ForgeInput input, PointerState pointer);
 
 internal static unsafe class WaylandWindow
 {
@@ -23,9 +23,20 @@ internal static unsafe class WaylandWindow
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    private static void RenderThunk(uint* pixels, int width, int height, int stridePixels, ulong frameIndex, uint inputMask)
+    private static void RenderThunk(
+        uint* pixels,
+        int width,
+        int height,
+        int stridePixels,
+        ulong frameIndex,
+        uint inputMask,
+        int pointerX,
+        int pointerY,
+        uint pointerButtons,
+        uint pointerInside)
     {
-        s_render?.Invoke(pixels, width, height, stridePixels, frameIndex, (ForgeInput)inputMask);
+        var pointer = new PointerState(pointerX, pointerY, (PointerButtons)pointerButtons, pointerInside != 0);
+        s_render?.Invoke(pixels, width, height, stridePixels, frameIndex, (ForgeInput)inputMask, pointer);
     }
 }
 
@@ -36,5 +47,5 @@ internal static unsafe partial class Native
         int width,
         int height,
         string title,
-        delegate* unmanaged[Cdecl]<uint*, int, int, int, ulong, uint, void> render);
+        delegate* unmanaged[Cdecl]<uint*, int, int, int, ulong, uint, int, int, uint, uint, void> render);
 }

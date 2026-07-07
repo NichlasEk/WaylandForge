@@ -7,6 +7,9 @@ internal sealed unsafe class SoftwareCanvas
     private int _height;
     private int _stridePixels;
 
+    public int Width => _width;
+    public int Height => _height;
+
     public void Bind(uint* pixels, int width, int height, int stridePixels)
     {
         _pixels = pixels;

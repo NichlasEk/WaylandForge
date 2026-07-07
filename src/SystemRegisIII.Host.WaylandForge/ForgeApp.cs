@@ -15,26 +15,34 @@ internal sealed unsafe class ForgeApp : IDisposable
     private readonly FrameClock _clock = new();
     private ForgeInput _lastInput;
     private ForgeInput _previousInput;
+    private PointerState _pointer;
+    private PointerState _previousPointer;
+    private int _surfaceWidth;
+    private int _surfaceHeight;
     private ulong _hostFrameIndex;
 
-    public void Render(uint* pixels, int width, int height, int stridePixels, ulong frameIndex, ForgeInput input)
+    public void Render(uint* pixels, int width, int height, int stridePixels, ulong frameIndex, ForgeInput input, PointerState pointer)
     {
-        Update(input, frameIndex);
+        Update(input, pointer, frameIndex, width, height);
 
         _canvas.Bind(pixels, width, height, stridePixels);
         Draw(width, height);
     }
 
-    private void Update(ForgeInput input, ulong frameIndex)
+    private void Update(ForgeInput input, PointerState pointer, ulong frameIndex, int width, int height)
     {
         _clock.Tick();
         _lastInput = input;
+        _pointer = pointer;
+        _surfaceWidth = width;
+        _surfaceHeight = height;
         _hostFrameIndex = frameIndex;
         HandleHostShortcuts(input);
 
         _inputSource.Update(input);
         _core.StepFrame(_inputSource, _frameStore);
         _previousInput = input;
+        _previousPointer = pointer;
     }
 
     private void Draw(int width, int height)
@@ -48,6 +56,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         {
             DrawDebugPanel(layout);
         }
+        DrawScaleToggles(layout);
         DrawStatusBar(layout);
     }
 
@@ -110,6 +119,8 @@ internal sealed unsafe class ForgeApp : IDisposable
         DrawMetric(x, y, "SCALE", _viewport.ScaleMode.ToString().ToUpperInvariant()); y += 18;
         DrawMetric(x, y, "FPS", _clock.FramesPerSecond.ToString("0.0")); y += 18;
         DrawMetric(x, y, "MS", _clock.FrameMilliseconds.ToString("0.00")); y += 18;
+        DrawMetric(x, y, "PTR", _pointer.IsInside ? $"{_pointer.X},{_pointer.Y}" : "OUT"); y += 18;
+        DrawMetric(x, y, "MBTN", _pointer.Buttons.ToString().ToUpperInvariant()); y += 18;
         DrawMetric(x, y, "FRAME", _hostFrameIndex.ToString()); y += 26;
 
         _canvas.DrawText(x, y, "INPUT", 0xffe8edf2, 2);
@@ -130,10 +141,37 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         string inputText = _lastInput == ForgeInput.None ? "INPUT: NONE" : $"INPUT: {_lastInput}";
         _canvas.DrawText(12, layout.Height - 16, inputText.ToUpperInvariant(), 0xffc7d1d9);
-        if (layout.Width >= 520)
+        if (layout.Width >= 760)
         {
-            _canvas.DrawText(layout.Width - 283, layout.Height - 16, "1 FIT 2 INTEGER 3 STRETCH", 0xff91a1ad);
+            _canvas.DrawText(layout.Width - 378, layout.Height - 16, "1/2/3 OR CLICK SCALE", 0xff91a1ad);
         }
+    }
+
+    private void DrawScaleToggles(ForgeLayout layout)
+    {
+        if (layout.Width < 420)
+        {
+            return;
+        }
+
+        int y = layout.Height - 21;
+        int x = layout.Width >= 720 ? layout.Width - 206 : layout.Width - 194;
+        DrawScaleButton(new RectI(x, y, 48, 15), "FIT", ViewportScaleMode.Fit);
+        DrawScaleButton(new RectI(x + 52, y, 48, 15), "INT", ViewportScaleMode.Integer);
+        DrawScaleButton(new RectI(x + 104, y, 48, 15), "STR", ViewportScaleMode.Stretch);
+    }
+
+    private void DrawScaleButton(RectI rect, string label, ViewportScaleMode mode)
+    {
+        bool active = _viewport.ScaleMode == mode;
+        bool hover = _pointer.IsInside && Contains(rect, _pointer.X, _pointer.Y);
+        uint fill = active ? 0xff355c7d : hover ? 0xff28333d : 0xff181d22;
+        uint border = active ? 0xff82cfff : hover ? 0xff91a1ad : 0xff39424c;
+        uint text = active ? 0xffe8edf2 : 0xff91a1ad;
+
+        _canvas.FillRect(rect.X, rect.Y, rect.Width, rect.Height, fill);
+        _canvas.DrawRect(rect.X, rect.Y, rect.Width, rect.Height, border);
+        _canvas.DrawText(rect.X + 6, rect.Y + 4, label, text);
     }
 
     private void HandleHostShortcuts(ForgeInput input)
@@ -150,11 +188,60 @@ internal sealed unsafe class ForgeApp : IDisposable
         {
             _viewport.ScaleMode = ViewportScaleMode.Stretch;
         }
+
+        if (PointerClicked())
+        {
+            if (TryHitScaleMode(_pointer.X, _pointer.Y, out ViewportScaleMode mode))
+            {
+                _viewport.ScaleMode = mode;
+            }
+        }
     }
 
     private bool Pressed(ForgeInput input, ForgeInput button)
     {
         return (input & button) != 0 && (_previousInput & button) == 0;
+    }
+
+    private bool PointerClicked()
+    {
+        return _pointer.IsInside && _pointer.LeftPressed && !_previousPointer.LeftPressed;
+    }
+
+    private bool TryHitScaleMode(int x, int y, out ViewportScaleMode mode)
+    {
+        var layout = ForgeLayout.Calculate(_surfaceWidth, _surfaceHeight);
+        if (layout.Width < 420)
+        {
+            mode = default;
+            return false;
+        }
+
+        int buttonY = layout.Height - 21;
+        int buttonX = layout.Width >= 720 ? layout.Width - 206 : layout.Width - 194;
+        if (Contains(new RectI(buttonX, buttonY, 48, 15), x, y))
+        {
+            mode = ViewportScaleMode.Fit;
+            return true;
+        }
+        if (Contains(new RectI(buttonX + 52, buttonY, 48, 15), x, y))
+        {
+            mode = ViewportScaleMode.Integer;
+            return true;
+        }
+        if (Contains(new RectI(buttonX + 104, buttonY, 48, 15), x, y))
+        {
+            mode = ViewportScaleMode.Stretch;
+            return true;
+        }
+
+        mode = default;
+        return false;
+    }
+
+    private static bool Contains(RectI rect, int x, int y)
+    {
+        return x >= rect.X && x < rect.Right && y >= rect.Y && y < rect.Bottom;
     }
 
     private void DrawMetric(int x, int y, string label, string value)
