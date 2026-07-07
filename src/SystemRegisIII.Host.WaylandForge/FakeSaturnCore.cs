@@ -12,6 +12,8 @@ internal sealed class FakeSaturnCore : ISystemCore
     private int _blobX = FrameWidth / 2;
     private int _blobY = FrameHeight / 2;
 
+    public ulong FrameIndex => _frameIndex;
+
     public void Reset()
     {
         _frameIndex = 0;

@@ -18,6 +18,8 @@ M1 is still intentionally narrow:
 - track keyboard state for emulator-style buttons
 - track Wayland pointer position/buttons
 - expose clickable scale toggles in the custom UI
+- draw buttons through a reusable custom UI/style layer
+- expose toolbar controls for pause/run, reset, and single-step
 - close on ESC or compositor close
 
 Current keyboard mapping:
@@ -28,7 +30,10 @@ Current keyboard mapping:
 - A/S/D: X/Y/Z
 - 1/2/3: viewport scale mode fit/integer/stretch
 - mouse: hover/click the scale toggles
+- mouse: use the toolbar buttons for pause/run, reset, and step
 - ESC: quit
+
+The UI style skeleton lives in `ForgeUi.cs`: button colors, border thickness, padding, hover/active states, and click state are theme-driven so other WaylandForge apps can reuse the same low-level controls.
 
 The fake core draws a controllable blob so every mapped button has visible output before a real emulator core is wired in.
 
