@@ -15,6 +15,7 @@ internal sealed class UiConfig
     public UiWindowMode WindowMode { get; set; } = UiWindowMode.Tiled;
     public string Theme { get; set; } = "dark";
     public string Scale { get; set; } = "fit";
+    public UiStyleConfig Style { get; } = new();
     public Dictionary<string, UiWindowConfig> Windows { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public static UiConfig Load(string defaultsPath, string localPath)
@@ -46,6 +47,10 @@ internal sealed class UiConfig
         writer.WriteLine($"window_mode = \"{Format(WindowMode)}\"");
         writer.WriteLine($"theme = \"{Theme.ToLowerInvariant()}\"");
         writer.WriteLine($"scale = \"{Scale.ToLowerInvariant()}\"");
+        writer.WriteLine($"bling = {Style.Bling.ToString().ToLowerInvariant()}");
+        writer.WriteLine($"rainbow_borders = {Style.RainbowBorders.ToString().ToLowerInvariant()}");
+        writer.WriteLine($"button_style = \"{Style.ButtonStyle.ToLowerInvariant()}\"");
+        writer.WriteLine($"border_thickness = {Style.BorderThickness.ToString(CultureInfo.InvariantCulture)}");
         writer.WriteLine();
 
         foreach (KeyValuePair<string, UiWindowConfig> pair in Windows.OrderBy(static pair => pair.Value.Order).ThenBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase))
@@ -117,6 +122,18 @@ internal sealed class UiConfig
                 case "scale":
                     Scale = value;
                     break;
+                case "bling":
+                    Style.Bling = ParseBool(value, Style.Bling);
+                    break;
+                case "rainbow_borders":
+                    Style.RainbowBorders = ParseBool(value, Style.RainbowBorders);
+                    break;
+                case "button_style":
+                    Style.ButtonStyle = ParseButtonStyle(value, Style.ButtonStyle);
+                    break;
+                case "border_thickness":
+                    Style.BorderThickness = Math.Clamp(ParseInt(value, Style.BorderThickness), 1, 4);
+                    break;
             }
             return;
         }
@@ -175,6 +192,22 @@ internal sealed class UiConfig
         return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) ? parsed : fallback;
     }
 
+    private static bool ParseBool(string value, bool fallback)
+    {
+        return bool.TryParse(value, out bool parsed) ? parsed : fallback;
+    }
+
+    private static string ParseButtonStyle(string value, string fallback)
+    {
+        return value.Trim().ToLowerInvariant() switch
+        {
+            "flat" => "flat",
+            "edge" => "edge",
+            "loud" => "loud",
+            _ => fallback,
+        };
+    }
+
     private static string StripComment(string line)
     {
         bool inString = false;
@@ -227,4 +260,12 @@ internal sealed class UiWindowConfig
             Height = rect.Height;
         }
     }
+}
+
+internal sealed class UiStyleConfig
+{
+    public bool Bling { get; set; }
+    public bool RainbowBorders { get; set; } = true;
+    public string ButtonStyle { get; set; } = "flat";
+    public int BorderThickness { get; set; } = 1;
 }

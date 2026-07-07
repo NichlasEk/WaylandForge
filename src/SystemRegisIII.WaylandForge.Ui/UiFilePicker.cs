@@ -102,7 +102,7 @@ public sealed class UiFilePicker
         {
             RectI row = new(scroll.Content.X + 2, y, scroll.Content.Width - 4, 17);
             bool active = string.Equals(_currentDirectory, entry.Path, StringComparison.Ordinal);
-            string label = "> " + Truncate(entry.Name, Math.Max(8, row.Width / 6 - 2));
+            string label = "[DIR] " + Truncate(entry.Name, Math.Max(8, row.Width / 6 - 6));
             if (ui.Button(new UiId("filepicker.dir:" + entry.Path), row, label, active).Clicked)
             {
                 NavigateTo(entry.Path, ui);
@@ -122,10 +122,16 @@ public sealed class UiFilePicker
             SetSort(FileSortMode.Name);
         }
 
-        sort = sort.Next(58, out RectI typeRect);
-        if (ui.Button(new UiId("filepicker.sort.type"), typeRect, SortLabel("TYPE", FileSortMode.Type), _sortMode == FileSortMode.Type).Clicked)
+        sort = sort.Next(56, out RectI typeRect);
+        if (ui.Button(new UiId("filepicker.sort.type"), typeRect, SortLabel("EXT", FileSortMode.Type), _sortMode == FileSortMode.Type).Clicked)
         {
             SetSort(FileSortMode.Type);
+        }
+
+        sort = sort.Next(58, out RectI sizeRect);
+        if (ui.Button(new UiId("filepicker.sort.size"), sizeRect, SortLabel("SIZE", FileSortMode.Size), _sortMode == FileSortMode.Size).Clicked)
+        {
+            SetSort(FileSortMode.Size);
         }
 
         sort = sort.Next(62, out RectI dateRect);
@@ -234,7 +240,7 @@ public sealed class UiFilePicker
             foreach (string file in Directory.EnumerateFiles(_currentDirectory).Order(StringComparer.OrdinalIgnoreCase))
             {
                 var info = new FileInfo(file);
-                files.Add(new FileEntry(info.Name, file, info.Extension, info.LastWriteTime));
+                files.Add(new FileEntry(info.Name, file, info.Extension, info.Length, info.LastWriteTime));
             }
 
             _directories = directories.ToArray();
@@ -261,6 +267,9 @@ public sealed class UiFilePicker
             FileSortMode.Modified => _sortDescending
                 ? files.OrderByDescending(static entry => entry.Modified).ThenBy(static entry => entry.Name, StringComparer.OrdinalIgnoreCase)
                 : files.OrderBy(static entry => entry.Modified).ThenBy(static entry => entry.Name, StringComparer.OrdinalIgnoreCase),
+            FileSortMode.Size => _sortDescending
+                ? files.OrderByDescending(static entry => entry.Size).ThenBy(static entry => entry.Name, StringComparer.OrdinalIgnoreCase)
+                : files.OrderBy(static entry => entry.Size).ThenBy(static entry => entry.Name, StringComparer.OrdinalIgnoreCase),
             _ => _sortDescending
                 ? files.OrderByDescending(static entry => entry.Name, StringComparer.OrdinalIgnoreCase)
                 : files.OrderBy(static entry => entry.Name, StringComparer.OrdinalIgnoreCase),
@@ -280,10 +289,41 @@ public sealed class UiFilePicker
 
     private static string FormatFileLabel(FileEntry entry, int maxChars)
     {
-        string extension = string.IsNullOrEmpty(entry.Extension) ? "file" : entry.Extension.TrimStart('.').ToLowerInvariant();
+        string icon = FileIcon(entry.Extension);
+        string extension = string.IsNullOrEmpty(entry.Extension) ? "FILE" : entry.Extension.TrimStart('.').ToUpperInvariant();
+        string size = FormatSize(entry.Size);
         string date = entry.Modified.ToString("yyyy-MM-dd");
-        int nameChars = Math.Max(6, maxChars - extension.Length - 13);
-        return $"{Truncate(entry.Name, nameChars)}  {extension}  {date}";
+        string suffix = $"  {extension,-5} {size,8} {date}";
+        int nameChars = Math.Max(6, maxChars - icon.Length - suffix.Length - 1);
+        return $"{icon} {Truncate(entry.Name, nameChars)}{suffix}";
+    }
+
+    private static string FileIcon(string extension)
+    {
+        return extension.Trim().ToLowerInvariant() switch
+        {
+            ".cue" or ".bin" or ".iso" or ".chd" or ".mds" or ".mdf" or ".sms" or ".gg" or ".sg" or ".smd" or ".gen" or ".md" or ".32x" or ".pce" or ".nes" or ".sfc" or ".smc" or ".gba" or ".gb" or ".gbc" => "[ROM]",
+            ".zip" or ".7z" or ".rar" => "[ZIP]",
+            ".png" or ".jpg" or ".jpeg" or ".bmp" or ".ppm" => "[IMG]",
+            ".txt" or ".log" => "[TXT]",
+            ".json" or ".toml" or ".cfg" or ".conf" or ".ini" => "[CFG]",
+            ".so" or ".dll" or ".exe" => "[BIN]",
+            _ => "[FILE]",
+        };
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        double value = Math.Max(0, bytes);
+        int unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+
+        return unit == 0 ? $"{(long)value} {units[unit]}" : $"{value:0.0} {units[unit]}";
     }
 
     private static string Truncate(string text, int maxChars)
@@ -297,11 +337,12 @@ public sealed class UiFilePicker
     }
 
     private readonly record struct DirectoryEntry(string Name, string Path);
-    private readonly record struct FileEntry(string Name, string Path, string Extension, DateTime Modified);
+    private readonly record struct FileEntry(string Name, string Path, string Extension, long Size, DateTime Modified);
     private enum FileSortMode
     {
         Name,
         Type,
+        Size,
         Modified,
     }
 }

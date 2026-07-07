@@ -4,12 +4,25 @@
 window_mode = "tiled" # tiled | floating | mixed
 theme = "dark"
 scale = "fit" # fit | integer | stretch
+bling = false # opens style effects when enabled
+rainbow_borders = true
+button_style = "flat" # flat | edge | loud
+border_thickness = 1
 
 [ui.tile]
 primary = "viewport"
 right_stack = "debug,settings"
 bottom_stack = ""
 rom_picker = "center" # floating | right | bottom | center
+
+[ui.windows.style_editor]
+open = false
+slot = "right" # left | right | top | bottom
+order = 5
+x = 0
+y = 0
+width = 360
+height = 330
 
 [ui.windows.settings]
 open = false

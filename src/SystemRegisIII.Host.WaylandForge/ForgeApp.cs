@@ -32,7 +32,8 @@ internal sealed unsafe class ForgeApp : IDisposable
     private bool _stepRequested;
     private readonly UiWindowState _filePickerWindow = new();
     private readonly UiWindowState _settingsWindow = new();
-    private readonly List<AppWindow> _windowOrder = [AppWindow.Settings, AppWindow.Rom];
+    private readonly UiWindowState _styleWindow = new();
+    private readonly List<AppWindow> _windowOrder = [AppWindow.Style, AppWindow.Settings, AppWindow.Rom];
     private string? _romPath;
     private int _themeIndex;
     private bool _configDirty;
@@ -180,6 +181,12 @@ internal sealed unsafe class ForgeApp : IDisposable
         {
             ToggleWindow(AppWindow.Settings);
         }
+
+        row = row.Next(60, out RectI styleRect);
+        if (_ui.Button(new UiId("toolbar.style"), styleRect, "BLING", _styleWindow.IsOpen).Clicked)
+        {
+            ToggleWindow(AppWindow.Style);
+        }
     }
 
     private void DrawViewport(ForgeLayout layout)
@@ -288,6 +295,9 @@ internal sealed unsafe class ForgeApp : IDisposable
                 case AppWindow.Settings:
                     DrawSettingsWindow(layout, active, inputEnabled);
                     break;
+                case AppWindow.Style:
+                    DrawStyleWindow(layout, active, inputEnabled);
+                    break;
             }
         }
     }
@@ -320,6 +330,8 @@ internal sealed unsafe class ForgeApp : IDisposable
             MarkConfigDirty();
             return;
         }
+
+        DrawBlingWindowBorder(window.Rect, 0);
 
         using (_ui.PushInputEnabled(inputEnabled))
         {
@@ -423,6 +435,20 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
         column = column with { NextY = column.NextY + 36 };
 
+        _ui.Text(column.X, column.NextY, "VISUAL", UiTextKind.Muted); column = column with { NextY = column.NextY + 14 };
+        var visualRow = new UiRow(column.X, column.NextY, 18, 6);
+        visualRow = visualRow.Next(78, out RectI styleOpenRect);
+        if (_ui.Button(new UiId("settings.style.open"), styleOpenRect, "STYLE", _styleWindow.IsOpen).Clicked)
+        {
+            ToggleWindow(AppWindow.Style);
+        }
+        visualRow = visualRow.Next(78, out RectI blingRect);
+        if (_ui.ToggleButton(new UiId("settings.bling"), blingRect, "BLING", _config.Style.Bling))
+        {
+            SetBling(!_config.Style.Bling);
+        }
+        column = column with { NextY = column.NextY + 34 };
+
         _ui.Text(column.X, column.NextY, "HOST", UiTextKind.Muted); column = column with { NextY = column.NextY + 16 };
         DrawMetric(column.X, column.NextY, "FPS", _clock.FramesPerSecond.ToString("0.0")); column = column with { NextY = column.NextY + 18 };
         DrawMetric(column.X, column.NextY, "FRAME MS", _clock.FrameMilliseconds.ToString("0.0")); column = column with { NextY = column.NextY + 18 };
@@ -432,6 +458,151 @@ internal sealed unsafe class ForgeApp : IDisposable
         DrawMetric(column.X, column.NextY, "MODE", _config.WindowMode.ToString().ToUpperInvariant()); column = column with { NextY = column.NextY + 18 };
         DrawMetric(column.X, column.NextY, "ACTIVE", TopOpenWindow()?.ToString().ToUpperInvariant() ?? "-"); column = column with { NextY = column.NextY + 18 };
         DrawMetric(column.X, column.NextY, "ROM", _romPath is null ? "NONE" : TruncateMiddle(_romPath, 28));
+        DrawBlingWindowBorder(window.Rect, 11);
+    }
+
+    private void DrawStyleWindow(ForgeLayout layout, bool active, bool inputEnabled)
+    {
+        if (!_styleWindow.IsOpen)
+        {
+            return;
+        }
+
+        RectI preferredRect = PreferredWindowRect(layout, AppWindow.Style);
+        bool tileEdit = IsTileEditModifierDown();
+        bool movable = _config.WindowMode != UiWindowMode.Tiled || tileEdit;
+        if (!movable || (_config.WindowMode == UiWindowMode.Tiled && !_styleWindow.IsDragging))
+        {
+            _styleWindow.Rect = preferredRect;
+        }
+
+        UiWindowResult window = _ui.BeginWindow(new UiId("style.window"), _styleWindow, preferredRect, ChildWindowBounds(layout), "STYLE EDITOR", active, inputEnabled, movable);
+        if (window.Activated)
+        {
+            BringToFront(AppWindow.Style);
+        }
+        if (window.Dragging)
+        {
+            MarkConfigDirty();
+        }
+        if (!window.IsOpen || window.Closed)
+        {
+            MarkConfigDirty();
+            return;
+        }
+
+        using IDisposable inputScope = _ui.PushInputEnabled(inputEnabled);
+        RectI content = window.Content;
+        _ui.Panel(content);
+        var column = new UiColumn(content.X + 10, content.Y + 10, Math.Max(1, content.Width - 20), 8);
+
+        _ui.Text(column.X, column.NextY, "EFFECTS", UiTextKind.Muted); column = column with { NextY = column.NextY + 14 };
+        var effectRow = new UiRow(column.X, column.NextY, 18, 6);
+        effectRow = effectRow.Next(74, out RectI blingRect);
+        if (_ui.ToggleButton(new UiId("style.bling"), blingRect, "BLING", _config.Style.Bling))
+        {
+            SetBling(!_config.Style.Bling);
+        }
+        effectRow = effectRow.Next(98, out RectI rainbowRect);
+        if (_ui.ToggleButton(new UiId("style.rainbow"), rainbowRect, "RAINBOW", _config.Style.RainbowBorders))
+        {
+            _config.Style.RainbowBorders = !_config.Style.RainbowBorders;
+            MarkConfigDirty();
+        }
+        column = column with { NextY = column.NextY + 34 };
+
+        _ui.Text(column.X, column.NextY, "BUTTON STYLE", UiTextKind.Muted); column = column with { NextY = column.NextY + 14 };
+        var styleRow = new UiRow(column.X, column.NextY, 18, 6);
+        DrawButtonStyleToggle(ref styleRow, "flat", "FLAT");
+        DrawButtonStyleToggle(ref styleRow, "edge", "EDGE");
+        DrawButtonStyleToggle(ref styleRow, "loud", "LOUD");
+        column = column with { NextY = column.NextY + 34 };
+
+        _ui.Text(column.X, column.NextY, "BORDER", UiTextKind.Muted); column = column with { NextY = column.NextY + 14 };
+        var borderRow = new UiRow(column.X, column.NextY, 18, 6);
+        for (int thickness = 1; thickness <= 4; thickness++)
+        {
+            borderRow = borderRow.Next(38, out RectI borderRect);
+            if (_ui.ToggleButton(new UiId("style.border." + thickness), borderRect, thickness.ToString(), _config.Style.BorderThickness == thickness))
+            {
+                _config.Style.BorderThickness = thickness;
+                MarkConfigDirty();
+            }
+        }
+        column = column with { NextY = column.NextY + 38 };
+
+        _ui.Text(column.X, column.NextY, "PREVIEW", UiTextKind.Muted); column = column with { NextY = column.NextY + 16 };
+        DrawButtonPreview(new RectI(column.X, column.NextY, Math.Min(210, column.Width), 64));
+        column = column with { NextY = column.NextY + 78 };
+
+        DrawMetric(column.X, column.NextY, "TOML", "[ui]"); column = column with { NextY = column.NextY + 18 };
+        DrawMetric(column.X, column.NextY, "BLING", _config.Style.Bling.ToString().ToLowerInvariant()); column = column with { NextY = column.NextY + 18 };
+        DrawMetric(column.X, column.NextY, "BUTTON", _config.Style.ButtonStyle.ToUpperInvariant()); column = column with { NextY = column.NextY + 18 };
+        DrawMetric(column.X, column.NextY, "BORDER", _config.Style.BorderThickness.ToString());
+
+        DrawBlingWindowBorder(window.Rect, 23);
+    }
+
+    private void DrawButtonStyleToggle(ref UiRow row, string value, string label)
+    {
+        row = row.Next(58, out RectI rect);
+        if (_ui.ToggleButton(new UiId("style.button." + value), rect, label, string.Equals(_config.Style.ButtonStyle, value, StringComparison.OrdinalIgnoreCase)))
+        {
+            _config.Style.ButtonStyle = value;
+            MarkConfigDirty();
+        }
+    }
+
+    private void DrawButtonPreview(RectI rect)
+    {
+        _canvas.DrawRect(rect.X, rect.Y, rect.Width, rect.Height, _ui.Theme.Button.Colors.Border);
+        RectI a = new(rect.X + 10, rect.Y + 14, 72, 24);
+        RectI b = new(a.Right + 10, a.Y, 88, 24);
+        DrawStyledButtonPreview(a, "NORMAL", false);
+        DrawStyledButtonPreview(b, "ACTIVE", true);
+    }
+
+    private void DrawStyledButtonPreview(RectI rect, string label, bool active)
+    {
+        UiColors colors = _ui.Theme.Button.Colors;
+        uint surface = active ? colors.Accent : colors.Surface;
+        if (string.Equals(_config.Style.ButtonStyle, "loud", StringComparison.OrdinalIgnoreCase))
+        {
+            surface = active ? RainbowColor(2) : 0xff263746;
+        }
+        _canvas.FillRect(rect.X, rect.Y, rect.Width, rect.Height, surface);
+        int thickness = Math.Clamp(_config.Style.BorderThickness, 1, 4);
+        for (int i = 0; i < thickness; i++)
+        {
+            uint border = string.Equals(_config.Style.ButtonStyle, "loud", StringComparison.OrdinalIgnoreCase) ? RainbowColor(i) : colors.BorderHot;
+            _canvas.DrawRect(rect.X + i, rect.Y + i, rect.Width - i * 2, rect.Height - i * 2, border);
+        }
+        if (string.Equals(_config.Style.ButtonStyle, "edge", StringComparison.OrdinalIgnoreCase))
+        {
+            _canvas.DrawLine(rect.X + 2, rect.Bottom - 3, rect.Right - 3, rect.Bottom - 3, colors.Accent);
+        }
+        _canvas.DrawText(rect.X + 8, rect.Y + 8, label, colors.Text);
+    }
+
+    private void DrawBlingWindowBorder(RectI rect, int seed)
+    {
+        if (!_config.Style.Bling || !_config.Style.RainbowBorders)
+        {
+            return;
+        }
+
+        int thickness = Math.Clamp(_config.Style.BorderThickness, 1, 4);
+        for (int i = 0; i < thickness + 1; i++)
+        {
+            _canvas.DrawRect(rect.X - i - 1, rect.Y - i - 1, rect.Width + (i + 1) * 2, rect.Height + (i + 1) * 2, RainbowColor(seed + i));
+        }
+    }
+
+    private uint RainbowColor(int offset)
+    {
+        ReadOnlySpan<uint> colors = stackalloc uint[] { 0xffff4d6d, 0xffffc857, 0xff5efc8d, 0xff48cae4, 0xff7b61ff, 0xffff4fd8 };
+        int index = (int)((_hostFrameIndex / 5 + (ulong)Math.Abs(offset)) % (ulong)colors.Length);
+        return colors[index];
     }
 
 
@@ -517,6 +688,11 @@ internal sealed unsafe class ForgeApp : IDisposable
                 (layout.Height - Math.Min(680, Math.Max(320, layout.Height - 96))) / 2,
                 Math.Min(980, Math.Max(360, layout.Width - (layout.HasSidePanel ? SidePanelWidth + 80 : 48))),
                 Math.Min(680, Math.Max(320, layout.Height - 96))),
+            AppWindow.Style => new RectI(
+                Math.Max(16, layout.Width - Math.Min(360, Math.Max(300, layout.Width - 72)) - (layout.HasSidePanel ? SidePanelWidth + 28 : 28)),
+                TopBarHeight + 40,
+                Math.Min(360, Math.Max(300, layout.Width - 72)),
+                Math.Min(360, Math.Max(280, layout.Height - 112))),
             AppWindow.Settings => new RectI(
                 Math.Max(16, layout.Width - Math.Min(360, Math.Max(300, layout.Width - 72)) - (layout.HasSidePanel ? SidePanelWidth + 28 : 28)),
                 TopBarHeight + 40,
@@ -539,14 +715,18 @@ internal sealed unsafe class ForgeApp : IDisposable
         int defaultSettingsHeight = Math.Min(330, Math.Max(170, work.Height / 3));
         int settingsHeight = settingsOpen ? Math.Clamp(settingsConfig.Height > 0 ? settingsConfig.Height : defaultSettingsHeight, 150, Math.Max(150, work.Height - 180)) : 0;
 
-        if (window == AppWindow.Settings)
+        if (window == AppWindow.Settings || window == AppWindow.Style)
         {
-            return slot switch
+            UiWindowConfig windowConfig = _config.Window(WindowKey(window));
+            string windowSlot = window == AppWindow.Settings ? slot : NormalizeTileSlot(windowConfig.Slot);
+            int width = window == AppWindow.Settings ? settingsWidth : Math.Clamp(windowConfig.Width > 0 ? windowConfig.Width : defaultSettingsWidth, 220, Math.Max(220, work.Width - 260));
+            int height = window == AppWindow.Settings ? settingsHeight : Math.Clamp(windowConfig.Height > 0 ? windowConfig.Height : defaultSettingsHeight, 150, Math.Max(150, work.Height - 180));
+            return windowSlot switch
             {
-                "left" => new RectI(work.X, work.Y, settingsWidth, work.Height),
-                "top" => new RectI(work.X, work.Y, work.Width, settingsHeight),
-                "bottom" => new RectI(work.X, work.Bottom - settingsHeight, work.Width, settingsHeight),
-                _ => new RectI(work.Right - settingsWidth, work.Y, settingsWidth, work.Height),
+                "left" => new RectI(work.X, work.Y, width, work.Height),
+                "top" => new RectI(work.X, work.Y, work.Width, height),
+                "bottom" => new RectI(work.X, work.Bottom - height, work.Width, height),
+                _ => new RectI(work.Right - width, work.Y, width, work.Height),
             };
         }
 
@@ -644,6 +824,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         AppWindow.Rom => _filePickerWindow,
         AppWindow.Settings => _settingsWindow,
+        AppWindow.Style => _styleWindow,
         _ => throw new ArgumentOutOfRangeException(nameof(window)),
     };
 
@@ -700,6 +881,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         SetScaleMode(ParseScaleMode(_config.Scale), markDirty: false);
         ApplyWindowConfig(AppWindow.Rom, "rom_picker");
         ApplyWindowConfig(AppWindow.Settings, "settings");
+        ApplyWindowConfig(AppWindow.Style, "style_editor");
         _windowOrder.Clear();
         _windowOrder.AddRange(Enum.GetValues<AppWindow>().OrderBy(window => _config.Window(WindowKey(window)).Order));
     }
@@ -721,6 +903,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         _config.Scale = FormatScaleMode(_viewport.ScaleMode);
         SnapshotWindow(AppWindow.Rom, "rom_picker");
         SnapshotWindow(AppWindow.Settings, "settings");
+        SnapshotWindow(AppWindow.Style, "style_editor");
         for (int i = 0; i < _windowOrder.Count; i++)
         {
             _config.Window(WindowKey(_windowOrder[i])).Order = i * 10;
@@ -783,6 +966,17 @@ internal sealed unsafe class ForgeApp : IDisposable
         MarkConfigDirty();
     }
 
+    private void SetBling(bool enabled)
+    {
+        _config.Style.Bling = enabled;
+        if (enabled && !_styleWindow.IsOpen)
+        {
+            _styleWindow.IsOpen = true;
+            BringToFront(AppWindow.Style);
+        }
+        MarkConfigDirty();
+    }
+
     private static int FindThemeIndex(string themeName)
     {
         for (int i = 0; i < UiTheme.BuiltIns.Count; i++)
@@ -813,6 +1007,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         AppWindow.Rom => "rom_picker",
         AppWindow.Settings => "settings",
+        AppWindow.Style => "style_editor",
         _ => throw new ArgumentOutOfRangeException(nameof(window)),
     };
 
@@ -904,6 +1099,7 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private enum AppWindow
     {
+        Style,
         Settings,
         Rom,
     }
