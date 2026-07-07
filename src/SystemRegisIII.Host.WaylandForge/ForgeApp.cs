@@ -33,9 +33,6 @@ internal sealed unsafe class ForgeApp : IDisposable
     private int _filePickerDragStartY;
     private int _filePickerDragWindowX;
     private int _filePickerDragWindowY;
-    private bool _filePickerVisualInitialized;
-    private double _filePickerVisualX;
-    private double _filePickerVisualY;
     private string? _romPath;
     private int _themeIndex;
 
@@ -263,14 +260,12 @@ internal sealed unsafe class ForgeApp : IDisposable
 
         int width = Math.Min(980, Math.Max(360, layout.Width - (layout.HasSidePanel ? SidePanelWidth + 80 : 48)));
         int height = Math.Min(680, Math.Max(320, layout.Height - 96));
-        RectI targetWindow = ResolveFilePickerWindow(layout, width, height);
-        RectI hitWindow = CurrentFilePickerVisualWindow(targetWindow);
-        RectI titleBar = new(hitWindow.X, hitWindow.Y, hitWindow.Width, 24);
-        RectI closeRect = new(hitWindow.Right - 28, hitWindow.Y + 4, 20, 16);
+        RectI window = ResolveFilePickerWindow(layout, width, height);
+        RectI titleBar = new(window.X, window.Y, window.Width, 24);
+        RectI closeRect = new(window.Right - 28, window.Y + 4, 20, 16);
 
-        HandleFilePickerDrag(layout, titleBar, closeRect, hitWindow);
-        targetWindow = _filePickerWindowRect ?? targetWindow;
-        RectI window = SmoothFilePickerVisualWindow(targetWindow);
+        HandleFilePickerDrag(layout, titleBar, closeRect, window);
+        window = _filePickerWindowRect ?? window;
         titleBar = new(window.X, window.Y, window.Width, 24);
         closeRect = new(window.Right - 28, window.Y + 4, 20, 16);
 
@@ -309,42 +304,6 @@ internal sealed unsafe class ForgeApp : IDisposable
         window = ClampChildWindow(layout, window);
         _filePickerWindowRect = window;
         return window;
-    }
-
-    private RectI CurrentFilePickerVisualWindow(RectI target)
-    {
-        if (!_filePickerVisualInitialized)
-        {
-            _filePickerVisualX = target.X;
-            _filePickerVisualY = target.Y;
-            _filePickerVisualInitialized = true;
-        }
-
-        return target with { X = (int)Math.Round(_filePickerVisualX), Y = (int)Math.Round(_filePickerVisualY) };
-    }
-
-    private RectI SmoothFilePickerVisualWindow(RectI target)
-    {
-        if (!_filePickerVisualInitialized)
-        {
-            _filePickerVisualX = target.X;
-            _filePickerVisualY = target.Y;
-            _filePickerVisualInitialized = true;
-        }
-
-        double follow = _draggingFilePicker ? 0.46 : 0.28;
-        _filePickerVisualX += (target.X - _filePickerVisualX) * follow;
-        _filePickerVisualY += (target.Y - _filePickerVisualY) * follow;
-        if (Math.Abs(target.X - _filePickerVisualX) < 0.35)
-        {
-            _filePickerVisualX = target.X;
-        }
-        if (Math.Abs(target.Y - _filePickerVisualY) < 0.35)
-        {
-            _filePickerVisualY = target.Y;
-        }
-
-        return target with { X = (int)Math.Round(_filePickerVisualX), Y = (int)Math.Round(_filePickerVisualY) };
     }
 
     private void DrawFloatingWindowBackplate(RectI window)

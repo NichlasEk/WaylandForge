@@ -167,13 +167,16 @@ public sealed unsafe class SoftwareCanvas
         {
             int destRow = clippedY + y;
             int sourceY = (destRow - destY) * sourceHeight / destHeight;
+            int sourceRow = sourceY * sourceStride;
             uint* dst = _pixels + (destRow * _stridePixels) + clippedX;
+            long sourceXFixed = ((long)(clippedX - destX) * sourceWidth << 16) / destWidth;
+            long sourceXStep = ((long)sourceWidth << 16) / destWidth;
 
             for (int x = 0; x < clippedW; x++)
             {
-                int destCol = clippedX + x;
-                int sourceX = (destCol - destX) * sourceWidth / destWidth;
-                dst[x] = source[(sourceY * sourceStride) + sourceX];
+                int sourceX = (int)(sourceXFixed >> 16);
+                dst[x] = source[sourceRow + sourceX];
+                sourceXFixed += sourceXStep;
             }
         }
     }
