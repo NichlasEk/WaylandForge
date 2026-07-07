@@ -40,6 +40,8 @@ internal sealed unsafe class ForgeApp : IDisposable
     private bool _configDirty;
     private double _lastConfigSaveSeconds;
     private bool _resizingTileSplit;
+    private AppWindow? _tileDragWindow;
+    private RectI _tileDragRect;
     private int _tileResizeStartX;
     private int _tileResizeStartY;
     private int _tileResizeStartWidth;
@@ -301,6 +303,7 @@ internal sealed unsafe class ForgeApp : IDisposable
                     break;
             }
         }
+        DrawTileDropPreview(layout);
     }
 
     private void DrawFilePicker(ForgeLayout layout, bool active, bool inputEnabled)
@@ -322,11 +325,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         {
             BringToFront(AppWindow.Rom);
         }
-        if (window.Dragging)
-        {
-            UpdateTileDropOrder(layout, AppWindow.Rom, window.Rect);
-            MarkConfigDirty();
-        }
+        HandleTileWindowDrag(layout, AppWindow.Rom, window.Rect, window.Dragging);
         if (!window.IsOpen || window.Closed)
         {
             MarkConfigDirty();
@@ -371,11 +370,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         {
             BringToFront(AppWindow.Settings);
         }
-        if (window.Dragging)
-        {
-            UpdateTileDropOrder(layout, AppWindow.Settings, window.Rect);
-            MarkConfigDirty();
-        }
+        HandleTileWindowDrag(layout, AppWindow.Settings, window.Rect, window.Dragging);
         if (!window.IsOpen || window.Closed)
         {
             MarkConfigDirty();
@@ -484,11 +479,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         {
             BringToFront(AppWindow.Style);
         }
-        if (window.Dragging)
-        {
-            UpdateTileDropOrder(layout, AppWindow.Style, window.Rect);
-            MarkConfigDirty();
-        }
+        HandleTileWindowDrag(layout, AppWindow.Style, window.Rect, window.Dragging);
         if (!window.IsOpen || window.Closed)
         {
             MarkConfigDirty();
@@ -951,13 +942,33 @@ internal sealed unsafe class ForgeApp : IDisposable
         return _tileOrder.Where(window => WindowState(window).IsOpen).ToArray();
     }
 
-    private void UpdateTileDropOrder(ForgeLayout layout, AppWindow window, RectI draggedRect)
+    private void HandleTileWindowDrag(ForgeLayout layout, AppWindow window, RectI draggedRect, bool dragging)
     {
         if (_config.WindowMode != UiWindowMode.Tiled || !IsTileEditModifierDown())
         {
+            if (_tileDragWindow == window)
+            {
+                _tileDragWindow = null;
+            }
             return;
         }
 
+        if (dragging)
+        {
+            _tileDragWindow = window;
+            _tileDragRect = draggedRect;
+            return;
+        }
+
+        if (_tileDragWindow == window && !_pointer.LeftPressed)
+        {
+            CommitTileDropOrder(layout, window, _tileDragRect);
+            _tileDragWindow = null;
+        }
+    }
+
+    private void CommitTileDropOrder(ForgeLayout layout, AppWindow window, RectI draggedRect)
+    {
         AppWindow[] open = OpenTiledWindows();
         if (open.Length < 2 || !open.Contains(window))
         {
@@ -972,6 +983,63 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
 
         MoveTileWindow(window, TileDropIndex(layout, draggedRect, open.Length));
+    }
+
+    private void DrawTileDropPreview(ForgeLayout layout)
+    {
+        if (_tileDragWindow is not AppWindow dragged || !_pointer.LeftPressed || _config.WindowMode != UiWindowMode.Tiled || !IsTileEditModifierDown())
+        {
+            return;
+        }
+
+        AppWindow[] open = OpenTiledWindows();
+        if (open.Length < 2 || !open.Contains(dragged))
+        {
+            return;
+        }
+
+        RectI targetRect;
+        int? swapIndex = TileDropSwapIndex(layout, dragged, _tileDragRect, open);
+        if (swapIndex is int targetIndex)
+        {
+            targetRect = TiledWindowRect(layout, open[targetIndex]);
+        }
+        else
+        {
+            targetRect = PreviewTileRect(layout, TileDropIndex(layout, _tileDragRect, open.Length), open.Length);
+        }
+
+        uint color = WithAlpha(_ui.Theme.Button.Colors.BorderActive, 150);
+        for (int i = 0; i < 3; i++)
+        {
+            RectI r = Expand(targetRect, i + 2);
+            _canvas.BlendRect(r.X, r.Y, r.Width, 1, color);
+            _canvas.BlendRect(r.X, r.Bottom - 1, r.Width, 1, color);
+            _canvas.BlendRect(r.X, r.Y, 1, r.Height, color);
+            _canvas.BlendRect(r.Right - 1, r.Y, 1, r.Height, color);
+        }
+    }
+
+    private RectI PreviewTileRect(ForgeLayout layout, int index, int openCount)
+    {
+        RectI work = TileWorkArea(layout);
+        const int gap = 8;
+        if (openCount == 2)
+        {
+            int primaryWidth = TilePrimaryWidth(_tileOrder[0], work, (int)Math.Round(work.Width * 0.64));
+            return index == 0
+                ? new RectI(work.X, work.Y, primaryWidth, work.Height)
+                : new RectI(work.X + primaryWidth + gap, work.Y, Math.Max(220, work.Width - primaryWidth - gap), work.Height);
+        }
+
+        int primaryHeight = TilePrimaryHeight(_tileOrder[0], work, (int)Math.Round(work.Height * 0.60));
+        if (index == 0)
+        {
+            return new RectI(work.X, work.Y, work.Width, primaryHeight);
+        }
+
+        RectI rest = new(work.X, work.Y + primaryHeight + gap, work.Width, Math.Max(160, work.Height - primaryHeight - gap));
+        return GridTileRect(rest, index - 1, openCount - 1, gap);
     }
 
     private int? TileDropSwapIndex(ForgeLayout layout, AppWindow dragged, RectI draggedRect, AppWindow[] open)
