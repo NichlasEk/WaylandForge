@@ -293,10 +293,13 @@ internal sealed unsafe class ForgeApp : IDisposable
             return;
         }
 
-        int width = Math.Min(980, Math.Max(360, layout.Width - (layout.HasSidePanel ? SidePanelWidth + 80 : 48)));
-        int height = Math.Min(680, Math.Max(320, layout.Height - 96));
-        RectI preferredRect = new((layout.Width - width) / 2, (layout.Height - height) / 2, width, height);
-        UiWindowResult window = _ui.BeginWindow(new UiId("filepicker.window"), _filePickerWindow, preferredRect, ChildWindowBounds(layout), "ROM PICKER", active, inputEnabled);
+        RectI preferredRect = PreferredWindowRect(layout, AppWindow.Rom);
+        bool movable = _config.WindowMode != UiWindowMode.Tiled;
+        if (!movable)
+        {
+            _filePickerWindow.Rect = preferredRect;
+        }
+        UiWindowResult window = _ui.BeginWindow(new UiId("filepicker.window"), _filePickerWindow, preferredRect, ChildWindowBounds(layout), "ROM PICKER", active, inputEnabled, movable);
         if (window.Activated)
         {
             BringToFront(AppWindow.Rom);
@@ -334,10 +337,13 @@ internal sealed unsafe class ForgeApp : IDisposable
             return;
         }
 
-        int width = Math.Min(360, Math.Max(300, layout.Width - 72));
-        int height = Math.Min(330, Math.Max(260, layout.Height - 112));
-        RectI preferredRect = new(Math.Max(16, layout.Width - width - (layout.HasSidePanel ? SidePanelWidth + 28 : 28)), TopBarHeight + 40, width, height);
-        UiWindowResult window = _ui.BeginWindow(new UiId("settings.window"), _settingsWindow, preferredRect, ChildWindowBounds(layout), "DISPLAY SETTINGS", active, inputEnabled);
+        RectI preferredRect = PreferredWindowRect(layout, AppWindow.Settings);
+        bool movable = _config.WindowMode != UiWindowMode.Tiled;
+        if (!movable)
+        {
+            _settingsWindow.Rect = preferredRect;
+        }
+        UiWindowResult window = _ui.BeginWindow(new UiId("settings.window"), _settingsWindow, preferredRect, ChildWindowBounds(layout), "DISPLAY SETTINGS", active, inputEnabled, movable);
         if (window.Activated)
         {
             BringToFront(AppWindow.Settings);
@@ -416,6 +422,59 @@ internal sealed unsafe class ForgeApp : IDisposable
         DrawMetric(column.X, column.NextY, "MODE", _config.WindowMode.ToString().ToUpperInvariant()); column = column with { NextY = column.NextY + 18 };
         DrawMetric(column.X, column.NextY, "ACTIVE", TopOpenWindow()?.ToString().ToUpperInvariant() ?? "-"); column = column with { NextY = column.NextY + 18 };
         DrawMetric(column.X, column.NextY, "ROM", _romPath is null ? "NONE" : TruncateMiddle(_romPath, 28));
+    }
+
+
+    private RectI PreferredWindowRect(ForgeLayout layout, AppWindow window)
+    {
+        if (_config.WindowMode == UiWindowMode.Tiled)
+        {
+            return TiledWindowRect(layout, window);
+        }
+
+        return FloatingWindowRect(layout, window);
+    }
+
+    private RectI FloatingWindowRect(ForgeLayout layout, AppWindow window)
+    {
+        return window switch
+        {
+            AppWindow.Rom => new RectI(
+                (layout.Width - Math.Min(980, Math.Max(360, layout.Width - (layout.HasSidePanel ? SidePanelWidth + 80 : 48)))) / 2,
+                (layout.Height - Math.Min(680, Math.Max(320, layout.Height - 96))) / 2,
+                Math.Min(980, Math.Max(360, layout.Width - (layout.HasSidePanel ? SidePanelWidth + 80 : 48))),
+                Math.Min(680, Math.Max(320, layout.Height - 96))),
+            AppWindow.Settings => new RectI(
+                Math.Max(16, layout.Width - Math.Min(360, Math.Max(300, layout.Width - 72)) - (layout.HasSidePanel ? SidePanelWidth + 28 : 28)),
+                TopBarHeight + 40,
+                Math.Min(360, Math.Max(300, layout.Width - 72)),
+                Math.Min(330, Math.Max(260, layout.Height - 112))),
+            _ => throw new ArgumentOutOfRangeException(nameof(window)),
+        };
+    }
+
+    private RectI TiledWindowRect(ForgeLayout layout, AppWindow window)
+    {
+        RectI work = TileWorkArea(layout);
+        bool settingsOpen = _settingsWindow.IsOpen;
+        int settingsWidth = settingsOpen ? Math.Min(360, Math.Max(260, work.Width / 3)) : 0;
+        int gap = settingsOpen ? 8 : 0;
+        return window switch
+        {
+            AppWindow.Settings => new RectI(work.Right - settingsWidth, work.Y, settingsWidth, work.Height),
+            AppWindow.Rom => new RectI(work.X, work.Y, Math.Max(240, work.Width - settingsWidth - gap), work.Height),
+            _ => throw new ArgumentOutOfRangeException(nameof(window)),
+        };
+    }
+
+    private RectI TileWorkArea(ForgeLayout layout)
+    {
+        int pad = layout.Width >= 520 ? 16 : 8;
+        int right = layout.HasSidePanel ? layout.SidePanelX - pad : layout.Width - pad;
+        int x = pad;
+        int y = TopBarHeight + pad;
+        int bottom = layout.Height - StatusBarHeight - pad;
+        return new RectI(x, y, Math.Max(1, right - x), Math.Max(1, bottom - y));
     }
 
     private RectI ChildWindowBounds(ForgeLayout layout)

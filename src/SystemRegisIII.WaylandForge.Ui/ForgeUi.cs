@@ -252,7 +252,7 @@ public sealed class UiContext
             Math.Max(1, rect.Height - style.Padding * 2 - (string.IsNullOrEmpty(title) ? 0 : 26)));
     }
 
-    public UiWindowResult BeginWindow(UiId id, UiWindowState state, RectI preferredRect, RectI bounds, string title, bool active = true, bool inputEnabled = true)
+    public UiWindowResult BeginWindow(UiId id, UiWindowState state, RectI preferredRect, RectI bounds, string title, bool active = true, bool inputEnabled = true, bool movable = true)
     {
         const int titleBarHeight = 24;
         RectI rect = state.Rect ?? preferredRect;
@@ -263,7 +263,7 @@ public sealed class UiContext
         RectI titleBar = new(rect.X, rect.Y, rect.Width, titleBarHeight);
         RectI closeRect = new(rect.Right - 28, rect.Y + 4, 20, 16);
         bool activated = inputEnabled && _pointer.IsInside && rect.Contains(_pointer.X, _pointer.Y) && _pointer.LeftPressed && !_previousPointer.LeftPressed;
-        if (inputEnabled)
+        if (inputEnabled && movable)
         {
             HandleWindowDrag(id, state, bounds, titleBar, closeRect, rect);
         }
