@@ -7,6 +7,7 @@ scale = "fit" # fit | integer | stretch
 bling = false # opens style effects when enabled
 rainbow_borders = true
 button_style = "flat" # flat | edge | loud
+border_effect = "glow" # still | glow | flow
 border_thickness = 1
 
 [ui.tile]

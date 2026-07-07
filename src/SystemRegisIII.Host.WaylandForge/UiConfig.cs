@@ -50,6 +50,7 @@ internal sealed class UiConfig
         writer.WriteLine($"bling = {Style.Bling.ToString().ToLowerInvariant()}");
         writer.WriteLine($"rainbow_borders = {Style.RainbowBorders.ToString().ToLowerInvariant()}");
         writer.WriteLine($"button_style = \"{Style.ButtonStyle.ToLowerInvariant()}\"");
+        writer.WriteLine($"border_effect = \"{Style.BorderEffect.ToLowerInvariant()}\"");
         writer.WriteLine($"border_thickness = {Style.BorderThickness.ToString(CultureInfo.InvariantCulture)}");
         writer.WriteLine();
 
@@ -131,6 +132,9 @@ internal sealed class UiConfig
                 case "button_style":
                     Style.ButtonStyle = ParseButtonStyle(value, Style.ButtonStyle);
                     break;
+                case "border_effect":
+                    Style.BorderEffect = ParseBorderEffect(value, Style.BorderEffect);
+                    break;
                 case "border_thickness":
                     Style.BorderThickness = Math.Clamp(ParseInt(value, Style.BorderThickness), 1, 4);
                     break;
@@ -208,6 +212,17 @@ internal sealed class UiConfig
         };
     }
 
+    private static string ParseBorderEffect(string value, string fallback)
+    {
+        return value.Trim().ToLowerInvariant() switch
+        {
+            "still" => "still",
+            "glow" => "glow",
+            "flow" => "flow",
+            _ => fallback,
+        };
+    }
+
     private static string StripComment(string line)
     {
         bool inString = false;
@@ -267,5 +282,6 @@ internal sealed class UiStyleConfig
     public bool Bling { get; set; }
     public bool RainbowBorders { get; set; } = true;
     public string ButtonStyle { get; set; } = "flat";
+    public string BorderEffect { get; set; } = "glow";
     public int BorderThickness { get; set; } = 1;
 }

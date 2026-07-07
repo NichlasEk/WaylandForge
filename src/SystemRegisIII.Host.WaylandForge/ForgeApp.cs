@@ -504,11 +504,18 @@ internal sealed unsafe class ForgeApp : IDisposable
             SetBling(!_config.Style.Bling);
         }
         effectRow = effectRow.Next(98, out RectI rainbowRect);
-        if (_ui.ToggleButton(new UiId("style.rainbow"), rainbowRect, "RAINBOW", _config.Style.RainbowBorders))
+        if (_ui.ToggleButton(new UiId("style.rainbow"), rainbowRect, "BORDER FX", _config.Style.RainbowBorders))
         {
             _config.Style.RainbowBorders = !_config.Style.RainbowBorders;
             MarkConfigDirty();
         }
+        column = column with { NextY = column.NextY + 34 };
+
+        _ui.Text(column.X, column.NextY, "BORDER EFFECT", UiTextKind.Muted); column = column with { NextY = column.NextY + 14 };
+        var effectModeRow = new UiRow(column.X, column.NextY, 18, 6);
+        DrawBorderEffectToggle(ref effectModeRow, "still", "STILL");
+        DrawBorderEffectToggle(ref effectModeRow, "glow", "GLOW");
+        DrawBorderEffectToggle(ref effectModeRow, "flow", "FLOW");
         column = column with { NextY = column.NextY + 34 };
 
         _ui.Text(column.X, column.NextY, "BUTTON STYLE", UiTextKind.Muted); column = column with { NextY = column.NextY + 14 };
@@ -537,6 +544,7 @@ internal sealed unsafe class ForgeApp : IDisposable
 
         DrawMetric(column.X, column.NextY, "TOML", "[ui]"); column = column with { NextY = column.NextY + 18 };
         DrawMetric(column.X, column.NextY, "BLING", _config.Style.Bling.ToString().ToLowerInvariant()); column = column with { NextY = column.NextY + 18 };
+        DrawMetric(column.X, column.NextY, "EFFECT", _config.Style.BorderEffect.ToUpperInvariant()); column = column with { NextY = column.NextY + 18 };
         DrawMetric(column.X, column.NextY, "BUTTON", _config.Style.ButtonStyle.ToUpperInvariant()); column = column with { NextY = column.NextY + 18 };
         DrawMetric(column.X, column.NextY, "BORDER", _config.Style.BorderThickness.ToString());
 
@@ -549,6 +557,16 @@ internal sealed unsafe class ForgeApp : IDisposable
         if (_ui.ToggleButton(new UiId("style.button." + value), rect, label, string.Equals(_config.Style.ButtonStyle, value, StringComparison.OrdinalIgnoreCase)))
         {
             _config.Style.ButtonStyle = value;
+            MarkConfigDirty();
+        }
+    }
+
+    private void DrawBorderEffectToggle(ref UiRow row, string value, string label)
+    {
+        row = row.Next(58, out RectI rect);
+        if (_ui.ToggleButton(new UiId("style.effect." + value), rect, label, string.Equals(_config.Style.BorderEffect, value, StringComparison.OrdinalIgnoreCase)))
+        {
+            _config.Style.BorderEffect = value;
             MarkConfigDirty();
         }
     }
@@ -591,28 +609,126 @@ internal sealed unsafe class ForgeApp : IDisposable
             return;
         }
 
+        string effect = _config.Style.BorderEffect.Trim().ToLowerInvariant();
+        if (effect == "flow")
+        {
+            DrawFlowBorder(rect, seed, animated: true);
+        }
+        else if (effect == "still")
+        {
+            DrawFlowBorder(rect, seed, animated: false);
+        }
+        else
+        {
+            DrawGlowBorder(rect, seed);
+        }
+    }
+
+    private void DrawGlowBorder(RectI rect, int seed)
+    {
+        uint baseColor = _ui.Theme.Button.Colors.BorderHot;
         int thickness = Math.Clamp(_config.Style.BorderThickness, 1, 4);
+        double breathe = 0.18 + 0.07 * (Math.Sin(((double)_hostFrameIndex + seed * 17.0) / 720.0) + 1.0) * 0.5;
+        uint color = WithAlpha(SoftFadeColor(seed, baseColor, 0.34), 118);
+        uint haze = WithAlpha(SoftFadeColor(seed + 3, baseColor, breathe), 42);
+
+        for (int i = thickness + 3; i >= thickness; i--)
+        {
+            RectI expanded = Expand(rect, i);
+            _canvas.BlendRect(expanded.X, expanded.Y, expanded.Width, 1, haze);
+            _canvas.BlendRect(expanded.X, expanded.Bottom - 1, expanded.Width, 1, haze);
+            _canvas.BlendRect(expanded.X, expanded.Y, 1, expanded.Height, haze);
+            _canvas.BlendRect(expanded.Right - 1, expanded.Y, 1, expanded.Height, haze);
+        }
+
         for (int i = 0; i < thickness + 1; i++)
         {
-            _canvas.DrawRect(rect.X - i - 1, rect.Y - i - 1, rect.Width + (i + 1) * 2, rect.Height + (i + 1) * 2, SoftFadeColor(seed, _ui.Theme.Button.Colors.BorderHot, 0.26));
+            RectI expanded = Expand(rect, i + 1);
+            _canvas.BlendRect(expanded.X, expanded.Y, expanded.Width, 1, color);
+            _canvas.BlendRect(expanded.X, expanded.Bottom - 1, expanded.Width, 1, color);
+            _canvas.BlendRect(expanded.X, expanded.Y, 1, expanded.Height, color);
+            _canvas.BlendRect(expanded.Right - 1, expanded.Y, 1, expanded.Height, color);
+        }
+    }
+
+    private void DrawFlowBorder(RectI rect, int seed, bool animated)
+    {
+        int thickness = Math.Clamp(_config.Style.BorderThickness, 1, 4) + 1;
+        int segment = 28;
+        uint baseColor = _ui.Theme.Button.Colors.BorderHot;
+        RectI expanded = Expand(rect, thickness);
+        int perimeter = Math.Max(1, expanded.Width * 2 + expanded.Height * 2 - 4);
+        double phase = animated ? (_hostFrameIndex / 2400.0) : 0.0;
+        phase += seed * 0.013;
+
+        for (int layer = 0; layer < thickness; layer++)
+        {
+            RectI r = Expand(rect, layer + 1);
+            int alpha = Math.Max(52, 150 - layer * 24);
+            DrawFlowEdge(r.X, r.Y, r.Width, 1, 0, perimeter, segment, phase, baseColor, alpha);
+            DrawFlowEdge(r.Right - 1, r.Y, 1, r.Height, r.Width, perimeter, segment, phase, baseColor, alpha);
+            DrawFlowEdge(r.X, r.Bottom - 1, r.Width, 1, r.Width + r.Height, perimeter, segment, phase, baseColor, alpha, reverse: true);
+            DrawFlowEdge(r.X, r.Y, 1, r.Height, r.Width * 2 + r.Height, perimeter, segment, phase, baseColor, alpha, reverse: true);
+        }
+    }
+
+    private void DrawFlowEdge(int x, int y, int width, int height, int distanceStart, int perimeter, int segment, double phase, uint baseColor, int alpha, bool reverse = false)
+    {
+        int length = Math.Max(width, height);
+        for (int pos = 0; pos < length; pos += segment)
+        {
+            int run = Math.Min(segment, length - pos);
+            int distance = distanceStart + (reverse ? length - pos : pos);
+            double progress = ((distance / (double)perimeter) + phase) % 1.0;
+            uint color = WithAlpha(GradientBorderColor(progress, baseColor), alpha);
+            if (width >= height)
+            {
+                _canvas.BlendRect(x + pos, y, run, height, color);
+            }
+            else
+            {
+                _canvas.BlendRect(x, y + pos, width, run, color);
+            }
         }
     }
 
     private uint SoftFadeColor(int offset, uint baseColor, double strength)
     {
-        ReadOnlySpan<uint> colors = stackalloc uint[] { 0xff6f8fb5, 0xff7f77b8, 0xff9b6f9f, 0xff6faaa0, 0xffb0916a };
-        double t = ((_hostFrameIndex / 1200.0) + offset * 0.04) % colors.Length;
-        int index = (int)Math.Floor(t);
-        int next = (index + 1) % colors.Length;
-        double local = SmoothStep(t - index);
-        uint faded = LerpColor(colors[index], colors[next], local);
+        double t = ((_hostFrameIndex / 1800.0) + offset * 0.04) % 1.0;
+        uint faded = GradientBorderColor(t, baseColor);
         return LerpColor(baseColor, faded, Math.Clamp(strength, 0.0, 1.0));
+    }
+
+    private uint GradientBorderColor(double progress, uint baseColor)
+    {
+        ReadOnlySpan<uint> colors = stackalloc uint[] { 0xff6f8fb5, 0xff7f77b8, 0xff9b6f9f, 0xff6faaa0, 0xffb0916a };
+        double scaled = PositiveModulo(progress, 1.0) * colors.Length;
+        int index = (int)Math.Floor(scaled) % colors.Length;
+        int next = (index + 1) % colors.Length;
+        double local = SmoothStep(scaled - index);
+        return LerpColor(baseColor, LerpColor(colors[index], colors[next], local), 0.52);
     }
 
     private static double SmoothStep(double value)
     {
         value = Math.Clamp(value, 0.0, 1.0);
         return value * value * (3.0 - 2.0 * value);
+    }
+
+    private static double PositiveModulo(double value, double divisor)
+    {
+        double result = value % divisor;
+        return result < 0 ? result + divisor : result;
+    }
+
+    private static RectI Expand(RectI rect, int amount)
+    {
+        return new RectI(rect.X - amount, rect.Y - amount, rect.Width + amount * 2, rect.Height + amount * 2);
+    }
+
+    private static uint WithAlpha(uint color, int alpha)
+    {
+        return ((uint)Math.Clamp(alpha, 0, 255) << 24) | (color & 0x00ffffff);
     }
 
     private static uint LerpColor(uint from, uint to, double amount)
