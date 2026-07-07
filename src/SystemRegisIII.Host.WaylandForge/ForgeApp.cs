@@ -23,6 +23,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     private ulong _hostFrameIndex;
     private bool _paused;
     private bool _stepRequested;
+    private int _themeIndex;
 
     public ForgeApp()
     {
@@ -59,7 +60,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     private void Draw(int width, int height)
     {
         _ui.BeginFrame(_pointer, _previousPointer);
-        _canvas.Clear(0xff111318);
+        _canvas.Clear(_ui.Theme.Panel.Colors.Panel);
         var layout = ForgeLayout.Calculate(width, height);
 
         DrawChrome(layout);
@@ -79,29 +80,30 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private void DrawChrome(ForgeLayout layout)
     {
-        _canvas.FillRect(0, 0, layout.Width, TopBarHeight, 0xff1f252b);
-        _canvas.FillRect(0, layout.Height - StatusBarHeight, layout.Width, StatusBarHeight, 0xff1f252b);
+        UiColors colors = _ui.Theme.Button.Colors;
+        _canvas.FillRect(0, 0, layout.Width, TopBarHeight, colors.Surface);
+        _canvas.FillRect(0, layout.Height - StatusBarHeight, layout.Width, StatusBarHeight, colors.Surface);
         if (layout.HasSidePanel)
         {
-            _canvas.FillRect(layout.SidePanelX, TopBarHeight, SidePanelWidth, layout.Height - TopBarHeight - StatusBarHeight, 0xff181d22);
+            _canvas.FillRect(layout.SidePanelX, TopBarHeight, SidePanelWidth, layout.Height - TopBarHeight - StatusBarHeight, colors.Panel);
         }
 
-        _canvas.DrawRect(0, 0, layout.Width, layout.Height, 0xff39424c);
-        _canvas.DrawLine(0, TopBarHeight, layout.Width, TopBarHeight, 0xff39424c);
-        _canvas.DrawLine(0, layout.Height - StatusBarHeight - 1, layout.Width, layout.Height - StatusBarHeight - 1, 0xff39424c);
+        _canvas.DrawRect(0, 0, layout.Width, layout.Height, colors.Border);
+        _canvas.DrawLine(0, TopBarHeight, layout.Width, TopBarHeight, colors.Border);
+        _canvas.DrawLine(0, layout.Height - StatusBarHeight - 1, layout.Width, layout.Height - StatusBarHeight - 1, colors.Border);
         if (layout.HasSidePanel)
         {
-            _canvas.DrawLine(layout.SidePanelX - 1, TopBarHeight, layout.SidePanelX - 1, layout.Height - StatusBarHeight, 0xff39424c);
+            _canvas.DrawLine(layout.SidePanelX - 1, TopBarHeight, layout.SidePanelX - 1, layout.Height - StatusBarHeight, colors.Border);
         }
 
-        _canvas.DrawText(12, 10, "WAYLANDFORGE", 0xffe8edf2, 2);
+        _ui.Text(12, 10, "WAYLANDFORGE", scale: 2);
         if (layout.Width >= 520)
         {
-            _canvas.DrawText(214, 11, "CPU UI / SHM / DOUBLE BUFFER", 0xff91a1ad);
+            _ui.Text(214, 11, "CPU UI / SHM / DOUBLE BUFFER", UiTextKind.Muted);
         }
         if (layout.Width >= 900)
         {
-            _canvas.DrawText(layout.Width - 174, 11, $"FRAME {_hostFrameIndex}", 0xff91a1ad);
+            _ui.Text(layout.Width - 174, 11, $"FRAME {_hostFrameIndex}", UiTextKind.Muted);
         }
     }
 
@@ -112,24 +114,32 @@ internal sealed unsafe class ForgeApp : IDisposable
             return;
         }
 
-        int x = 402;
-        int y = 6;
+        var row = new UiRow(402, 6, 17, 6);
         string runLabel = _paused ? "RUN" : "PAUSE";
-        if (_ui.Button(new RectI(x, y, 50, 17), runLabel, !_paused).Clicked)
+        row = row.Next(50, out RectI runRect);
+        if (_ui.Button(runRect, runLabel, !_paused).Clicked)
         {
             _paused = !_paused;
         }
 
-        if (_ui.Button(new RectI(x + 56, y, 50, 17), "RESET").Clicked)
+        row = row.Next(50, out RectI resetRect);
+        if (_ui.Button(resetRect, "RESET").Clicked)
         {
             _core.Reset();
             _core.StepFrame(_inputSource, _frameStore);
         }
 
-        if (_ui.Button(new RectI(x + 112, y, 42, 17), "STEP").Clicked)
+        row = row.Next(42, out RectI stepRect);
+        if (_ui.Button(stepRect, "STEP").Clicked)
         {
             _paused = true;
             _stepRequested = true;
+        }
+
+        row = row.Next(50, out RectI themeRect);
+        if (_ui.Button(themeRect, _ui.Theme.Name).Clicked)
+        {
+            NextTheme();
         }
     }
 
@@ -147,11 +157,11 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private void DrawDebugPanel(ForgeLayout layout)
     {
-        int x = layout.SidePanelX + 16;
-        int y = 48;
-
-        _canvas.DrawText(x, y, "HOST", 0xffe8edf2, 2);
-        y += 28;
+        RectI content = _ui.Panel(
+            new RectI(layout.SidePanelX + 8, TopBarHeight + 8, SidePanelWidth - 16, layout.Height - TopBarHeight - StatusBarHeight - 16),
+            "HOST");
+        int x = content.X;
+        int y = content.Y;
         DrawMetric(x, y, "BACKEND", "WAYLAND"); y += 18;
         DrawMetric(x, y, "BUFFER", "WL_SHM X2"); y += 18;
         DrawMetric(x, y, "FORMAT", "ARGB8888"); y += 18;
@@ -166,7 +176,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         DrawMetric(x, y, "MBTN", _pointer.Buttons.ToString().ToUpperInvariant()); y += 18;
         DrawMetric(x, y, "FRAME", _hostFrameIndex.ToString()); y += 26;
 
-        _canvas.DrawText(x, y, "INPUT", 0xffe8edf2, 2);
+        _ui.Text(x, y, "INPUT", scale: 2);
         y += 28;
         DrawInputLamp(x, y, "UP", ForgeInput.Up); y += 16;
         DrawInputLamp(x, y, "DOWN", ForgeInput.Down); y += 16;
@@ -176,17 +186,17 @@ internal sealed unsafe class ForgeApp : IDisposable
         DrawInputLamp(x, y, "A B C", ForgeInput.A | ForgeInput.B | ForgeInput.C); y += 16;
         DrawInputLamp(x, y, "X Y Z", ForgeInput.X | ForgeInput.Y | ForgeInput.Z);
 
-        _canvas.DrawText(x, layout.Height - 78, "ESC CLOSES", 0xffffc857);
-        _canvas.DrawText(x, layout.Height - 60, "NO GTK QT SDL", 0xff91a1ad);
+        _ui.Text(x, layout.Height - 78, "ESC CLOSES", UiTextKind.Accent);
+        _ui.Text(x, layout.Height - 60, "NO GTK QT SDL", UiTextKind.Muted);
     }
 
     private void DrawStatusBar(ForgeLayout layout)
     {
         string inputText = _lastInput == ForgeInput.None ? "INPUT: NONE" : $"INPUT: {_lastInput}";
-        _canvas.DrawText(12, layout.Height - 16, inputText.ToUpperInvariant(), 0xffc7d1d9);
+        _ui.Text(12, layout.Height - 16, inputText.ToUpperInvariant());
         if (layout.Width >= 760)
         {
-            _canvas.DrawText(layout.Width - 378, layout.Height - 16, "1/2/3 OR CLICK SCALE", 0xff91a1ad);
+            _ui.Text(layout.Width - 438, layout.Height - 16, "1/2/3 SCALE  T THEME", UiTextKind.Muted);
         }
     }
 
@@ -199,15 +209,19 @@ internal sealed unsafe class ForgeApp : IDisposable
 
         int y = layout.Height - 21;
         int x = layout.Width >= 720 ? layout.Width - 206 : layout.Width - 194;
-        if (_ui.ToggleButton(new RectI(x, y, 48, 15), "FIT", _viewport.ScaleMode == ViewportScaleMode.Fit))
+        var row = new UiRow(x, y, 15, 4);
+        row = row.Next(48, out RectI fitRect);
+        if (_ui.ToggleButton(fitRect, "FIT", _viewport.ScaleMode == ViewportScaleMode.Fit))
         {
             _viewport.ScaleMode = ViewportScaleMode.Fit;
         }
-        if (_ui.ToggleButton(new RectI(x + 52, y, 48, 15), "INT", _viewport.ScaleMode == ViewportScaleMode.Integer))
+        row = row.Next(48, out RectI intRect);
+        if (_ui.ToggleButton(intRect, "INT", _viewport.ScaleMode == ViewportScaleMode.Integer))
         {
             _viewport.ScaleMode = ViewportScaleMode.Integer;
         }
-        if (_ui.ToggleButton(new RectI(x + 104, y, 48, 15), "STR", _viewport.ScaleMode == ViewportScaleMode.Stretch))
+        row = row.Next(48, out RectI stretchRect);
+        if (_ui.ToggleButton(stretchRect, "STR", _viewport.ScaleMode == ViewportScaleMode.Stretch))
         {
             _viewport.ScaleMode = ViewportScaleMode.Stretch;
         }
@@ -227,6 +241,10 @@ internal sealed unsafe class ForgeApp : IDisposable
         {
             _viewport.ScaleMode = ViewportScaleMode.Stretch;
         }
+        else if (Pressed(input, ForgeInput.ThemeNext))
+        {
+            NextTheme();
+        }
 
     }
 
@@ -237,17 +255,24 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private void DrawMetric(int x, int y, string label, string value)
     {
-        _canvas.DrawText(x, y, label, 0xff70808d);
-        _canvas.DrawText(x + 72, y, value, 0xffc7d1d9);
+        _ui.Text(x, y, label, UiTextKind.Muted);
+        _ui.Text(x + 72, y, value);
     }
 
     private void DrawInputLamp(int x, int y, string label, ForgeInput bit)
     {
         bool active = (_lastInput & bit) != 0;
-        uint color = active ? 0xff58d68d : 0xff39424c;
+        UiColors colors = _ui.Theme.Button.Colors;
+        uint color = active ? colors.Accent : colors.Border;
         _canvas.FillRect(x, y + 2, 8, 8, color);
-        _canvas.DrawRect(x, y + 2, 8, 8, 0xff70808d);
-        _canvas.DrawText(x + 16, y, label, active ? 0xffe8edf2 : 0xff91a1ad);
+        _canvas.DrawRect(x, y + 2, 8, 8, colors.BorderHot);
+        _ui.Text(x + 16, y, label, active ? UiTextKind.Normal : UiTextKind.Muted);
+    }
+
+    private void NextTheme()
+    {
+        _themeIndex = (_themeIndex + 1) % UiTheme.BuiltIns.Count;
+        _ui.Theme = UiTheme.BuiltIns[_themeIndex];
     }
 
     private readonly record struct ForgeLayout(

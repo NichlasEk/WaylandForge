@@ -19,4 +19,5 @@ internal enum ForgeInput : uint
     ScaleFit = 1 << 12,
     ScaleInteger = 1 << 13,
     ScaleStretch = 1 << 14,
+    ThemeNext = 1 << 15,
 }

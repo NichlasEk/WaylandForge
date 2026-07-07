@@ -41,6 +41,7 @@ enum {
     WAYLANDFORGE_INPUT_SCALE_FIT = 1u << 12,
     WAYLANDFORGE_INPUT_SCALE_INTEGER = 1u << 13,
     WAYLANDFORGE_INPUT_SCALE_STRETCH = 1u << 14,
+    WAYLANDFORGE_INPUT_THEME_NEXT = 1u << 15,
 };
 
 struct waylandforge_app;
@@ -350,6 +351,9 @@ static void keyboard_key(void *data, struct wl_keyboard *keyboard, uint32_t seri
         break;
     case KEY_3:
         bit = WAYLANDFORGE_INPUT_SCALE_STRETCH;
+        break;
+    case KEY_T:
+        bit = WAYLANDFORGE_INPUT_THEME_NEXT;
         break;
     default:
         break;

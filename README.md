@@ -19,6 +19,8 @@ M1 is still intentionally narrow:
 - track Wayland pointer position/buttons
 - expose clickable scale toggles in the custom UI
 - draw buttons through a reusable custom UI/style layer
+- draw panels/text through the same reusable UI layer
+- provide dark-first theme variants and simple row/column layout helpers
 - expose toolbar controls for pause/run, reset, and single-step
 - close on ESC or compositor close
 
@@ -29,11 +31,12 @@ Current keyboard mapping:
 - Z/X/C: A/B/C
 - A/S/D: X/Y/Z
 - 1/2/3: viewport scale mode fit/integer/stretch
+- T: cycle UI theme
 - mouse: hover/click the scale toggles
 - mouse: use the toolbar buttons for pause/run, reset, and step
 - ESC: quit
 
-The reusable UI style skeleton lives in `SystemRegisIII.WaylandForge.Ui`: canvas, rectangles, pointer state, button colors, border thickness, padding, hover/active states, and click state are theme-driven so other WaylandForge apps can use the same low-level controls.
+The reusable UI style skeleton lives in `SystemRegisIII.WaylandForge.Ui`: canvas, rectangles, pointer state, panels, text, row/column helpers, button colors, border thickness, padding, hover/active states, and click state are theme-driven so other WaylandForge apps can use the same low-level controls. Dark is the default theme.
 
 The fake core draws a controllable blob so every mapped button has visible output before a real emulator core is wired in.
 
