@@ -21,7 +21,7 @@ rom_picker = "center" # floating | right | bottom | center
 [ui.windows.style_editor]
 open = false
 slot = "right" # left | right | top | bottom
-order = 5
+order = 20
 x = 0
 y = 0
 width = 360
@@ -39,7 +39,7 @@ height = 330
 [ui.windows.rom_picker]
 open = false
 slot = "center"
-order = 20
+order = 0
 x = 0
 y = 0
 width = 980
