@@ -8,6 +8,7 @@ M1 is still intentionally narrow:
 - bind `wl_compositor`, `wl_shm`, `wl_seat`, and `xdg_wm_base`
 - create `wl_surface`, `xdg_surface`, and `xdg_toplevel`
 - allocate double-buffered `wl_shm` ARGB8888 framebuffers
+- resize the shm framebuffers from `xdg_toplevel.configure`
 - repaint only from Wayland frame callbacks / buffer release
 - render a small custom software UI from managed code
 - track keyboard state for emulator-style buttons

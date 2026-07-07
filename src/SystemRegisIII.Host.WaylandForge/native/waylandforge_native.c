@@ -37,6 +37,7 @@ struct waylandforge_shm_buffer {
     uint32_t *pixels;
     struct waylandforge_app *owner;
     int busy;
+    int retired;
     int bytes;
 };
 
@@ -52,9 +53,11 @@ struct waylandforge_app {
     struct xdg_surface *xdg_surface;
     struct xdg_toplevel *toplevel;
     struct wl_callback *frame_callback;
-    struct waylandforge_shm_buffer buffers[2];
+    struct waylandforge_shm_buffer *buffers[2];
     int width;
     int height;
+    int pending_width;
+    int pending_height;
     int stride_pixels;
     int configured;
     int running;
@@ -81,12 +84,50 @@ static int make_shm_file(size_t size)
 }
 
 static void draw_and_commit(struct waylandforge_app *app);
+static int resize_buffers(struct waylandforge_app *app, int width, int height);
+
+static void destroy_shm_buffer(struct waylandforge_shm_buffer *shm_buffer)
+{
+    if (shm_buffer == NULL) {
+        return;
+    }
+
+    if (shm_buffer->buffer) {
+        wl_buffer_destroy(shm_buffer->buffer);
+    }
+
+    if (shm_buffer->pixels) {
+        munmap(shm_buffer->pixels, (size_t)shm_buffer->bytes);
+    }
+
+    free(shm_buffer);
+}
+
+static void retire_shm_buffer(struct waylandforge_shm_buffer *shm_buffer)
+{
+    if (shm_buffer == NULL) {
+        return;
+    }
+
+    shm_buffer->owner = NULL;
+    if (shm_buffer->busy) {
+        shm_buffer->retired = 1;
+    } else {
+        destroy_shm_buffer(shm_buffer);
+    }
+}
 
 static void buffer_release(void *data, struct wl_buffer *buffer)
 {
     (void)buffer;
     struct waylandforge_shm_buffer *shm_buffer = data;
     shm_buffer->busy = 0;
+
+    if (shm_buffer->retired) {
+        destroy_shm_buffer(shm_buffer);
+        return;
+    }
+
     if (shm_buffer->owner != NULL && shm_buffer->owner->running && shm_buffer->owner->configured && shm_buffer->owner->frame_callback == NULL) {
         draw_and_commit(shm_buffer->owner);
     }
@@ -111,14 +152,14 @@ static const struct wl_callback_listener frame_listener = {
 
 static void draw_and_commit(struct waylandforge_app *app)
 {
-    if (!app->configured || !app->running) {
+    if (!app->configured || !app->running || app->frame_callback != NULL) {
         return;
     }
 
     struct waylandforge_shm_buffer *target = NULL;
     for (size_t i = 0; i < sizeof(app->buffers) / sizeof(app->buffers[0]); i++) {
-        if (!app->buffers[i].busy) {
-            target = &app->buffers[i];
+        if (app->buffers[i] != NULL && !app->buffers[i]->busy) {
+            target = app->buffers[i];
             break;
         }
     }
@@ -152,10 +193,24 @@ static void xdg_surface_configure(void *data, struct xdg_surface *surface, uint3
     struct waylandforge_app *app = data;
     xdg_surface_ack_configure(surface, serial);
 
+    if (app->pending_width > 0 && app->pending_height > 0 &&
+        (app->pending_width != app->width || app->pending_height != app->height)) {
+        if (resize_buffers(app, app->pending_width, app->pending_height) != 0) {
+            app->running = 0;
+            return;
+        }
+
+        if (app->frame_callback) {
+            wl_callback_destroy(app->frame_callback);
+            app->frame_callback = NULL;
+        }
+    }
+
     if (!app->configured) {
         app->configured = 1;
-        draw_and_commit(app);
     }
+
+    draw_and_commit(app);
 }
 
 static const struct xdg_surface_listener xdg_surface_listener = {
@@ -164,11 +219,14 @@ static const struct xdg_surface_listener xdg_surface_listener = {
 
 static void toplevel_configure(void *data, struct xdg_toplevel *toplevel, int32_t width, int32_t height, struct wl_array *states)
 {
-    (void)data;
     (void)toplevel;
-    (void)width;
-    (void)height;
     (void)states;
+
+    struct waylandforge_app *app = data;
+    if (width > 0 && height > 0) {
+        app->pending_width = width;
+        app->pending_height = height;
+    }
 }
 
 static void toplevel_close(void *data, struct xdg_toplevel *toplevel)
@@ -357,15 +415,21 @@ static const struct wl_registry_listener registry_listener = {
     .global_remove = registry_global_remove,
 };
 
-static int create_shm_buffer(struct waylandforge_app *app, struct waylandforge_shm_buffer *target)
+static struct waylandforge_shm_buffer *create_shm_buffer(struct waylandforge_app *app)
 {
+    struct waylandforge_shm_buffer *target = calloc(1, sizeof(*target));
+    if (target == NULL) {
+        return NULL;
+    }
+
     int stride_bytes = app->stride_pixels * 4;
     target->owner = app;
     target->bytes = stride_bytes * app->height;
 
     int fd = make_shm_file((size_t)target->bytes);
     if (fd < 0) {
-        return -1;
+        free(target);
+        return NULL;
     }
 
     target->pixels = mmap(NULL, (size_t)target->bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
@@ -373,7 +437,8 @@ static int create_shm_buffer(struct waylandforge_app *app, struct waylandforge_s
         perror("mmap");
         target->pixels = NULL;
         close(fd);
-        return -1;
+        free(target);
+        return NULL;
     }
 
     struct wl_shm_pool *pool = wl_shm_create_pool(app->shm, fd, target->bytes);
@@ -384,7 +449,61 @@ static int create_shm_buffer(struct waylandforge_app *app, struct waylandforge_s
     wl_shm_pool_destroy(pool);
     close(fd);
 
-    return target->buffer == NULL ? -1 : 0;
+    if (target->buffer == NULL) {
+        destroy_shm_buffer(target);
+        return NULL;
+    }
+
+    return target;
+}
+
+static int resize_buffers(struct waylandforge_app *app, int width, int height)
+{
+    if (width < 1) {
+        width = 1;
+    }
+    if (height < 1) {
+        height = 1;
+    }
+
+    if (app->buffers[0] != NULL && app->buffers[1] != NULL &&
+        app->width == width && app->height == height) {
+        return 0;
+    }
+
+    struct waylandforge_shm_buffer *old_buffers[2] = { app->buffers[0], app->buffers[1] };
+    int old_width = app->width;
+    int old_height = app->height;
+    int old_stride_pixels = app->stride_pixels;
+    app->buffers[0] = NULL;
+    app->buffers[1] = NULL;
+
+    app->width = width;
+    app->height = height;
+    app->stride_pixels = app->width;
+
+    for (size_t i = 0; i < sizeof(app->buffers) / sizeof(app->buffers[0]); i++) {
+        app->buffers[i] = create_shm_buffer(app);
+        if (app->buffers[i] == NULL) {
+            for (size_t j = 0; j < sizeof(app->buffers) / sizeof(app->buffers[0]); j++) {
+                retire_shm_buffer(app->buffers[j]);
+                app->buffers[j] = NULL;
+            }
+
+            app->buffers[0] = old_buffers[0];
+            app->buffers[1] = old_buffers[1];
+            app->width = old_width;
+            app->height = old_height;
+            app->stride_pixels = old_stride_pixels;
+            return -1;
+        }
+    }
+
+    for (size_t i = 0; i < sizeof(old_buffers) / sizeof(old_buffers[0]); i++) {
+        retire_shm_buffer(old_buffers[i]);
+    }
+
+    return 0;
 }
 
 static void cleanup(struct waylandforge_app *app)
@@ -393,12 +512,8 @@ static void cleanup(struct waylandforge_app *app)
         wl_callback_destroy(app->frame_callback);
     }
     for (size_t i = 0; i < sizeof(app->buffers) / sizeof(app->buffers[0]); i++) {
-        if (app->buffers[i].buffer) {
-            wl_buffer_destroy(app->buffers[i].buffer);
-        }
-        if (app->buffers[i].pixels) {
-            munmap(app->buffers[i].pixels, (size_t)app->buffers[i].bytes);
-        }
+        destroy_shm_buffer(app->buffers[i]);
+        app->buffers[i] = NULL;
     }
     if (app->keyboard) {
         wl_keyboard_destroy(app->keyboard);
@@ -463,13 +578,9 @@ int waylandforge_run(int width, int height, const char *title, waylandforge_rend
         return 11;
     }
 
-    app.stride_pixels = app.width;
-
-    for (size_t i = 0; i < sizeof(app.buffers) / sizeof(app.buffers[0]); i++) {
-        if (create_shm_buffer(&app, &app.buffers[i]) != 0) {
-            cleanup(&app);
-            return 12;
-        }
+    if (resize_buffers(&app, app.width, app.height) != 0) {
+        cleanup(&app);
+        return 12;
     }
 
     app.surface = wl_compositor_create_surface(app.compositor);
