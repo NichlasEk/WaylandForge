@@ -122,14 +122,14 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         Stop();
     }
 
-    public void PushInputNow(SaturnInputState inputState)
+    public void PushInputNow(SaturnInputState inputState, uint rawKeyCode = 0, uint rawKeySerial = 0, bool rawKeyPressed = false)
     {
         if (_mode != "wfcore_socket" || _socket is null)
         {
             return;
         }
 
-        SendInputState(inputState);
+        SendInputState(inputState, rawKeyCode, rawKeySerial, rawKeyPressed);
     }
 
     private void StepStdio(IInputSource input, IFrameSink frameSink)
@@ -200,21 +200,25 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         }
     }
 
-    private void SendInputState(SaturnInputState inputState)
+    private void SendInputState(SaturnInputState inputState, uint rawKeyCode = 0, uint rawKeySerial = 0, bool rawKeyPressed = false)
     {
         lock (_inputLock)
         {
-            PrepareInputHeader(inputState);
+            PrepareInputHeader(inputState, rawKeyCode, rawKeySerial, rawKeyPressed);
             TrySendInputHeader();
         }
     }
 
-    private void PrepareInputHeader(SaturnInputState inputState)
+    private void PrepareInputHeader(SaturnInputState inputState, uint rawKeyCode, uint rawKeySerial, bool rawKeyPressed)
     {
+        Array.Clear(_inputHeader);
         BinaryPrimitives.WriteUInt32LittleEndian(_inputHeader.AsSpan(0), InputMagic);
         BinaryPrimitives.WriteInt32LittleEndian(_inputHeader.AsSpan(4), 32);
         BinaryPrimitives.WriteUInt32LittleEndian(_inputHeader.AsSpan(8), (uint)inputState.Buttons);
+        BinaryPrimitives.WriteUInt32LittleEndian(_inputHeader.AsSpan(12), rawKeyCode);
         BinaryPrimitives.WriteUInt64LittleEndian(_inputHeader.AsSpan(16), FrameIndex);
+        BinaryPrimitives.WriteUInt32LittleEndian(_inputHeader.AsSpan(24), rawKeySerial);
+        BinaryPrimitives.WriteUInt32LittleEndian(_inputHeader.AsSpan(28), rawKeyPressed ? 1u : 0u);
     }
 
     private bool WaitForSocketData(int timeoutMs)

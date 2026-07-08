@@ -95,7 +95,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     public void RawKeyInput(uint keyCode, uint keySerial, bool pressed)
     {
         ProcessRawKey(new TextInputEvent(keyCode, keySerial, pressed));
-        PushCurrentInputState();
+        PushCurrentInputState(keyCode, keySerial, pressed);
     }
 
     private void Update(ForgeInput input, PointerState pointer, TextInputEvent textInput, ScrollInputEvent scrollInput, ulong frameIndex)
@@ -2450,14 +2450,14 @@ internal sealed unsafe class ForgeApp : IDisposable
         PushCurrentInputState();
     }
 
-    private void PushCurrentInputState()
+    private void PushCurrentInputState(uint rawKeyCode = 0, uint rawKeySerial = 0, bool rawKeyPressed = false)
     {
         ForgeInput mappedInput = MapInputFromPressedKeys();
         _lastInput = mappedInput;
         _inputSource.Update(mappedInput);
         if (_core is ExternalProcessCore external)
         {
-            external.PushInputNow(_inputSource.Poll());
+            external.PushInputNow(_inputSource.Poll(), rawKeyCode, rawKeySerial, rawKeyPressed);
         }
     }
 

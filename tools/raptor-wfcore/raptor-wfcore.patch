@@ -1,5 +1,5 @@
 diff --git a/src/i_video.cpp b/src/i_video.cpp
-index 482b9d8..47aed4d 100644
+index 482b9d8..785999b 100644
 --- a/src/i_video.cpp
 +++ b/src/i_video.cpp
 @@ -20,6 +20,11 @@
@@ -22,7 +22,7 @@ index 482b9d8..47aed4d 100644
  #include "musapi.h"
  #include "prefapi.h"
  #include "joyapi.h"
-@@ -203,6 +209,22 @@ int screencoordpoint = 0;
+@@ -203,6 +209,23 @@ int screencoordpoint = 0;
  // When textmode is true not update pointer cursor
  static bool textmode = false;
  
@@ -40,12 +40,13 @@ index 482b9d8..47aed4d 100644
 +static void wfcore_poll_input(void);
 +static void wfcore_apply_buttons(uint32_t buttons);
 +static void wfcore_set_key(int scancode, bool pressed);
++static int wfcore_raw_key_to_scancode(uint32_t raw_key);
 +static void wfcore_send_frame(void);
 +
  void VIDEO_LoadPrefs(void)
  {
      fullscreen = INI_GetPreferenceLong("Video", "fullscreen", 0);
-@@ -210,6 +232,51 @@ void VIDEO_LoadPrefs(void)
+@@ -210,6 +233,51 @@ void VIDEO_LoadPrefs(void)
      txt_fullscreen = INI_GetPreferenceLong("Video", "txt_fullscreen", 0);
  }
  
@@ -97,7 +98,7 @@ index 482b9d8..47aed4d 100644
  static bool MouseShouldBeGrabbed()
  {
      // never grab the mouse when in screensaver mode
-@@ -280,11 +347,19 @@ static void SetShowCursor(bool show)
+@@ -280,11 +348,19 @@ static void SetShowCursor(bool show)
  
  void I_ShutdownGraphics(void)
  {
@@ -118,7 +119,7 @@ index 482b9d8..47aed4d 100644
  
          initialized = false;
      }
-@@ -423,6 +498,14 @@ void I_GetEvent(void)
+@@ -423,6 +499,14 @@ void I_GetEvent(void)
  
      SDL_Event sdlevent;
  
@@ -133,7 +134,7 @@ index 482b9d8..47aed4d 100644
      SDL_PumpEvents();
  
      while (SDL_PollEvent(&sdlevent))
-@@ -729,6 +812,13 @@ void I_FinishUpdate (void)
+@@ -729,6 +813,13 @@ void I_FinishUpdate (void)
      if (!initialized)
          return;
  
@@ -147,7 +148,7 @@ index 482b9d8..47aed4d 100644
      // if (noblit)
      //     return;
  
-@@ -1414,6 +1504,7 @@ void I_InitGraphics(uint8_t *pal)
+@@ -1414,6 +1505,7 @@ void I_InitGraphics(uint8_t *pal)
      SDL_Event dummy;
      char *env;
      int rw = 0, rh = 0;
@@ -155,7 +156,7 @@ index 482b9d8..47aed4d 100644
  
      // Pass through the XSCREENSAVER_WINDOW environment variable to
      // SDL_WINDOWID, to embed the SDL window into the Xscreensaver
-@@ -1432,6 +1523,38 @@ void I_InitGraphics(uint8_t *pal)
+@@ -1432,6 +1524,38 @@ void I_InitGraphics(uint8_t *pal)
          putenv(winenv);
      }
  
@@ -194,7 +195,7 @@ index 482b9d8..47aed4d 100644
      SetSDLVideoDriver();
  
      if (SDL_Init(SDL_INIT_VIDEO) < 0)
-@@ -1626,4 +1749,158 @@ bool I_GetNeedResize(bool setonlypos)
+@@ -1626,4 +1750,185 @@ bool I_GetNeedResize(bool setonlypos)
  void I_Settextmode(bool flag)
  {
      textmode = flag;
@@ -276,8 +277,17 @@ index 482b9d8..47aed4d 100644
 +        if (memcmp(header, "WFIN", 4) == 0)
 +        {
 +            uint32_t buttons;
++            uint32_t raw_key;
++            uint32_t raw_state;
 +            memcpy(&buttons, header + 8, sizeof(buttons));
++            memcpy(&raw_key, header + 12, sizeof(raw_key));
++            memcpy(&raw_state, header + 28, sizeof(raw_state));
 +            wfcore_apply_buttons(buttons);
++            int scancode = wfcore_raw_key_to_scancode(raw_key);
++            if (scancode != SC_NONE)
++            {
++                wfcore_set_key(scancode, raw_state != 0);
++            }
 +            offset += 32;
 +            continue;
 +        }
@@ -289,6 +299,24 @@ index 482b9d8..47aed4d 100644
 +        memmove(wfcore_input_buffer, wfcore_input_buffer + offset, wfcore_input_buffer_used - offset);
 +        wfcore_input_buffer_used -= offset;
 +    }
++}
++
++static int wfcore_raw_key_to_scancode(uint32_t raw_key)
++{
++    if (raw_key == 0 || raw_key == UINT32_MAX)
++        return SC_NONE;
++
++    switch (raw_key)
++    {
++    case 103: return SC_UP;
++    case 108: return SC_DOWN;
++    case 105: return SC_LEFT;
++    case 106: return SC_RIGHT;
++    default:
++        break;
++    }
++
++    return raw_key < 256 ? (int)raw_key : SC_NONE;
 +}
 +
 +static void wfcore_send_frame(void)
