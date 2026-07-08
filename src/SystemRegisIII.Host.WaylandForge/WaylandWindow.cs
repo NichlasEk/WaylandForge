@@ -37,11 +37,12 @@ internal static unsafe class WaylandWindow
         uint pointerInside,
         uint keyCode,
         uint keySerial,
+        uint keyState,
         int scrollDelta,
         uint scrollSerial)
     {
         var pointer = new PointerState(pointerX, pointerY, (PointerButtons)pointerButtons, pointerInside != 0);
-        var textInput = new TextInputEvent(keyCode, keySerial);
+        var textInput = new TextInputEvent(keyCode, keySerial, keyState != 0);
         var scrollInput = new ScrollInputEvent(scrollDelta, scrollSerial);
         s_render?.Invoke(pixels, width, height, stridePixels, frameIndex, (ForgeInput)inputMask, pointer, textInput, scrollInput);
     }
@@ -54,5 +55,5 @@ internal static unsafe partial class Native
         int width,
         int height,
         string title,
-        delegate* unmanaged[Cdecl]<uint*, int, int, int, ulong, uint, int, int, uint, uint, uint, uint, int, uint, void> render);
+        delegate* unmanaged[Cdecl]<uint*, int, int, int, ulong, uint, int, int, uint, uint, uint, uint, uint, int, uint, void> render);
 }

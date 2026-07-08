@@ -17,6 +17,7 @@ internal sealed class UiConfig
     public string Scale { get; set; } = "fit";
     public UiStyleConfig Style { get; } = new();
     public UiAudioConfig Audio { get; } = new();
+    public UiInputConfig Input { get; } = new();
     public UiTileLayoutConfig Layout { get; } = new();
     public UiExternalCoreConfig ExternalCore { get; } = new();
     public Dictionary<string, UiWindowConfig> Windows { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -60,6 +61,12 @@ internal sealed class UiConfig
         writer.WriteLine();
         writer.WriteLine("[audio]");
         writer.WriteLine($"volume = {Audio.Volume.ToString(CultureInfo.InvariantCulture)}");
+        writer.WriteLine();
+        writer.WriteLine("[input]");
+        foreach (KeyValuePair<string, string> pair in Input.Bindings.OrderBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            writer.WriteLine($"{pair.Key} = \"{Escape(pair.Value)}\"");
+        }
         writer.WriteLine();
         writer.WriteLine("[ui.layout]");
         writer.WriteLine($"root = \"{Layout.Root}\"");
@@ -183,6 +190,12 @@ internal sealed class UiConfig
             {
                 Audio.Volume = Math.Clamp(ParseInt(value, Audio.Volume), 0, 100);
             }
+            return;
+        }
+
+        if (string.Equals(section, "input", StringComparison.OrdinalIgnoreCase))
+        {
+            Input.Bindings[key.Trim().ToLowerInvariant()] = value.Trim();
             return;
         }
 
@@ -369,6 +382,31 @@ internal sealed class UiStyleConfig
 internal sealed class UiAudioConfig
 {
     public int Volume { get; set; } = 80;
+}
+
+internal sealed class UiInputConfig
+{
+    public Dictionary<string, string> Bindings { get; } = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["escape"] = "esc",
+        ["up"] = "up",
+        ["down"] = "down",
+        ["left"] = "left",
+        ["right"] = "right",
+        ["start"] = "enter",
+        ["a"] = "z",
+        ["b"] = "x",
+        ["c"] = "c",
+        ["x"] = "a",
+        ["y"] = "s",
+        ["z"] = "d",
+        ["scale_fit"] = "1",
+        ["scale_integer"] = "2",
+        ["scale_stretch"] = "3",
+        ["theme_next"] = "t",
+        ["shift"] = "leftshift,rightshift",
+        ["super"] = "leftmeta,rightmeta",
+    };
 }
 
 internal sealed class UiTileLayoutConfig

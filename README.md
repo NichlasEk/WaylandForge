@@ -16,7 +16,7 @@ M1 is still intentionally narrow:
 - blit the core framebuffer through a dedicated emulator viewport
 - track host frame timing and show FPS/frame milliseconds
 - keep host update and UI rendering as separate steps
-- track keyboard state for emulator-style buttons
+- track raw keyboard up/down state and map it to emulator-style actions
 - track Wayland pointer position/buttons
 - expose clickable scale toggles in the custom UI
 - draw buttons through a reusable custom UI/style layer
@@ -33,7 +33,7 @@ M1 is still intentionally narrow:
 - persist UI defaults/state through a small repo-local TOML configuration layer
 - close on ESC or compositor close
 
-Current keyboard mapping:
+Default keyboard mapping:
 
 - arrows: d-pad
 - enter: start
@@ -48,6 +48,7 @@ Current keyboard mapping:
 - mouse: use the toolbar buttons for pause/run, reset, step, ROM, and settings
 - EXT toolbar button: toggle the external process dummy core
 - ROM toolbar button: toggles the ROM picker open/closed
+- INPUT toolbar button: open the input mapper
 - Super+Shift in tiled mode: drag the internal tile split to resize in X/Y, drag the Settings title toward an edge to dock left/right/top/bottom
 - ESC: quit
 
@@ -131,7 +132,19 @@ Then run WaylandForge and press `EXT`. The host starts the local ignored OpenTyr
 
 ## UI Config
 
-Default UI configuration lives in `config/waylandforge.ui.toml`. Runtime changes are written to `config/waylandforge.ui.local.toml`, which is gitignored. The config currently persists theme, viewport scale, internal window mode, z-order, open state, floating window rectangles, and the tiled Settings split and dock side.
+Default UI configuration lives in `config/waylandforge.ui.toml`. Runtime changes are written to `config/waylandforge.ui.local.toml`, which is gitignored. The config currently persists theme, viewport scale, internal window mode, z-order, open state, floating window rectangles, tiled layout, audio volume, and input bindings.
+
+Input mappings live under `[input]`. The `INPUT` toolbar window edits the same values, one action at a time. A binding can also be edited manually as a comma-separated list, for example:
+
+```toml
+[input]
+start = "enter,space"
+a = "z"
+b = "x"
+x = "a"
+```
+
+Those names map to Wayland/Linux key codes today. Future gamepad support should feed the same action names instead of adding emulator-specific hardmapping.
 
 ## Audio Daemon Prototype
 

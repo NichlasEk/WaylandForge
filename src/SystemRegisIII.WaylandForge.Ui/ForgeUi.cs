@@ -88,7 +88,7 @@ public readonly record struct UiButtonResult(bool Hovered, bool Pressed, bool Cl
 public readonly record struct UiSliderResult(int Value, bool Hovered, bool Dragging, bool Changed);
 public readonly record struct UiTextBoxOptions(bool ReadOnly = false, bool Numeric = false, bool Password = false, int MaxLength = 32);
 public readonly record struct UiTextBoxResult(string Text, bool Hovered, bool Focused, bool Changed, bool Submitted);
-public readonly record struct TextInputEvent(uint KeyCode, uint Serial);
+public readonly record struct TextInputEvent(uint KeyCode, uint Serial, bool Pressed = true);
 public readonly record struct ScrollInputEvent(int Delta, uint Serial);
 public readonly record struct UiScrollArea(RectI Content, IDisposable Clip) : IDisposable
 {
@@ -462,7 +462,7 @@ public sealed class UiContext
         bool focused = _focused == id.Value;
         bool changed = false;
         bool submitted = false;
-        if (_inputEnabled && focused && !options.ReadOnly && _textInput.Serial != 0 && _textInput.Serial != _handledTextSerial)
+        if (_inputEnabled && focused && !options.ReadOnly && _textInput.Pressed && _textInput.Serial != 0 && _textInput.Serial != _handledTextSerial)
         {
             _handledTextSerial = _textInput.Serial;
             changed = ApplyTextInput(state, options, out submitted);

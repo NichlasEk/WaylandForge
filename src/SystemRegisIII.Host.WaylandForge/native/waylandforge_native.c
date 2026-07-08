@@ -26,6 +26,7 @@ typedef void (*waylandforge_render_callback)(
     uint32_t pointer_inside,
     uint32_t key_code,
     uint32_t key_serial,
+    uint32_t key_state,
     int32_t scroll_delta,
     uint32_t scroll_serial);
 
@@ -89,6 +90,7 @@ struct waylandforge_app {
     uint32_t pointer_inside;
     uint32_t key_code;
     uint32_t key_serial;
+    uint32_t key_state;
     int32_t scroll_delta;
     uint32_t scroll_serial;
     uint64_t frame_index;
@@ -210,6 +212,7 @@ static void draw_and_commit(struct waylandforge_app *app)
         app->pointer_inside,
         app->key_code,
         app->key_serial,
+        app->key_state,
         app->scroll_delta,
         app->scroll_serial);
     app->scroll_delta = 0;
@@ -390,10 +393,9 @@ static void keyboard_key(void *data, struct wl_keyboard *keyboard, uint32_t seri
         }
     }
 
-    if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
-        app->key_code = key;
-        app->key_serial++;
-    }
+    app->key_code = key;
+    app->key_state = state == WL_KEYBOARD_KEY_STATE_PRESSED ? 1u : 0u;
+    app->key_serial++;
 
     if (key == KEY_ESC && state == WL_KEYBOARD_KEY_STATE_PRESSED) {
         app->running = 0;

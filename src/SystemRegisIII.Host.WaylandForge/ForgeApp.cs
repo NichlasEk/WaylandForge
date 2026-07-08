@@ -40,10 +40,14 @@ internal sealed unsafe class ForgeApp : IDisposable
     private readonly UiWindowState _filePickerWindow = new();
     private readonly UiWindowState _settingsWindow = new();
     private readonly UiWindowState _styleWindow = new();
-    private readonly List<AppWindow> _windowOrder = [AppWindow.Style, AppWindow.Settings, AppWindow.Rom];
-    private readonly List<AppWindow> _tileOrder = [AppWindow.Viewport, AppWindow.Rom, AppWindow.Settings, AppWindow.Style];
+    private readonly UiWindowState _inputWindow = new();
+    private readonly List<AppWindow> _windowOrder = [AppWindow.Style, AppWindow.Settings, AppWindow.Input, AppWindow.Rom];
+    private readonly List<AppWindow> _tileOrder = [AppWindow.Viewport, AppWindow.Rom, AppWindow.Settings, AppWindow.Style, AppWindow.Input];
+    private readonly HashSet<uint> _pressedKeys = [];
     private string? _romPath;
     private AppWindow _focusedTile = AppWindow.Viewport;
+    private InputBinding? _capturingBinding;
+    private uint _handledKeySerial;
     private int _themeIndex;
     private bool _configDirty;
     private string _coreFault = string.Empty;
@@ -84,14 +88,16 @@ internal sealed unsafe class ForgeApp : IDisposable
     private void Update(ForgeInput input, PointerState pointer, TextInputEvent textInput, ScrollInputEvent scrollInput, ulong frameIndex)
     {
         _clock.Tick();
-        _lastInput = input;
+        ProcessRawKey(textInput);
+        ForgeInput mappedInput = MapInputFromPressedKeys();
+        _lastInput = mappedInput;
         _pointer = pointer;
         _textInput = textInput;
         _scrollInput = scrollInput;
         _hostFrameIndex = frameIndex;
-        HandleHostShortcuts(input);
+        HandleHostShortcuts(mappedInput);
 
-        _inputSource.Update(input);
+        _inputSource.Update(mappedInput);
         if (!_paused || _stepRequested || _frameStore.Pixels.IsEmpty)
         {
             StepActiveCore();
@@ -100,7 +106,7 @@ internal sealed unsafe class ForgeApp : IDisposable
 
         SaveConfigIfDue();
         SyncAudioVolumeIfDue();
-        _previousInput = input;
+        _previousInput = mappedInput;
     }
 
     private void Draw(int width, int height)
@@ -119,6 +125,46 @@ internal sealed unsafe class ForgeApp : IDisposable
         DrawScaleToggles(layout);
         DrawStatusBar(layout);
         DrawChildWindows(layout);
+    }
+
+    private void ProcessRawKey(TextInputEvent textInput)
+    {
+        if (textInput.Serial == 0 || textInput.Serial == _handledKeySerial)
+        {
+            return;
+        }
+
+        _handledKeySerial = textInput.Serial;
+        if (textInput.Pressed)
+        {
+            _pressedKeys.Add(textInput.KeyCode);
+            if (_capturingBinding is InputBinding binding && !IsReservedMappingKey(textInput.KeyCode))
+            {
+                SetInputBinding(binding, textInput.KeyCode);
+                _capturingBinding = null;
+            }
+        }
+        else
+        {
+            _pressedKeys.Remove(textInput.KeyCode);
+        }
+    }
+
+    private ForgeInput MapInputFromPressedKeys()
+    {
+        ForgeInput input = ForgeInput.None;
+        foreach (InputBinding binding in InputBindings)
+        {
+            foreach (uint keyCode in BoundKeyCodes(binding.Id))
+            {
+                if (_pressedKeys.Contains(keyCode))
+                {
+                    input |= binding.Bit;
+                    break;
+                }
+            }
+        }
+        return input;
     }
 
     public void Dispose()
@@ -219,6 +265,12 @@ internal sealed unsafe class ForgeApp : IDisposable
         if (_ui.Button(new UiId("toolbar.style"), styleRect, "BLING", _styleWindow.IsOpen).Clicked)
         {
             ToggleWindow(AppWindow.Style);
+        }
+
+        row = row.Next(56, out RectI inputRect);
+        if (_ui.Button(new UiId("toolbar.input"), inputRect, "INPUT", _inputWindow.IsOpen).Clicked)
+        {
+            ToggleWindow(AppWindow.Input);
         }
 
         DrawAudioVolume(layout);
@@ -391,6 +443,9 @@ internal sealed unsafe class ForgeApp : IDisposable
                     break;
                 case AppWindow.Style:
                     DrawStyleWindow(layout, active, inputEnabled);
+                    break;
+                case AppWindow.Input:
+                    DrawInputWindow(layout, active, inputEnabled);
                     break;
             }
         }
@@ -657,6 +712,88 @@ internal sealed unsafe class ForgeApp : IDisposable
         DrawMetric(column.X, column.NextY, "POWER", _config.Style.EffectStrength.ToString());
 
         DrawBlingWindowBorder(window.Rect, 23);
+    }
+
+    private void DrawInputWindow(ForgeLayout layout, bool active, bool inputEnabled)
+    {
+        if (!_inputWindow.IsOpen)
+        {
+            return;
+        }
+
+        RectI preferredRect = PreferredWindowRect(layout, AppWindow.Input);
+        bool tileEdit = IsTileEditModifierDown();
+        bool movable = _config.WindowMode != UiWindowMode.Tiled || tileEdit;
+        if (!movable || (_config.WindowMode == UiWindowMode.Tiled && !_inputWindow.IsDragging))
+        {
+            _inputWindow.Rect = preferredRect;
+        }
+
+        UiWindowResult window = _ui.BeginWindow(new UiId("input.window"), _inputWindow, preferredRect, ChildWindowBounds(layout), "INPUT MAPPER", active, inputEnabled, movable);
+        if (window.Activated)
+        {
+            _focusedTile = AppWindow.Input;
+            BringToFront(AppWindow.Input);
+        }
+        HandleTileWindowDrag(layout, AppWindow.Input, window.Rect, window.Dragging);
+        if (!window.IsOpen || window.Closed)
+        {
+            _capturingBinding = null;
+            MarkConfigDirty();
+            return;
+        }
+
+        using IDisposable inputScope = _ui.PushInputEnabled(inputEnabled);
+        RectI content = window.Content;
+        _ui.Panel(content);
+        int contentHeight = 104 + InputBindings.Length * 24;
+        using UiScrollArea scroll = _ui.BeginScrollArea(new UiId("input.scroll"), content, contentHeight);
+        var column = new UiColumn(scroll.Content.X + 10, scroll.Content.Y + 10, Math.Max(1, scroll.Content.Width - 20), 6);
+
+        _ui.Text(column.X, column.NextY, "PROFILE", UiTextKind.Muted);
+        _ui.Text(column.X + 72, column.NextY, "KEYBOARD", UiTextKind.Accent);
+        column = column with { NextY = column.NextY + 18 };
+        _ui.Text(column.X, column.NextY, "MAP ACTIONS NOW. GAMEPAD CAN FEED THE SAME ACTIONS LATER.", UiTextKind.Muted);
+        column = column with { NextY = column.NextY + 24 };
+
+        int actionWidth = Math.Min(96, Math.Max(58, column.Width / 4));
+        int keyWidth = Math.Min(168, Math.Max(92, column.Width - actionWidth - 116));
+        _ui.Text(column.X, column.NextY, "ACTION", UiTextKind.Muted);
+        _ui.Text(column.X + actionWidth + 8, column.NextY, "KEY", UiTextKind.Muted);
+        column = column with { NextY = column.NextY + 16 };
+
+        foreach (InputBinding binding in InputBindings)
+        {
+            bool capturing = _capturingBinding?.Id == binding.Id;
+            bool activeBinding = (_lastInput & binding.Bit) != 0;
+            RectI rowRect = new(column.X, column.NextY - 2, Math.Max(1, column.Width - 8), 20);
+            uint border = capturing ? _ui.Theme.Button.Colors.Accent : activeBinding ? _ui.Theme.Button.Colors.BorderHot : _ui.Theme.Button.Colors.Border;
+            _canvas.DrawRect(rowRect.X, rowRect.Y, rowRect.Width, rowRect.Height, border);
+            _ui.Text(column.X + 6, column.NextY + 3, binding.Label, activeBinding ? UiTextKind.Accent : UiTextKind.Normal);
+            string keyText = capturing ? "PRESS KEY" : TruncateMiddle(BindingDisplay(binding.Id), Math.Max(8, keyWidth / 6));
+            _ui.Text(column.X + actionWidth + 8, column.NextY + 3, keyText, capturing ? UiTextKind.Accent : UiTextKind.Muted);
+
+            int buttonX = column.X + actionWidth + keyWidth + 18;
+            if (_ui.Button(new UiId("input.map." + binding.Id), new RectI(buttonX, column.NextY, 46, 17), capturing ? "..." : "MAP", capturing).Clicked)
+            {
+                _capturingBinding = capturing ? null : binding;
+            }
+            if (_ui.Button(new UiId("input.clear." + binding.Id), new RectI(buttonX + 52, column.NextY, 52, 17), "CLEAR").Clicked)
+            {
+                _config.Input.Bindings[binding.Id] = string.Empty;
+                if (_capturingBinding?.Id == binding.Id)
+                {
+                    _capturingBinding = null;
+                }
+                MarkConfigDirty();
+            }
+            column = column with { NextY = column.NextY + 24 };
+        }
+
+        column = column with { NextY = column.NextY + 8 };
+        _ui.Text(column.X, column.NextY, "TOML", UiTextKind.Muted);
+        _ui.Text(column.X + 72, column.NextY, "CONFIG/WAYLANDFORGE.UI.LOCAL.TOML", UiTextKind.Muted);
+        DrawBlingWindowBorder(window.Rect, 31);
     }
 
     private void DrawButtonStyleToggle(ref UiRow row, string value, string label)
@@ -1107,6 +1244,11 @@ internal sealed unsafe class ForgeApp : IDisposable
                 TopBarHeight + 40,
                 Math.Min(360, Math.Max(300, layout.Width - 72)),
                 Math.Min(330, Math.Max(260, layout.Height - 112))),
+            AppWindow.Input => new RectI(
+                Math.Max(16, layout.Width - Math.Min(420, Math.Max(320, layout.Width - 72)) - (layout.HasSidePanel ? SidePanelWidth + 28 : 28)),
+                TopBarHeight + 68,
+                Math.Min(420, Math.Max(320, layout.Width - 72)),
+                Math.Min(520, Math.Max(300, layout.Height - 112))),
             _ => throw new ArgumentOutOfRangeException(nameof(window)),
         };
     }
@@ -1629,6 +1771,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         AppWindow.Rom => _filePickerWindow,
         AppWindow.Settings => _settingsWindow,
         AppWindow.Style => _styleWindow,
+        AppWindow.Input => _inputWindow,
         _ => throw new ArgumentOutOfRangeException(nameof(window)),
     };
 
@@ -1704,6 +1847,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         ApplyWindowConfig(AppWindow.Rom, "rom_picker");
         ApplyWindowConfig(AppWindow.Settings, "settings");
         ApplyWindowConfig(AppWindow.Style, "style_editor");
+        ApplyWindowConfig(AppWindow.Input, "input_mapper");
         AppWindow[] persistedOrder = Enum.GetValues<AppWindow>().OrderBy(window => _config.Window(WindowKey(window)).Order).ToArray();
         AppWindow[] layoutOrder = TileRootLeaves(_config.Layout.Root).ToArray();
         if (layoutOrder.Length == 0)
@@ -1735,6 +1879,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         SnapshotWindow(AppWindow.Rom, "rom_picker");
         SnapshotWindow(AppWindow.Settings, "settings");
         SnapshotWindow(AppWindow.Style, "style_editor");
+        SnapshotWindow(AppWindow.Input, "input_mapper");
         for (int i = 0; i < _tileOrder.Count; i++)
         {
             _config.Window(WindowKey(_tileOrder[i])).Order = i * 10;
@@ -1973,6 +2118,10 @@ internal sealed unsafe class ForgeApp : IDisposable
             case "style":
                 window = AppWindow.Style;
                 return true;
+            case "input_mapper":
+            case "input":
+                window = AppWindow.Input;
+                return true;
             default:
                 window = default;
                 return false;
@@ -1981,7 +2130,7 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private static AppWindow[] NormalizeTileOrder(AppWindow[] persistedOrder)
     {
-        AppWindow[] fallback = [AppWindow.Viewport, AppWindow.Rom, AppWindow.Settings, AppWindow.Style];
+        AppWindow[] fallback = [AppWindow.Viewport, AppWindow.Rom, AppWindow.Settings, AppWindow.Style, AppWindow.Input];
         if (persistedOrder.Length == 0)
         {
             return fallback;
@@ -2009,8 +2158,71 @@ internal sealed unsafe class ForgeApp : IDisposable
         AppWindow.Rom => "rom_picker",
         AppWindow.Settings => "settings",
         AppWindow.Style => "style_editor",
+        AppWindow.Input => "input_mapper",
         _ => throw new ArgumentOutOfRangeException(nameof(window)),
     };
+
+    private IEnumerable<uint> BoundKeyCodes(string actionId)
+    {
+        if (!_config.Input.Bindings.TryGetValue(actionId, out string? value))
+        {
+            yield break;
+        }
+
+        foreach (string token in value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (TryParseKeyCode(token, out uint keyCode))
+            {
+                yield return keyCode;
+            }
+        }
+    }
+
+    private string BindingDisplay(string actionId)
+    {
+        if (!_config.Input.Bindings.TryGetValue(actionId, out string? value) || string.IsNullOrWhiteSpace(value))
+        {
+            return "-";
+        }
+        return value.ToUpperInvariant();
+    }
+
+    private void SetInputBinding(InputBinding binding, uint keyCode)
+    {
+        _config.Input.Bindings[binding.Id] = FormatKeyName(keyCode);
+        MarkConfigDirty();
+    }
+
+    private static bool IsReservedMappingKey(uint keyCode)
+    {
+        return keyCode == 1;
+    }
+
+    private static bool TryParseKeyCode(string token, out uint keyCode)
+    {
+        string normalized = token.Trim().ToLowerInvariant();
+        if (KeyNameToCode.TryGetValue(normalized, out keyCode))
+        {
+            return true;
+        }
+        if (normalized.StartsWith("key:", StringComparison.Ordinal) &&
+            uint.TryParse(normalized[4..], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out keyCode))
+        {
+            return true;
+        }
+        if (uint.TryParse(normalized, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out keyCode))
+        {
+            return true;
+        }
+
+        keyCode = 0;
+        return false;
+    }
+
+    private static string FormatKeyName(uint keyCode)
+    {
+        return KeyCodeToName.TryGetValue(keyCode, out string? name) ? name : "key:" + keyCode.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
 
     private void DrawScaleToggles(ForgeLayout layout)
     {
@@ -2267,6 +2479,108 @@ internal sealed unsafe class ForgeApp : IDisposable
     }
 
 
+    private static readonly InputBinding[] InputBindings =
+    [
+        new("escape", "ESCAPE", ForgeInput.Escape),
+        new("up", "UP", ForgeInput.Up),
+        new("down", "DOWN", ForgeInput.Down),
+        new("left", "LEFT", ForgeInput.Left),
+        new("right", "RIGHT", ForgeInput.Right),
+        new("start", "START", ForgeInput.Start),
+        new("a", "A", ForgeInput.A),
+        new("b", "B", ForgeInput.B),
+        new("c", "C", ForgeInput.C),
+        new("x", "X", ForgeInput.X),
+        new("y", "Y", ForgeInput.Y),
+        new("z", "Z", ForgeInput.Z),
+        new("scale_fit", "SCALE FIT", ForgeInput.ScaleFit),
+        new("scale_integer", "SCALE INT", ForgeInput.ScaleInteger),
+        new("scale_stretch", "SCALE STR", ForgeInput.ScaleStretch),
+        new("theme_next", "THEME", ForgeInput.ThemeNext),
+        new("shift", "SHIFT", ForgeInput.Shift),
+        new("super", "SUPER", ForgeInput.Super),
+    ];
+
+    private static readonly Dictionary<string, uint> KeyNameToCode = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["esc"] = 1,
+        ["escape"] = 1,
+        ["1"] = 2,
+        ["2"] = 3,
+        ["3"] = 4,
+        ["4"] = 5,
+        ["5"] = 6,
+        ["6"] = 7,
+        ["7"] = 8,
+        ["8"] = 9,
+        ["9"] = 10,
+        ["0"] = 11,
+        ["q"] = 16,
+        ["w"] = 17,
+        ["e"] = 18,
+        ["r"] = 19,
+        ["t"] = 20,
+        ["y"] = 21,
+        ["u"] = 22,
+        ["i"] = 23,
+        ["o"] = 24,
+        ["p"] = 25,
+        ["enter"] = 28,
+        ["return"] = 28,
+        ["leftctrl"] = 29,
+        ["ctrl"] = 29,
+        ["a"] = 30,
+        ["s"] = 31,
+        ["d"] = 32,
+        ["f"] = 33,
+        ["g"] = 34,
+        ["h"] = 35,
+        ["j"] = 36,
+        ["k"] = 37,
+        ["l"] = 38,
+        ["leftshift"] = 42,
+        ["shift"] = 42,
+        ["z"] = 44,
+        ["x"] = 45,
+        ["c"] = 46,
+        ["v"] = 47,
+        ["b"] = 48,
+        ["n"] = 49,
+        ["m"] = 50,
+        ["rightshift"] = 54,
+        ["leftalt"] = 56,
+        ["alt"] = 56,
+        ["space"] = 57,
+        ["f1"] = 59,
+        ["f2"] = 60,
+        ["f3"] = 61,
+        ["f4"] = 62,
+        ["f5"] = 63,
+        ["f6"] = 64,
+        ["f7"] = 65,
+        ["f8"] = 66,
+        ["f9"] = 67,
+        ["f10"] = 68,
+        ["home"] = 102,
+        ["up"] = 103,
+        ["pageup"] = 104,
+        ["left"] = 105,
+        ["right"] = 106,
+        ["end"] = 107,
+        ["down"] = 108,
+        ["pagedown"] = 109,
+        ["insert"] = 110,
+        ["delete"] = 111,
+        ["leftmeta"] = 125,
+        ["super"] = 125,
+        ["rightmeta"] = 126,
+    };
+
+    private static readonly Dictionary<uint, string> KeyCodeToName = KeyNameToCode
+        .GroupBy(static pair => pair.Value)
+        .ToDictionary(static group => group.Key, static group => group.First().Key);
+
+    private readonly record struct InputBinding(string Id, string Label, ForgeInput Bit);
     private readonly record struct TileResizeHandle(string Path, bool Vertical, double StartRatio, int Span);
     private readonly record struct TileResizeCandidate(TileResizeHandle Handle, RectI Divider);
 
@@ -2397,6 +2711,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         Style,
         Settings,
         Rom,
+        Input,
     }
 
     private readonly record struct ForgeLayout(

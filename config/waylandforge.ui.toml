@@ -15,8 +15,28 @@ border_thickness = 1
 [audio]
 volume = 80
 
+[input]
+escape = "esc"
+up = "up"
+down = "down"
+left = "left"
+right = "right"
+start = "enter"
+a = "z"
+b = "x"
+c = "c"
+x = "a"
+y = "s"
+z = "d"
+scale_fit = "1"
+scale_integer = "2"
+scale_stretch = "3"
+theme_next = "t"
+shift = "leftshift,rightshift"
+super = "leftmeta,rightmeta"
+
 [ui.layout]
-root = "v(viewport,h(rom_picker,h(settings,style_editor,0.50),0.58),0.62)"
+root = "v(viewport,h(rom_picker,h(settings,h(style_editor,input_mapper,0.50),0.50),0.58),0.62)"
 
 [external_core]
 mode = "wfcore_socket" # stdio | wfex_file | wfcore_socket
@@ -68,3 +88,12 @@ x = 0
 y = 0
 width = 980
 height = 680
+
+[ui.windows.input_mapper]
+open = false
+slot = "right"
+order = 40
+x = 0
+y = 0
+width = 420
+height = 520
