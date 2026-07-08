@@ -1,5 +1,6 @@
 using SystemRegisIII.WaylandForge.Ui;
 using System.Diagnostics;
+using SystemRegisIII.Core;
 
 namespace SystemRegisIII.Host.WaylandForge;
 
@@ -13,7 +14,9 @@ internal sealed unsafe class ForgeApp : IDisposable
     private const string LocalConfigPath = "config/waylandforge.ui.local.toml";
 
     private readonly SoftwareCanvas _canvas = new();
-    private readonly FakeSaturnCore _core = new();
+    private readonly FakeSaturnCore _fakeCore = new();
+    private readonly ExternalProcessCore _externalCore = new(ResolveExternalDummyCorePath());
+    private ISystemCore _core;
     private readonly ForgeInputSource _inputSource = new();
     private readonly FrameStore _frameStore = new();
     private readonly EmulatorViewport _viewport = new();
@@ -54,6 +57,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         _ui = new UiContext(_canvas, UiTheme.Default);
         _config = UiConfig.Load(DefaultConfigPath, LocalConfigPath);
+        _core = _fakeCore;
         ApplyConfig();
     }
 
@@ -112,6 +116,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     public void Dispose()
     {
         SaveConfig(force: false);
+        _externalCore.Dispose();
     }
 
     private void DrawChrome(ForgeLayout layout)
@@ -176,6 +181,12 @@ internal sealed unsafe class ForgeApp : IDisposable
         if (_ui.Button(themeRect, _ui.Theme.Name).Clicked)
         {
             NextTheme();
+        }
+
+        row = row.Next(42, out RectI extRect);
+        if (_ui.Button(new UiId("toolbar.ext"), extRect, "EXT", ReferenceEquals(_core, _externalCore)).Clicked)
+        {
+            ToggleExternalCore();
         }
 
         row = row.Next(50, out RectI coreRect);
@@ -249,10 +260,10 @@ internal sealed unsafe class ForgeApp : IDisposable
                 DrawMetric(x, y, "BACKEND", "WAYLAND"); y += 18;
                 DrawMetric(x, y, "BUFFER", "WL_SHM X2"); y += 18;
                 DrawMetric(x, y, "FORMAT", "ARGB8888"); y += 18;
-                DrawMetric(x, y, "CORE", "FAKE SATURN"); y += 18;
+                DrawMetric(x, y, "CORE", CoreName()); y += 18;
                 DrawMetric(x, y, "RUN", _paused ? "PAUSED" : "RUNNING"); y += 18;
                 DrawMetric(x, y, "SOURCE", $"{_frameStore.Width}X{_frameStore.Height}"); y += 18;
-                DrawMetric(x, y, "CFRAME", _core.FrameIndex.ToString()); y += 18;
+                DrawMetric(x, y, "CFRAME", CoreFrameIndex().ToString()); y += 18;
                 DrawMetric(x, y, "SCALE", _viewport.ScaleMode.ToString().ToUpperInvariant()); y += 18;
                 DrawMetric(x, y, "FPS", _clock.FramesPerSecond.ToString("0.0")); y += 18;
                 DrawMetric(x, y, "FRAME MS", _clock.FrameMilliseconds.ToString("0.0")); y += 18;
@@ -2047,6 +2058,60 @@ internal sealed unsafe class ForgeApp : IDisposable
     private void NextTheme()
     {
         SetTheme((_themeIndex + 1) % UiTheme.BuiltIns.Count);
+    }
+
+    private void ToggleExternalCore()
+    {
+        if (ReferenceEquals(_core, _externalCore))
+        {
+            _externalCore.Reset();
+            _core = _fakeCore;
+        }
+        else
+        {
+            _fakeCore.Reset();
+            _core = _externalCore;
+        }
+
+        _core.Reset();
+        _core.StepFrame(_inputSource, _frameStore);
+    }
+
+    private string CoreName()
+    {
+        return _core switch
+        {
+            FakeSaturnCore => "FAKE SATURN",
+            ExternalProcessCore external => external.Name,
+            _ => _core.GetType().Name.ToUpperInvariant(),
+        };
+    }
+
+    private ulong CoreFrameIndex()
+    {
+        return _core switch
+        {
+            FakeSaturnCore fake => fake.FrameIndex,
+            ExternalProcessCore external => external.FrameIndex,
+            _ => 0,
+        };
+    }
+
+    private static string ResolveExternalDummyCorePath()
+    {
+        string local = Path.Combine(AppContext.BaseDirectory, "SystemRegisIII.ExternalCore.Dummy.dll");
+        if (File.Exists(local))
+        {
+            return local;
+        }
+
+        string configuration = new DirectoryInfo(AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar)).Parent?.Name ?? "Debug";
+        return Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "../../../../SystemRegisIII.ExternalCore.Dummy/bin",
+            configuration,
+            "net8.0",
+            "SystemRegisIII.ExternalCore.Dummy.dll"));
     }
 
     private static string TruncateMiddle(string text, int maxChars)

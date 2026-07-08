@@ -12,6 +12,7 @@ M1 is still intentionally narrow:
 - repaint only from Wayland frame callbacks / buffer release
 - render a small custom software UI from managed code
 - run a fake Saturn core that produces a 320x224 ARGB8888 framebuffer
+- run an opt-in external process core over a tiny stdin/stdout ARGB8888 frame protocol
 - blit the core framebuffer through a dedicated emulator viewport
 - track host frame timing and show FPS/frame milliseconds
 - keep host update and UI rendering as separate steps
@@ -27,6 +28,7 @@ M1 is still intentionally narrow:
 - expose clipped scroll areas with wheel input and a scrollbar
 - expose a native WaylandForge file picker for ROM/file selection
 - expose toolbar controls for pause/run, reset, single-step, ROM picker, and settings
+- expose an EXT toolbar toggle that switches between the in-process fake core and the dummy external core process
 - persist UI defaults/state through a small repo-local TOML configuration layer
 - close on ESC or compositor close
 
@@ -43,6 +45,7 @@ Current keyboard mapping:
 - ROM toolbar button: open the file picker
 - mouse: hover/click the scale toggles
 - mouse: use the toolbar buttons for pause/run, reset, step, ROM, and settings
+- EXT toolbar button: toggle the external process dummy core
 - ROM toolbar button: toggles the ROM picker open/closed
 - Super+Shift in tiled mode: drag the internal tile split to resize in X/Y, drag the Settings title toward an edge to dock left/right/top/bottom
 - ESC: quit
@@ -50,6 +53,16 @@ Current keyboard mapping:
 The reusable UI style skeleton lives in `SystemRegisIII.WaylandForge.Ui`: canvas, rectangles, pointer state, panels, text, row/column helpers, button colors, border thickness, padding, hover/active states, and click state are theme-driven so other WaylandForge apps can use the same low-level controls. Dark is the default theme.
 
 The fake core draws a controllable blob so every mapped button has visible output before a real emulator core is wired in.
+
+## External Core Protocol
+
+`SystemRegisIII.ExternalCore.Dummy` is a deliberately tiny process-isolated core target. The host starts it as a separate `dotnet` process and speaks over stdin/stdout:
+
+- host writes: `S` byte followed by little-endian `uint32` Saturn button bits
+- core writes: `WFEX` magic, `int32 width`, `int32 height`, `int32 stride`, `uint64 frameIndex`, `int32 byteCount`, reserved `int32`
+- core then writes `byteCount` bytes of ARGB8888 pixels
+
+This keeps GPL or other external code out of the WaylandForge process while still letting the host present frames and inject input.
 
 ## UI Config
 
