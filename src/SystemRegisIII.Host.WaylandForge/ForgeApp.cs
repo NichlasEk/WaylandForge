@@ -807,6 +807,13 @@ internal sealed unsafe class ForgeApp : IDisposable
         return ((uint)Math.Clamp(alpha, 0, 255) << 24) | (color & 0x00ffffff);
     }
 
+    private static double DistanceToRect(int x, int y, RectI rect)
+    {
+        int dx = Math.Max(Math.Max(rect.X - x, 0), x - rect.Right);
+        int dy = Math.Max(Math.Max(rect.Y - y, 0), y - rect.Bottom);
+        return Math.Sqrt(dx * dx + dy * dy);
+    }
+
     private static uint LerpColor(uint from, uint to, double amount)
     {
         amount = Math.Clamp(amount, 0.0, 1.0);
@@ -879,21 +886,46 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private List<TileResizeHandle> HitTileTreeSplitters(RectI work, AppWindow[] open)
     {
-        var handles = new List<TileResizeHandle>();
+        var candidates = new List<TileResizeCandidate>();
         TileNode? root = ParseTileRoot(_config.Layout.Root);
         if (root is null)
         {
-            return handles;
+            return [];
         }
 
-        HitTileTreeSplitters(root, work, open.ToHashSet(), string.Empty, handles);
-        return handles
+        CollectTileTreeSplitters(root, work, open.ToHashSet(), string.Empty, candidates);
+        List<TileResizeCandidate> directHits = candidates
+            .Where(candidate => Expand(candidate.Divider, 4).Contains(_pointer.X, _pointer.Y))
+            .ToList();
+        if (directHits.Count == 0)
+        {
+            return [];
+        }
+
+        const int cornerReach = 28;
+        bool hasVertical = directHits.Any(candidate => candidate.Handle.Vertical);
+        bool hasHorizontal = directHits.Any(candidate => !candidate.Handle.Vertical);
+        foreach (TileResizeCandidate candidate in candidates)
+        {
+            if ((candidate.Handle.Vertical && hasVertical) || (!candidate.Handle.Vertical && hasHorizontal))
+            {
+                continue;
+            }
+
+            if (DistanceToRect(_pointer.X, _pointer.Y, candidate.Divider) <= cornerReach)
+            {
+                directHits.Add(candidate);
+            }
+        }
+
+        return directHits
+            .Select(candidate => candidate.Handle)
             .GroupBy(handle => handle.Path)
             .Select(group => group.First())
             .ToList();
     }
 
-    private void HitTileTreeSplitters(TileNode node, RectI rect, HashSet<AppWindow> open, string path, List<TileResizeHandle> handles)
+    private void CollectTileTreeSplitters(TileNode node, RectI rect, HashSet<AppWindow> open, string path, List<TileResizeCandidate> candidates)
     {
         const int gap = 8;
         const int grip = 10;
@@ -910,12 +942,12 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
         if (firstActive && !secondActive)
         {
-            HitTileTreeSplitters(node.First, rect, open, path + "0", handles);
+            CollectTileTreeSplitters(node.First, rect, open, path + "0", candidates);
             return;
         }
         if (!firstActive && secondActive)
         {
-            HitTileTreeSplitters(node.Second, rect, open, path + "1", handles);
+            CollectTileTreeSplitters(node.Second, rect, open, path + "1", candidates);
             return;
         }
 
@@ -929,10 +961,9 @@ internal sealed unsafe class ForgeApp : IDisposable
             first = new RectI(rect.X, rect.Y, firstWidth, rect.Height);
             second = new RectI(rect.X + firstWidth + gap, rect.Y, Math.Max(1, rect.Width - firstWidth - gap), rect.Height);
             divider = new RectI(first.Right - grip / 2, rect.Y, Math.Max(grip, second.X - first.Right + grip), rect.Height);
-            if (divider.Contains(_pointer.X, _pointer.Y))
-            {
-                handles.Add(new TileResizeHandle(path, Vertical: true, nodeRatio, Math.Max(1, rect.Width - gap)));
-            }
+            candidates.Add(new TileResizeCandidate(
+                new TileResizeHandle(path, Vertical: true, nodeRatio, Math.Max(1, rect.Width - gap)),
+                divider));
         }
         else
         {
@@ -940,91 +971,13 @@ internal sealed unsafe class ForgeApp : IDisposable
             first = new RectI(rect.X, rect.Y, rect.Width, firstHeight);
             second = new RectI(rect.X, rect.Y + firstHeight + gap, rect.Width, Math.Max(1, rect.Height - firstHeight - gap));
             divider = new RectI(rect.X, first.Bottom - grip / 2, rect.Width, Math.Max(grip, second.Y - first.Bottom + grip));
-            if (divider.Contains(_pointer.X, _pointer.Y))
-            {
-                handles.Add(new TileResizeHandle(path, Vertical: false, nodeRatio, Math.Max(1, rect.Height - gap)));
-            }
+            candidates.Add(new TileResizeCandidate(
+                new TileResizeHandle(path, Vertical: false, nodeRatio, Math.Max(1, rect.Height - gap)),
+                divider));
         }
 
-        HitTileTreeSplitters(node.First, first, open, path + "0", handles);
-        HitTileTreeSplitters(node.Second, second, open, path + "1", handles);
-    }
-
-    private bool TryHitTileTreeSplitter(RectI work, AppWindow[] open, out string path, out bool vertical, out double ratio, out int span)
-    {
-        path = string.Empty;
-        vertical = true;
-        ratio = 0.5;
-        span = 1;
-        TileNode? root = ParseTileRoot(_config.Layout.Root);
-        return root is not null && TryHitTileTreeSplitter(root, work, open.ToHashSet(), string.Empty, out path, out vertical, out ratio, out span);
-    }
-
-    private bool TryHitTileTreeSplitter(TileNode node, RectI rect, HashSet<AppWindow> open, string path, out string hitPath, out bool vertical, out double ratio, out int span)
-    {
-        const int gap = 8;
-        const int grip = 8;
-        hitPath = string.Empty;
-        vertical = true;
-        ratio = 0.5;
-        span = 1;
-        if (node.Window is not null || node.First is null || node.Second is null)
-        {
-            return false;
-        }
-
-        bool firstActive = node.First.ContainsAny(open);
-        bool secondActive = node.Second.ContainsAny(open);
-        if (!firstActive && !secondActive)
-        {
-            return false;
-        }
-        if (firstActive && !secondActive)
-        {
-            return TryHitTileTreeSplitter(node.First, rect, open, path + "0", out hitPath, out vertical, out ratio, out span);
-        }
-        if (!firstActive && secondActive)
-        {
-            return TryHitTileTreeSplitter(node.Second, rect, open, path + "1", out hitPath, out vertical, out ratio, out span);
-        }
-
-        double nodeRatio = Math.Clamp(node.Ratio, 0.12, 0.88);
-        RectI first;
-        RectI second;
-        RectI divider;
-        if (node.Axis == TileSplitAxis.Horizontal)
-        {
-            int firstWidth = Math.Clamp((int)Math.Round((rect.Width - gap) * nodeRatio), 120, Math.Max(120, rect.Width - gap - 120));
-            first = new RectI(rect.X, rect.Y, firstWidth, rect.Height);
-            second = new RectI(rect.X + firstWidth + gap, rect.Y, Math.Max(1, rect.Width - firstWidth - gap), rect.Height);
-            divider = new RectI(first.Right - grip / 2, rect.Y, Math.Max(grip, second.X - first.Right + grip), rect.Height);
-            if (divider.Contains(_pointer.X, _pointer.Y))
-            {
-                hitPath = path;
-                vertical = true;
-                ratio = nodeRatio;
-                span = Math.Max(1, rect.Width - gap);
-                return true;
-            }
-        }
-        else
-        {
-            int firstHeight = Math.Clamp((int)Math.Round((rect.Height - gap) * nodeRatio), 100, Math.Max(100, rect.Height - gap - 100));
-            first = new RectI(rect.X, rect.Y, rect.Width, firstHeight);
-            second = new RectI(rect.X, rect.Y + firstHeight + gap, rect.Width, Math.Max(1, rect.Height - firstHeight - gap));
-            divider = new RectI(rect.X, first.Bottom - grip / 2, rect.Width, Math.Max(grip, second.Y - first.Bottom + grip));
-            if (divider.Contains(_pointer.X, _pointer.Y))
-            {
-                hitPath = path;
-                vertical = false;
-                ratio = nodeRatio;
-                span = Math.Max(1, rect.Height - gap);
-                return true;
-            }
-        }
-
-        return TryHitTileTreeSplitter(node.First, first, open, path + "0", out hitPath, out vertical, out ratio, out span)
-            || TryHitTileTreeSplitter(node.Second, second, open, path + "1", out hitPath, out vertical, out ratio, out span);
+        CollectTileTreeSplitters(node.First, first, open, path + "0", candidates);
+        CollectTileTreeSplitters(node.Second, second, open, path + "1", candidates);
     }
 
     private bool UpdateTileRootRatio(string path, double ratio)
@@ -1304,7 +1257,7 @@ internal sealed unsafe class ForgeApp : IDisposable
             return;
         }
 
-        if (!TryHitTileTreeSplitter(TileWorkArea(layout), open, out _, out _, out _, out _) && !_resizingTileSplit)
+        if (HitTileTreeSplitters(TileWorkArea(layout), open).Count == 0 && !_resizingTileSplit)
         {
             return;
         }
@@ -1993,6 +1946,7 @@ internal sealed unsafe class ForgeApp : IDisposable
 
 
     private readonly record struct TileResizeHandle(string Path, bool Vertical, double StartRatio, int Span);
+    private readonly record struct TileResizeCandidate(TileResizeHandle Handle, RectI Divider);
 
     private enum TileSplitAxis
     {
