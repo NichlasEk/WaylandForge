@@ -22,6 +22,9 @@
 #define CHANNELS 2
 #define RING_FRAMES (SAMPLE_RATE * 4)
 #define SOCKET_PATH "/tmp/waylandforge-audio.sock"
+#define WFAU_HEADER_SIZE 24
+#define WFAU_MAX_FRAMES 8192
+#define WFAU_FORMAT_F32LE 1
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -91,6 +94,100 @@ static void enqueue_test_click(struct audiod *daemon)
     }
 }
 
+static uint16_t read_le16(const uint8_t *data)
+{
+    return (uint16_t)data[0] | ((uint16_t)data[1] << 8);
+}
+
+static uint32_t read_le32(const uint8_t *data)
+{
+    return (uint32_t)data[0] |
+        ((uint32_t)data[1] << 8) |
+        ((uint32_t)data[2] << 16) |
+        ((uint32_t)data[3] << 24);
+}
+
+static bool read_exact(int fd, void *buffer, size_t byte_count)
+{
+    uint8_t *cursor = buffer;
+    size_t remaining = byte_count;
+
+    while (remaining > 0) {
+        ssize_t count = read(fd, cursor, remaining);
+        if (count == 0) {
+            return false;
+        }
+        if (count < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            return false;
+        }
+
+        cursor += count;
+        remaining -= (size_t)count;
+    }
+
+    return true;
+}
+
+static void write_text(int fd, const char *text)
+{
+    (void)write(fd, text, strlen(text));
+}
+
+static void handle_wfau_client(struct audiod *daemon, int client_fd)
+{
+    uint8_t header[WFAU_HEADER_SIZE];
+    if (!read_exact(client_fd, header, sizeof(header))) {
+        write_text(client_fd, "ERR WFAU SHORT_HEADER\n");
+        return;
+    }
+
+    uint16_t version = read_le16(header + 4);
+    uint16_t format = read_le16(header + 6);
+    uint32_t sample_rate = read_le32(header + 8);
+    uint16_t channels = read_le16(header + 12);
+    uint32_t frames = read_le32(header + 16);
+    uint32_t payload_bytes = read_le32(header + 20);
+    uint64_t expected_bytes = (uint64_t)frames * (uint64_t)channels * sizeof(float);
+
+    if (version != 1 ||
+        format != WFAU_FORMAT_F32LE ||
+        sample_rate != SAMPLE_RATE ||
+        channels != CHANNELS ||
+        frames == 0 ||
+        frames > WFAU_MAX_FRAMES ||
+        payload_bytes != expected_bytes) {
+        write_text(client_fd, "ERR WFAU BAD_HEADER\n");
+        return;
+    }
+
+    float payload[WFAU_MAX_FRAMES * CHANNELS];
+    if (!read_exact(client_fd, payload, payload_bytes)) {
+        write_text(client_fd, "ERR WFAU SHORT_PAYLOAD\n");
+        return;
+    }
+
+    uint32_t accepted = 0;
+    uint32_t dropped = 0;
+    for (uint32_t frame = 0; frame < frames; frame++) {
+        float left = payload[frame * CHANNELS + 0];
+        float right = payload[frame * CHANNELS + 1];
+        if (ring_push_frame(&daemon->ring, left, right)) {
+            accepted++;
+        } else {
+            dropped++;
+        }
+    }
+
+    char response[96];
+    snprintf(response, sizeof(response),
+             "OK WFAU frames=%u accepted=%u dropped=%u\n",
+             frames, accepted, dropped);
+    write_text(client_fd, response);
+}
+
 static void on_process(void *data)
 {
     struct audiod *daemon = data;
@@ -149,6 +246,13 @@ static const struct pw_stream_events stream_events = {
 
 static void handle_client(struct audiod *daemon, int client_fd)
 {
+    uint8_t prefix[4];
+    ssize_t prefix_count = recv(client_fd, prefix, sizeof(prefix), MSG_PEEK);
+    if (prefix_count == (ssize_t)sizeof(prefix) && memcmp(prefix, "WFAU", 4) == 0) {
+        handle_wfau_client(daemon, client_fd);
+        return;
+    }
+
     char command[256];
     ssize_t count = read(client_fd, command, sizeof(command) - 1);
     if (count <= 0) {
@@ -158,15 +262,15 @@ static void handle_client(struct audiod *daemon, int client_fd)
 
     if (strstr(command, "PLAY_TEST") != NULL) {
         enqueue_test_click(daemon);
-        (void)write(client_fd, "OK PLAY_TEST\n", 13);
+        write_text(client_fd, "OK PLAY_TEST\n");
         return;
     }
     if (strstr(command, "PING") != NULL) {
-        (void)write(client_fd, "PONG\n", 5);
+        write_text(client_fd, "PONG\n");
         return;
     }
 
-    (void)write(client_fd, "ERR UNKNOWN\n", 12);
+    write_text(client_fd, "ERR UNKNOWN\n");
 }
 
 static void *socket_thread_main(void *arg)

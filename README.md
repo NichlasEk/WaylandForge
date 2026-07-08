@@ -135,7 +135,7 @@ Default UI configuration lives in `config/waylandforge.ui.toml`. Runtime changes
 
 ## Audio Daemon Prototype
 
-`tools/waylandforge-audiod` is the first low-level PipeWire audio experiment. It creates a playback node named `EutherAudio Sinklet`, keeps a small F32 stereo ringbuffer, and listens on `/tmp/waylandforge-audio.sock` for a simple `PLAY_TEST` command.
+`tools/waylandforge-audiod` is the first low-level PipeWire audio experiment. It creates a playback node named `EutherAudio Sinklet`, keeps a small F32 stereo ringbuffer, and listens on `/tmp/waylandforge-audio.sock` for a simple `PLAY_TEST` command or bounded `WFAU` PCM chunks.
 
 ```sh
 cd tools/waylandforge-audiod
