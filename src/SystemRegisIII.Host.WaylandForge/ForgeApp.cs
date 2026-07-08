@@ -64,6 +64,8 @@ internal sealed unsafe class ForgeApp : IDisposable
     private int _lastRenderHeight;
     private int _lastSentAudioVolume = -1;
     private double _lastAudioVolumeAttemptSeconds;
+    private double _lastAudioStatusAttemptSeconds;
+    private string _audioStatus = "OFFLINE";
 
     public ForgeApp()
     {
@@ -115,6 +117,7 @@ internal sealed unsafe class ForgeApp : IDisposable
 
         SaveConfigIfDue();
         SyncAudioVolumeIfDue();
+        SyncAudioStatusIfDue();
         _previousInput = mappedInput;
     }
 
@@ -404,6 +407,15 @@ internal sealed unsafe class ForgeApp : IDisposable
                     _ui.Text(x, y, TruncateMiddle(line, 22), UiTextKind.Muted);
                     y += 14;
                 }
+            }
+
+            if (_ui.Collapsible(new UiId("debug.audio"), ref column, "AUDIO", 88, out RectI audioSection))
+            {
+                int x = audioSection.X;
+                int y = audioSection.Y;
+                DrawMetric(x, y, "VOL", _config.Audio.Volume.ToString(System.Globalization.CultureInfo.InvariantCulture)); y += 18;
+                DrawMetric(x, y, "DAEMON", TruncateMiddle(_audioStatus, 22)); y += 18;
+                DrawMetric(x, y, "SYNC", _lastSentAudioVolume == _config.Audio.Volume ? "OK" : "PENDING"); y += 18;
             }
 
             if (_ui.Collapsible(new UiId("debug.input"), ref column, "INPUT", 142, out RectI inputSection))
@@ -2056,7 +2068,6 @@ internal sealed unsafe class ForgeApp : IDisposable
 
         _config.Audio.Volume = volume;
         _lastSentAudioVolume = -1;
-        SendAudioVolume();
         MarkConfigDirty();
     }
 
@@ -2066,7 +2077,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         {
             return;
         }
-        if (_clock.ElapsedSeconds - _lastAudioVolumeAttemptSeconds < 1.0)
+        if (_clock.ElapsedSeconds - _lastAudioVolumeAttemptSeconds < 0.15)
         {
             return;
         }
@@ -2077,27 +2088,53 @@ internal sealed unsafe class ForgeApp : IDisposable
     private void SendAudioVolume()
     {
         _lastAudioVolumeAttemptSeconds = _clock.ElapsedSeconds;
+        if (TrySendAudioCommand($"SET_VOLUME {_config.Audio.Volume}\n", out _))
+        {
+            _lastSentAudioVolume = _config.Audio.Volume;
+        }
+        else
+        {
+            _lastSentAudioVolume = -1;
+        }
+    }
+
+    private void SyncAudioStatusIfDue()
+    {
+        if (_clock.ElapsedSeconds - _lastAudioStatusAttemptSeconds < 1.0)
+        {
+            return;
+        }
+
+        _lastAudioStatusAttemptSeconds = _clock.ElapsedSeconds;
+        if (TrySendAudioCommand("STATUS\n", out string response))
+        {
+            _audioStatus = response.Trim();
+        }
+        else
+        {
+            _audioStatus = "OFFLINE";
+        }
+    }
+
+    private static bool TrySendAudioCommand(string commandText, out string responseText)
+    {
+        responseText = string.Empty;
         try
         {
             using var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-            socket.Connect(new UnixDomainSocketEndPoint(AudioSocketPath));
-            byte[] command = Encoding.ASCII.GetBytes($"SET_VOLUME {_config.Audio.Volume}\n");
-            socket.Send(command);
-            byte[] response = new byte[64];
+            socket.SendTimeout = 100;
             socket.ReceiveTimeout = 100;
-            try
-            {
-                _ = socket.Receive(response);
-            }
-            catch (SocketException)
-            {
-                // The volume command is one-way for UI purposes; the reply is only a daemon smoke check.
-            }
-            _lastSentAudioVolume = _config.Audio.Volume;
+            socket.Connect(new UnixDomainSocketEndPoint(AudioSocketPath));
+            byte[] command = Encoding.ASCII.GetBytes(commandText);
+            socket.Send(command);
+            byte[] response = new byte[192];
+            int count = socket.Receive(response);
+            responseText = Encoding.ASCII.GetString(response, 0, count);
+            return true;
         }
         catch
         {
-            _lastSentAudioVolume = -1;
+            return false;
         }
     }
 

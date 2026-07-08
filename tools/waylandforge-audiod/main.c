@@ -42,6 +42,10 @@ struct audiod {
     pthread_t socket_thread;
     atomic_bool running;
     atomic_int volume_percent;
+    atomic_ulong accepted_frames;
+    atomic_ulong dropped_frames;
+    atomic_ulong underrun_frames;
+    atomic_ulong process_callbacks;
 };
 
 static struct audiod *g_daemon;
@@ -78,6 +82,16 @@ static bool ring_pop_frame(struct audio_ring *ring, float *left, float *right)
     *right = ring->samples[read_frame * CHANNELS + 1];
     atomic_store_explicit(&ring->read_frame, ring_next(read_frame), memory_order_release);
     return true;
+}
+
+static size_t ring_queued_frames(struct audio_ring *ring)
+{
+    size_t read_frame = atomic_load_explicit(&ring->read_frame, memory_order_acquire);
+    size_t write_frame = atomic_load_explicit(&ring->write_frame, memory_order_acquire);
+    if (write_frame >= read_frame) {
+        return write_frame - read_frame;
+    }
+    return RING_FRAMES - read_frame + write_frame;
 }
 
 static void enqueue_test_click(struct audiod *daemon)
@@ -181,6 +195,8 @@ static void handle_wfau_client(struct audiod *daemon, int client_fd)
             dropped++;
         }
     }
+    atomic_fetch_add_explicit(&daemon->accepted_frames, accepted, memory_order_relaxed);
+    atomic_fetch_add_explicit(&daemon->dropped_frames, dropped, memory_order_relaxed);
 
     char response[96];
     snprintf(response, sizeof(response),
@@ -209,15 +225,22 @@ static void on_process(void *data)
         ? buffer->requested
         : max_frames;
 
+    atomic_fetch_add_explicit(&daemon->process_callbacks, 1, memory_order_relaxed);
+    uint32_t underrun_frames = 0;
     for (uint32_t i = 0; i < frames; i++) {
         float left = 0.0f;
         float right = 0.0f;
-        ring_pop_frame(&daemon->ring, &left, &right);
+        if (!ring_pop_frame(&daemon->ring, &left, &right)) {
+            underrun_frames++;
+        }
         float volume = (float)atomic_load_explicit(&daemon->volume_percent, memory_order_relaxed) / 100.0f;
         left *= volume;
         right *= volume;
         out[i * CHANNELS + 0] = left;
         out[i * CHANNELS + 1] = right;
+    }
+    if (underrun_frames > 0) {
+        atomic_fetch_add_explicit(&daemon->underrun_frames, underrun_frames, memory_order_relaxed);
     }
 
     if (spa_buffer->datas[0].chunk != NULL) {
@@ -285,6 +308,19 @@ static void handle_client(struct audiod *daemon, int client_fd)
     if (strstr(command, "GET_VOLUME") != NULL) {
         char response[32];
         snprintf(response, sizeof(response), "VOLUME %d\n", atomic_load_explicit(&daemon->volume_percent, memory_order_relaxed));
+        write_text(client_fd, response);
+        return;
+    }
+    if (strstr(command, "STATUS") != NULL) {
+        char response[192];
+        snprintf(response, sizeof(response),
+                 "STATUS volume=%d queued=%zu accepted=%lu dropped=%lu underrun=%lu callbacks=%lu\n",
+                 atomic_load_explicit(&daemon->volume_percent, memory_order_relaxed),
+                 ring_queued_frames(&daemon->ring),
+                 atomic_load_explicit(&daemon->accepted_frames, memory_order_relaxed),
+                 atomic_load_explicit(&daemon->dropped_frames, memory_order_relaxed),
+                 atomic_load_explicit(&daemon->underrun_frames, memory_order_relaxed),
+                 atomic_load_explicit(&daemon->process_callbacks, memory_order_relaxed));
         write_text(client_fd, response);
         return;
     }
