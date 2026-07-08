@@ -404,6 +404,7 @@ internal sealed class UiInputConfig
         ["scale_integer"] = "2",
         ["scale_stretch"] = "3",
         ["theme_next"] = "t",
+        ["tile_fullscreen"] = "f11",
         ["shift"] = "leftshift,rightshift",
         ["super"] = "leftmeta,rightmeta",
     };

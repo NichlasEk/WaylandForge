@@ -49,6 +49,8 @@ Default keyboard mapping:
 - EXT toolbar button: toggle the external process dummy core
 - ROM toolbar button: toggles the ROM picker open/closed
 - INPUT toolbar button: open the input mapper
+- mouse over a tiled panel: focus that tile
+- F11: fullscreen the focused/hovered tile, press again to restore the tiled layout
 - Super+Shift in tiled mode: drag the internal tile split to resize in X/Y, drag the Settings title toward an edge to dock left/right/top/bottom
 - ESC: mapped input action, not host quit
 

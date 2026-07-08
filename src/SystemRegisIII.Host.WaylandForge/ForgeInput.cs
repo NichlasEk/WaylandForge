@@ -22,4 +22,5 @@ internal enum ForgeInput : uint
     ThemeNext = 1 << 15,
     Shift = 1 << 16,
     Super = 1 << 17,
+    TileFullscreen = 1 << 18,
 }

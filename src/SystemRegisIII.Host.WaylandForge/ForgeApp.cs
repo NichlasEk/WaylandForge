@@ -46,6 +46,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     private readonly HashSet<uint> _pressedKeys = [];
     private string? _romPath;
     private AppWindow _focusedTile = AppWindow.Viewport;
+    private AppWindow? _fullscreenTile;
     private InputBinding? _capturingBinding;
     private uint _handledKeySerial;
     private int _themeIndex;
@@ -114,6 +115,11 @@ internal sealed unsafe class ForgeApp : IDisposable
         _ui.BeginFrame(_pointer, _previousPointer, _textInput, _scrollInput);
         _canvas.Clear(_ui.Theme.Panel.Colors.Panel);
         var layout = ForgeLayout.Calculate(width, height);
+        if (_fullscreenTile is AppWindow fullscreen && !WindowState(fullscreen).IsOpen)
+        {
+            _fullscreenTile = null;
+        }
+        UpdateTileHoverFocus(layout);
 
         DrawChrome(layout);
         DrawToolbar(layout);
@@ -125,6 +131,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         DrawScaleToggles(layout);
         DrawStatusBar(layout);
         DrawChildWindows(layout);
+        DrawGlobalTileBling(layout);
     }
 
     private void ProcessRawKey(TextInputEvent textInput)
@@ -297,6 +304,10 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private void DrawViewport(ForgeLayout layout)
     {
+        if (_fullscreenTile is AppWindow fullscreen && fullscreen != AppWindow.Viewport)
+        {
+            return;
+        }
         if (_config.WindowMode == UiWindowMode.Tiled && !_viewportWindow.IsOpen)
         {
             return;
@@ -421,7 +432,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
         if (layout.Width >= 900)
         {
-            _ui.Text(layout.Width - 560, layout.Height - 16, "SUPER+ARROWS FOCUS  SUPER+SHIFT+ARROWS SWAP", UiTextKind.Muted);
+            _ui.Text(layout.Width - 610, layout.Height - 16, "F11 FULL TILE  SUPER+ARROWS FOCUS  SUPER+SHIFT+ARROWS SWAP", UiTextKind.Muted);
         }
     }
 
@@ -431,6 +442,10 @@ internal sealed unsafe class ForgeApp : IDisposable
         AppWindow? inputWindow = CapturedInputWindow() ?? HitTestTopWindow();
         foreach (AppWindow window in _windowOrder.ToArray())
         {
+            if (_fullscreenTile is AppWindow fullscreen && fullscreen != window)
+            {
+                continue;
+            }
             bool inputEnabled = inputWindow is null || inputWindow == window;
             bool active = IsTopOpenWindow(window);
             switch (window)
@@ -879,6 +894,24 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
     }
 
+    private void DrawGlobalTileBling(ForgeLayout layout)
+    {
+        if (_config.WindowMode != UiWindowMode.Tiled || !_config.Style.Bling || !_config.Style.RainbowBorders)
+        {
+            return;
+        }
+
+        foreach (AppWindow window in OpenTiledWindows())
+        {
+            if (_fullscreenTile is AppWindow fullscreen && fullscreen != window)
+            {
+                continue;
+            }
+            RectI rect = TiledWindowRect(layout, window);
+            DrawBlingWindowBorder(rect, 97 + (int)window * 13);
+        }
+    }
+
     private void DrawGlowBorder(RectI rect, int seed)
     {
         uint baseColor = _ui.Theme.Button.Colors.BorderHot;
@@ -1215,6 +1248,38 @@ internal sealed unsafe class ForgeApp : IDisposable
         return (_lastInput & (ForgeInput.Super | ForgeInput.Shift)) == (ForgeInput.Super | ForgeInput.Shift);
     }
 
+    private void UpdateTileHoverFocus(ForgeLayout layout)
+    {
+        if (_config.WindowMode != UiWindowMode.Tiled || !_pointer.IsInside || _pointer.LeftPressed || _resizingTileSplit || _tileDragWindow is not null)
+        {
+            return;
+        }
+
+        AppWindow? hovered = HitTestTile(layout);
+        if (hovered is AppWindow window)
+        {
+            _focusedTile = window;
+        }
+    }
+
+    private AppWindow? HitTestTile(ForgeLayout layout)
+    {
+        if (_fullscreenTile is AppWindow fullscreen && WindowState(fullscreen).IsOpen)
+        {
+            return TiledWindowRect(layout, fullscreen).Contains(_pointer.X, _pointer.Y) ? fullscreen : null;
+        }
+
+        foreach (AppWindow window in OpenTiledWindows().Reverse())
+        {
+            if (TiledWindowRect(layout, window).Contains(_pointer.X, _pointer.Y))
+            {
+                return window;
+            }
+        }
+
+        return null;
+    }
+
     private RectI PreferredWindowRect(ForgeLayout layout, AppWindow window)
     {
         if (_config.WindowMode == UiWindowMode.Tiled)
@@ -1256,6 +1321,10 @@ internal sealed unsafe class ForgeApp : IDisposable
     private RectI TiledWindowRect(ForgeLayout layout, AppWindow window)
     {
         RectI work = TileWorkArea(layout);
+        if (_fullscreenTile == window && WindowState(window).IsOpen)
+        {
+            return work;
+        }
         AppWindow[] open = OpenTiledWindows();
         if (!open.Contains(window))
         {
@@ -1758,6 +1827,10 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         UiWindowState state = WindowState(window);
         state.IsOpen = !state.IsOpen;
+        if (!state.IsOpen && _fullscreenTile == window)
+        {
+            _fullscreenTile = null;
+        }
         if (state.IsOpen)
         {
             BringToFront(window);
@@ -2253,6 +2326,12 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private void HandleHostShortcuts(ForgeInput input)
     {
+        if (Pressed(input, ForgeInput.TileFullscreen))
+        {
+            ToggleFocusedTileFullscreen();
+            return;
+        }
+
         if (HandleTileKeyboardShortcuts(input))
         {
             return;
@@ -2275,6 +2354,24 @@ internal sealed unsafe class ForgeApp : IDisposable
             NextTheme();
         }
 
+    }
+
+    private void ToggleFocusedTileFullscreen()
+    {
+        if (_config.WindowMode != UiWindowMode.Tiled)
+        {
+            return;
+        }
+
+        ForgeLayout layout = ForgeLayout.Calculate(Math.Max(1, _lastRenderWidth), Math.Max(1, _lastRenderHeight));
+        AppWindow target = HitTestTile(layout) ?? _focusedTile;
+        if (!WindowState(target).IsOpen)
+        {
+            target = AppWindow.Viewport;
+        }
+
+        _fullscreenTile = _fullscreenTile == target ? null : target;
+        _focusedTile = target;
     }
 
     private bool HandleTileKeyboardShortcuts(ForgeInput input)
@@ -2497,6 +2594,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         new("scale_integer", "SCALE INT", ForgeInput.ScaleInteger),
         new("scale_stretch", "SCALE STR", ForgeInput.ScaleStretch),
         new("theme_next", "THEME", ForgeInput.ThemeNext),
+        new("tile_fullscreen", "FULL TILE", ForgeInput.TileFullscreen),
         new("shift", "SHIFT", ForgeInput.Shift),
         new("super", "SUPER", ForgeInput.Super),
     ];
@@ -2561,6 +2659,8 @@ internal sealed unsafe class ForgeApp : IDisposable
         ["f8"] = 66,
         ["f9"] = 67,
         ["f10"] = 68,
+        ["f11"] = 87,
+        ["f12"] = 88,
         ["home"] = 102,
         ["up"] = 103,
         ["pageup"] = 104,
