@@ -47,6 +47,8 @@ internal sealed unsafe class ForgeApp : IDisposable
     private RectI _tileDragRect;
     private int _tileResizeStartX;
     private int _tileResizeStartY;
+    private int _lastRenderWidth;
+    private int _lastRenderHeight;
 
     public ForgeApp()
     {
@@ -57,6 +59,8 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     public void Render(uint* pixels, int width, int height, int stridePixels, ulong frameIndex, ForgeInput input, PointerState pointer, TextInputEvent textInput, ScrollInputEvent scrollInput)
     {
+        _lastRenderWidth = width;
+        _lastRenderHeight = height;
         Update(input, pointer, textInput, scrollInput, frameIndex);
 
         _canvas.Bind(pixels, width, height, stridePixels);
@@ -303,7 +307,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
         if (layout.Width >= 900)
         {
-            _ui.Text(layout.Width - 438, layout.Height - 16, "1/2/3 SCALE  T THEME", UiTextKind.Muted);
+            _ui.Text(layout.Width - 560, layout.Height - 16, "SUPER+ARROWS FOCUS  SUPER+SHIFT+ARROWS SWAP", UiTextKind.Muted);
         }
     }
 
@@ -1257,19 +1261,44 @@ internal sealed unsafe class ForgeApp : IDisposable
             return;
         }
 
-        if (HitTileTreeSplitters(TileWorkArea(layout), open).Count == 0 && !_resizingTileSplit)
-        {
-            return;
-        }
-
-        uint color = WithAlpha(_ui.Theme.Button.Colors.BorderActive, _resizingTileSplit ? 130 : 72);
+        bool hot = HitTileTreeSplitters(TileWorkArea(layout), open).Count > 0;
+        uint idleColor = WithAlpha(_ui.Theme.Button.Colors.BorderActive, 42);
+        uint hotColor = WithAlpha(_ui.Theme.Button.Colors.BorderActive, _resizingTileSplit ? 150 : 96);
         foreach (RectI divider in TileSplitterRects(layout, open))
         {
-            if (_resizingTileSplit || divider.Contains(_pointer.X, _pointer.Y))
+            bool dividerHot = _resizingTileSplit || Expand(divider, 8).Contains(_pointer.X, _pointer.Y);
+            uint color = dividerHot ? hotColor : idleColor;
+            _canvas.BlendRect(divider.X, divider.Y, divider.Width, divider.Height, color);
+            if (dividerHot || hot)
             {
-                _canvas.BlendRect(divider.X, divider.Y, divider.Width, divider.Height, color);
+                DrawTileResizeGrip(divider, dividerHot ? hotColor : idleColor);
             }
         }
+    }
+
+    private void DrawTileResizeGrip(RectI divider, uint color)
+    {
+        bool vertical = divider.Height >= divider.Width;
+        if (vertical)
+        {
+            int x = divider.X + divider.Width / 2 - 3;
+            DrawGripDot(x, divider.Y + 10, color);
+            DrawGripDot(x, divider.Y + divider.Height / 2 - 3, color);
+            DrawGripDot(x, divider.Bottom - 17, color);
+        }
+        else
+        {
+            int y = divider.Y + divider.Height / 2 - 3;
+            DrawGripDot(divider.X + 10, y, color);
+            DrawGripDot(divider.X + divider.Width / 2 - 3, y, color);
+            DrawGripDot(divider.Right - 17, y, color);
+        }
+    }
+
+    private void DrawGripDot(int x, int y, uint color)
+    {
+        _canvas.BlendRect(x, y, 7, 7, color);
+        _canvas.DrawRect(x, y, 7, 7, _ui.Theme.Button.Colors.BorderHot);
     }
 
     private IEnumerable<RectI> TileSplitterRects(ForgeLayout layout, AppWindow[] open)
@@ -1592,6 +1621,12 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private void BringToFront(AppWindow window)
     {
+        if (window == AppWindow.Viewport)
+        {
+            MarkConfigDirty();
+            return;
+        }
+
         _windowOrder.Remove(window);
         _windowOrder.Add(window);
         MarkConfigDirty();
@@ -1888,6 +1923,11 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private void HandleHostShortcuts(ForgeInput input)
     {
+        if (HandleTileKeyboardShortcuts(input))
+        {
+            return;
+        }
+
         if (Pressed(input, ForgeInput.ScaleFit))
         {
             SetScaleMode(ViewportScaleMode.Fit);
@@ -1905,6 +1945,82 @@ internal sealed unsafe class ForgeApp : IDisposable
             NextTheme();
         }
 
+    }
+
+    private bool HandleTileKeyboardShortcuts(ForgeInput input)
+    {
+        if (_config.WindowMode != UiWindowMode.Tiled || (input & ForgeInput.Super) == 0)
+        {
+            return false;
+        }
+
+        TileDirection? direction = Pressed(input, ForgeInput.Left) ? TileDirection.Left :
+            Pressed(input, ForgeInput.Right) ? TileDirection.Right :
+            Pressed(input, ForgeInput.Up) ? TileDirection.Up :
+            Pressed(input, ForgeInput.Down) ? TileDirection.Down :
+            null;
+        if (direction is not TileDirection dir)
+        {
+            return false;
+        }
+
+        AppWindow? target = FindDirectionalTile(_focusedTile, dir);
+        if (target is null)
+        {
+            return true;
+        }
+
+        if ((input & ForgeInput.Shift) != 0)
+        {
+            SwapTileWindow(_focusedTile, target.Value);
+        }
+        _focusedTile = target.Value;
+        BringToFront(_focusedTile);
+        return true;
+    }
+
+    private AppWindow? FindDirectionalTile(AppWindow from, TileDirection direction)
+    {
+        AppWindow[] open = OpenTiledWindows();
+        if (!open.Contains(from))
+        {
+            return open.FirstOrDefault();
+        }
+
+        ForgeLayout layout = ForgeLayout.Calculate(Math.Max(1, _lastRenderWidth), Math.Max(1, _lastRenderHeight));
+        RectI fromRect = TiledWindowRect(layout, from);
+        int fromX = fromRect.X + fromRect.Width / 2;
+        int fromY = fromRect.Y + fromRect.Height / 2;
+        AppWindow? best = null;
+        double bestScore = double.MaxValue;
+        foreach (AppWindow candidate in open)
+        {
+            if (candidate == from)
+            {
+                continue;
+            }
+
+            RectI candidateRect = TiledWindowRect(layout, candidate);
+            int candidateX = candidateRect.X + candidateRect.Width / 2;
+            int candidateY = candidateRect.Y + candidateRect.Height / 2;
+            int dx = candidateX - fromX;
+            int dy = candidateY - fromY;
+            double score = direction switch
+            {
+                TileDirection.Left when dx < 0 => -dx + Math.Abs(dy) * 0.35,
+                TileDirection.Right when dx > 0 => dx + Math.Abs(dy) * 0.35,
+                TileDirection.Up when dy < 0 => -dy + Math.Abs(dx) * 0.35,
+                TileDirection.Down when dy > 0 => dy + Math.Abs(dx) * 0.35,
+                _ => double.MaxValue,
+            };
+            if (score < bestScore)
+            {
+                best = candidate;
+                bestScore = score;
+            }
+        }
+
+        return best;
     }
 
     private bool Pressed(ForgeInput input, ForgeInput button)
@@ -1947,6 +2063,14 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private readonly record struct TileResizeHandle(string Path, bool Vertical, double StartRatio, int Span);
     private readonly record struct TileResizeCandidate(TileResizeHandle Handle, RectI Divider);
+
+    private enum TileDirection
+    {
+        Left,
+        Right,
+        Up,
+        Down,
+    }
 
     private enum TileSplitAxis
     {
