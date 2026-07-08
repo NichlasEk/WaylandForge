@@ -8,6 +8,7 @@ AUDIO_SOCKET="/tmp/waylandforge-audio.sock"
 HOST_PROJECT="$ROOT_DIR/src/SystemRegisIII.Host.WaylandForge/SystemRegisIII.Host.WaylandForge.csproj"
 HOST_DLL="$ROOT_DIR/src/SystemRegisIII.Host.WaylandForge/bin/Debug/net8.0/SystemRegisIII.Host.WaylandForge.dll"
 LOCAL_OPENTYRIAN_BIN="$ROOT_DIR/local/opentyrian-wfcore/opentyrian"
+LOCAL_RAPTOR_BIN="$ROOT_DIR/local/raptor/build/bin/raptor"
 AUDIO_PID=""
 HOST_PID=""
 
@@ -78,16 +79,21 @@ stop_existing_audio() {
 }
 
 stop_local_external_cores() {
-    if [ ! -x "$LOCAL_OPENTYRIAN_BIN" ] || ! command -v pgrep >/dev/null 2>&1; then
+    if ! command -v pgrep >/dev/null 2>&1; then
         return
     fi
 
-    while read -r pid; do
-        if [ -n "$pid" ]; then
-            echo "stopping stale external core pid $pid"
-            kill "$pid" 2>/dev/null || true
+    for core_bin in "$LOCAL_OPENTYRIAN_BIN" "$LOCAL_RAPTOR_BIN"; do
+        if [ ! -x "$core_bin" ]; then
+            continue
         fi
-    done < <(pgrep -f "$LOCAL_OPENTYRIAN_BIN" || true)
+        while read -r pid; do
+            if [ -n "$pid" ]; then
+                echo "stopping stale external core pid $pid"
+                kill "$pid" 2>/dev/null || true
+            fi
+        done < <(pgrep -f "$core_bin" || true)
+    done
 }
 
 cleanup() {

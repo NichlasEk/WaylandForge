@@ -29,6 +29,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     private NetworkStream? _socketStream;
     private DateTime _startedAtUtc;
     private int? _lastExitCode;
+    private bool _startBlockedAfterExit;
     private int _lastWidth;
     private int _lastHeight;
     private int _lastStride;
@@ -84,6 +85,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         _wfexPath = config.WfexPath.Trim();
         _socketPath = config.SocketPath.Trim();
         _fallbackDllPath = fallbackDllPath;
+        _startBlockedAfterExit = false;
     }
 
     public void Reset()
@@ -91,6 +93,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         Stop();
         FrameIndex = 0;
         _lastExitCode = null;
+        _startBlockedAfterExit = false;
         LastError = string.Empty;
         Array.Clear(_frame);
     }
@@ -99,6 +102,11 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     {
         try
         {
+            if (TryHoldExitedProcessFrame(frameSink))
+            {
+                return;
+            }
+
             if (_mode == "wfex_file")
             {
                 StepWfexFile(frameSink);
@@ -377,6 +385,18 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         {
             return;
         }
+        if (_process is { HasExited: true } process)
+        {
+            _lastExitCode = process.ExitCode;
+            _process = null;
+            CloseTransport();
+            process.Dispose();
+            _startBlockedAfterExit = true;
+        }
+        if (_startBlockedAfterExit)
+        {
+            throw new InvalidOperationException("External core exited. Press RESTART to launch it again.");
+        }
 
         string command = _command;
         string args = _args;
@@ -442,15 +462,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
 
     private void Stop()
     {
-        _wfexStream?.Dispose();
-        _wfexStream = null;
-        _socketStream?.Dispose();
-        _socketStream = null;
-        _socket?.Dispose();
-        _socket = null;
-        _socketListener?.Dispose();
-        _socketListener = null;
-        DeleteSocketPath();
+        CloseTransport();
         Process? process = _process;
         _process = null;
         if (process is null)
@@ -477,6 +489,56 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         finally
         {
             process.Dispose();
+        }
+    }
+
+    private void CloseTransport()
+    {
+        _wfexStream?.Dispose();
+        _wfexStream = null;
+        _socketStream?.Dispose();
+        _socketStream = null;
+        _socket?.Dispose();
+        _socket = null;
+        _socketListener?.Dispose();
+        _socketListener = null;
+        DeleteSocketPath();
+    }
+
+    private bool TryHoldExitedProcessFrame(IFrameSink frameSink)
+    {
+        if (_startBlockedAfterExit)
+        {
+            PresentLastFrame(frameSink);
+            return true;
+        }
+
+        Process? process = _process;
+        if (process is not { HasExited: true })
+        {
+            return false;
+        }
+
+        _lastExitCode = process.ExitCode;
+        AddStderrLine($"HOST: external core exited with code {_lastExitCode.Value}.");
+        _process = null;
+        CloseTransport();
+        process.Dispose();
+        _startBlockedAfterExit = true;
+        PresentLastFrame(frameSink);
+        return true;
+    }
+
+    private void PresentLastFrame(IFrameSink frameSink)
+    {
+        if (_frame.Length > 0 && _lastWidth > 0 && _lastHeight > 0)
+        {
+            frameSink.Present(_frame, _lastWidth, _lastHeight, _lastStride);
+            return;
+        }
+        if (_pendingFrame.Length > 0 && _lastWidth > 0 && _lastHeight > 0)
+        {
+            frameSink.Present(_pendingFrame, _lastWidth, _lastHeight, _lastStride);
         }
     }
 

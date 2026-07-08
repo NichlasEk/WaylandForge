@@ -1,5 +1,5 @@
 diff --git a/src/i_video.cpp b/src/i_video.cpp
-index 482b9d8..693978e 100644
+index 482b9d8..4f1a8e3 100644
 --- a/src/i_video.cpp
 +++ b/src/i_video.cpp
 @@ -20,6 +20,11 @@
@@ -22,7 +22,7 @@ index 482b9d8..693978e 100644
  #include "musapi.h"
  #include "prefapi.h"
  #include "joyapi.h"
-@@ -203,6 +209,25 @@ int screencoordpoint = 0;
+@@ -203,6 +209,26 @@ int screencoordpoint = 0;
  // When textmode is true not update pointer cursor
  static bool textmode = false;
  
@@ -42,13 +42,14 @@ index 482b9d8..693978e 100644
 +static void wfcore_apply_buttons(uint32_t buttons);
 +static void wfcore_apply_pointer(int32_t x, int32_t y, uint32_t buttons, bool inside);
 +static void wfcore_set_key(int scancode, bool pressed);
++static int wfcore_scancode_to_ascii(int scancode);
 +static int wfcore_raw_key_to_scancode(uint32_t raw_key);
 +static void wfcore_send_frame(void);
 +
  void VIDEO_LoadPrefs(void)
  {
      fullscreen = INI_GetPreferenceLong("Video", "fullscreen", 0);
-@@ -210,6 +235,51 @@ void VIDEO_LoadPrefs(void)
+@@ -210,6 +236,51 @@ void VIDEO_LoadPrefs(void)
      txt_fullscreen = INI_GetPreferenceLong("Video", "txt_fullscreen", 0);
  }
  
@@ -100,7 +101,7 @@ index 482b9d8..693978e 100644
  static bool MouseShouldBeGrabbed()
  {
      // never grab the mouse when in screensaver mode
-@@ -280,11 +350,19 @@ static void SetShowCursor(bool show)
+@@ -280,11 +351,19 @@ static void SetShowCursor(bool show)
  
  void I_ShutdownGraphics(void)
  {
@@ -121,7 +122,7 @@ index 482b9d8..693978e 100644
  
          initialized = false;
      }
-@@ -423,6 +501,14 @@ void I_GetEvent(void)
+@@ -423,6 +502,14 @@ void I_GetEvent(void)
  
      SDL_Event sdlevent;
  
@@ -136,7 +137,7 @@ index 482b9d8..693978e 100644
      SDL_PumpEvents();
  
      while (SDL_PollEvent(&sdlevent))
-@@ -729,6 +815,13 @@ void I_FinishUpdate (void)
+@@ -729,6 +816,13 @@ void I_FinishUpdate (void)
      if (!initialized)
          return;
  
@@ -150,7 +151,7 @@ index 482b9d8..693978e 100644
      // if (noblit)
      //     return;
  
-@@ -1414,6 +1507,7 @@ void I_InitGraphics(uint8_t *pal)
+@@ -1414,6 +1508,7 @@ void I_InitGraphics(uint8_t *pal)
      SDL_Event dummy;
      char *env;
      int rw = 0, rh = 0;
@@ -158,7 +159,7 @@ index 482b9d8..693978e 100644
  
      // Pass through the XSCREENSAVER_WINDOW environment variable to
      // SDL_WINDOWID, to embed the SDL window into the Xscreensaver
-@@ -1432,6 +1526,38 @@ void I_InitGraphics(uint8_t *pal)
+@@ -1432,6 +1527,38 @@ void I_InitGraphics(uint8_t *pal)
          putenv(winenv);
      }
  
@@ -197,7 +198,7 @@ index 482b9d8..693978e 100644
      SetSDLVideoDriver();
  
      if (SDL_Init(SDL_INIT_VIDEO) < 0)
-@@ -1626,4 +1752,230 @@ bool I_GetNeedResize(bool setonlypos)
+@@ -1626,4 +1753,280 @@ bool I_GetNeedResize(bool setonlypos)
  void I_Settextmode(bool flag)
  {
      textmode = flag;
@@ -215,6 +216,7 @@ index 482b9d8..693978e 100644
 +    {
 +        kbd_ack = 1;
 +        lastscan = scancode;
++        lastascii = wfcore_scancode_to_ascii(scancode);
 +    }
 +}
 +
@@ -346,6 +348,55 @@ index 482b9d8..693978e 100644
 +    if ((pressed & 2u) != 0) mouse_b2_ack = 1;
 +    if ((pressed & 4u) != 0) mouse_b3_ack = 1;
 +    wfcore_last_pointer_buttons = buttons;
++}
++
++static int wfcore_scancode_to_ascii(int scancode)
++{
++    bool shifted = keyboard[SC_LEFT_SHIFT] || keyboard[SC_RIGHT_SHIFT] || capslock;
++    switch (scancode)
++    {
++    case SC_A: return shifted ? 'A' : 'a';
++    case SC_B: return shifted ? 'B' : 'b';
++    case SC_C: return shifted ? 'C' : 'c';
++    case SC_D: return shifted ? 'D' : 'd';
++    case SC_E: return shifted ? 'E' : 'e';
++    case SC_F: return shifted ? 'F' : 'f';
++    case SC_G: return shifted ? 'G' : 'g';
++    case SC_H: return shifted ? 'H' : 'h';
++    case SC_I: return shifted ? 'I' : 'i';
++    case SC_J: return shifted ? 'J' : 'j';
++    case SC_K: return shifted ? 'K' : 'k';
++    case SC_L: return shifted ? 'L' : 'l';
++    case SC_M: return shifted ? 'M' : 'm';
++    case SC_N: return shifted ? 'N' : 'n';
++    case SC_O: return shifted ? 'O' : 'o';
++    case SC_P: return shifted ? 'P' : 'p';
++    case SC_Q: return shifted ? 'Q' : 'q';
++    case SC_R: return shifted ? 'R' : 'r';
++    case SC_S: return shifted ? 'S' : 's';
++    case SC_T: return shifted ? 'T' : 't';
++    case SC_U: return shifted ? 'U' : 'u';
++    case SC_V: return shifted ? 'V' : 'v';
++    case SC_W: return shifted ? 'W' : 'w';
++    case SC_X: return shifted ? 'X' : 'x';
++    case SC_Y: return shifted ? 'Y' : 'y';
++    case SC_Z: return shifted ? 'Z' : 'z';
++    case SC_SPACE: return ' ';
++    case SC_BACKSPACE: return 0x08;
++    case SC_ENTER: return 0x0d;
++    case SC_1: return shifted ? '!' : '1';
++    case SC_2: return shifted ? '@' : '2';
++    case SC_3: return shifted ? '#' : '3';
++    case SC_4: return shifted ? '$' : '4';
++    case SC_5: return shifted ? '%' : '5';
++    case SC_6: return shifted ? '^' : '6';
++    case SC_7: return shifted ? '&' : '7';
++    case SC_8: return shifted ? '*' : '8';
++    case SC_9: return shifted ? '(' : '9';
++    case SC_0: return shifted ? ')' : '0';
++    case SC_MINUS: return shifted ? '_' : '-';
++    default: return SC_NONE;
++    }
 +}
 +
 +static int wfcore_raw_key_to_scancode(uint32_t raw_key)
