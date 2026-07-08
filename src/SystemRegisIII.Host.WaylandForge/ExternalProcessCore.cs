@@ -171,7 +171,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         BinaryPrimitives.WriteUInt64LittleEndian(_inputHeader.AsSpan(16), FrameIndex);
         TrySendInputHeader();
 
-        if (!WaitForSocketData(_frame.Length == 0 ? 2000 : 2))
+        if (!WaitForSocketData(_frame.Length == 0 ? 2000 : 0))
         {
             if (_frame.Length > 0 && _lastWidth > 0 && _lastHeight > 0)
             {
@@ -221,9 +221,10 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
             return;
         }
 
+        int oldSendTimeout = socket.SendTimeout;
         try
         {
-            socket.Blocking = false;
+            socket.SendTimeout = 2;
             int offset = 0;
             while (offset < _inputHeader.Length)
             {
@@ -235,12 +236,12 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
                 offset += written;
             }
         }
-        catch (SocketException ex) when (ex.SocketErrorCode is SocketError.WouldBlock or SocketError.IOPending or SocketError.NoBufferSpaceAvailable)
+        catch (SocketException ex) when (ex.SocketErrorCode is SocketError.WouldBlock or SocketError.IOPending or SocketError.NoBufferSpaceAvailable or SocketError.TimedOut)
         {
         }
         finally
         {
-            socket.Blocking = true;
+            socket.SendTimeout = oldSendTimeout;
         }
     }
 
