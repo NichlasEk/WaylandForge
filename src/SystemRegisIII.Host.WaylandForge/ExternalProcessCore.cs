@@ -36,7 +36,11 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     private uint[] _pendingFrame = [];
     private readonly byte[] _header = new byte[32];
     private readonly byte[] _stepCommandBuffer = new byte[5];
-    private readonly byte[] _inputHeader = new byte[32];
+    private readonly byte[] _inputHeader = new byte[48];
+    private int _pointerX;
+    private int _pointerY;
+    private uint _pointerButtons;
+    private bool _pointerInside;
 
     public ExternalProcessCore(UiExternalCoreConfig config, string fallbackDllPath)
     {
@@ -132,6 +136,17 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         SendInputState(inputState, rawKeyCode, rawKeySerial, rawKeyPressed);
     }
 
+    public void SetPointerState(int x, int y, uint buttons, bool inside)
+    {
+        lock (_inputLock)
+        {
+            _pointerX = x;
+            _pointerY = y;
+            _pointerButtons = buttons;
+            _pointerInside = inside;
+        }
+    }
+
     private void StepStdio(IInputSource input, IFrameSink frameSink)
     {
         EnsureStarted();
@@ -213,12 +228,16 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     {
         Array.Clear(_inputHeader);
         BinaryPrimitives.WriteUInt32LittleEndian(_inputHeader.AsSpan(0), InputMagic);
-        BinaryPrimitives.WriteInt32LittleEndian(_inputHeader.AsSpan(4), 32);
+        BinaryPrimitives.WriteInt32LittleEndian(_inputHeader.AsSpan(4), _inputHeader.Length);
         BinaryPrimitives.WriteUInt32LittleEndian(_inputHeader.AsSpan(8), (uint)inputState.Buttons);
         BinaryPrimitives.WriteUInt32LittleEndian(_inputHeader.AsSpan(12), rawKeyCode);
         BinaryPrimitives.WriteUInt64LittleEndian(_inputHeader.AsSpan(16), FrameIndex);
         BinaryPrimitives.WriteUInt32LittleEndian(_inputHeader.AsSpan(24), rawKeySerial);
         BinaryPrimitives.WriteUInt32LittleEndian(_inputHeader.AsSpan(28), rawKeyPressed ? 1u : 0u);
+        BinaryPrimitives.WriteInt32LittleEndian(_inputHeader.AsSpan(32), _pointerX);
+        BinaryPrimitives.WriteInt32LittleEndian(_inputHeader.AsSpan(36), _pointerY);
+        BinaryPrimitives.WriteUInt32LittleEndian(_inputHeader.AsSpan(40), _pointerButtons);
+        BinaryPrimitives.WriteUInt32LittleEndian(_inputHeader.AsSpan(44), _pointerInside ? 1u : 0u);
     }
 
     private bool WaitForSocketData(int timeoutMs)

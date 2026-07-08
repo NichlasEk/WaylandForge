@@ -111,6 +111,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         HandleHostShortcuts(mappedInput);
 
         _inputSource.Update(mappedInput);
+        SyncExternalPointerState();
         if (!_paused || _stepRequested || _frameStore.Pixels.IsEmpty)
         {
             StepActiveCore();
@@ -2455,10 +2456,32 @@ internal sealed unsafe class ForgeApp : IDisposable
         ForgeInput mappedInput = MapInputFromPressedKeys();
         _lastInput = mappedInput;
         _inputSource.Update(mappedInput);
+        SyncExternalPointerState();
         if (_core is ExternalProcessCore external)
         {
             external.PushInputNow(_inputSource.Poll(), rawKeyCode, rawKeySerial, rawKeyPressed);
         }
+    }
+
+    private void SyncExternalPointerState()
+    {
+        if (_core is not ExternalProcessCore external)
+        {
+            return;
+        }
+
+        RectI content = _viewport.ContentRect;
+        int sourceWidth = Math.Max(1, _frameStore.Width);
+        int sourceHeight = Math.Max(1, _frameStore.Height);
+        int coreX = 0;
+        int coreY = 0;
+        bool inside = _pointer.IsInside && content.Width > 0 && content.Height > 0 && content.Contains(_pointer.X, _pointer.Y);
+        if (inside)
+        {
+            coreX = Math.Clamp((_pointer.X - content.X) * sourceWidth / content.Width, 0, sourceWidth - 1);
+            coreY = Math.Clamp((_pointer.Y - content.Y) * sourceHeight / content.Height, 0, sourceHeight - 1);
+        }
+        external.SetPointerState(coreX, coreY, (uint)_pointer.Buttons, inside);
     }
 
     private bool HandleTileKeyboardShortcuts(ForgeInput input)
