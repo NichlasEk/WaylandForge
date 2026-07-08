@@ -15,6 +15,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     private const string DefaultConfigPath = "config/waylandforge.ui.toml";
     private const string LocalConfigPath = "config/waylandforge.ui.local.toml";
     private const string AudioSocketPath = "/tmp/waylandforge-audio.sock";
+    private const uint AllKeysReleasedCode = uint.MaxValue;
 
     private readonly SoftwareCanvas _canvas = new();
     private readonly FakeSaturnCore _fakeCore = new();
@@ -150,6 +151,12 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
 
         _handledKeySerial = textInput.Serial;
+        if (!textInput.Pressed && textInput.KeyCode == AllKeysReleasedCode)
+        {
+            _pressedKeys.Clear();
+            return;
+        }
+
         if (textInput.Pressed)
         {
             _pressedKeys.Add(textInput.KeyCode);
@@ -2385,6 +2392,7 @@ internal sealed unsafe class ForgeApp : IDisposable
 
         _fullscreenTile = _fullscreenTile == target ? null : target;
         _focusedTile = target;
+        _pressedKeys.Clear();
     }
 
     private bool HandleTileKeyboardShortcuts(ForgeInput input)

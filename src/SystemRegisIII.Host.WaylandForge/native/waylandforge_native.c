@@ -366,10 +366,15 @@ static void keyboard_enter(void *data, struct wl_keyboard *keyboard, uint32_t se
 
 static void keyboard_leave(void *data, struct wl_keyboard *keyboard, uint32_t serial, struct wl_surface *surface)
 {
-    (void)data;
     (void)keyboard;
     (void)serial;
     (void)surface;
+
+    struct waylandforge_app *app = data;
+    app->input_mask = 0;
+    app->key_code = UINT32_MAX;
+    app->key_state = 0;
+    app->key_serial++;
 }
 
 static void keyboard_key(void *data, struct wl_keyboard *keyboard, uint32_t serial, uint32_t time_ms, uint32_t key, uint32_t state)
