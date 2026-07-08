@@ -100,6 +100,7 @@ SDL_VIDEODRIVER=dummy OPENTYRIAN_WFEX_PATH=/tmp/opentyrian.wfex OPENTYRIAN_WFEX_
 ```
 
 That requires the Tyrian 2.1 freeware data files in OpenTyrian's expected data path. Without them, OpenTyrian exits before the first game frame and reports the missing files through stderr.
+For this local setup, the downloaded freeware data lives in `/home/nichlas/opentyrian/data`, which is ignored by the OpenTyrian checkout.
 
 ## UI Config
 
