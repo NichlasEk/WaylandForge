@@ -92,6 +92,15 @@ working_directory = "/home/nichlas/WaylandForge"
 
 The probe does not capture OpenTyrian video yet. It starts the target as a separate process, relays its stdout/stderr to WaylandForge, and renders a simple status framebuffer over the same `WFEX` protocol. The `SDL_VIDEODRIVER=dummy` example avoids opening a separate SDL window during lifecycle testing.
 
+The local `/home/nichlas/opentyrian` checkout also has an opt-in `OPENTYRIAN_WFEX_PATH` exporter patch. It writes real OpenTyrian `JE_showVGA()` frames as `WFEX` records to a file or FIFO:
+
+```sh
+cd /home/nichlas/opentyrian
+SDL_VIDEODRIVER=dummy OPENTYRIAN_WFEX_PATH=/tmp/opentyrian.wfex OPENTYRIAN_WFEX_MAX_FRAMES=2 ./opentyrian
+```
+
+That requires the Tyrian 2.1 freeware data files in OpenTyrian's expected data path. Without them, OpenTyrian exits before the first game frame and reports the missing files through stderr.
+
 ## UI Config
 
 Default UI configuration lives in `config/waylandforge.ui.toml`. Runtime changes are written to `config/waylandforge.ui.local.toml`, which is gitignored. The config currently persists theme, viewport scale, internal window mode, z-order, open state, floating window rectangles, and the tiled Settings split and dock side.
