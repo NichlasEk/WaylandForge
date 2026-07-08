@@ -25,6 +25,55 @@ except OSError:
 PY
 }
 
+audio_quit() {
+python - "$AUDIO_SOCKET" <<'PY'
+import socket
+import sys
+
+path = sys.argv[1]
+try:
+    with socket.socket(socket.AF_UNIX) as s:
+        s.settimeout(0.5)
+        s.connect(path)
+        s.sendall(b"QUIT\n")
+        s.recv(32)
+except OSError:
+    pass
+PY
+}
+
+stop_existing_audio() {
+    if ! audio_ping; then
+        return
+    fi
+
+    echo "stopping existing waylandforge-audiod on $AUDIO_SOCKET"
+    audio_quit
+    for _ in $(seq 1 50); do
+        if ! audio_ping; then
+            return
+        fi
+        sleep 0.05
+    done
+
+    if command -v pgrep >/dev/null 2>&1; then
+        while read -r pid; do
+            if [ -n "$pid" ]; then
+                kill "$pid" 2>/dev/null || true
+            fi
+        done < <(pgrep -f "$AUDIO_BIN" || true)
+        for _ in $(seq 1 50); do
+            if ! audio_ping; then
+                return
+            fi
+            sleep 0.05
+        done
+    fi
+
+    echo "existing waylandforge-audiod did not stop cleanly" >&2
+    exit 1
+}
+
 cleanup() {
     if [ -n "$HOST_PID" ]; then
         kill "$HOST_PID" 2>/dev/null || true
@@ -39,21 +88,19 @@ trap cleanup EXIT INT TERM
 
 make -C "$AUDIO_DIR"
 
-if audio_ping; then
-    echo "waylandforge-audiod already running on $AUDIO_SOCKET"
-else
-    "$AUDIO_BIN" &
-    AUDIO_PID="$!"
-    for _ in $(seq 1 50); do
-        if audio_ping; then
-            break
-        fi
-        sleep 0.05
-    done
-    if ! audio_ping; then
-        echo "failed to start waylandforge-audiod on $AUDIO_SOCKET" >&2
-        exit 1
+stop_existing_audio
+
+"$AUDIO_BIN" &
+AUDIO_PID="$!"
+for _ in $(seq 1 50); do
+    if audio_ping; then
+        break
     fi
+    sleep 0.05
+done
+if ! audio_ping; then
+    echo "failed to start waylandforge-audiod on $AUDIO_SOCKET" >&2
+    exit 1
 fi
 
 dotnet run --project "$ROOT_DIR/src/SystemRegisIII.Host.WaylandForge" &

@@ -292,6 +292,14 @@ static void handle_client(struct audiod *daemon, int client_fd)
         write_text(client_fd, "PONG\n");
         return;
     }
+    if (strstr(command, "QUIT") != NULL) {
+        write_text(client_fd, "OK QUIT\n");
+        atomic_store_explicit(&daemon->running, false, memory_order_release);
+        if (daemon->main_loop != NULL) {
+            pw_main_loop_quit(daemon->main_loop);
+        }
+        return;
+    }
 
     write_text(client_fd, "ERR UNKNOWN\n");
 }
