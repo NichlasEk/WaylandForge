@@ -10,10 +10,10 @@ if [ ! -d "$RAPTOR_DIR/.git" ]; then
     git clone https://github.com/skynettx/raptor "$RAPTOR_DIR"
 fi
 
-if ! git -C "$RAPTOR_DIR" diff --quiet -- src/i_video.cpp; then
+if ! git -C "$RAPTOR_DIR" diff --quiet -- src/i_video.cpp src/windows.cpp; then
     echo "local/raptor already has changes; leaving them in place"
 else
-    git -C "$RAPTOR_DIR" apply "$PATCH_FILE"
+    git -C "$RAPTOR_DIR" apply --unidiff-zero "$PATCH_FILE"
 fi
 
 cmake -S "$RAPTOR_DIR" -B "$RAPTOR_DIR/build"

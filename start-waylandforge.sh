@@ -79,20 +79,44 @@ stop_existing_audio() {
 }
 
 stop_local_external_cores() {
-    if ! command -v pgrep >/dev/null 2>&1; then
+    if ! command -v ps >/dev/null 2>&1; then
         return
     fi
 
-    for core_bin in "$LOCAL_OPENTYRIAN_BIN" "$LOCAL_RAPTOR_BIN"; do
-        if [ ! -x "$core_bin" ]; then
+    local pids=()
+    while read -r pid args; do
+        if [ -z "${pid:-}" ]; then
             continue
         fi
-        while read -r pid; do
-            if [ -n "$pid" ]; then
+        case "$args" in
+            *"$LOCAL_OPENTYRIAN_BIN"*|*"$LOCAL_RAPTOR_BIN"*|*"$ROOT_DIR/local/opentyrian-wfcore/"*|*"$ROOT_DIR/local/raptor/"*)
                 echo "stopping stale external core pid $pid"
                 kill "$pid" 2>/dev/null || true
+                pids+=("$pid")
+                ;;
+        esac
+    done < <(ps -eo pid=,args=)
+
+    if [ "${#pids[@]}" -eq 0 ]; then
+        return
+    fi
+    for _ in $(seq 1 20); do
+        local alive=0
+        for pid in "${pids[@]}"; do
+            if kill -0 "$pid" 2>/dev/null; then
+                alive=1
             fi
-        done < <(pgrep -f "$core_bin" || true)
+        done
+        if [ "$alive" -eq 0 ]; then
+            return
+        fi
+        sleep 0.05
+    done
+    for pid in "${pids[@]}"; do
+        if kill -0 "$pid" 2>/dev/null; then
+            echo "force stopping stale external core pid $pid"
+            kill -9 "$pid" 2>/dev/null || true
+        fi
     done
 }
 

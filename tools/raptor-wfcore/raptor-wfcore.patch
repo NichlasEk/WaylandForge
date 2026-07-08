@@ -1,31 +1,16 @@
 diff --git a/src/i_video.cpp b/src/i_video.cpp
-index 482b9d8..18526ca 100644
+index 482b9d8..264db6e 100644
 --- a/src/i_video.cpp
 +++ b/src/i_video.cpp
-@@ -20,6 +20,11 @@
- #include <stdlib.h>
- #include <cstring>
- #include <climits>
+@@ -22,0 +23,5 @@
 +#include <errno.h>
 +#include <fcntl.h>
 +#include <sys/socket.h>
 +#include <sys/un.h>
 +#include <unistd.h>
- #include "SDL.h"
- #include "SDL_opengl.h"
- 
-@@ -35,6 +40,7 @@
- #include "m_misc.h"
- #include "ptrapi.h"
- #include "input.h"
+@@ -37,0 +43 @@
 +#include "kbdapi.h"
- #include "musapi.h"
- #include "prefapi.h"
- #include "joyapi.h"
-@@ -203,6 +209,28 @@ int screencoordpoint = 0;
- // When textmode is true not update pointer cursor
- static bool textmode = false;
- 
+@@ -205,0 +212,23 @@ static bool textmode = false;
 +static bool wfcore_mode = false;
 +static int wfcore_socket_fd = -1;
 +static uint32_t *wfcore_frame = NULL;
@@ -43,18 +28,13 @@ index 482b9d8..18526ca 100644
 +static void wfcore_apply_buttons(uint32_t buttons);
 +static void wfcore_apply_pointer(int32_t x, int32_t y, uint32_t buttons, bool inside);
 +static void wfcore_move_menu_pointer(uint32_t buttons);
++static void wfcore_release_action_keys(void);
 +static void wfcore_set_key(int scancode, bool pressed);
 +static int wfcore_scancode_to_ascii(int scancode);
 +static int wfcore_raw_key_to_scancode(uint32_t raw_key);
 +static void wfcore_send_frame(void);
 +
- void VIDEO_LoadPrefs(void)
- {
-     fullscreen = INI_GetPreferenceLong("Video", "fullscreen", 0);
-@@ -210,6 +238,51 @@ void VIDEO_LoadPrefs(void)
-     txt_fullscreen = INI_GetPreferenceLong("Video", "txt_fullscreen", 0);
- }
- 
+@@ -212,0 +242,45 @@ void VIDEO_LoadPrefs(void)
 +static void wfcore_connect(void)
 +{
 +    const char *socket_path = getenv("WFCORE_SOCKET");
@@ -100,34 +80,19 @@ index 482b9d8..18526ca 100644
 +    wfcore_input_buffer_used = 0;
 +}
 +
- static bool MouseShouldBeGrabbed()
- {
-     // never grab the mouse when in screensaver mode
-@@ -280,11 +353,19 @@ static void SetShowCursor(bool show)
- 
- void I_ShutdownGraphics(void)
- {
+@@ -282,0 +357,5 @@ void I_ShutdownGraphics(void)
 +    if (wfcore_mode)
 +    {
 +        wfcore_disconnect();
 +    }
 +
-     if (initialized)
-     {
-         SetShowCursor(true);
- 
+@@ -287 +366,4 @@ void I_ShutdownGraphics(void)
 -        SDL_QuitSubSystem(SDL_INIT_VIDEO);
 +        if (!wfcore_mode)
 +        {
 +            SDL_QuitSubSystem(SDL_INIT_VIDEO);
 +        }
- 
-         initialized = false;
-     }
-@@ -423,6 +504,14 @@ void I_GetEvent(void)
- 
-     SDL_Event sdlevent;
- 
+@@ -425,0 +508,8 @@ void I_GetEvent(void)
 +    if (wfcore_mode)
 +    {
 +        wfcore_poll_input();
@@ -136,13 +101,7 @@ index 482b9d8..18526ca 100644
 +        return;
 +    }
 +
-     SDL_PumpEvents();
- 
-     while (SDL_PollEvent(&sdlevent))
-@@ -729,6 +818,13 @@ void I_FinishUpdate (void)
-     if (!initialized)
-         return;
- 
+@@ -731,0 +822,7 @@ void I_FinishUpdate (void)
 +    if (wfcore_mode)
 +    {
 +        wfcore_poll_input();
@@ -150,21 +109,9 @@ index 482b9d8..18526ca 100644
 +        return;
 +    }
 +
-     // if (noblit)
-     //     return;
- 
-@@ -1414,6 +1510,7 @@ void I_InitGraphics(uint8_t *pal)
-     SDL_Event dummy;
-     char *env;
-     int rw = 0, rh = 0;
+@@ -1416,0 +1514 @@ void I_InitGraphics(uint8_t *pal)
 +    wfcore_mode = getenv("RAPTOR_WFCORE") != NULL;
- 
-     // Pass through the XSCREENSAVER_WINDOW environment variable to
-     // SDL_WINDOWID, to embed the SDL window into the Xscreensaver
-@@ -1432,6 +1529,38 @@ void I_InitGraphics(uint8_t *pal)
-         putenv(winenv);
-     }
- 
+@@ -1434,0 +1533,32 @@ void I_InitGraphics(uint8_t *pal)
 +    if (wfcore_mode)
 +    {
 +        if (SDL_Init(SDL_INIT_TIMER) < 0)
@@ -197,13 +144,7 @@ index 482b9d8..18526ca 100644
 +        return;
 +    }
 +
-     SetSDLVideoDriver();
- 
-     if (SDL_Init(SDL_INIT_VIDEO) < 0)
-@@ -1626,4 +1755,326 @@ bool I_GetNeedResize(bool setonlypos)
- void I_Settextmode(bool flag)
- {
-     textmode = flag;
+@@ -1629 +1759,345 @@ void I_Settextmode(bool flag)
 -}
 \ No newline at end of file
 +}
@@ -226,6 +167,13 @@ index 482b9d8..18526ca 100644
 +{
 +    uint32_t pressed = buttons & ~wfcore_last_buttons;
 +    bool menu_mode = g_drawcursor != 0;
++    if (textmode)
++    {
++        wfcore_release_action_keys();
++        wfcore_action_pointer_buttons = 0;
++        wfcore_last_buttons = buttons;
++        return;
++    }
 +
 +    // WaylandForge owns window/session exit; keep Raptor ESC from dropping to DOS.
 +    wfcore_set_key(SC_ESC, false);
@@ -397,6 +345,21 @@ index 482b9d8..18526ca 100644
 +    if (cur_my >= SCREENHEIGHT) cur_my = SCREENHEIGHT - 1;
 +}
 +
++static void wfcore_release_action_keys(void)
++{
++    wfcore_set_key(SC_ESC, false);
++    wfcore_set_key(SC_UP, false);
++    wfcore_set_key(SC_DOWN, false);
++    wfcore_set_key(SC_LEFT, false);
++    wfcore_set_key(SC_RIGHT, false);
++    wfcore_set_key(SC_ENTER, false);
++    wfcore_set_key(SC_CTRL, false);
++    wfcore_set_key(SC_ALT, false);
++    wfcore_set_key(SC_SPACE, false);
++    wfcore_set_key(SC_RIGHT_SHIFT, false);
++    wfcore_set_key(SC_P, false);
++}
++
 +static int wfcore_scancode_to_ascii(int scancode)
 +{
 +    bool shifted = keyboard[SC_LEFT_SHIFT] || keyboard[SC_RIGHT_SHIFT] || capslock;
@@ -529,3 +492,15 @@ index 482b9d8..18526ca 100644
 +    }
 +    return true;
 +}
+diff --git a/src/windows.cpp b/src/windows.cpp
+index 98a975d..d3f1456 100644
+--- a/src/windows.cpp
++++ b/src/windows.cpp
+@@ -2,0 +3 @@
++#include <stdlib.h>
+@@ -629,0 +631,3 @@ WIN_AskExit(
++    if (getenv("WFCORE_SOCKET"))
++        return;
++
+@@ -2237 +2240,0 @@ menu_exit:
+-

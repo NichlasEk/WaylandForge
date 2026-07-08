@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 namespace SystemRegisIII.Host.WaylandForge;
 
 internal static unsafe class Program
@@ -24,6 +26,30 @@ internal static unsafe class Program
 
         Console.CancelKeyPress += (_, _) => DisposeApp();
         AppDomain.CurrentDomain.ProcessExit += (_, _) => DisposeApp();
+        PosixSignalRegistration? sigInt = null;
+        PosixSignalRegistration? sigTerm = null;
+        PosixSignalRegistration? sigHup = null;
+        if (OperatingSystem.IsLinux())
+        {
+            sigInt = PosixSignalRegistration.Create(PosixSignal.SIGINT, context =>
+            {
+                context.Cancel = true;
+                DisposeApp();
+                Environment.Exit(130);
+            });
+            sigTerm = PosixSignalRegistration.Create(PosixSignal.SIGTERM, context =>
+            {
+                context.Cancel = true;
+                DisposeApp();
+                Environment.Exit(143);
+            });
+            sigHup = PosixSignalRegistration.Create(PosixSignal.SIGHUP, context =>
+            {
+                context.Cancel = true;
+                DisposeApp();
+                Environment.Exit(129);
+            });
+        }
 
         int result = WaylandWindow.Run(Width, Height, "WaylandForge M1", app.Render, app.RawKeyInput);
         if (result != 0)
@@ -32,6 +58,9 @@ internal static unsafe class Program
         }
 
         DisposeApp();
+        sigInt?.Dispose();
+        sigTerm?.Dispose();
+        sigHup?.Dispose();
         return result;
     }
 }
