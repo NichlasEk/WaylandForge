@@ -17,6 +17,7 @@ internal sealed class UiConfig
     public string Scale { get; set; } = "fit";
     public UiStyleConfig Style { get; } = new();
     public UiTileLayoutConfig Layout { get; } = new();
+    public UiExternalCoreConfig ExternalCore { get; } = new();
     public Dictionary<string, UiWindowConfig> Windows { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public static UiConfig Load(string defaultsPath, string localPath)
@@ -58,6 +59,11 @@ internal sealed class UiConfig
         writer.WriteLine();
         writer.WriteLine("[ui.layout]");
         writer.WriteLine($"root = \"{Layout.Root}\"");
+        writer.WriteLine();
+        writer.WriteLine("[external_core]");
+        writer.WriteLine($"command = \"{Escape(ExternalCore.Command)}\"");
+        writer.WriteLine($"args = \"{Escape(ExternalCore.Args)}\"");
+        writer.WriteLine($"working_directory = \"{Escape(ExternalCore.WorkingDirectory)}\"");
         writer.WriteLine();
 
         foreach (KeyValuePair<string, UiWindowConfig> pair in Windows.OrderBy(static pair => pair.Value.Order).ThenBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase))
@@ -159,6 +165,23 @@ internal sealed class UiConfig
             if (string.Equals(key, "root", StringComparison.OrdinalIgnoreCase))
             {
                 Layout.Root = value;
+            }
+            return;
+        }
+
+        if (string.Equals(section, "external_core", StringComparison.OrdinalIgnoreCase))
+        {
+            switch (key.ToLowerInvariant())
+            {
+                case "command":
+                    ExternalCore.Command = value;
+                    break;
+                case "args":
+                    ExternalCore.Args = value;
+                    break;
+                case "working_directory":
+                    ExternalCore.WorkingDirectory = value;
+                    break;
             }
             return;
         }
@@ -266,6 +289,11 @@ internal sealed class UiConfig
         value = value.Trim();
         return value.Length >= 2 && value[0] == '"' && value[^1] == '"' ? value[1..^1] : value;
     }
+
+    private static string Escape(string value)
+    {
+        return value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
+    }
 }
 
 internal sealed class UiWindowConfig
@@ -312,4 +340,11 @@ internal sealed class UiStyleConfig
 internal sealed class UiTileLayoutConfig
 {
     public string Root { get; set; } = string.Empty;
+}
+
+internal sealed class UiExternalCoreConfig
+{
+    public string Command { get; set; } = string.Empty;
+    public string Args { get; set; } = string.Empty;
+    public string WorkingDirectory { get; set; } = string.Empty;
 }

@@ -29,6 +29,7 @@ M1 is still intentionally narrow:
 - expose a native WaylandForge file picker for ROM/file selection
 - expose toolbar controls for pause/run, reset, single-step, ROM picker, and settings
 - expose an EXT toolbar toggle that switches between the in-process fake core and the dummy external core process
+- expose external-core status, restart, exit state, and stderr tail in the debug panel
 - persist UI defaults/state through a small repo-local TOML configuration layer
 - close on ESC or compositor close
 
@@ -63,6 +64,17 @@ The fake core draws a controllable blob so every mapped button has visible outpu
 - core then writes `byteCount` bytes of ARGB8888 pixels
 
 This keeps GPL or other external code out of the WaylandForge process while still letting the host present frames and inject input.
+
+External cores are configured in TOML:
+
+```toml
+[external_core]
+command = "" # empty uses the built-in dummy external core
+args = ""
+working_directory = ""
+```
+
+When `EXT` is enabled, the debug panel shows process status, the selected command, last host-side fault, a restart button, and the latest stderr lines.
 
 ## UI Config
 

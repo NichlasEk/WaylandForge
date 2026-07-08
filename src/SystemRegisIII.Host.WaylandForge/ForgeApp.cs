@@ -15,7 +15,7 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private readonly SoftwareCanvas _canvas = new();
     private readonly FakeSaturnCore _fakeCore = new();
-    private readonly ExternalProcessCore _externalCore = new(ResolveExternalDummyCorePath());
+    private readonly ExternalProcessCore _externalCore;
     private ISystemCore _core;
     private readonly ForgeInputSource _inputSource = new();
     private readonly FrameStore _frameStore = new();
@@ -43,6 +43,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     private AppWindow _focusedTile = AppWindow.Viewport;
     private int _themeIndex;
     private bool _configDirty;
+    private string _coreFault = string.Empty;
     private double _lastConfigSaveSeconds;
     private bool _resizingTileSplit;
     private readonly List<TileResizeHandle> _tileResizeHandles = new();
@@ -57,6 +58,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         _ui = new UiContext(_canvas, UiTheme.Default);
         _config = UiConfig.Load(DefaultConfigPath, LocalConfigPath);
+        _externalCore = new ExternalProcessCore(_config.ExternalCore, ResolveExternalDummyCorePath());
         _core = _fakeCore;
         ApplyConfig();
     }
@@ -87,7 +89,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         _inputSource.Update(input);
         if (!_paused || _stepRequested || _frameStore.Pixels.IsEmpty)
         {
-            _core.StepFrame(_inputSource, _frameStore);
+            StepActiveCore();
             _stepRequested = false;
         }
 
@@ -167,7 +169,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         if (_ui.Button(resetRect, "RESET").Clicked)
         {
             _core.Reset();
-            _core.StepFrame(_inputSource, _frameStore);
+            StepActiveCore();
         }
 
         row = row.Next(42, out RectI stepRect);
@@ -249,7 +251,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         RectI content = _ui.Panel(
             new RectI(layout.SidePanelX + 8, TopBarHeight + 8, SidePanelWidth - 16, layout.Height - TopBarHeight - StatusBarHeight - 16),
             "DEBUG");
-        using (UiScrollArea scroll = _ui.BeginScrollArea(new UiId("debug.scroll"), content, 520))
+        using (UiScrollArea scroll = _ui.BeginScrollArea(new UiId("debug.scroll"), content, 700))
         {
             var column = new UiColumn(scroll.Content.X, scroll.Content.Y, scroll.Content.Width, 5);
 
@@ -269,6 +271,27 @@ internal sealed unsafe class ForgeApp : IDisposable
                 DrawMetric(x, y, "FRAME MS", _clock.FrameMilliseconds.ToString("0.0")); y += 18;
                 DrawMetric(x, y, "HZ", (_clock.FrameMilliseconds > 0 ? 1000.0 / _clock.FrameMilliseconds : 0).ToString("0.0")); y += 18;
                 DrawMetric(x, y, "DRAW MS", _clock.DrawMilliseconds.ToString("0.0")); y += 18;
+            }
+
+            if (_ui.Collapsible(new UiId("debug.external"), ref column, "EXT CORE", 176, out RectI externalSection))
+            {
+                int x = externalSection.X;
+                int y = externalSection.Y;
+                DrawMetric(x, y, "STATUS", _externalCore.Status); y += 18;
+                DrawMetric(x, y, "CMD", ExternalCommandLabel()); y += 18;
+                DrawMetric(x, y, "FAULT", string.IsNullOrEmpty(_coreFault) ? "-" : TruncateMiddle(_coreFault, 18)); y += 20;
+                RectI restartRect = new(x, y, 86, 18);
+                if (_ui.Button(new UiId("external.restart"), restartRect, "RESTART").Clicked)
+                {
+                    RestartExternalCore();
+                }
+                y += 26;
+                _ui.Text(x, y, "STDERR", UiTextKind.Muted); y += 14;
+                foreach (string line in _externalCore.StderrTail.TakeLast(4))
+                {
+                    _ui.Text(x, y, TruncateMiddle(line, 22), UiTextKind.Muted);
+                    y += 14;
+                }
             }
 
             if (_ui.Collapsible(new UiId("debug.input"), ref column, "INPUT", 142, out RectI inputSection))
@@ -1648,6 +1671,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         SetTheme(FindThemeIndex(_config.Theme), markDirty: false);
         SetScaleMode(ParseScaleMode(_config.Scale), markDirty: false);
+        _externalCore.Configure(_config.ExternalCore, ResolveExternalDummyCorePath());
         ApplyWindowConfig(AppWindow.Viewport, "viewport");
         ApplyWindowConfig(AppWindow.Rom, "rom_picker");
         ApplyWindowConfig(AppWindow.Settings, "settings");
@@ -2073,8 +2097,42 @@ internal sealed unsafe class ForgeApp : IDisposable
             _core = _externalCore;
         }
 
+        _coreFault = string.Empty;
         _core.Reset();
-        _core.StepFrame(_inputSource, _frameStore);
+        StepActiveCore();
+    }
+
+    private void RestartExternalCore()
+    {
+        _coreFault = string.Empty;
+        _externalCore.Reset();
+        if (!ReferenceEquals(_core, _externalCore))
+        {
+            _core = _externalCore;
+        }
+        StepActiveCore();
+    }
+
+    private void StepActiveCore()
+    {
+        try
+        {
+            _core.StepFrame(_inputSource, _frameStore);
+            _coreFault = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _coreFault = ex.Message;
+            _paused = true;
+            _stepRequested = false;
+        }
+    }
+
+    private string ExternalCommandLabel()
+    {
+        return string.IsNullOrWhiteSpace(_config.ExternalCore.Command)
+            ? "BUILTIN DUMMY"
+            : TruncateMiddle(Path.GetFileName(_config.ExternalCore.Command), 18);
     }
 
     private string CoreName()
