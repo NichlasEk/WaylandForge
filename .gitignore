@@ -9,3 +9,5 @@ wayland-generated/
 src/SystemRegisIII.Host.WaylandForge/libwaylandforge_native.so
 core
 config/waylandforge.ui.local.toml
+
+local/

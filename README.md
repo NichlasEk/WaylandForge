@@ -110,14 +110,14 @@ To show those exported frames in WaylandForge, switch the external core to file-
 ```toml
 [external_core]
 mode = "wfex_file" # stdio | wfex_file
-command = "/home/nichlas/opentyrian/opentyrian"
+command = "/home/nichlas/WaylandForge/local/opentyrian-wfcore/opentyrian"
 args = ""
-working_directory = "/home/nichlas/opentyrian"
-env = "SDL_VIDEODRIVER=dummy"
+working_directory = "/home/nichlas/WaylandForge/local/opentyrian-wfcore"
+env = "OPENTYRIAN_WFCORE=1;SDL_VIDEODRIVER=dummy"
 wfex_path = "/tmp/waylandforge-opentyrian.wfex"
 ```
 
-Then run WaylandForge and press `EXT`. The host starts OpenTyrian, injects `OPENTYRIAN_WFEX_PATH` automatically, applies `env`, reads the exported `WFEX` frames, and presents them in the core viewport. To point at another external target, change only this TOML block.
+Then run WaylandForge and press `EXT`. The host starts the local ignored OpenTyrian WF core copy, injects `OPENTYRIAN_WFEX_PATH` automatically, applies `env`, reads the exported `WFEX` frames, and presents them in the core viewport. To point at another external target, change only this TOML block. The `local/` tree is gitignored so GPL experiment code stays out of the WaylandForge repository until it is intentionally split or licensed as a separate component.
 
 ## UI Config
 

@@ -17,10 +17,10 @@ root = "v(viewport,h(rom_picker,h(settings,style_editor,0.50),0.58),0.62)"
 
 [external_core]
 mode = "wfex_file" # stdio | wfex_file
-command = "/home/nichlas/opentyrian/opentyrian" # empty + stdio uses the built-in dummy process
+command = "/home/nichlas/WaylandForge/local/opentyrian-wfcore/opentyrian" # empty + stdio uses the built-in dummy process
 args = ""
-working_directory = "/home/nichlas/opentyrian"
-env = "SDL_VIDEODRIVER=dummy"
+working_directory = "/home/nichlas/WaylandForge/local/opentyrian-wfcore"
+env = "OPENTYRIAN_WFCORE=1;SDL_VIDEODRIVER=dummy"
 wfex_path = "/tmp/waylandforge-opentyrian.wfex"
 
 [ui.tile]
