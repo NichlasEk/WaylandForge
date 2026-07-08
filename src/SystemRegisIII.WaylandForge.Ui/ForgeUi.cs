@@ -85,6 +85,7 @@ public sealed class UiTheme
 }
 
 public readonly record struct UiButtonResult(bool Hovered, bool Pressed, bool Clicked);
+public readonly record struct UiSliderResult(int Value, bool Hovered, bool Dragging, bool Changed);
 public readonly record struct UiTextBoxOptions(bool ReadOnly = false, bool Numeric = false, bool Password = false, int MaxLength = 32);
 public readonly record struct UiTextBoxResult(string Text, bool Hovered, bool Focused, bool Changed, bool Submitted);
 public readonly record struct TextInputEvent(uint KeyCode, uint Serial);
@@ -229,6 +230,58 @@ public sealed class UiContext
     public bool ToggleButton(UiId id, RectI rect, string label, bool active)
     {
         return Button(id, rect, label, active).Clicked;
+    }
+
+    public UiSliderResult Slider(UiId id, RectI rect, int value, int min, int max)
+    {
+        if (max <= min)
+        {
+            max = min + 1;
+        }
+
+        value = Math.Clamp(value, min, max);
+        bool hovered = _inputEnabled && _pointer.IsInside && rect.Contains(_pointer.X, _pointer.Y);
+        bool started = hovered && _pointer.LeftPressed && !_previousPointer.LeftPressed;
+        if (started)
+        {
+            _active = id.Value;
+            _focused = id.Value;
+        }
+
+        bool dragging = _inputEnabled && _pointer.LeftPressed && (_active == id.Value || hovered);
+        bool changed = false;
+        if (dragging)
+        {
+            _active = id.Value;
+            int trackX = rect.X + 4;
+            int trackWidth = Math.Max(1, rect.Width - 8);
+            int clampedX = Math.Clamp(_pointer.X, trackX, trackX + trackWidth);
+            int next = min + (int)Math.Round((clampedX - trackX) * (double)(max - min) / trackWidth);
+            next = Math.Clamp(next, min, max);
+            changed = next != value;
+            value = next;
+        }
+        if (hovered)
+        {
+            _hot = id.Value;
+        }
+
+        UiButtonStyle style = Theme.Button;
+        uint fill = dragging ? style.Colors.SurfaceActive : hovered ? style.Colors.SurfaceHot : style.Colors.Surface;
+        uint border = dragging ? style.Colors.BorderActive : hovered ? style.Colors.BorderHot : style.Colors.Border;
+        _canvas.FillRect(rect.X, rect.Y, rect.Width, rect.Height, fill);
+        _canvas.DrawRect(rect.X, rect.Y, rect.Width, rect.Height, border);
+
+        int lineY = rect.Y + rect.Height / 2;
+        int lineX = rect.X + 5;
+        int lineW = Math.Max(1, rect.Width - 10);
+        _canvas.DrawLine(lineX, lineY, lineX + lineW, lineY, style.Colors.Border);
+
+        int knobX = lineX + (int)Math.Round((value - min) * (double)lineW / (max - min));
+        _canvas.FillRect(knobX - 2, rect.Y + 3, 5, Math.Max(1, rect.Height - 6), style.Colors.Accent);
+        _canvas.DrawRect(knobX - 3, rect.Y + 2, 7, Math.Max(1, rect.Height - 4), border);
+
+        return new UiSliderResult(value, hovered, dragging, changed);
     }
 
     public RectI Panel(RectI rect, string? title = null)

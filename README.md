@@ -156,6 +156,12 @@ pw-top
 dotnet run --project src/SystemRegisIII.Host.WaylandForge
 ```
 
+Or start the host together with the PipeWire audio daemon:
+
+```sh
+./start-waylandforge.sh
+```
+
 Requirements:
 
 - Wayland session with `WAYLAND_DISPLAY` set

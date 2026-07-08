@@ -41,6 +41,7 @@ struct audiod {
     struct audio_ring ring;
     pthread_t socket_thread;
     atomic_bool running;
+    atomic_int volume_percent;
 };
 
 static struct audiod *g_daemon;
@@ -212,6 +213,9 @@ static void on_process(void *data)
         float left = 0.0f;
         float right = 0.0f;
         ring_pop_frame(&daemon->ring, &left, &right);
+        float volume = (float)atomic_load_explicit(&daemon->volume_percent, memory_order_relaxed) / 100.0f;
+        left *= volume;
+        right *= volume;
         out[i * CHANNELS + 0] = left;
         out[i * CHANNELS + 1] = right;
     }
@@ -263,6 +267,25 @@ static void handle_client(struct audiod *daemon, int client_fd)
     if (strstr(command, "PLAY_TEST") != NULL) {
         enqueue_test_click(daemon);
         write_text(client_fd, "OK PLAY_TEST\n");
+        return;
+    }
+    if (strncmp(command, "SET_VOLUME", 10) == 0) {
+        int volume = atoi(command + 10);
+        if (volume < 0) {
+            volume = 0;
+        } else if (volume > 100) {
+            volume = 100;
+        }
+        atomic_store_explicit(&daemon->volume_percent, volume, memory_order_relaxed);
+        char response[32];
+        snprintf(response, sizeof(response), "OK VOLUME %d\n", volume);
+        write_text(client_fd, response);
+        return;
+    }
+    if (strstr(command, "GET_VOLUME") != NULL) {
+        char response[32];
+        snprintf(response, sizeof(response), "VOLUME %d\n", atomic_load_explicit(&daemon->volume_percent, memory_order_relaxed));
+        write_text(client_fd, response);
         return;
     }
     if (strstr(command, "PING") != NULL) {
@@ -357,6 +380,7 @@ int main(int argc, char **argv)
     struct audiod daemon;
     memset(&daemon, 0, sizeof(daemon));
     atomic_store(&daemon.running, true);
+    atomic_store(&daemon.volume_percent, 80);
     g_daemon = &daemon;
 
     signal(SIGINT, handle_signal);

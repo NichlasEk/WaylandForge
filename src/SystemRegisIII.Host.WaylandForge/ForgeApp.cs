@@ -1,5 +1,7 @@
 using SystemRegisIII.WaylandForge.Ui;
 using System.Diagnostics;
+using System.Net.Sockets;
+using System.Text;
 using SystemRegisIII.Core;
 
 namespace SystemRegisIII.Host.WaylandForge;
@@ -12,6 +14,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     private const int MinimumWidthForSidePanel = 560;
     private const string DefaultConfigPath = "config/waylandforge.ui.toml";
     private const string LocalConfigPath = "config/waylandforge.ui.local.toml";
+    private const string AudioSocketPath = "/tmp/waylandforge-audio.sock";
 
     private readonly SoftwareCanvas _canvas = new();
     private readonly FakeSaturnCore _fakeCore = new();
@@ -53,6 +56,8 @@ internal sealed unsafe class ForgeApp : IDisposable
     private int _tileResizeStartY;
     private int _lastRenderWidth;
     private int _lastRenderHeight;
+    private int _lastSentAudioVolume = -1;
+    private double _lastAudioVolumeAttemptSeconds;
 
     public ForgeApp()
     {
@@ -94,6 +99,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
 
         SaveConfigIfDue();
+        SyncAudioVolumeIfDue();
         _previousInput = input;
     }
 
@@ -214,6 +220,27 @@ internal sealed unsafe class ForgeApp : IDisposable
         {
             ToggleWindow(AppWindow.Style);
         }
+
+        DrawAudioVolume(layout);
+    }
+
+    private void DrawAudioVolume(ForgeLayout layout)
+    {
+        if (layout.Width < 1060)
+        {
+            return;
+        }
+
+        int x = layout.Width - 354;
+        int y = 7;
+        _ui.Text(x, y + 2, "VOL", UiTextKind.Muted);
+        RectI sliderRect = new(x + 36, y, 116, 15);
+        UiSliderResult slider = _ui.Slider(new UiId("toolbar.audio.volume"), sliderRect, _config.Audio.Volume, 0, 100);
+        if (slider.Changed)
+        {
+            SetAudioVolume(slider.Value);
+        }
+        _ui.Text(x + 160, y + 2, _config.Audio.Volume.ToString("000", System.Globalization.CultureInfo.InvariantCulture), UiTextKind.Muted);
     }
 
     private void DrawViewport(ForgeLayout layout)
@@ -1773,6 +1800,51 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         _config.WindowMode = mode;
         MarkConfigDirty();
+    }
+
+    private void SetAudioVolume(int volume)
+    {
+        volume = Math.Clamp(volume, 0, 100);
+        if (_config.Audio.Volume == volume)
+        {
+            return;
+        }
+
+        _config.Audio.Volume = volume;
+        _lastSentAudioVolume = -1;
+        SendAudioVolume();
+        MarkConfigDirty();
+    }
+
+    private void SyncAudioVolumeIfDue()
+    {
+        if (_lastSentAudioVolume == _config.Audio.Volume)
+        {
+            return;
+        }
+        if (_clock.ElapsedSeconds - _lastAudioVolumeAttemptSeconds < 1.0)
+        {
+            return;
+        }
+
+        SendAudioVolume();
+    }
+
+    private void SendAudioVolume()
+    {
+        _lastAudioVolumeAttemptSeconds = _clock.ElapsedSeconds;
+        try
+        {
+            using var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+            socket.Connect(new UnixDomainSocketEndPoint(AudioSocketPath));
+            byte[] command = Encoding.ASCII.GetBytes($"SET_VOLUME {_config.Audio.Volume}\n");
+            socket.Send(command);
+            _lastSentAudioVolume = _config.Audio.Volume;
+        }
+        catch
+        {
+            _lastSentAudioVolume = -1;
+        }
     }
 
     private void SetBling(bool enabled)

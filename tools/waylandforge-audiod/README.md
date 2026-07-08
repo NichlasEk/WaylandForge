@@ -22,6 +22,8 @@ In another terminal:
 
 ```sh
 printf 'PLAY_TEST\n' | socat - UNIX-CONNECT:/tmp/waylandforge-audio.sock
+printf 'SET_VOLUME 60\n' | socat - UNIX-CONNECT:/tmp/waylandforge-audio.sock
+printf 'GET_VOLUME\n' | socat - UNIX-CONNECT:/tmp/waylandforge-audio.sock
 ```
 
 Or send a real `WFAU` PCM packet:
