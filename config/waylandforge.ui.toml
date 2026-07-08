@@ -18,10 +18,19 @@ right_stack = "debug,settings"
 bottom_stack = ""
 rom_picker = "center" # floating | right | bottom | center
 
+[ui.windows.viewport]
+open = true
+slot = "center"
+order = 0
+x = 0
+y = 0
+width = 980
+height = 680
+
 [ui.windows.style_editor]
 open = false
 slot = "right" # left | right | top | bottom
-order = 20
+order = 30
 x = 0
 y = 0
 width = 360
@@ -30,7 +39,7 @@ height = 330
 [ui.windows.settings]
 open = false
 slot = "right" # left | right | top | bottom
-order = 10
+order = 20
 x = 0
 y = 0
 width = 360
@@ -39,7 +48,7 @@ height = 330
 [ui.windows.rom_picker]
 open = false
 slot = "center"
-order = 0
+order = 10
 x = 0
 y = 0
 width = 980

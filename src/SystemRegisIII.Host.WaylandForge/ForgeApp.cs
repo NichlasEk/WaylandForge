@@ -30,12 +30,14 @@ internal sealed unsafe class ForgeApp : IDisposable
     private ulong _hostFrameIndex;
     private bool _paused;
     private bool _stepRequested;
+    private readonly UiWindowState _viewportWindow = new() { IsOpen = true };
     private readonly UiWindowState _filePickerWindow = new();
     private readonly UiWindowState _settingsWindow = new();
     private readonly UiWindowState _styleWindow = new();
     private readonly List<AppWindow> _windowOrder = [AppWindow.Style, AppWindow.Settings, AppWindow.Rom];
-    private readonly List<AppWindow> _tileOrder = [AppWindow.Rom, AppWindow.Settings, AppWindow.Style];
+    private readonly List<AppWindow> _tileOrder = [AppWindow.Viewport, AppWindow.Rom, AppWindow.Settings, AppWindow.Style];
     private string? _romPath;
+    private AppWindow _focusedTile = AppWindow.Viewport;
     private int _themeIndex;
     private bool _configDirty;
     private double _lastConfigSaveSeconds;
@@ -196,11 +198,24 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private void DrawViewport(ForgeLayout layout)
     {
-        var area = new RectI(layout.ViewAreaX, layout.ViewAreaY, layout.ViewAreaW, layout.ViewAreaH);
+        RectI area = _config.WindowMode == UiWindowMode.Tiled
+            ? TiledWindowRect(layout, AppWindow.Viewport)
+            : new RectI(layout.ViewAreaX, layout.ViewAreaY, layout.ViewAreaW, layout.ViewAreaH);
+        if (_config.WindowMode == UiWindowMode.Tiled)
+        {
+            _viewportWindow.Rect = area;
+            if (_pointer.IsInside && area.Contains(_pointer.X, _pointer.Y) && _pointer.LeftPressed && !_previousPointer.LeftPressed)
+            {
+                _focusedTile = AppWindow.Viewport;
+            }
+            uint border = _focusedTile == AppWindow.Viewport ? _ui.Theme.Button.Colors.BorderHot : _ui.Theme.Button.Colors.Border;
+            _canvas.DrawRect(area.X, area.Y, area.Width, area.Height, border);
+            area = new RectI(area.X + 1, area.Y + 1, Math.Max(1, area.Width - 2), Math.Max(1, area.Height - 2));
+        }
         _viewport.Draw(_canvas, area, _frameStore.Pixels, _frameStore.Width, _frameStore.Height, _frameStore.StridePixels);
 
         RectI content = _viewport.ContentRect;
-        if (content.Bottom + 18 < layout.Height - StatusBarHeight)
+        if (content.Bottom + 18 < layout.Height - StatusBarHeight && area.Height >= 80)
         {
             _canvas.DrawText(content.X, content.Bottom + 8, $"EMULATOR VIEWPORT {_frameStore.Width}X{_frameStore.Height} {_viewport.ScaleMode.ToString().ToUpperInvariant()}", 0xff91a1ad);
         }
@@ -326,6 +341,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         UiWindowResult window = _ui.BeginWindow(new UiId("filepicker.window"), _filePickerWindow, preferredRect, ChildWindowBounds(layout), "ROM PICKER", active, inputEnabled, movable);
         if (window.Activated)
         {
+            _focusedTile = AppWindow.Rom;
             BringToFront(AppWindow.Rom);
         }
         HandleTileWindowDrag(layout, AppWindow.Rom, window.Rect, window.Dragging);
@@ -371,6 +387,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         UiWindowResult window = _ui.BeginWindow(new UiId("settings.window"), _settingsWindow, preferredRect, ChildWindowBounds(layout), "DISPLAY SETTINGS", active, inputEnabled, movable);
         if (window.Activated)
         {
+            _focusedTile = AppWindow.Settings;
             BringToFront(AppWindow.Settings);
         }
         HandleTileWindowDrag(layout, AppWindow.Settings, window.Rect, window.Dragging);
@@ -458,7 +475,7 @@ internal sealed unsafe class ForgeApp : IDisposable
 
         _ui.Text(column.X, column.NextY, "WINDOWS", UiTextKind.Muted); column = column with { NextY = column.NextY + 16 };
         DrawMetric(column.X, column.NextY, "MODE", _config.WindowMode.ToString().ToUpperInvariant()); column = column with { NextY = column.NextY + 18 };
-        DrawMetric(column.X, column.NextY, "ACTIVE", TopOpenWindow()?.ToString().ToUpperInvariant() ?? "-"); column = column with { NextY = column.NextY + 18 };
+        DrawMetric(column.X, column.NextY, "ACTIVE", _focusedTile.ToString().ToUpperInvariant()); column = column with { NextY = column.NextY + 18 };
         DrawMetric(column.X, column.NextY, "ROM", _romPath is null ? "NONE" : TruncateMiddle(_romPath, 28));
         DrawBlingWindowBorder(window.Rect, 11);
     }
@@ -481,6 +498,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         UiWindowResult window = _ui.BeginWindow(new UiId("style.window"), _styleWindow, preferredRect, ChildWindowBounds(layout), "STYLE EDITOR", active, inputEnabled, movable);
         if (window.Activated)
         {
+            _focusedTile = AppWindow.Style;
             BringToFront(AppWindow.Style);
         }
         HandleTileWindowDrag(layout, AppWindow.Style, window.Rect, window.Dragging);
@@ -1387,6 +1405,7 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private UiWindowState WindowState(AppWindow window) => window switch
     {
+        AppWindow.Viewport => _viewportWindow,
         AppWindow.Rom => _filePickerWindow,
         AppWindow.Settings => _settingsWindow,
         AppWindow.Style => _styleWindow,
@@ -1454,6 +1473,8 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         SetTheme(FindThemeIndex(_config.Theme), markDirty: false);
         SetScaleMode(ParseScaleMode(_config.Scale), markDirty: false);
+        ApplyWindowConfig(AppWindow.Viewport, "viewport");
+        _viewportWindow.IsOpen = true;
         ApplyWindowConfig(AppWindow.Rom, "rom_picker");
         ApplyWindowConfig(AppWindow.Settings, "settings");
         ApplyWindowConfig(AppWindow.Style, "style_editor");
@@ -1479,6 +1500,8 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         _config.Theme = _ui.Theme.Name.ToLowerInvariant();
         _config.Scale = FormatScaleMode(_viewport.ScaleMode);
+        _viewportWindow.IsOpen = true;
+        SnapshotWindow(AppWindow.Viewport, "viewport");
         SnapshotWindow(AppWindow.Rom, "rom_picker");
         SnapshotWindow(AppWindow.Settings, "settings");
         SnapshotWindow(AppWindow.Style, "style_editor");
@@ -1583,21 +1606,31 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private static AppWindow[] NormalizeTileOrder(AppWindow[] persistedOrder)
     {
+        AppWindow[] fallback = [AppWindow.Viewport, AppWindow.Rom, AppWindow.Settings, AppWindow.Style];
         if (persistedOrder.Length == 0)
         {
-            return [AppWindow.Rom, AppWindow.Settings, AppWindow.Style];
+            return fallback;
         }
 
-        if (persistedOrder is [AppWindow.Style, AppWindow.Settings, AppWindow.Rom])
+        var result = new List<AppWindow>();
+        if (!persistedOrder.Contains(AppWindow.Viewport))
         {
-            return [AppWindow.Rom, AppWindow.Settings, AppWindow.Style];
+            result.Add(AppWindow.Viewport);
         }
-
-        return persistedOrder;
+        result.AddRange(persistedOrder);
+        foreach (AppWindow window in fallback)
+        {
+            if (!result.Contains(window))
+            {
+                result.Add(window);
+            }
+        }
+        return result.ToArray();
     }
 
     private static string WindowKey(AppWindow window) => window switch
     {
+        AppWindow.Viewport => "viewport",
         AppWindow.Rom => "rom_picker",
         AppWindow.Settings => "settings",
         AppWindow.Style => "style_editor",
@@ -1692,6 +1725,7 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private enum AppWindow
     {
+        Viewport,
         Style,
         Settings,
         Rom,

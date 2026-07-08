@@ -5,12 +5,15 @@ public readonly record struct UiFilePickerResult(bool IsOpen, bool Accepted, boo
 public sealed class UiFilePicker
 {
     private readonly UiId _pathBoxId = new("filepicker.path");
+    private readonly UiId _filterBoxId = new("filepicker.filter");
     private string _currentDirectory;
     private string? _selectedPath;
     private string? _error;
     private DirectoryEntry[] _directories = [];
     private FileEntry[] _files = [];
     private bool _entriesLoaded;
+    private string _filterText = string.Empty;
+    private bool _romOnly;
     private FileSortMode _sortMode = FileSortMode.Name;
     private bool _sortDescending;
 
@@ -51,8 +54,26 @@ public sealed class UiFilePicker
             NavigateTo(pathBox.Text, ui);
         }
 
-        int bodyY = content.Y + 25;
-        int bodyHeight = Math.Max(58, content.Height - 78);
+        int filterY = content.Y + 25;
+        var filterRow = new UiRow(content.X, filterY, 18, 5);
+        filterRow = filterRow.Next(58, out RectI filterLabelRect);
+        ui.Text(filterLabelRect.X, filterLabelRect.Y + 5, "FILTER", UiTextKind.Muted);
+        filterRow = filterRow.Next(Math.Max(90, content.Width - 184), out RectI filterRect);
+        UiTextBoxResult filterBox = ui.TextBox(_filterBoxId, filterRect, _filterText, "name or ext", new UiTextBoxOptions(MaxLength: 64));
+        if (filterBox.Changed)
+        {
+            _filterText = filterBox.Text;
+            _selectedPath = null;
+        }
+        filterRow = filterRow.Next(64, out RectI romFilterRect);
+        if (ui.ToggleButton(new UiId("filepicker.filter.rom"), romFilterRect, "ROM", _romOnly))
+        {
+            _romOnly = !_romOnly;
+            _selectedPath = null;
+        }
+
+        int bodyY = content.Y + 49;
+        int bodyHeight = Math.Max(58, content.Height - 102);
         int sideWidth = Math.Min(190, Math.Max(132, content.Width / 3));
         RectI sideRect = new(content.X, bodyY, sideWidth, bodyHeight);
         RectI fileRect = new(sideRect.Right + 8, bodyY, Math.Max(80, content.Right - sideRect.Right - 8), bodyHeight);
@@ -141,18 +162,19 @@ public sealed class UiFilePicker
         }
 
         RectI listRect = new(content.X, content.Y + 24, content.Width, Math.Max(20, content.Height - 24));
+        FileEntry[] visibleFiles = FilterFiles().ToArray();
         int rowHeight = 20;
-        int listHeight = Math.Max(listRect.Height, _files.Length * rowHeight + 4);
+        int listHeight = Math.Max(listRect.Height, visibleFiles.Length * rowHeight + 4);
         using UiScrollArea scroll = ui.BeginScrollArea(new UiId("filepicker.files.scroll"), listRect, listHeight);
 
-        if (_files.Length == 0)
+        if (visibleFiles.Length == 0)
         {
             ui.Text(scroll.Content.X + 4, scroll.Content.Y + 4, "NO FILES", UiTextKind.Muted);
             return;
         }
 
         int y = scroll.Content.Y + 2;
-        foreach (FileEntry entry in _files)
+        foreach (FileEntry entry in visibleFiles)
         {
             RectI row = new(scroll.Content.X + 2, y, scroll.Content.Width - 4, 17);
             bool active = string.Equals(_selectedPath, entry.Path, StringComparison.Ordinal);
@@ -257,6 +279,23 @@ public sealed class UiFilePicker
         }
     }
 
+    private IEnumerable<FileEntry> FilterFiles()
+    {
+        IEnumerable<FileEntry> files = _files;
+        if (_romOnly)
+        {
+            files = files.Where(static entry => IsRomExtension(entry.Extension));
+        }
+
+        string filter = _filterText.Trim();
+        if (filter.Length > 0)
+        {
+            files = files.Where(entry => entry.Name.Contains(filter, StringComparison.OrdinalIgnoreCase) || entry.Extension.TrimStart('.').Contains(filter, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return files;
+    }
+
     private IEnumerable<FileEntry> SortFiles(IEnumerable<FileEntry> files)
     {
         IOrderedEnumerable<FileEntry> ordered = _sortMode switch
@@ -302,13 +341,22 @@ public sealed class UiFilePicker
     {
         return extension.Trim().ToLowerInvariant() switch
         {
-            ".cue" or ".bin" or ".iso" or ".chd" or ".mds" or ".mdf" or ".sms" or ".gg" or ".sg" or ".smd" or ".gen" or ".md" or ".32x" or ".pce" or ".nes" or ".sfc" or ".smc" or ".gba" or ".gb" or ".gbc" => "[ROM]",
+            _ when IsRomExtension(extension) => "[ROM]",
             ".zip" or ".7z" or ".rar" => "[ZIP]",
             ".png" or ".jpg" or ".jpeg" or ".bmp" or ".ppm" => "[IMG]",
             ".txt" or ".log" => "[TXT]",
             ".json" or ".toml" or ".cfg" or ".conf" or ".ini" => "[CFG]",
             ".so" or ".dll" or ".exe" => "[BIN]",
             _ => "[FILE]",
+        };
+    }
+
+    private static bool IsRomExtension(string extension)
+    {
+        return extension.Trim().ToLowerInvariant() switch
+        {
+            ".cue" or ".bin" or ".iso" or ".chd" or ".mds" or ".mdf" or ".sms" or ".gg" or ".sg" or ".smd" or ".gen" or ".md" or ".32x" or ".pce" or ".nes" or ".sfc" or ".smc" or ".gba" or ".gb" or ".gbc" or ".zip" or ".7z" => true,
+            _ => false,
         };
     }
 
