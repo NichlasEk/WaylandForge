@@ -42,10 +42,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     private bool _configDirty;
     private double _lastConfigSaveSeconds;
     private bool _resizingTileSplit;
-    private bool _tileResizeVertical;
-    private string _tileResizePath = string.Empty;
-    private double _tileResizeStartRatio;
-    private int _tileResizeSpan;
+    private readonly List<TileResizeHandle> _tileResizeHandles = new();
     private AppWindow? _tileDragWindow;
     private RectI _tileDragRect;
     private int _tileResizeStartX;
@@ -177,6 +174,12 @@ internal sealed unsafe class ForgeApp : IDisposable
             NextTheme();
         }
 
+        row = row.Next(50, out RectI coreRect);
+        if (_ui.Button(new UiId("toolbar.core"), coreRect, "CORE", _viewportWindow.IsOpen).Clicked)
+        {
+            ToggleWindow(AppWindow.Viewport);
+        }
+
         row = row.Next(42, out RectI romRect);
         if (_ui.Button(new UiId("toolbar.rom"), romRect, "ROM", _filePickerWindow.IsOpen).Clicked)
         {
@@ -198,6 +201,11 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private void DrawViewport(ForgeLayout layout)
     {
+        if (_config.WindowMode == UiWindowMode.Tiled && !_viewportWindow.IsOpen)
+        {
+            return;
+        }
+
         RectI area = _config.WindowMode == UiWindowMode.Tiled
             ? TiledWindowRect(layout, AppWindow.Viewport)
             : new RectI(layout.ViewAreaX, layout.ViewAreaY, layout.ViewAreaW, layout.ViewAreaH);
@@ -832,20 +840,22 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
 
         RectI work = TileWorkArea(layout);
-        if (_pointer.IsInside && _pointer.LeftPressed && !_previousPointer.LeftPressed && TryHitTileTreeSplitter(work, open, out string path, out bool vertical, out double ratio, out int span))
+        if (_pointer.IsInside && _pointer.LeftPressed && !_previousPointer.LeftPressed)
         {
-            _resizingTileSplit = true;
-            _tileResizeVertical = vertical;
-            _tileResizePath = path;
-            _tileResizeStartRatio = ratio;
-            _tileResizeSpan = Math.Max(1, span);
-            _tileResizeStartX = _pointer.X;
-            _tileResizeStartY = _pointer.Y;
+            _tileResizeHandles.Clear();
+            _tileResizeHandles.AddRange(HitTileTreeSplitters(work, open));
+            if (_tileResizeHandles.Count > 0)
+            {
+                _resizingTileSplit = true;
+                _tileResizeStartX = _pointer.X;
+                _tileResizeStartY = _pointer.Y;
+            }
         }
 
         if (!_pointer.LeftPressed)
         {
             _resizingTileSplit = false;
+            _tileResizeHandles.Clear();
         }
 
         if (!_resizingTileSplit)
@@ -853,12 +863,91 @@ internal sealed unsafe class ForgeApp : IDisposable
             return;
         }
 
-        int delta = _tileResizeVertical ? _pointer.X - _tileResizeStartX : _pointer.Y - _tileResizeStartY;
-        double newRatio = Math.Clamp(_tileResizeStartRatio + delta / (double)_tileResizeSpan, 0.12, 0.88);
-        if (UpdateTileRootRatio(_tileResizePath, newRatio))
+        bool changed = false;
+        foreach (TileResizeHandle handle in _tileResizeHandles)
+        {
+            int delta = handle.Vertical ? _pointer.X - _tileResizeStartX : _pointer.Y - _tileResizeStartY;
+            double newRatio = Math.Clamp(handle.StartRatio + delta / (double)handle.Span, 0.12, 0.88);
+            changed |= UpdateTileRootRatio(handle.Path, newRatio);
+        }
+
+        if (changed)
         {
             MarkConfigDirty();
         }
+    }
+
+    private List<TileResizeHandle> HitTileTreeSplitters(RectI work, AppWindow[] open)
+    {
+        var handles = new List<TileResizeHandle>();
+        TileNode? root = ParseTileRoot(_config.Layout.Root);
+        if (root is null)
+        {
+            return handles;
+        }
+
+        HitTileTreeSplitters(root, work, open.ToHashSet(), string.Empty, handles);
+        return handles
+            .GroupBy(handle => handle.Path)
+            .Select(group => group.First())
+            .ToList();
+    }
+
+    private void HitTileTreeSplitters(TileNode node, RectI rect, HashSet<AppWindow> open, string path, List<TileResizeHandle> handles)
+    {
+        const int gap = 8;
+        const int grip = 10;
+        if (node.Window is not null || node.First is null || node.Second is null)
+        {
+            return;
+        }
+
+        bool firstActive = node.First.ContainsAny(open);
+        bool secondActive = node.Second.ContainsAny(open);
+        if (!firstActive && !secondActive)
+        {
+            return;
+        }
+        if (firstActive && !secondActive)
+        {
+            HitTileTreeSplitters(node.First, rect, open, path + "0", handles);
+            return;
+        }
+        if (!firstActive && secondActive)
+        {
+            HitTileTreeSplitters(node.Second, rect, open, path + "1", handles);
+            return;
+        }
+
+        double nodeRatio = Math.Clamp(node.Ratio, 0.12, 0.88);
+        RectI first;
+        RectI second;
+        RectI divider;
+        if (node.Axis == TileSplitAxis.Horizontal)
+        {
+            int firstWidth = Math.Clamp((int)Math.Round((rect.Width - gap) * nodeRatio), 120, Math.Max(120, rect.Width - gap - 120));
+            first = new RectI(rect.X, rect.Y, firstWidth, rect.Height);
+            second = new RectI(rect.X + firstWidth + gap, rect.Y, Math.Max(1, rect.Width - firstWidth - gap), rect.Height);
+            divider = new RectI(first.Right - grip / 2, rect.Y, Math.Max(grip, second.X - first.Right + grip), rect.Height);
+            if (divider.Contains(_pointer.X, _pointer.Y))
+            {
+                handles.Add(new TileResizeHandle(path, Vertical: true, nodeRatio, Math.Max(1, rect.Width - gap)));
+            }
+        }
+        else
+        {
+            int firstHeight = Math.Clamp((int)Math.Round((rect.Height - gap) * nodeRatio), 100, Math.Max(100, rect.Height - gap - 100));
+            first = new RectI(rect.X, rect.Y, rect.Width, firstHeight);
+            second = new RectI(rect.X, rect.Y + firstHeight + gap, rect.Width, Math.Max(1, rect.Height - firstHeight - gap));
+            divider = new RectI(rect.X, first.Bottom - grip / 2, rect.Width, Math.Max(grip, second.Y - first.Bottom + grip));
+            if (divider.Contains(_pointer.X, _pointer.Y))
+            {
+                handles.Add(new TileResizeHandle(path, Vertical: false, nodeRatio, Math.Max(1, rect.Height - gap)));
+            }
+        }
+
+        HitTileTreeSplitters(node.First, first, open, path + "0", handles);
+        HitTileTreeSplitters(node.Second, second, open, path + "1", handles);
     }
 
     private bool TryHitTileTreeSplitter(RectI work, AppWindow[] open, out string path, out bool vertical, out double ratio, out int span)
@@ -1561,7 +1650,6 @@ internal sealed unsafe class ForgeApp : IDisposable
         SetTheme(FindThemeIndex(_config.Theme), markDirty: false);
         SetScaleMode(ParseScaleMode(_config.Scale), markDirty: false);
         ApplyWindowConfig(AppWindow.Viewport, "viewport");
-        _viewportWindow.IsOpen = true;
         ApplyWindowConfig(AppWindow.Rom, "rom_picker");
         ApplyWindowConfig(AppWindow.Settings, "settings");
         ApplyWindowConfig(AppWindow.Style, "style_editor");
@@ -1592,7 +1680,6 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         _config.Theme = _ui.Theme.Name.ToLowerInvariant();
         _config.Scale = FormatScaleMode(_viewport.ScaleMode);
-        _viewportWindow.IsOpen = true;
         SnapshotWindow(AppWindow.Viewport, "viewport");
         SnapshotWindow(AppWindow.Rom, "rom_picker");
         SnapshotWindow(AppWindow.Settings, "settings");
@@ -1904,6 +1991,8 @@ internal sealed unsafe class ForgeApp : IDisposable
         return text[..keep] + "..." + text[^keep..];
     }
 
+
+    private readonly record struct TileResizeHandle(string Path, bool Vertical, double StartRatio, int Span);
 
     private enum TileSplitAxis
     {
