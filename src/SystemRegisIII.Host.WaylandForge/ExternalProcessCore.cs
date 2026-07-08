@@ -418,6 +418,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
                 if (!process.WaitForExit(250))
                 {
                     process.Kill(entireProcessTree: true);
+                    process.WaitForExit(1000);
                 }
             }
             if (process.HasExited)

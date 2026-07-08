@@ -10,13 +10,28 @@ internal static unsafe class Program
         Console.WriteLine("WaylandForge M1: double-buffered wl_shm host, software UI, configurable input state.");
         Console.WriteLine("If no window appears, run this inside a Wayland session with WAYLAND_DISPLAY set.");
 
-        using var app = new ForgeApp();
+        var app = new ForgeApp();
+        bool disposed = false;
+        void DisposeApp()
+        {
+            if (disposed)
+            {
+                return;
+            }
+            disposed = true;
+            app.Dispose();
+        }
+
+        Console.CancelKeyPress += (_, _) => DisposeApp();
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => DisposeApp();
+
         int result = WaylandWindow.Run(Width, Height, "WaylandForge M1", app.Render);
         if (result != 0)
         {
             Console.Error.WriteLine($"WaylandForge exited with native error {result}.");
         }
 
+        DisposeApp();
         return result;
     }
 }

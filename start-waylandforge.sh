@@ -5,6 +5,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AUDIO_DIR="$ROOT_DIR/tools/waylandforge-audiod"
 AUDIO_BIN="$AUDIO_DIR/waylandforge-audiod"
 AUDIO_SOCKET="/tmp/waylandforge-audio.sock"
+HOST_PROJECT="$ROOT_DIR/src/SystemRegisIII.Host.WaylandForge/SystemRegisIII.Host.WaylandForge.csproj"
+HOST_DLL="$ROOT_DIR/src/SystemRegisIII.Host.WaylandForge/bin/Debug/net8.0/SystemRegisIII.Host.WaylandForge.dll"
+LOCAL_OPENTYRIAN_BIN="$ROOT_DIR/local/opentyrian-wfcore/opentyrian"
 AUDIO_PID=""
 HOST_PID=""
 
@@ -74,11 +77,25 @@ stop_existing_audio() {
     exit 1
 }
 
+stop_local_external_cores() {
+    if [ ! -x "$LOCAL_OPENTYRIAN_BIN" ] || ! command -v pgrep >/dev/null 2>&1; then
+        return
+    fi
+
+    while read -r pid; do
+        if [ -n "$pid" ]; then
+            echo "stopping stale external core pid $pid"
+            kill "$pid" 2>/dev/null || true
+        fi
+    done < <(pgrep -f "$LOCAL_OPENTYRIAN_BIN" || true)
+}
+
 cleanup() {
     if [ -n "$HOST_PID" ]; then
         kill "$HOST_PID" 2>/dev/null || true
         wait "$HOST_PID" 2>/dev/null || true
     fi
+    stop_local_external_cores
     if [ -n "$AUDIO_PID" ]; then
         kill "$AUDIO_PID" 2>/dev/null || true
         wait "$AUDIO_PID" 2>/dev/null || true
@@ -87,6 +104,8 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 make -C "$AUDIO_DIR"
+dotnet build "$HOST_PROJECT" --nologo
+stop_local_external_cores
 
 stop_existing_audio
 
@@ -103,7 +122,7 @@ if ! audio_ping; then
     exit 1
 fi
 
-dotnet run --project "$ROOT_DIR/src/SystemRegisIII.Host.WaylandForge" &
+dotnet "$HOST_DLL" &
 HOST_PID="$!"
 wait "$HOST_PID"
 HOST_PID=""
