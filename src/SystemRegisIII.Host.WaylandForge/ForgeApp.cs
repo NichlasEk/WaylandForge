@@ -122,6 +122,13 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
         UpdateTileHoverFocus(layout);
 
+        if (_fullscreenTile is not null)
+        {
+            DrawViewport(layout);
+            DrawChildWindows(layout);
+            return;
+        }
+
         DrawChrome(layout);
         DrawToolbar(layout);
         DrawViewport(layout);
@@ -1321,11 +1328,11 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private RectI TiledWindowRect(ForgeLayout layout, AppWindow window)
     {
-        RectI work = TileWorkArea(layout);
         if (_fullscreenTile == window && WindowState(window).IsOpen)
         {
-            return work;
+            return FullWindowRect(layout);
         }
+        RectI work = TileWorkArea(layout);
         AppWindow[] open = OpenTiledWindows();
         if (!open.Contains(window))
         {
@@ -1810,6 +1817,11 @@ internal sealed unsafe class ForgeApp : IDisposable
         int y = TopBarHeight + pad;
         int bottom = layout.Height - StatusBarHeight - pad;
         return new RectI(x, y, Math.Max(1, right - x), Math.Max(1, bottom - y));
+    }
+
+    private static RectI FullWindowRect(ForgeLayout layout)
+    {
+        return new RectI(0, 0, layout.Width, layout.Height);
     }
 
     private RectI ChildWindowBounds(ForgeLayout layout)
