@@ -43,13 +43,13 @@ internal sealed unsafe class ForgeApp : IDisposable
     private double _lastConfigSaveSeconds;
     private bool _resizingTileSplit;
     private bool _tileResizeVertical;
-    private AppWindow _tileResizeOwner;
+    private string _tileResizePath = string.Empty;
+    private double _tileResizeStartRatio;
+    private int _tileResizeSpan;
     private AppWindow? _tileDragWindow;
     private RectI _tileDragRect;
     private int _tileResizeStartX;
     private int _tileResizeStartY;
-    private int _tileResizeStartWidth;
-    private int _tileResizeStartHeight;
 
     public ForgeApp()
     {
@@ -832,19 +832,15 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
 
         RectI work = TileWorkArea(layout);
-        const int gap = 8;
-        int primaryHeight = TilePrimaryHeight(open[0], work, (int)Math.Round(work.Height * 0.60));
-        RectI stackArea = new(work.X, work.Y + primaryHeight + gap, work.Width, Math.Max(160, work.Height - primaryHeight - gap));
-        int stackWidth = open.Length == 3 ? TileStackWidth(open[1], stackArea, (stackArea.Width - gap) / 2) : 0;
-        if (_pointer.IsInside && _pointer.LeftPressed && !_previousPointer.LeftPressed && TryHitTileSplitter(layout, open, out AppWindow owner, out bool vertical, out int startSize))
+        if (_pointer.IsInside && _pointer.LeftPressed && !_previousPointer.LeftPressed && TryHitTileTreeSplitter(work, open, out string path, out bool vertical, out double ratio, out int span))
         {
             _resizingTileSplit = true;
             _tileResizeVertical = vertical;
-            _tileResizeOwner = owner;
+            _tileResizePath = path;
+            _tileResizeStartRatio = ratio;
+            _tileResizeSpan = Math.Max(1, span);
             _tileResizeStartX = _pointer.X;
             _tileResizeStartY = _pointer.Y;
-            _tileResizeStartWidth = open.Length == 3 ? stackWidth : startSize;
-            _tileResizeStartHeight = open.Length == 3 ? primaryHeight : startSize;
         }
 
         if (!_pointer.LeftPressed)
@@ -857,108 +853,116 @@ internal sealed unsafe class ForgeApp : IDisposable
             return;
         }
 
-        if (open.Length == 3)
+        int delta = _tileResizeVertical ? _pointer.X - _tileResizeStartX : _pointer.Y - _tileResizeStartY;
+        double newRatio = Math.Clamp(_tileResizeStartRatio + delta / (double)_tileResizeSpan, 0.12, 0.88);
+        if (UpdateTileRootRatio(_tileResizePath, newRatio))
         {
-            UiWindowConfig primaryConfig = _config.Window(WindowKey(open[0]));
-            UiWindowConfig stackConfig = _config.Window(WindowKey(open[1]));
-            int height = _tileResizeStartHeight + (_pointer.Y - _tileResizeStartY);
-            int width = _tileResizeStartWidth + (_pointer.X - _tileResizeStartX);
-            primaryConfig.Height = Math.Clamp(height, 140, Math.Max(140, work.Height - 140));
-            stackConfig.Width = Math.Clamp(width, 160, Math.Max(160, stackArea.Width - 160));
             MarkConfigDirty();
-            return;
+        }
+    }
+
+    private bool TryHitTileTreeSplitter(RectI work, AppWindow[] open, out string path, out bool vertical, out double ratio, out int span)
+    {
+        path = string.Empty;
+        vertical = true;
+        ratio = 0.5;
+        span = 1;
+        TileNode? root = ParseTileRoot(_config.Layout.Root);
+        return root is not null && TryHitTileTreeSplitter(root, work, open.ToHashSet(), string.Empty, out path, out vertical, out ratio, out span);
+    }
+
+    private bool TryHitTileTreeSplitter(TileNode node, RectI rect, HashSet<AppWindow> open, string path, out string hitPath, out bool vertical, out double ratio, out int span)
+    {
+        const int gap = 8;
+        const int grip = 8;
+        hitPath = string.Empty;
+        vertical = true;
+        ratio = 0.5;
+        span = 1;
+        if (node.Window is not null || node.First is null || node.Second is null)
+        {
+            return false;
         }
 
-        UiWindowConfig ownerConfig = _config.Window(WindowKey(_tileResizeOwner));
-        if (_tileResizeVertical)
+        bool firstActive = node.First.ContainsAny(open);
+        bool secondActive = node.Second.ContainsAny(open);
+        if (!firstActive && !secondActive)
         {
-            int width = _tileResizeStartWidth + (_pointer.X - _tileResizeStartX);
-            RectI bounds = TileResizeBounds(layout, _tileResizeOwner, vertical: true);
-            ownerConfig.Width = Math.Clamp(width, 160, Math.Max(160, bounds.Width - 160));
+            return false;
+        }
+        if (firstActive && !secondActive)
+        {
+            return TryHitTileTreeSplitter(node.First, rect, open, path + "0", out hitPath, out vertical, out ratio, out span);
+        }
+        if (!firstActive && secondActive)
+        {
+            return TryHitTileTreeSplitter(node.Second, rect, open, path + "1", out hitPath, out vertical, out ratio, out span);
+        }
+
+        double nodeRatio = Math.Clamp(node.Ratio, 0.12, 0.88);
+        RectI first;
+        RectI second;
+        RectI divider;
+        if (node.Axis == TileSplitAxis.Horizontal)
+        {
+            int firstWidth = Math.Clamp((int)Math.Round((rect.Width - gap) * nodeRatio), 120, Math.Max(120, rect.Width - gap - 120));
+            first = new RectI(rect.X, rect.Y, firstWidth, rect.Height);
+            second = new RectI(rect.X + firstWidth + gap, rect.Y, Math.Max(1, rect.Width - firstWidth - gap), rect.Height);
+            divider = new RectI(first.Right - grip / 2, rect.Y, Math.Max(grip, second.X - first.Right + grip), rect.Height);
+            if (divider.Contains(_pointer.X, _pointer.Y))
+            {
+                hitPath = path;
+                vertical = true;
+                ratio = nodeRatio;
+                span = Math.Max(1, rect.Width - gap);
+                return true;
+            }
         }
         else
         {
-            int height = _tileResizeStartHeight + (_pointer.Y - _tileResizeStartY);
-            RectI bounds = TileResizeBounds(layout, _tileResizeOwner, vertical: false);
-            ownerConfig.Height = Math.Clamp(height, 140, Math.Max(140, bounds.Height - 140));
-        }
-        MarkConfigDirty();
-    }
-
-    private bool TryHitTileSplitter(ForgeLayout layout, AppWindow[] open, out AppWindow owner, out bool vertical, out int startSize)
-    {
-        const int grip = 8;
-        owner = open[0];
-        vertical = true;
-        startSize = 0;
-
-        for (int i = 0; i < open.Length; i++)
-        {
-            RectI a = TiledWindowRect(layout, open[i]);
-            for (int j = 0; j < open.Length; j++)
+            int firstHeight = Math.Clamp((int)Math.Round((rect.Height - gap) * nodeRatio), 100, Math.Max(100, rect.Height - gap - 100));
+            first = new RectI(rect.X, rect.Y, rect.Width, firstHeight);
+            second = new RectI(rect.X, rect.Y + firstHeight + gap, rect.Width, Math.Max(1, rect.Height - firstHeight - gap));
+            divider = new RectI(rect.X, first.Bottom - grip / 2, rect.Width, Math.Max(grip, second.Y - first.Bottom + grip));
+            if (divider.Contains(_pointer.X, _pointer.Y))
             {
-                if (i == j)
-                {
-                    continue;
-                }
-
-                RectI b = TiledWindowRect(layout, open[j]);
-                int y0 = Math.Max(a.Y, b.Y);
-                int y1 = Math.Min(a.Bottom, b.Bottom);
-                if (a.Right <= b.X && y1 - y0 > 24)
-                {
-                    RectI divider = new(a.Right - grip / 2, y0, Math.Max(grip, b.X - a.Right + grip), y1 - y0);
-                    if (divider.Contains(_pointer.X, _pointer.Y))
-                    {
-                        owner = open[i];
-                        vertical = true;
-                        startSize = a.Width;
-                        return true;
-                    }
-                }
-
-                int x0 = Math.Max(a.X, b.X);
-                int x1 = Math.Min(a.Right, b.Right);
-                if (a.Bottom <= b.Y && x1 - x0 > 24)
-                {
-                    RectI divider = new(x0, a.Bottom - grip / 2, x1 - x0, Math.Max(grip, b.Y - a.Bottom + grip));
-                    if (divider.Contains(_pointer.X, _pointer.Y))
-                    {
-                        owner = open[i];
-                        vertical = false;
-                        startSize = a.Height;
-                        return true;
-                    }
-                }
+                hitPath = path;
+                vertical = false;
+                ratio = nodeRatio;
+                span = Math.Max(1, rect.Height - gap);
+                return true;
             }
         }
 
-        return false;
+        return TryHitTileTreeSplitter(node.First, first, open, path + "0", out hitPath, out vertical, out ratio, out span)
+            || TryHitTileTreeSplitter(node.Second, second, open, path + "1", out hitPath, out vertical, out ratio, out span);
     }
 
-    private RectI TileResizeBounds(ForgeLayout layout, AppWindow owner, bool vertical)
+    private bool UpdateTileRootRatio(string path, double ratio)
     {
-        RectI ownerRect = TiledWindowRect(layout, owner);
-        AppWindow[] open = OpenTiledWindows();
-        const int gap = 8;
-        if (!vertical)
+        TileNode? root = ParseTileRoot(_config.Layout.Root);
+        if (root is null || !UpdateTileRootRatio(root, path, 0, ratio))
         {
-            return TileWorkArea(layout);
+            return false;
+        }
+        _config.Layout.Root = FormatTileRoot(root);
+        return true;
+    }
+
+    private static bool UpdateTileRootRatio(TileNode node, string path, int depth, double ratio)
+    {
+        if (depth == path.Length)
+        {
+            if (node.Window is not null)
+            {
+                return false;
+            }
+            node.Ratio = ratio;
+            return true;
         }
 
-        if (open.Length == 2 && owner == open[0])
-        {
-            return TileWorkArea(layout);
-        }
-
-        if (open.Length == 3 && owner == open[1])
-        {
-            RectI work = TileWorkArea(layout);
-            int primaryHeight = TilePrimaryHeight(open[0], work, (int)Math.Round(work.Height * 0.60));
-            return new RectI(work.X, work.Y + primaryHeight + gap, work.Width, Math.Max(160, work.Height - primaryHeight - gap));
-        }
-
-        return ownerRect;
+        TileNode? next = path[depth] == '0' ? node.First : node.Second;
+        return next is not null && UpdateTileRootRatio(next, path, depth + 1, ratio);
     }
 
     private bool IsTileEditModifierDown()
@@ -1003,14 +1007,33 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         RectI work = TileWorkArea(layout);
         AppWindow[] open = OpenTiledWindows();
-        int index = Array.IndexOf(open, window);
-        if (index < 0)
+        if (!open.Contains(window))
         {
             return work;
         }
 
+        Dictionary<AppWindow, RectI> rects = ComputeTileRects(work, open);
+        return rects.TryGetValue(window, out RectI rect) ? rect : LegacyTiledWindowRect(work, open, window);
+    }
+
+    private Dictionary<AppWindow, RectI> ComputeTileRects(RectI work, AppWindow[] open)
+    {
+        var rects = new Dictionary<AppWindow, RectI>();
+        TileNode? root = ParseTileRoot(_config.Layout.Root);
+        if (root is null)
+        {
+            return rects;
+        }
+
+        LayoutTileNode(root, work, open.ToHashSet(), rects);
+        return rects;
+    }
+
+    private RectI LegacyTiledWindowRect(RectI work, AppWindow[] open, AppWindow window)
+    {
+        int index = Array.IndexOf(open, window);
         const int gap = 8;
-        if (open.Length == 1)
+        if (index < 0 || open.Length == 1)
         {
             return work;
         }
@@ -1036,6 +1059,70 @@ internal sealed unsafe class ForgeApp : IDisposable
             return StackPairTileRect(rest, index - 1, open[1], gap);
         }
         return GridTileRect(rest, index - 1, open.Length - 1, gap);
+    }
+
+    private static bool LayoutTileNode(TileNode node, RectI rect, HashSet<AppWindow> open, Dictionary<AppWindow, RectI> rects)
+    {
+        const int gap = 8;
+        if (node.Window is AppWindow leaf)
+        {
+            if (!open.Contains(leaf))
+            {
+                return false;
+            }
+            rects[leaf] = rect;
+            return true;
+        }
+
+        if (node.First is null || node.Second is null)
+        {
+            return false;
+        }
+
+        bool firstActive = node.First.ContainsAny(open);
+        bool secondActive = node.Second.ContainsAny(open);
+        if (!firstActive && !secondActive)
+        {
+            return false;
+        }
+        if (firstActive && !secondActive)
+        {
+            return LayoutTileNode(node.First, rect, open, rects);
+        }
+        if (!firstActive && secondActive)
+        {
+            return LayoutTileNode(node.Second, rect, open, rects);
+        }
+
+        double ratio = Math.Clamp(node.Ratio, 0.12, 0.88);
+        if (node.Axis == TileSplitAxis.Horizontal)
+        {
+            int firstWidth = Math.Clamp((int)Math.Round((rect.Width - gap) * ratio), 120, Math.Max(120, rect.Width - gap - 120));
+            RectI first = new(rect.X, rect.Y, firstWidth, rect.Height);
+            RectI second = new(rect.X + firstWidth + gap, rect.Y, Math.Max(1, rect.Width - firstWidth - gap), rect.Height);
+            LayoutTileNode(node.First, first, open, rects);
+            LayoutTileNode(node.Second, second, open, rects);
+        }
+        else
+        {
+            int firstHeight = Math.Clamp((int)Math.Round((rect.Height - gap) * ratio), 100, Math.Max(100, rect.Height - gap - 100));
+            RectI first = new(rect.X, rect.Y, rect.Width, firstHeight);
+            RectI second = new(rect.X, rect.Y + firstHeight + gap, rect.Width, Math.Max(1, rect.Height - firstHeight - gap));
+            LayoutTileNode(node.First, first, open, rects);
+            LayoutTileNode(node.Second, second, open, rects);
+        }
+        return true;
+    }
+
+    private static TileNode? ParseTileRoot(string root)
+    {
+        if (string.IsNullOrWhiteSpace(root))
+        {
+            return null;
+        }
+
+        var parser = new TileRootParser(root);
+        return parser.Parse();
     }
 
     private int TilePrimaryWidth(AppWindow window, RectI work, int fallback)
@@ -1128,7 +1215,7 @@ internal sealed unsafe class ForgeApp : IDisposable
             return;
         }
 
-        if (!TryHitTileSplitter(layout, open, out _, out _, out _) && !_resizingTileSplit)
+        if (!TryHitTileTreeSplitter(TileWorkArea(layout), open, out _, out _, out _, out _) && !_resizingTileSplit)
         {
             return;
         }
@@ -1514,7 +1601,11 @@ internal sealed unsafe class ForgeApp : IDisposable
         {
             _config.Window(WindowKey(_tileOrder[i])).Order = i * 10;
         }
-        _config.Layout.Root = FormatTileRoot(_tileOrder);
+        AppWindow[] rootOrder = TileRootLeaves(_config.Layout.Root).Distinct().ToArray();
+        if (!rootOrder.SequenceEqual(_tileOrder))
+        {
+            _config.Layout.Root = FormatTileRoot(_tileOrder);
+        }
     }
 
     private void SnapshotWindow(AppWindow window, string key)
@@ -1659,6 +1750,18 @@ internal sealed unsafe class ForgeApp : IDisposable
         return $"v({WindowKey(order[0])},{stack},0.62)";
     }
 
+    private static string FormatTileRoot(TileNode node)
+    {
+        if (node.Window is AppWindow window)
+        {
+            return WindowKey(window);
+        }
+        string axis = node.Axis == TileSplitAxis.Horizontal ? "h" : "v";
+        string first = node.First is null ? string.Empty : FormatTileRoot(node.First);
+        string second = node.Second is null ? string.Empty : FormatTileRoot(node.Second);
+        return $"{axis}({first},{second},{node.Ratio.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)})";
+    }
+
     private static bool TryWindowFromKey(string key, out AppWindow window)
     {
         switch (key.Trim().ToLowerInvariant())
@@ -1801,6 +1904,119 @@ internal sealed unsafe class ForgeApp : IDisposable
         return text[..keep] + "..." + text[^keep..];
     }
 
+
+    private enum TileSplitAxis
+    {
+        Horizontal,
+        Vertical,
+    }
+
+    private sealed class TileNode
+    {
+        public AppWindow? Window { get; init; }
+        public TileSplitAxis Axis { get; init; }
+        public TileNode? First { get; init; }
+        public TileNode? Second { get; init; }
+        public double Ratio { get; set; } = 0.5;
+
+        public bool ContainsAny(HashSet<AppWindow> windows)
+        {
+            if (Window is AppWindow window)
+            {
+                return windows.Contains(window);
+            }
+            return (First?.ContainsAny(windows) ?? false) || (Second?.ContainsAny(windows) ?? false);
+        }
+    }
+
+    private sealed class TileRootParser
+    {
+        private readonly string _text;
+        private int _index;
+
+        public TileRootParser(string text)
+        {
+            _text = text;
+        }
+
+        public TileNode? Parse()
+        {
+            TileNode? node = ParseNode();
+            SkipTrivia();
+            return node;
+        }
+
+        private TileNode? ParseNode()
+        {
+            SkipTrivia();
+            string token = ParseToken();
+            if (token.Length == 0)
+            {
+                return null;
+            }
+
+            SkipTrivia();
+            if ((token == "h" || token == "v") && TryConsume('('))
+            {
+                TileNode? first = ParseNode();
+                if (!TryConsume(',')) return null;
+                TileNode? second = ParseNode();
+                double ratio = 0.5;
+                if (TryConsume(','))
+                {
+                    ratio = ParseRatio(0.5);
+                }
+                if (!TryConsume(')') || first is null || second is null)
+                {
+                    return null;
+                }
+                return new TileNode { Axis = token == "h" ? TileSplitAxis.Horizontal : TileSplitAxis.Vertical, First = first, Second = second, Ratio = ratio };
+            }
+
+            return TryWindowFromKey(token, out AppWindow window) ? new TileNode { Window = window } : null;
+        }
+
+        private string ParseToken()
+        {
+            SkipTrivia();
+            int start = _index;
+            while (_index < _text.Length && (char.IsLetterOrDigit(_text[_index]) || _text[_index] == '_'))
+            {
+                _index++;
+            }
+            return _text[start.._index].Trim().ToLowerInvariant();
+        }
+
+        private double ParseRatio(double fallback)
+        {
+            SkipTrivia();
+            int start = _index;
+            while (_index < _text.Length && (char.IsDigit(_text[_index]) || _text[_index] == '.'))
+            {
+                _index++;
+            }
+            return double.TryParse(_text[start.._index], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double ratio) ? ratio : fallback;
+        }
+
+        private bool TryConsume(char expected)
+        {
+            SkipTrivia();
+            if (_index >= _text.Length || _text[_index] != expected)
+            {
+                return false;
+            }
+            _index++;
+            return true;
+        }
+
+        private void SkipTrivia()
+        {
+            while (_index < _text.Length && char.IsWhiteSpace(_text[_index]))
+            {
+                _index++;
+            }
+        }
+    }
 
     private enum AppWindow
     {
