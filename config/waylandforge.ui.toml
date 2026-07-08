@@ -16,12 +16,13 @@ border_thickness = 1
 root = "v(viewport,h(rom_picker,h(settings,style_editor,0.50),0.58),0.62)"
 
 [external_core]
-mode = "wfex_file" # stdio | wfex_file
+mode = "wfcore_socket" # stdio | wfex_file | wfcore_socket
 command = "/home/nichlas/WaylandForge/local/opentyrian-wfcore/opentyrian" # empty + stdio uses the built-in dummy process
 args = ""
 working_directory = "/home/nichlas/WaylandForge/local/opentyrian-wfcore"
 env = "OPENTYRIAN_WFCORE=1;SDL_VIDEODRIVER=dummy"
 wfex_path = "/tmp/waylandforge-opentyrian.wfex"
+socket_path = "/tmp/waylandforge-wfcore.sock"
 
 [ui.tile]
 primary = "viewport"

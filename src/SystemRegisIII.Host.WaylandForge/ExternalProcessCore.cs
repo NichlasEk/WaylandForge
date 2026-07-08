@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Diagnostics;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using SystemRegisIII.Core;
 
@@ -8,6 +9,7 @@ namespace SystemRegisIII.Host.WaylandForge;
 internal sealed class ExternalProcessCore : ISystemCore, IDisposable
 {
     private const uint FrameMagic = 0x58454657; // WFEX
+    private const uint InputMagic = 0x4e494657; // WFIN
     private const byte StepCommand = (byte)'S';
     private readonly object _logLock = new();
     private readonly Queue<string> _stderrTail = new();
@@ -17,9 +19,13 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     private string _workingDirectory = string.Empty;
     private string _env = string.Empty;
     private string _wfexPath = string.Empty;
+    private string _socketPath = string.Empty;
     private string _fallbackDllPath = string.Empty;
     private Process? _process;
     private Stream? _wfexStream;
+    private Socket? _socketListener;
+    private Socket? _socket;
+    private NetworkStream? _socketStream;
     private DateTime _startedAtUtc;
     private int? _lastExitCode;
     private int _lastWidth;
@@ -29,6 +35,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     private uint[] _pendingFrame = [];
     private readonly byte[] _header = new byte[32];
     private readonly byte[] _stepCommandBuffer = new byte[5];
+    private readonly byte[] _inputHeader = new byte[32];
 
     public ExternalProcessCore(UiExternalCoreConfig config, string fallbackDllPath)
     {
@@ -59,12 +66,18 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         {
             Stop();
         }
-        _mode = config.Mode.Trim().ToLowerInvariant() == "wfex_file" ? "wfex_file" : "stdio";
+        _mode = config.Mode.Trim().ToLowerInvariant() switch
+        {
+            "wfex_file" => "wfex_file",
+            "wfcore_socket" => "wfcore_socket",
+            _ => "stdio",
+        };
         _command = config.Command.Trim();
         _args = config.Args.Trim();
         _workingDirectory = config.WorkingDirectory.Trim();
         _env = config.Env.Trim();
         _wfexPath = config.WfexPath.Trim();
+        _socketPath = config.SocketPath.Trim();
         _fallbackDllPath = fallbackDllPath;
     }
 
@@ -84,6 +97,10 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
             if (_mode == "wfex_file")
             {
                 StepWfexFile(frameSink);
+            }
+            else if (_mode == "wfcore_socket")
+            {
+                StepWfCoreSocket(input, frameSink);
             }
             else
             {
@@ -139,6 +156,39 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         catch (EndOfStreamException) when (_frame.Length > 0 && _lastWidth > 0 && _lastHeight > 0)
         {
             frameSink.Present(_frame, _lastWidth, _lastHeight, _lastStride);
+        }
+    }
+
+    private void StepWfCoreSocket(IInputSource input, IFrameSink frameSink)
+    {
+        EnsureStarted();
+        _socketStream ??= OpenWfCoreSocketStream();
+
+        SaturnInputState inputState = input.Poll();
+        BinaryPrimitives.WriteUInt32LittleEndian(_inputHeader.AsSpan(0), InputMagic);
+        BinaryPrimitives.WriteInt32LittleEndian(_inputHeader.AsSpan(4), 32);
+        BinaryPrimitives.WriteUInt32LittleEndian(_inputHeader.AsSpan(8), (uint)inputState.Buttons);
+        BinaryPrimitives.WriteUInt64LittleEndian(_inputHeader.AsSpan(16), FrameIndex);
+        _socketStream.Write(_inputHeader);
+        _socketStream.Flush();
+
+        int oldTimeout = _socketStream.ReadTimeout;
+        _socketStream.ReadTimeout = _frame.Length == 0 ? 2000 : 2;
+        try
+        {
+            ReadWfexFrame(_socketStream, frameSink);
+        }
+        catch (IOException) when (_frame.Length > 0 && _lastWidth > 0 && _lastHeight > 0)
+        {
+            frameSink.Present(_frame, _lastWidth, _lastHeight, _lastStride);
+        }
+        catch (EndOfStreamException) when (_frame.Length > 0 && _lastWidth > 0 && _lastHeight > 0)
+        {
+            frameSink.Present(_frame, _lastWidth, _lastHeight, _lastStride);
+        }
+        finally
+        {
+            _socketStream.ReadTimeout = oldTimeout;
         }
     }
 
@@ -231,6 +281,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         string command = _command;
         string args = _args;
         string wfexPath = ResolveWfexPath();
+        string socketPath = ResolveSocketPath();
         if (string.IsNullOrWhiteSpace(command))
         {
             if (!File.Exists(_fallbackDllPath))
@@ -239,6 +290,11 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
             }
             command = "dotnet";
             args = QuoteArgument(_fallbackDllPath);
+        }
+
+        if (_mode == "wfcore_socket")
+        {
+            StartSocketListener(socketPath);
         }
 
         var startInfo = new ProcessStartInfo
@@ -253,6 +309,11 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         if (_mode == "wfex_file")
         {
             startInfo.Environment["OPENTYRIAN_WFEX_PATH"] = wfexPath;
+        }
+        if (_mode == "wfcore_socket")
+        {
+            startInfo.Environment["WFCORE_SOCKET"] = socketPath;
+            startInfo.Environment["OPENTYRIAN_WFCORE"] = "1";
         }
         foreach ((string key, string value) in SplitEnvironment(_env))
         {
@@ -283,6 +344,13 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     {
         _wfexStream?.Dispose();
         _wfexStream = null;
+        _socketStream?.Dispose();
+        _socketStream = null;
+        _socket?.Dispose();
+        _socket = null;
+        _socketListener?.Dispose();
+        _socketListener = null;
+        DeleteSocketPath();
         Process? process = _process;
         _process = null;
         if (process is null)
@@ -391,6 +459,47 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         }
     }
 
+    private NetworkStream OpenWfCoreSocketStream()
+    {
+        if (_socket is null)
+        {
+            Stopwatch wait = Stopwatch.StartNew();
+            while (wait.ElapsedMilliseconds < 2000)
+            {
+                try
+                {
+                    _socket = _socketListener?.Accept();
+                    if (_socket is not null)
+                    {
+                        break;
+                    }
+                }
+                catch (SocketException ex) when (ex.SocketErrorCode == SocketError.WouldBlock)
+                {
+                    Thread.Sleep(1);
+                }
+            }
+        }
+
+        if (_socket is null)
+        {
+            throw new TimeoutException("External WF core did not connect to the host socket.");
+        }
+
+        return new NetworkStream(_socket, ownsSocket: false);
+    }
+
+    private void StartSocketListener(string path)
+    {
+        DeleteSocketPath(path);
+        _socketListener = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified)
+        {
+            Blocking = false,
+        };
+        _socketListener.Bind(new UnixDomainSocketEndPoint(path));
+        _socketListener.Listen(1);
+    }
+
     private string ResolveWfexPath()
     {
         if (!string.IsNullOrWhiteSpace(_wfexPath))
@@ -398,6 +507,34 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
             return _wfexPath;
         }
         return Path.Combine(Path.GetTempPath(), "waylandforge-external.wfex");
+    }
+
+    private string ResolveSocketPath()
+    {
+        if (!string.IsNullOrWhiteSpace(_socketPath))
+        {
+            return _socketPath;
+        }
+        return Path.Combine(Path.GetTempPath(), "waylandforge-wfcore.sock");
+    }
+
+    private void DeleteSocketPath() => DeleteSocketPath(ResolveSocketPath());
+
+    private static void DeleteSocketPath(string path)
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
     }
 
     private void AddStderrLine(string line)

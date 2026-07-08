@@ -57,11 +57,19 @@ The fake core draws a controllable blob so every mapped button has visible outpu
 
 ## External Core Protocol
 
-`SystemRegisIII.ExternalCore.Dummy` is a deliberately tiny process-isolated core target. The host starts it as a separate `dotnet` process and speaks over stdin/stdout:
+`SystemRegisIII.ExternalCore.Dummy` is a deliberately tiny process-isolated core target. The host can start external cores as separate processes and speak either the original stdin/stdout probe protocol or the newer bounded Unix socket protocol.
+
+The legacy stdio probe is:
 
 - host writes: `S` byte followed by little-endian `uint32` Saturn button bits
 - core writes: `WFEX` magic, `int32 width`, `int32 height`, `int32 stride`, `uint64 frameIndex`, `int32 byteCount`, reserved `int32`
 - core then writes `byteCount` bytes of ARGB8888 pixels
+
+The socket mode is intended for real bringup work. The host creates `socket_path`, starts the process with `WFCORE_SOCKET=<path>`, and exchanges bounded messages:
+
+- host writes `WFIN`: `uint32 magic`, `int32 headerSize`, `uint32 Saturn button bits`, reserved, `uint64 lastFrameIndex`, reserved
+- core writes `WFEX`: the same 32-byte frame header and ARGB8888 payload used by the stdio probe
+- future audio should use the same socket as bounded PCM chunks, not a growing file
 
 This keeps GPL or other external code out of the WaylandForge process while still letting the host present frames and inject input.
 
@@ -69,12 +77,13 @@ External cores are configured in TOML:
 
 ```toml
 [external_core]
-mode = "stdio" # stdio | wfex_file
+mode = "stdio" # stdio | wfex_file | wfcore_socket
 command = "" # empty uses the built-in dummy external core
 args = ""
 working_directory = ""
 env = ""
 wfex_path = "/tmp/waylandforge-opentyrian.wfex"
+socket_path = "/tmp/waylandforge-wfcore.sock"
 ```
 
 When `EXT` is enabled, the debug panel shows process status, the selected command, last host-side fault, a restart button, and the latest stderr lines.
@@ -109,15 +118,16 @@ To show those exported frames in WaylandForge, switch the external core to file-
 
 ```toml
 [external_core]
-mode = "wfex_file" # stdio | wfex_file
+mode = "wfcore_socket" # stdio | wfex_file | wfcore_socket
 command = "/home/nichlas/WaylandForge/local/opentyrian-wfcore/opentyrian"
 args = ""
 working_directory = "/home/nichlas/WaylandForge/local/opentyrian-wfcore"
 env = "OPENTYRIAN_WFCORE=1;SDL_VIDEODRIVER=dummy"
 wfex_path = "/tmp/waylandforge-opentyrian.wfex"
+socket_path = "/tmp/waylandforge-wfcore.sock"
 ```
 
-Then run WaylandForge and press `EXT`. The host starts the local ignored OpenTyrian WF core copy, injects `OPENTYRIAN_WFEX_PATH` automatically, applies `env`, reads the exported `WFEX` frames, and presents them in the core viewport. To point at another external target, change only this TOML block. The `local/` tree is gitignored so GPL experiment code stays out of the WaylandForge repository until it is intentionally split or licensed as a separate component.
+Then run WaylandForge and press `EXT`. The host starts the local ignored OpenTyrian WF core copy, creates the Unix socket, applies `env`, reads bounded `WFEX` frames, sends `WFIN` input state, and presents the core viewport. To point at another external target, change only this TOML block. The `local/` tree is gitignored so GPL experiment code stays out of the WaylandForge repository until it is intentionally split or licensed as a separate component.
 
 ## UI Config
 

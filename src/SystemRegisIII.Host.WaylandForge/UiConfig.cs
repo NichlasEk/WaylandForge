@@ -67,6 +67,7 @@ internal sealed class UiConfig
         writer.WriteLine($"working_directory = \"{Escape(ExternalCore.WorkingDirectory)}\"");
         writer.WriteLine($"env = \"{Escape(ExternalCore.Env)}\"");
         writer.WriteLine($"wfex_path = \"{Escape(ExternalCore.WfexPath)}\"");
+        writer.WriteLine($"socket_path = \"{Escape(ExternalCore.SocketPath)}\"");
         writer.WriteLine();
 
         foreach (KeyValuePair<string, UiWindowConfig> pair in Windows.OrderBy(static pair => pair.Value.Order).ThenBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase))
@@ -193,6 +194,9 @@ internal sealed class UiConfig
                     break;
                 case "wfex_path":
                     ExternalCore.WfexPath = value;
+                    break;
+                case "socket_path":
+                    ExternalCore.SocketPath = value;
                     break;
             }
             return;
@@ -362,4 +366,5 @@ internal sealed class UiExternalCoreConfig
     public string WorkingDirectory { get; set; } = string.Empty;
     public string Env { get; set; } = string.Empty;
     public string WfexPath { get; set; } = string.Empty;
+    public string SocketPath { get; set; } = string.Empty;
 }
