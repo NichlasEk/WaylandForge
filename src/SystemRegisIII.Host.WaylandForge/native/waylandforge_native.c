@@ -31,6 +31,11 @@ typedef uint32_t (*waylandforge_render_callback)(
     int32_t scroll_delta,
     uint32_t scroll_serial);
 
+typedef void (*waylandforge_input_callback)(
+    uint32_t key_code,
+    uint32_t key_serial,
+    uint32_t key_state);
+
 enum {
     WAYLANDFORGE_INPUT_ESCAPE = 1u << 0,
     WAYLANDFORGE_INPUT_UP = 1u << 1,
@@ -96,6 +101,7 @@ struct waylandforge_app {
     uint32_t scroll_serial;
     uint64_t frame_index;
     waylandforge_render_callback render;
+    waylandforge_input_callback input;
     uint32_t pointer_serial;
     int cursor_hidden;
     int cursor_hidden_applied;
@@ -375,6 +381,9 @@ static void keyboard_leave(void *data, struct wl_keyboard *keyboard, uint32_t se
     app->key_code = UINT32_MAX;
     app->key_state = 0;
     app->key_serial++;
+    if (app->input) {
+        app->input(app->key_code, app->key_serial, app->key_state);
+    }
 }
 
 static void keyboard_key(void *data, struct wl_keyboard *keyboard, uint32_t serial, uint32_t time_ms, uint32_t key, uint32_t state)
@@ -457,7 +466,9 @@ static void keyboard_key(void *data, struct wl_keyboard *keyboard, uint32_t seri
     app->key_code = key;
     app->key_state = state == WL_KEYBOARD_KEY_STATE_PRESSED ? 1u : 0u;
     app->key_serial++;
-
+    if (app->input) {
+        app->input(app->key_code, app->key_serial, app->key_state);
+    }
 }
 
 static void keyboard_modifiers(void *data, struct wl_keyboard *keyboard, uint32_t serial, uint32_t depressed, uint32_t latched, uint32_t locked, uint32_t group)
@@ -819,7 +830,7 @@ static void cleanup(struct waylandforge_app *app)
     }
 }
 
-int waylandforge_run(int width, int height, const char *title, waylandforge_render_callback render)
+int waylandforge_run(int width, int height, const char *title, waylandforge_render_callback render, waylandforge_input_callback input)
 {
     if (width <= 0 || height <= 0 || render == NULL) {
         return 2;
@@ -830,6 +841,7 @@ int waylandforge_run(int width, int height, const char *title, waylandforge_rend
         .height = height,
         .running = 1,
         .render = render,
+        .input = input,
         .cursor_hidden_applied = -1,
     };
 

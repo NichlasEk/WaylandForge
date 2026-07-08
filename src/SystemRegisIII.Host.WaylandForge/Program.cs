@@ -25,7 +25,7 @@ internal static unsafe class Program
         Console.CancelKeyPress += (_, _) => DisposeApp();
         AppDomain.CurrentDomain.ProcessExit += (_, _) => DisposeApp();
 
-        int result = WaylandWindow.Run(Width, Height, "WaylandForge M1", app.Render);
+        int result = WaylandWindow.Run(Width, Height, "WaylandForge M1", app.Render, app.RawKeyInput);
         if (result != 0)
         {
             Console.Error.WriteLine($"WaylandForge exited with native error {result}.");

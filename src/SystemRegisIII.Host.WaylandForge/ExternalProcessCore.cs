@@ -12,6 +12,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     private const uint InputMagic = 0x4e494657; // WFIN
     private const byte StepCommand = (byte)'S';
     private readonly object _logLock = new();
+    private readonly object _inputLock = new();
     private readonly Queue<string> _stderrTail = new();
     private string _mode = "stdio";
     private string _command = string.Empty;
@@ -121,6 +122,16 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         Stop();
     }
 
+    public void PushInputNow(SaturnInputState inputState)
+    {
+        if (_mode != "wfcore_socket" || _socket is null)
+        {
+            return;
+        }
+
+        SendInputState(inputState);
+    }
+
     private void StepStdio(IInputSource input, IFrameSink frameSink)
     {
         EnsureStarted();
@@ -165,11 +176,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         _socketStream ??= OpenWfCoreSocketStream();
 
         SaturnInputState inputState = input.Poll();
-        BinaryPrimitives.WriteUInt32LittleEndian(_inputHeader.AsSpan(0), InputMagic);
-        BinaryPrimitives.WriteInt32LittleEndian(_inputHeader.AsSpan(4), 32);
-        BinaryPrimitives.WriteUInt32LittleEndian(_inputHeader.AsSpan(8), (uint)inputState.Buttons);
-        BinaryPrimitives.WriteUInt64LittleEndian(_inputHeader.AsSpan(16), FrameIndex);
-        TrySendInputHeader();
+        SendInputState(inputState);
 
         if (!WaitForSocketData(_frame.Length == 0 ? 2000 : 0))
         {
@@ -191,6 +198,23 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         {
             _socketStream.ReadTimeout = oldTimeout;
         }
+    }
+
+    private void SendInputState(SaturnInputState inputState)
+    {
+        lock (_inputLock)
+        {
+            PrepareInputHeader(inputState);
+            TrySendInputHeader();
+        }
+    }
+
+    private void PrepareInputHeader(SaturnInputState inputState)
+    {
+        BinaryPrimitives.WriteUInt32LittleEndian(_inputHeader.AsSpan(0), InputMagic);
+        BinaryPrimitives.WriteInt32LittleEndian(_inputHeader.AsSpan(4), 32);
+        BinaryPrimitives.WriteUInt32LittleEndian(_inputHeader.AsSpan(8), (uint)inputState.Buttons);
+        BinaryPrimitives.WriteUInt64LittleEndian(_inputHeader.AsSpan(16), FrameIndex);
     }
 
     private bool WaitForSocketData(int timeoutMs)

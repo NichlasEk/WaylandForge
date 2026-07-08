@@ -88,6 +88,12 @@ internal sealed unsafe class ForgeApp : IDisposable
         return _fullscreenTile is not null ? 1u : 0u;
     }
 
+    public void RawKeyInput(uint keyCode, uint keySerial, bool pressed)
+    {
+        ProcessRawKey(new TextInputEvent(keyCode, keySerial, pressed));
+        PushCurrentInputState();
+    }
+
     private void Update(ForgeInput input, PointerState pointer, TextInputEvent textInput, ScrollInputEvent scrollInput, ulong frameIndex)
     {
         _clock.Tick();
@@ -2393,6 +2399,18 @@ internal sealed unsafe class ForgeApp : IDisposable
         _fullscreenTile = _fullscreenTile == target ? null : target;
         _focusedTile = target;
         _pressedKeys.Clear();
+        PushCurrentInputState();
+    }
+
+    private void PushCurrentInputState()
+    {
+        ForgeInput mappedInput = MapInputFromPressedKeys();
+        _lastInput = mappedInput;
+        _inputSource.Update(mappedInput);
+        if (ReferenceEquals(_core, _externalCore))
+        {
+            _externalCore.PushInputNow(_inputSource.Poll());
+        }
     }
 
     private bool HandleTileKeyboardShortcuts(ForgeInput input)
