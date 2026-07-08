@@ -169,8 +169,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         BinaryPrimitives.WriteInt32LittleEndian(_inputHeader.AsSpan(4), 32);
         BinaryPrimitives.WriteUInt32LittleEndian(_inputHeader.AsSpan(8), (uint)inputState.Buttons);
         BinaryPrimitives.WriteUInt64LittleEndian(_inputHeader.AsSpan(16), FrameIndex);
-        _socketStream.Write(_inputHeader);
-        _socketStream.Flush();
+        TrySendInputHeader();
 
         int oldTimeout = _socketStream.ReadTimeout;
         _socketStream.ReadTimeout = _frame.Length == 0 ? 2000 : 2;
@@ -189,6 +188,37 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         finally
         {
             _socketStream.ReadTimeout = oldTimeout;
+        }
+    }
+
+    private void TrySendInputHeader()
+    {
+        Socket? socket = _socket;
+        if (socket is null)
+        {
+            return;
+        }
+
+        try
+        {
+            socket.Blocking = false;
+            int offset = 0;
+            while (offset < _inputHeader.Length)
+            {
+                int written = socket.Send(_inputHeader.AsSpan(offset), SocketFlags.None);
+                if (written <= 0)
+                {
+                    return;
+                }
+                offset += written;
+            }
+        }
+        catch (SocketException ex) when (ex.SocketErrorCode is SocketError.WouldBlock or SocketError.IOPending or SocketError.NoBufferSpaceAvailable)
+        {
+        }
+        finally
+        {
+            socket.Blocking = true;
         }
     }
 
