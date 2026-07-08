@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/SystemRegisIII.Core/SystemRegisIII.Core.csproj" />
     <Project Path="src/SystemRegisIII.ExternalCore.Dummy/SystemRegisIII.ExternalCore.Dummy.csproj" />
+    <Project Path="src/SystemRegisIII.ExternalCore.ProcessProbe/SystemRegisIII.ExternalCore.ProcessProbe.csproj" />
     <Project Path="src/SystemRegisIII.Host.WaylandForge/SystemRegisIII.Host.WaylandForge.csproj" />
     <Project Path="src/SystemRegisIII.WaylandForge.Ui/SystemRegisIII.WaylandForge.Ui.csproj" />
   </Folder>

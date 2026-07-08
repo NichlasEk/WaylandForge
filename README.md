@@ -76,6 +76,22 @@ working_directory = ""
 
 When `EXT` is enabled, the debug panel shows process status, the selected command, last host-side fault, a restart button, and the latest stderr lines.
 
+For a first OpenTyrian lifecycle probe, build OpenTyrian without networking and point the external core at the process probe:
+
+```sh
+cd /home/nichlas/opentyrian
+make WITH_NETWORK=false
+```
+
+```toml
+[external_core]
+command = "dotnet"
+args = "src/SystemRegisIII.ExternalCore.ProcessProbe/bin/Debug/net8.0/SystemRegisIII.ExternalCore.ProcessProbe.dll --target /usr/bin/env --cwd /home/nichlas/opentyrian -- SDL_VIDEODRIVER=dummy /home/nichlas/opentyrian/opentyrian"
+working_directory = "/home/nichlas/WaylandForge"
+```
+
+The probe does not capture OpenTyrian video yet. It starts the target as a separate process, relays its stdout/stderr to WaylandForge, and renders a simple status framebuffer over the same `WFEX` protocol. The `SDL_VIDEODRIVER=dummy` example avoids opening a separate SDL window during lifecycle testing.
+
 ## UI Config
 
 Default UI configuration lives in `config/waylandforge.ui.toml`. Runtime changes are written to `config/waylandforge.ui.local.toml`, which is gitignored. The config currently persists theme, viewport scale, internal window mode, z-order, open state, floating window rectangles, and the tiled Settings split and dock side.
