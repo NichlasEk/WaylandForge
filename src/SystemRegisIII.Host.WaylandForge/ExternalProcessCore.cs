@@ -171,24 +171,46 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         BinaryPrimitives.WriteUInt64LittleEndian(_inputHeader.AsSpan(16), FrameIndex);
         TrySendInputHeader();
 
+        if (!WaitForSocketData(_frame.Length == 0 ? 2000 : 2))
+        {
+            if (_frame.Length > 0 && _lastWidth > 0 && _lastHeight > 0)
+            {
+                frameSink.Present(_frame, _lastWidth, _lastHeight, _lastStride);
+                return;
+            }
+            throw new TimeoutException("External WF core did not produce an initial frame.");
+        }
+
         int oldTimeout = _socketStream.ReadTimeout;
-        _socketStream.ReadTimeout = _frame.Length == 0 ? 2000 : 2;
+        _socketStream.ReadTimeout = _frame.Length == 0 ? 2000 : 500;
         try
         {
             ReadWfexFrame(_socketStream, frameSink);
-        }
-        catch (IOException) when (_frame.Length > 0 && _lastWidth > 0 && _lastHeight > 0)
-        {
-            frameSink.Present(_frame, _lastWidth, _lastHeight, _lastStride);
-        }
-        catch (EndOfStreamException) when (_frame.Length > 0 && _lastWidth > 0 && _lastHeight > 0)
-        {
-            frameSink.Present(_frame, _lastWidth, _lastHeight, _lastStride);
         }
         finally
         {
             _socketStream.ReadTimeout = oldTimeout;
         }
+    }
+
+    private bool WaitForSocketData(int timeoutMs)
+    {
+        Socket? socket = _socket;
+        if (socket is null)
+        {
+            return false;
+        }
+
+        Stopwatch wait = Stopwatch.StartNew();
+        while (socket.Available == 0)
+        {
+            if (wait.ElapsedMilliseconds >= timeoutMs)
+            {
+                return false;
+            }
+            Thread.Sleep(1);
+        }
+        return true;
     }
 
     private void TrySendInputHeader()
