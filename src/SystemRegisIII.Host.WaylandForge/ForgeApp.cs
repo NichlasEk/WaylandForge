@@ -273,11 +273,12 @@ internal sealed unsafe class ForgeApp : IDisposable
                 DrawMetric(x, y, "DRAW MS", _clock.DrawMilliseconds.ToString("0.0")); y += 18;
             }
 
-            if (_ui.Collapsible(new UiId("debug.external"), ref column, "EXT CORE", 176, out RectI externalSection))
+            if (_ui.Collapsible(new UiId("debug.external"), ref column, "EXT CORE", 194, out RectI externalSection))
             {
                 int x = externalSection.X;
                 int y = externalSection.Y;
                 DrawMetric(x, y, "STATUS", _externalCore.Status); y += 18;
+                DrawMetric(x, y, "MODE", _externalCore.Mode.ToUpperInvariant()); y += 18;
                 DrawMetric(x, y, "CMD", ExternalCommandLabel()); y += 18;
                 DrawMetric(x, y, "FAULT", string.IsNullOrEmpty(_coreFault) ? "-" : TruncateMiddle(_coreFault, 18)); y += 20;
                 RectI restartRect = new(x, y, 86, 18);

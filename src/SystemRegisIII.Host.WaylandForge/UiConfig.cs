@@ -61,9 +61,12 @@ internal sealed class UiConfig
         writer.WriteLine($"root = \"{Layout.Root}\"");
         writer.WriteLine();
         writer.WriteLine("[external_core]");
+        writer.WriteLine($"mode = \"{Escape(ExternalCore.Mode)}\"");
         writer.WriteLine($"command = \"{Escape(ExternalCore.Command)}\"");
         writer.WriteLine($"args = \"{Escape(ExternalCore.Args)}\"");
         writer.WriteLine($"working_directory = \"{Escape(ExternalCore.WorkingDirectory)}\"");
+        writer.WriteLine($"env = \"{Escape(ExternalCore.Env)}\"");
+        writer.WriteLine($"wfex_path = \"{Escape(ExternalCore.WfexPath)}\"");
         writer.WriteLine();
 
         foreach (KeyValuePair<string, UiWindowConfig> pair in Windows.OrderBy(static pair => pair.Value.Order).ThenBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase))
@@ -173,6 +176,9 @@ internal sealed class UiConfig
         {
             switch (key.ToLowerInvariant())
             {
+                case "mode":
+                    ExternalCore.Mode = value;
+                    break;
                 case "command":
                     ExternalCore.Command = value;
                     break;
@@ -181,6 +187,12 @@ internal sealed class UiConfig
                     break;
                 case "working_directory":
                     ExternalCore.WorkingDirectory = value;
+                    break;
+                case "env":
+                    ExternalCore.Env = value;
+                    break;
+                case "wfex_path":
+                    ExternalCore.WfexPath = value;
                     break;
             }
             return;
@@ -344,7 +356,10 @@ internal sealed class UiTileLayoutConfig
 
 internal sealed class UiExternalCoreConfig
 {
+    public string Mode { get; set; } = "stdio";
     public string Command { get; set; } = string.Empty;
     public string Args { get; set; } = string.Empty;
     public string WorkingDirectory { get; set; } = string.Empty;
+    public string Env { get; set; } = string.Empty;
+    public string WfexPath { get; set; } = string.Empty;
 }

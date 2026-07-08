@@ -16,9 +16,12 @@ border_thickness = 1
 root = "v(viewport,h(rom_picker,h(settings,style_editor,0.50),0.58),0.62)"
 
 [external_core]
-command = "" # empty uses the built-in SystemRegisIII.ExternalCore.Dummy process
+mode = "wfex_file" # stdio | wfex_file
+command = "/home/nichlas/opentyrian/opentyrian" # empty + stdio uses the built-in dummy process
 args = ""
-working_directory = ""
+working_directory = "/home/nichlas/opentyrian"
+env = "SDL_VIDEODRIVER=dummy"
+wfex_path = "/tmp/waylandforge-opentyrian.wfex"
 
 [ui.tile]
 primary = "viewport"

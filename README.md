@@ -69,9 +69,12 @@ External cores are configured in TOML:
 
 ```toml
 [external_core]
+mode = "stdio" # stdio | wfex_file
 command = "" # empty uses the built-in dummy external core
 args = ""
 working_directory = ""
+env = ""
+wfex_path = "/tmp/waylandforge-opentyrian.wfex"
 ```
 
 When `EXT` is enabled, the debug panel shows process status, the selected command, last host-side fault, a restart button, and the latest stderr lines.
@@ -101,6 +104,20 @@ SDL_VIDEODRIVER=dummy OPENTYRIAN_WFEX_PATH=/tmp/opentyrian.wfex OPENTYRIAN_WFEX_
 
 That requires the Tyrian 2.1 freeware data files in OpenTyrian's expected data path. Without them, OpenTyrian exits before the first game frame and reports the missing files through stderr.
 For this local setup, the downloaded freeware data lives in `/home/nichlas/opentyrian/data`, which is ignored by the OpenTyrian checkout.
+
+To show those exported frames in WaylandForge, switch the external core to file-reader mode:
+
+```toml
+[external_core]
+mode = "wfex_file" # stdio | wfex_file
+command = "/home/nichlas/opentyrian/opentyrian"
+args = ""
+working_directory = "/home/nichlas/opentyrian"
+env = "SDL_VIDEODRIVER=dummy"
+wfex_path = "/tmp/waylandforge-opentyrian.wfex"
+```
+
+Then run WaylandForge and press `EXT`. The host starts OpenTyrian, injects `OPENTYRIAN_WFEX_PATH` automatically, applies `env`, reads the exported `WFEX` frames, and presents them in the core viewport. To point at another external target, change only this TOML block.
 
 ## UI Config
 
