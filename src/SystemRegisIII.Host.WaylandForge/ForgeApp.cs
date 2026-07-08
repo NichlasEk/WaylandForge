@@ -73,7 +73,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         ApplyConfig();
     }
 
-    public void Render(uint* pixels, int width, int height, int stridePixels, ulong frameIndex, ForgeInput input, PointerState pointer, TextInputEvent textInput, ScrollInputEvent scrollInput)
+    public uint Render(uint* pixels, int width, int height, int stridePixels, ulong frameIndex, ForgeInput input, PointerState pointer, TextInputEvent textInput, ScrollInputEvent scrollInput)
     {
         _lastRenderWidth = width;
         _lastRenderHeight = height;
@@ -84,6 +84,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         Draw(width, height);
         _clock.RecordDraw(Stopwatch.GetElapsedTime(drawStart).TotalMilliseconds);
         _previousPointer = pointer;
+        return _fullscreenTile is not null ? 1u : 0u;
     }
 
     private void Update(ForgeInput input, PointerState pointer, TextInputEvent textInput, ScrollInputEvent scrollInput, ulong frameIndex)

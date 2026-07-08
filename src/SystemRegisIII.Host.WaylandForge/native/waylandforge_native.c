@@ -10,10 +10,11 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <wayland-client.h>
+#include <wayland-cursor.h>
 
 #include "xdg-shell-client-protocol.h"
 
-typedef void (*waylandforge_render_callback)(
+typedef uint32_t (*waylandforge_render_callback)(
     uint32_t *pixels,
     int width,
     int height,
@@ -95,6 +96,12 @@ struct waylandforge_app {
     uint32_t scroll_serial;
     uint64_t frame_index;
     waylandforge_render_callback render;
+    uint32_t pointer_serial;
+    int cursor_hidden;
+    int cursor_hidden_applied;
+    struct wl_cursor_theme *cursor_theme;
+    struct wl_cursor *cursor;
+    struct wl_surface *cursor_surface;
 };
 
 static int make_shm_file(size_t size)
@@ -115,6 +122,7 @@ static int make_shm_file(size_t size)
 }
 
 static void draw_and_commit(struct waylandforge_app *app);
+static void update_cursor(struct waylandforge_app *app);
 static int resize_buffers(struct waylandforge_app *app, int width, int height);
 
 static void destroy_shm_buffer(struct waylandforge_shm_buffer *shm_buffer)
@@ -199,7 +207,7 @@ static void draw_and_commit(struct waylandforge_app *app)
         return;
     }
 
-    app->render(
+    uint32_t render_flags = app->render(
         target->pixels,
         app->width,
         app->height,
@@ -215,6 +223,8 @@ static void draw_and_commit(struct waylandforge_app *app)
         app->key_state,
         app->scroll_delta,
         app->scroll_serial);
+    app->cursor_hidden = (render_flags & 1u) != 0;
+    update_cursor(app);
     app->scroll_delta = 0;
     target->busy = 1;
 
@@ -287,6 +297,52 @@ static const struct xdg_toplevel_listener toplevel_listener = {
     .configure = toplevel_configure,
     .close = toplevel_close,
 };
+
+static void ensure_cursor_theme(struct waylandforge_app *app)
+{
+    if (app->cursor_theme != NULL || app->shm == NULL) {
+        return;
+    }
+
+    app->cursor_theme = wl_cursor_theme_load(NULL, 24, app->shm);
+    if (app->cursor_theme == NULL) {
+        return;
+    }
+
+    app->cursor = wl_cursor_theme_get_cursor(app->cursor_theme, "left_ptr");
+    app->cursor_surface = wl_compositor_create_surface(app->compositor);
+}
+
+static void update_cursor(struct waylandforge_app *app)
+{
+    if (app->pointer == NULL || !app->pointer_inside || app->pointer_serial == 0) {
+        app->cursor_hidden_applied = -1;
+        return;
+    }
+
+    if (app->cursor_hidden == app->cursor_hidden_applied) {
+        return;
+    }
+
+    if (app->cursor_hidden) {
+        wl_pointer_set_cursor(app->pointer, app->pointer_serial, NULL, 0, 0);
+        app->cursor_hidden_applied = 1;
+        return;
+    }
+
+    ensure_cursor_theme(app);
+    if (app->cursor == NULL || app->cursor->image_count == 0 || app->cursor_surface == NULL) {
+        return;
+    }
+
+    struct wl_cursor_image *image = app->cursor->images[0];
+    struct wl_buffer *buffer = wl_cursor_image_get_buffer(image);
+    wl_pointer_set_cursor(app->pointer, app->pointer_serial, app->cursor_surface, (int32_t)image->hotspot_x, (int32_t)image->hotspot_y);
+    wl_surface_attach(app->cursor_surface, buffer, 0, 0);
+    wl_surface_damage_buffer(app->cursor_surface, 0, 0, (int32_t)image->width, (int32_t)image->height);
+    wl_surface_commit(app->cursor_surface);
+    app->cursor_hidden_applied = 0;
+}
 
 static void keyboard_keymap(void *data, struct wl_keyboard *keyboard, uint32_t format, int32_t fd, uint32_t size)
 {
@@ -430,13 +486,15 @@ static const struct wl_keyboard_listener keyboard_listener = {
 static void pointer_enter(void *data, struct wl_pointer *pointer, uint32_t serial, struct wl_surface *surface, wl_fixed_t surface_x, wl_fixed_t surface_y)
 {
     (void)pointer;
-    (void)serial;
     (void)surface;
 
     struct waylandforge_app *app = data;
+    app->pointer_serial = serial;
     app->pointer_inside = 1;
     app->pointer_x = wl_fixed_to_int(surface_x);
     app->pointer_y = wl_fixed_to_int(surface_y);
+    app->cursor_hidden_applied = -1;
+    update_cursor(app);
 }
 
 static void pointer_leave(void *data, struct wl_pointer *pointer, uint32_t serial, struct wl_surface *surface)
@@ -448,6 +506,7 @@ static void pointer_leave(void *data, struct wl_pointer *pointer, uint32_t seria
     struct waylandforge_app *app = data;
     app->pointer_inside = 0;
     app->pointer_buttons = 0;
+    app->cursor_hidden_applied = -1;
 }
 
 static void pointer_motion(void *data, struct wl_pointer *pointer, uint32_t time_ms, wl_fixed_t surface_x, wl_fixed_t surface_y)
@@ -723,6 +782,12 @@ static void cleanup(struct waylandforge_app *app)
     if (app->seat) {
         wl_seat_destroy(app->seat);
     }
+    if (app->cursor_surface) {
+        wl_surface_destroy(app->cursor_surface);
+    }
+    if (app->cursor_theme) {
+        wl_cursor_theme_destroy(app->cursor_theme);
+    }
     if (app->toplevel) {
         xdg_toplevel_destroy(app->toplevel);
     }
@@ -760,6 +825,7 @@ int waylandforge_run(int width, int height, const char *title, waylandforge_rend
         .height = height,
         .running = 1,
         .render = render,
+        .cursor_hidden_applied = -1,
     };
 
     app.display = wl_display_connect(NULL);

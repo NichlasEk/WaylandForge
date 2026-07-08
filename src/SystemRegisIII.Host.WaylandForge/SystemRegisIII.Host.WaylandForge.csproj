@@ -24,7 +24,7 @@
     <MakeDir Directories="$(WaylandForgeOutputDir)" />
     <Exec Command="wayland-scanner client-header &quot;$(WaylandProtocolsDir)/stable/xdg-shell/xdg-shell.xml&quot; &quot;$(WaylandForgeGeneratedDir)/xdg-shell-client-protocol.h&quot;" />
     <Exec Command="wayland-scanner private-code &quot;$(WaylandProtocolsDir)/stable/xdg-shell/xdg-shell.xml&quot; &quot;$(WaylandForgeGeneratedDir)/xdg-shell-protocol.c&quot;" />
-    <Exec Command="cc -std=c11 -O2 -g -Wall -Wextra -fPIC -I&quot;$(WaylandForgeGeneratedDir)&quot; &quot;$(WaylandForgeNativeDir)/waylandforge_native.c&quot; &quot;$(WaylandForgeGeneratedDir)/xdg-shell-protocol.c&quot; -shared -o &quot;$(WaylandForgeNativeOutput)&quot; -lwayland-client -lm" />
+    <Exec Command="cc -std=c11 -O2 -g -Wall -Wextra -fPIC -I&quot;$(WaylandForgeGeneratedDir)&quot; &quot;$(WaylandForgeNativeDir)/waylandforge_native.c&quot; &quot;$(WaylandForgeGeneratedDir)/xdg-shell-protocol.c&quot; -shared -o &quot;$(WaylandForgeNativeOutput)&quot; -lwayland-client -lwayland-cursor -lm" />
   </Target>
 
 </Project>
