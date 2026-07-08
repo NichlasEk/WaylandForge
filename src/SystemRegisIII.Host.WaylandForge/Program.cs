@@ -7,7 +7,7 @@ internal static unsafe class Program
 
     public static int Main()
     {
-        Console.WriteLine("WaylandForge M1: double-buffered wl_shm host, software UI, input state, ESC quits.");
+        Console.WriteLine("WaylandForge M1: double-buffered wl_shm host, software UI, configurable input state.");
         Console.WriteLine("If no window appears, run this inside a Wayland session with WAYLAND_DISPLAY set.");
 
         using var app = new ForgeApp();

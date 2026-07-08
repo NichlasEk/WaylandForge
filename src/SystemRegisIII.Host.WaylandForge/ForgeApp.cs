@@ -407,7 +407,7 @@ internal sealed unsafe class ForgeApp : IDisposable
             }
         }
 
-        _ui.Text(content.X, layout.Height - 78, "ESC CLOSES", UiTextKind.Accent);
+        _ui.Text(content.X, layout.Height - 78, "ESC IS INPUT", UiTextKind.Accent);
         _ui.Text(content.X, layout.Height - 60, "NO GTK QT SDL", UiTextKind.Muted);
     }
 

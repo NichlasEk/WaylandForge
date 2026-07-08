@@ -31,7 +31,7 @@ M1 is still intentionally narrow:
 - expose an EXT toolbar toggle that switches between the in-process fake core and the dummy external core process
 - expose external-core status, restart, exit state, and stderr tail in the debug panel
 - persist UI defaults/state through a small repo-local TOML configuration layer
-- close on ESC or compositor close
+- close on compositor close
 
 Default keyboard mapping:
 
@@ -50,7 +50,7 @@ Default keyboard mapping:
 - ROM toolbar button: toggles the ROM picker open/closed
 - INPUT toolbar button: open the input mapper
 - Super+Shift in tiled mode: drag the internal tile split to resize in X/Y, drag the Settings title toward an edge to dock left/right/top/bottom
-- ESC: quit
+- ESC: mapped input action, not host quit
 
 The reusable UI style skeleton lives in `SystemRegisIII.WaylandForge.Ui`: canvas, rectangles, pointer state, panels, text, row/column helpers, button colors, border thickness, padding, hover/active states, and click state are theme-driven so other WaylandForge apps can use the same low-level controls. Dark is the default theme.
 

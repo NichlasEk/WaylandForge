@@ -397,9 +397,6 @@ static void keyboard_key(void *data, struct wl_keyboard *keyboard, uint32_t seri
     app->key_state = state == WL_KEYBOARD_KEY_STATE_PRESSED ? 1u : 0u;
     app->key_serial++;
 
-    if (key == KEY_ESC && state == WL_KEYBOARD_KEY_STATE_PRESSED) {
-        app->running = 0;
-    }
 }
 
 static void keyboard_modifiers(void *data, struct wl_keyboard *keyboard, uint32_t serial, uint32_t depressed, uint32_t latched, uint32_t locked, uint32_t group)
