@@ -48,6 +48,15 @@ env = "OPENTYRIAN_WFCORE=1;SDL_VIDEODRIVER=dummy"
 wfex_path = "/tmp/waylandforge-opentyrian.wfex"
 socket_path = "/tmp/waylandforge-wfcore.sock"
 
+[external_core2]
+mode = "wfcore_socket"
+command = "/home/nichlas/WaylandForge/local/raptor/build/bin/raptor"
+args = ""
+working_directory = "/home/nichlas/WaylandForge/local/raptor"
+env = "RAPTOR_WFCORE=1;SDL_VIDEODRIVER=dummy"
+wfex_path = "/tmp/waylandforge-raptor.wfex"
+socket_path = "/tmp/waylandforge-raptor.sock"
+
 [ui.tile]
 primary = "viewport"
 right_stack = "debug,settings"

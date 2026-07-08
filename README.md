@@ -132,6 +132,36 @@ socket_path = "/tmp/waylandforge-wfcore.sock"
 
 Then run WaylandForge and press `EXT`. The host starts the local ignored OpenTyrian WF core copy, creates the Unix socket, applies `env`, reads bounded `WFEX` frames, sends `WFIN` input state, and presents the core viewport. To point at another external target, change only this TOML block. The `local/` tree is gitignored so GPL experiment code stays out of the WaylandForge repository until it is intentionally split or licensed as a separate component.
 
+### Local Raptor WF Core
+
+`EXT2` is a second ignored external core slot. The default config points it at a local Raptor checkout:
+
+```toml
+[external_core2]
+mode = "wfcore_socket"
+command = "/home/nichlas/WaylandForge/local/raptor/build/bin/raptor"
+args = ""
+working_directory = "/home/nichlas/WaylandForge/local/raptor"
+env = "RAPTOR_WFCORE=1;SDL_VIDEODRIVER=dummy"
+wfex_path = "/tmp/waylandforge-raptor.wfex"
+socket_path = "/tmp/waylandforge-raptor.sock"
+```
+
+Raptor is GPLv2-or-later, so the checkout stays under ignored `local/raptor`. To recreate the local adapter:
+
+```bash
+tools/raptor-wfcore/setup-raptor-wfcore.sh
+```
+
+Copy Raptor 1.2+ shareware assets into `local/raptor`:
+
+```text
+FILE0000.GLB
+FILE0001.GLB
+```
+
+The full version may additionally use `FILE0002.GLB`, `FILE0003.GLB`, and `FILE0004.GLB`. Start WaylandForge and press `EXT2` to run the Raptor WF core.
+
 ## UI Config
 
 Default UI configuration lives in `config/waylandforge.ui.toml`. Runtime changes are written to `config/waylandforge.ui.local.toml`, which is gitignored. The config currently persists theme, viewport scale, internal window mode, z-order, open state, floating window rectangles, tiled layout, audio volume, and input bindings.

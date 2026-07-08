@@ -20,6 +20,7 @@ internal sealed class UiConfig
     public UiInputConfig Input { get; } = new();
     public UiTileLayoutConfig Layout { get; } = new();
     public UiExternalCoreConfig ExternalCore { get; } = new();
+    public UiExternalCoreConfig ExternalCore2 { get; } = new();
     public Dictionary<string, UiWindowConfig> Windows { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public static UiConfig Load(string defaultsPath, string localPath)
@@ -79,6 +80,15 @@ internal sealed class UiConfig
         writer.WriteLine($"env = \"{Escape(ExternalCore.Env)}\"");
         writer.WriteLine($"wfex_path = \"{Escape(ExternalCore.WfexPath)}\"");
         writer.WriteLine($"socket_path = \"{Escape(ExternalCore.SocketPath)}\"");
+        writer.WriteLine();
+        writer.WriteLine("[external_core2]");
+        writer.WriteLine($"mode = \"{Escape(ExternalCore2.Mode)}\"");
+        writer.WriteLine($"command = \"{Escape(ExternalCore2.Command)}\"");
+        writer.WriteLine($"args = \"{Escape(ExternalCore2.Args)}\"");
+        writer.WriteLine($"working_directory = \"{Escape(ExternalCore2.WorkingDirectory)}\"");
+        writer.WriteLine($"env = \"{Escape(ExternalCore2.Env)}\"");
+        writer.WriteLine($"wfex_path = \"{Escape(ExternalCore2.WfexPath)}\"");
+        writer.WriteLine($"socket_path = \"{Escape(ExternalCore2.SocketPath)}\"");
         writer.WriteLine();
 
         foreach (KeyValuePair<string, UiWindowConfig> pair in Windows.OrderBy(static pair => pair.Value.Order).ThenBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase))
@@ -199,30 +209,34 @@ internal sealed class UiConfig
             return;
         }
 
-        if (string.Equals(section, "external_core", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(section, "external_core", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(section, "external_core2", StringComparison.OrdinalIgnoreCase))
         {
+            UiExternalCoreConfig externalCore = string.Equals(section, "external_core2", StringComparison.OrdinalIgnoreCase)
+                ? ExternalCore2
+                : ExternalCore;
             switch (key.ToLowerInvariant())
             {
                 case "mode":
-                    ExternalCore.Mode = value;
+                    externalCore.Mode = value;
                     break;
                 case "command":
-                    ExternalCore.Command = value;
+                    externalCore.Command = value;
                     break;
                 case "args":
-                    ExternalCore.Args = value;
+                    externalCore.Args = value;
                     break;
                 case "working_directory":
-                    ExternalCore.WorkingDirectory = value;
+                    externalCore.WorkingDirectory = value;
                     break;
                 case "env":
-                    ExternalCore.Env = value;
+                    externalCore.Env = value;
                     break;
                 case "wfex_path":
-                    ExternalCore.WfexPath = value;
+                    externalCore.WfexPath = value;
                     break;
                 case "socket_path":
-                    ExternalCore.SocketPath = value;
+                    externalCore.SocketPath = value;
                     break;
             }
             return;

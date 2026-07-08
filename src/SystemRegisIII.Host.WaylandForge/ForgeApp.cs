@@ -20,6 +20,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     private readonly SoftwareCanvas _canvas = new();
     private readonly FakeSaturnCore _fakeCore = new();
     private readonly ExternalProcessCore _externalCore;
+    private readonly ExternalProcessCore _externalCore2;
     private ISystemCore _core;
     private readonly ForgeInputSource _inputSource = new();
     private readonly FrameStore _frameStore = new();
@@ -72,6 +73,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         _ui = new UiContext(_canvas, UiTheme.Default);
         _config = UiConfig.Load(DefaultConfigPath, LocalConfigPath);
         _externalCore = new ExternalProcessCore(_config.ExternalCore, ResolveExternalDummyCorePath());
+        _externalCore2 = new ExternalProcessCore(_config.ExternalCore2, ResolveExternalDummyCorePath());
         _core = _fakeCore;
         ApplyConfig();
     }
@@ -202,6 +204,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         SaveConfig(force: false);
         _externalCore.Dispose();
+        _externalCore2.Dispose();
     }
 
     private void DrawChrome(ForgeLayout layout)
@@ -272,6 +275,12 @@ internal sealed unsafe class ForgeApp : IDisposable
         if (_ui.Button(new UiId("toolbar.ext"), extRect, "EXT", ReferenceEquals(_core, _externalCore)).Clicked)
         {
             ToggleExternalCore();
+        }
+
+        row = row.Next(50, out RectI ext2Rect);
+        if (_ui.Button(new UiId("toolbar.ext2"), ext2Rect, "EXT2", ReferenceEquals(_core, _externalCore2)).Clicked)
+        {
+            ToggleExternalCore2();
         }
 
         row = row.Next(50, out RectI coreRect);
@@ -391,8 +400,9 @@ internal sealed unsafe class ForgeApp : IDisposable
             {
                 int x = externalSection.X;
                 int y = externalSection.Y;
-                DrawMetric(x, y, "STATUS", _externalCore.Status); y += 18;
-                DrawMetric(x, y, "MODE", _externalCore.Mode.ToUpperInvariant()); y += 18;
+                ExternalProcessCore external = ActiveExternalCore();
+                DrawMetric(x, y, "STATUS", external.Status); y += 18;
+                DrawMetric(x, y, "MODE", external.Mode.ToUpperInvariant()); y += 18;
                 DrawMetric(x, y, "CMD", ExternalCommandLabel()); y += 18;
                 DrawMetric(x, y, "FAULT", string.IsNullOrEmpty(_coreFault) ? "-" : TruncateMiddle(_coreFault, 18)); y += 20;
                 RectI restartRect = new(x, y, 86, 18);
@@ -402,7 +412,7 @@ internal sealed unsafe class ForgeApp : IDisposable
                 }
                 y += 26;
                 _ui.Text(x, y, "STDERR", UiTextKind.Muted); y += 14;
-                foreach (string line in _externalCore.StderrTail.TakeLast(4))
+                foreach (string line in external.StderrTail.TakeLast(4))
                 {
                     _ui.Text(x, y, TruncateMiddle(line, 22), UiTextKind.Muted);
                     y += 14;
@@ -1954,6 +1964,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         SetTheme(FindThemeIndex(_config.Theme), markDirty: false);
         SetScaleMode(ParseScaleMode(_config.Scale), markDirty: false);
         _externalCore.Configure(_config.ExternalCore, ResolveExternalDummyCorePath());
+        _externalCore2.Configure(_config.ExternalCore2, ResolveExternalDummyCorePath());
         ApplyWindowConfig(AppWindow.Viewport, "viewport");
         ApplyWindowConfig(AppWindow.Rom, "rom_picker");
         ApplyWindowConfig(AppWindow.Settings, "settings");
@@ -2444,9 +2455,9 @@ internal sealed unsafe class ForgeApp : IDisposable
         ForgeInput mappedInput = MapInputFromPressedKeys();
         _lastInput = mappedInput;
         _inputSource.Update(mappedInput);
-        if (ReferenceEquals(_core, _externalCore))
+        if (_core is ExternalProcessCore external)
         {
-            _externalCore.PushInputNow(_inputSource.Poll());
+            external.PushInputNow(_inputSource.Poll());
         }
     }
 
@@ -2554,15 +2565,33 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private void ToggleExternalCore()
     {
-        if (ReferenceEquals(_core, _externalCore))
+        ToggleExternalCore(_externalCore);
+    }
+
+    private void ToggleExternalCore2()
+    {
+        ToggleExternalCore(_externalCore2);
+    }
+
+    private void ToggleExternalCore(ExternalProcessCore target)
+    {
+        if (ReferenceEquals(_core, target))
         {
-            _externalCore.Reset();
+            target.Reset();
             _core = _fakeCore;
         }
         else
         {
             _fakeCore.Reset();
-            _core = _externalCore;
+            if (ReferenceEquals(target, _externalCore))
+            {
+                _externalCore2.Reset();
+            }
+            else
+            {
+                _externalCore.Reset();
+            }
+            _core = target;
         }
 
         _coreFault = string.Empty;
@@ -2572,11 +2601,12 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private void RestartExternalCore()
     {
+        ExternalProcessCore external = ActiveExternalCore();
         _coreFault = string.Empty;
-        _externalCore.Reset();
-        if (!ReferenceEquals(_core, _externalCore))
+        external.Reset();
+        if (!ReferenceEquals(_core, external))
         {
-            _core = _externalCore;
+            _core = external;
         }
         StepActiveCore();
     }
@@ -2598,9 +2628,17 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private string ExternalCommandLabel()
     {
-        return string.IsNullOrWhiteSpace(_config.ExternalCore.Command)
+        UiExternalCoreConfig config = ReferenceEquals(ActiveExternalCore(), _externalCore2)
+            ? _config.ExternalCore2
+            : _config.ExternalCore;
+        return string.IsNullOrWhiteSpace(config.Command)
             ? "BUILTIN DUMMY"
-            : TruncateMiddle(Path.GetFileName(_config.ExternalCore.Command), 18);
+            : TruncateMiddle(Path.GetFileName(config.Command), 18);
+    }
+
+    private ExternalProcessCore ActiveExternalCore()
+    {
+        return ReferenceEquals(_core, _externalCore2) ? _externalCore2 : _externalCore;
     }
 
     private string CoreName()

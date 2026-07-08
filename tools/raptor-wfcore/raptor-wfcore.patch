@@ -1,0 +1,357 @@
+diff --git a/src/i_video.cpp b/src/i_video.cpp
+index 482b9d8..47aed4d 100644
+--- a/src/i_video.cpp
++++ b/src/i_video.cpp
+@@ -20,6 +20,11 @@
+ #include <stdlib.h>
+ #include <cstring>
+ #include <climits>
++#include <errno.h>
++#include <fcntl.h>
++#include <sys/socket.h>
++#include <sys/un.h>
++#include <unistd.h>
+ #include "SDL.h"
+ #include "SDL_opengl.h"
+ 
+@@ -35,6 +40,7 @@
+ #include "m_misc.h"
+ #include "ptrapi.h"
+ #include "input.h"
++#include "kbdapi.h"
+ #include "musapi.h"
+ #include "prefapi.h"
+ #include "joyapi.h"
+@@ -203,6 +209,22 @@ int screencoordpoint = 0;
+ // When textmode is true not update pointer cursor
+ static bool textmode = false;
+ 
++static bool wfcore_mode = false;
++static int wfcore_socket_fd = -1;
++static uint32_t *wfcore_frame = NULL;
++static uint64_t wfcore_frame_index = 0;
++static uint32_t wfcore_last_buttons = 0;
++static uint8_t wfcore_input_buffer[256];
++static size_t wfcore_input_buffer_used = 0;
++
++static bool wfcore_write_all(int fd, const void *buffer, size_t size);
++static void wfcore_connect(void);
++static void wfcore_disconnect(void);
++static void wfcore_poll_input(void);
++static void wfcore_apply_buttons(uint32_t buttons);
++static void wfcore_set_key(int scancode, bool pressed);
++static void wfcore_send_frame(void);
++
+ void VIDEO_LoadPrefs(void)
+ {
+     fullscreen = INI_GetPreferenceLong("Video", "fullscreen", 0);
+@@ -210,6 +232,51 @@ void VIDEO_LoadPrefs(void)
+     txt_fullscreen = INI_GetPreferenceLong("Video", "txt_fullscreen", 0);
+ }
+ 
++static void wfcore_connect(void)
++{
++    const char *socket_path = getenv("WFCORE_SOCKET");
++    wfcore_mode = getenv("RAPTOR_WFCORE") != NULL;
++    if (!wfcore_mode || socket_path == NULL || socket_path[0] == '\0')
++        return;
++
++    wfcore_socket_fd = socket(AF_UNIX, SOCK_STREAM, 0);
++    if (wfcore_socket_fd < 0)
++    {
++        fprintf(stderr, "warning: failed to create WF core socket: %s\n", strerror(errno));
++        return;
++    }
++
++    struct sockaddr_un addr;
++    memset(&addr, 0, sizeof(addr));
++    addr.sun_family = AF_UNIX;
++    snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", socket_path);
++    if (connect(wfcore_socket_fd, (struct sockaddr *)&addr, sizeof(addr)) != 0)
++    {
++        fprintf(stderr, "warning: failed to connect WF core socket '%s': %s\n", socket_path, strerror(errno));
++        close(wfcore_socket_fd);
++        wfcore_socket_fd = -1;
++        return;
++    }
++
++    int flags = fcntl(wfcore_socket_fd, F_GETFL, 0);
++    if (flags >= 0)
++        fcntl(wfcore_socket_fd, F_SETFL, flags | O_NONBLOCK);
++
++    fprintf(stderr, "WF core socket connected: %s\n", socket_path);
++}
++
++static void wfcore_disconnect(void)
++{
++    if (wfcore_socket_fd >= 0)
++    {
++        close(wfcore_socket_fd);
++        wfcore_socket_fd = -1;
++    }
++    free(wfcore_frame);
++    wfcore_frame = NULL;
++    wfcore_input_buffer_used = 0;
++}
++
+ static bool MouseShouldBeGrabbed()
+ {
+     // never grab the mouse when in screensaver mode
+@@ -280,11 +347,19 @@ static void SetShowCursor(bool show)
+ 
+ void I_ShutdownGraphics(void)
+ {
++    if (wfcore_mode)
++    {
++        wfcore_disconnect();
++    }
++
+     if (initialized)
+     {
+         SetShowCursor(true);
+ 
+-        SDL_QuitSubSystem(SDL_INIT_VIDEO);
++        if (!wfcore_mode)
++        {
++            SDL_QuitSubSystem(SDL_INIT_VIDEO);
++        }
+ 
+         initialized = false;
+     }
+@@ -423,6 +498,14 @@ void I_GetEvent(void)
+ 
+     SDL_Event sdlevent;
+ 
++    if (wfcore_mode)
++    {
++        wfcore_poll_input();
++        IPT_GetButtons();
++        MUS_Poll();
++        return;
++    }
++
+     SDL_PumpEvents();
+ 
+     while (SDL_PollEvent(&sdlevent))
+@@ -729,6 +812,13 @@ void I_FinishUpdate (void)
+     if (!initialized)
+         return;
+ 
++    if (wfcore_mode)
++    {
++        wfcore_poll_input();
++        wfcore_send_frame();
++        return;
++    }
++
+     // if (noblit)
+     //     return;
+ 
+@@ -1414,6 +1504,7 @@ void I_InitGraphics(uint8_t *pal)
+     SDL_Event dummy;
+     char *env;
+     int rw = 0, rh = 0;
++    wfcore_mode = getenv("RAPTOR_WFCORE") != NULL;
+ 
+     // Pass through the XSCREENSAVER_WINDOW environment variable to
+     // SDL_WINDOWID, to embed the SDL window into the Xscreensaver
+@@ -1432,6 +1523,38 @@ void I_InitGraphics(uint8_t *pal)
+         putenv(winenv);
+     }
+ 
++    if (wfcore_mode)
++    {
++        if (SDL_Init(SDL_INIT_TIMER) < 0)
++        {
++            EXIT_Error("Failed to initialize SDL timer: %s", SDL_GetError());
++        }
++
++        actualheight = SCREENHEIGHT;
++        screenbuffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 8, 0, 0, 0, 0);
++        argbbuffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 32,
++                                          0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
++        if (screenbuffer == NULL || argbbuffer == NULL)
++        {
++            EXIT_Error("Failed to create WF core surfaces: %s", SDL_GetError());
++        }
++
++        SDL_FillRect(screenbuffer, NULL, 0);
++        SDL_FillRect(argbbuffer, NULL, 0);
++        I_SetPalette(pal);
++        SDL_SetPaletteColors(screenbuffer->format->palette, palette, 0, 256);
++        I_VideoBuffer = (pixel_t*)screenbuffer->pixels;
++        memset(I_VideoBuffer, 0, SCREENWIDTH * SCREENHEIGHT * sizeof(*I_VideoBuffer));
++        wfcore_frame = (uint32_t*)malloc(SCREENWIDTH * SCREENHEIGHT * sizeof(*wfcore_frame));
++        if (wfcore_frame == NULL)
++        {
++            EXIT_Error("Failed to allocate WF core frame");
++        }
++        wfcore_connect();
++        initialized = true;
++        return;
++    }
++
+     SetSDLVideoDriver();
+ 
+     if (SDL_Init(SDL_INIT_VIDEO) < 0)
+@@ -1626,4 +1749,158 @@ bool I_GetNeedResize(bool setonlypos)
+ void I_Settextmode(bool flag)
+ {
+     textmode = flag;
+-}
+\ No newline at end of file
++}
++
++static void wfcore_set_key(int scancode, bool pressed)
++{
++    if (scancode <= 0 || scancode >= 256)
++        return;
++
++    keyboard[scancode] = pressed ? 1 : 0;
++    if (pressed)
++    {
++        kbd_ack = 1;
++        lastscan = scancode;
++    }
++}
++
++static void wfcore_apply_buttons(uint32_t buttons)
++{
++    uint32_t pressed = buttons & ~wfcore_last_buttons;
++    wfcore_set_key(SC_ESC, (buttons & (1u << 0)) != 0);
++    wfcore_set_key(SC_UP, (buttons & (1u << 1)) != 0);
++    wfcore_set_key(SC_DOWN, (buttons & (1u << 2)) != 0);
++    wfcore_set_key(SC_LEFT, (buttons & (1u << 3)) != 0);
++    wfcore_set_key(SC_RIGHT, (buttons & (1u << 4)) != 0);
++    wfcore_set_key(SC_ENTER, (buttons & (1u << 5)) != 0);
++    wfcore_set_key(SC_CTRL, (buttons & (1u << 6)) != 0);
++    wfcore_set_key(SC_ALT, (buttons & (1u << 7)) != 0);
++    wfcore_set_key(SC_SPACE, (buttons & ((1u << 8) | (1u << 10))) != 0);
++    wfcore_set_key(SC_RIGHT_SHIFT, (buttons & (1u << 9)) != 0);
++    wfcore_set_key(SC_ENTER, (buttons & ((1u << 5) | (1u << 11))) != 0);
++
++    if ((pressed & (1u << 0)) != 0) lastscan = SC_ESC;
++    if ((pressed & (1u << 1)) != 0) lastscan = SC_UP;
++    if ((pressed & (1u << 2)) != 0) lastscan = SC_DOWN;
++    if ((pressed & (1u << 3)) != 0) lastscan = SC_LEFT;
++    if ((pressed & (1u << 4)) != 0) lastscan = SC_RIGHT;
++    if ((pressed & (1u << 5)) != 0) lastscan = SC_ENTER;
++    if ((pressed & (1u << 6)) != 0) lastscan = SC_CTRL;
++    if ((pressed & (1u << 7)) != 0) lastscan = SC_ALT;
++    if ((pressed & (1u << 8)) != 0) lastscan = SC_SPACE;
++    if ((pressed & (1u << 9)) != 0) lastscan = SC_RIGHT_SHIFT;
++    if ((pressed & (1u << 10)) != 0) lastscan = SC_SPACE;
++    if ((pressed & (1u << 11)) != 0) lastscan = SC_ENTER;
++    wfcore_last_buttons = buttons;
++}
++
++static void wfcore_poll_input(void)
++{
++    if (wfcore_socket_fd < 0)
++        return;
++
++    for (;;)
++    {
++        if (wfcore_input_buffer_used == sizeof(wfcore_input_buffer))
++        {
++            wfcore_input_buffer_used = 0;
++        }
++
++        ssize_t count = recv(
++            wfcore_socket_fd,
++            wfcore_input_buffer + wfcore_input_buffer_used,
++            sizeof(wfcore_input_buffer) - wfcore_input_buffer_used,
++            MSG_DONTWAIT);
++        if (count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
++            break;
++        if (count <= 0)
++            break;
++        wfcore_input_buffer_used += (size_t)count;
++    }
++
++    size_t offset = 0;
++    while (wfcore_input_buffer_used - offset >= 32)
++    {
++        const uint8_t *header = wfcore_input_buffer + offset;
++        if (memcmp(header, "WFIN", 4) == 0)
++        {
++            uint32_t buttons;
++            memcpy(&buttons, header + 8, sizeof(buttons));
++            wfcore_apply_buttons(buttons);
++            offset += 32;
++            continue;
++        }
++        offset++;
++    }
++
++    if (offset > 0)
++    {
++        memmove(wfcore_input_buffer, wfcore_input_buffer + offset, wfcore_input_buffer_used - offset);
++        wfcore_input_buffer_used -= offset;
++    }
++}
++
++static void wfcore_send_frame(void)
++{
++    if (wfcore_socket_fd < 0 || wfcore_frame == NULL || screenbuffer == NULL)
++        return;
++
++    if (palette_to_set)
++    {
++        SDL_SetPaletteColors(screenbuffer->format->palette, palette, 0, 256);
++        palette_to_set = false;
++    }
++
++    const uint8_t *pixels = (const uint8_t *)screenbuffer->pixels;
++    for (int y = 0; y < SCREENHEIGHT; y++)
++    {
++        const uint8_t *row = pixels + y * screenbuffer->pitch;
++        for (int x = 0; x < SCREENWIDTH; x++)
++        {
++            SDL_Color color = palette[row[x]];
++            wfcore_frame[y * SCREENWIDTH + x] =
++                0xff000000u |
++                ((uint32_t)color.r << 16) |
++                ((uint32_t)color.g << 8) |
++                (uint32_t)color.b;
++        }
++    }
++
++    uint8_t header[32] = {
++        0x57, 0x46, 0x45, 0x58,
++        (uint8_t)SCREENWIDTH, (uint8_t)(SCREENWIDTH >> 8), 0, 0,
++        (uint8_t)SCREENHEIGHT, (uint8_t)(SCREENHEIGHT >> 8), 0, 0,
++        (uint8_t)SCREENWIDTH, (uint8_t)(SCREENWIDTH >> 8), 0, 0,
++    };
++    int32_t byte_count = SCREENWIDTH * SCREENHEIGHT * (int)sizeof(*wfcore_frame);
++    memcpy(header + 16, &wfcore_frame_index, sizeof(wfcore_frame_index));
++    memcpy(header + 24, &byte_count, sizeof(byte_count));
++
++    if (!wfcore_write_all(wfcore_socket_fd, header, sizeof(header)) ||
++        !wfcore_write_all(wfcore_socket_fd, wfcore_frame, (size_t)byte_count))
++    {
++        close(wfcore_socket_fd);
++        wfcore_socket_fd = -1;
++        return;
++    }
++    wfcore_frame_index++;
++}
++
++static bool wfcore_write_all(int fd, const void *buffer, size_t size)
++{
++    const uint8_t *bytes = (const uint8_t *)buffer;
++    while (size > 0)
++    {
++        ssize_t written = send(fd, bytes, size, MSG_NOSIGNAL);
++        if (written < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
++        {
++            SDL_Delay(1);
++            continue;
++        }
++        if (written <= 0)
++            return false;
++        bytes += written;
++        size -= (size_t)written;
++    }
++    return true;
++}
