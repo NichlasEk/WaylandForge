@@ -134,7 +134,7 @@ static bool read_exact(int fd, void *buffer, size_t byte_count)
 
 static void write_text(int fd, const char *text)
 {
-    (void)write(fd, text, strlen(text));
+    (void)send(fd, text, strlen(text), MSG_NOSIGNAL);
 }
 
 static void handle_wfau_client(struct audiod *daemon, int client_fd)
@@ -385,6 +385,7 @@ int main(int argc, char **argv)
 
     signal(SIGINT, handle_signal);
     signal(SIGTERM, handle_signal);
+    signal(SIGPIPE, SIG_IGN);
 
     pw_init(&argc, &argv);
 

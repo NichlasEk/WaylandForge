@@ -1839,6 +1839,16 @@ internal sealed unsafe class ForgeApp : IDisposable
             socket.Connect(new UnixDomainSocketEndPoint(AudioSocketPath));
             byte[] command = Encoding.ASCII.GetBytes($"SET_VOLUME {_config.Audio.Volume}\n");
             socket.Send(command);
+            byte[] response = new byte[64];
+            socket.ReceiveTimeout = 100;
+            try
+            {
+                _ = socket.Receive(response);
+            }
+            catch (SocketException)
+            {
+                // The volume command is one-way for UI purposes; the reply is only a daemon smoke check.
+            }
             _lastSentAudioVolume = _config.Audio.Volume;
         }
         catch
