@@ -40,7 +40,8 @@ internal sealed unsafe class ForgeApp : IDisposable
     private bool _configDirty;
     private double _lastConfigSaveSeconds;
     private bool _resizingTileSplit;
-    private bool _resizingTileStackSplit;
+    private bool _tileResizeVertical;
+    private AppWindow _tileResizeOwner;
     private AppWindow? _tileDragWindow;
     private RectI _tileDragRect;
     private int _tileResizeStartX;
@@ -304,6 +305,7 @@ internal sealed unsafe class ForgeApp : IDisposable
                     break;
             }
         }
+        DrawTileResizePreview(layout);
         DrawTileDropPreview(layout);
     }
 
@@ -801,7 +803,6 @@ internal sealed unsafe class ForgeApp : IDisposable
         if (_config.WindowMode != UiWindowMode.Tiled || !IsTileEditModifierDown())
         {
             _resizingTileSplit = false;
-            _resizingTileStackSplit = false;
             return;
         }
 
@@ -809,51 +810,24 @@ internal sealed unsafe class ForgeApp : IDisposable
         if (open.Length < 2)
         {
             _resizingTileSplit = false;
-            _resizingTileStackSplit = false;
             return;
         }
 
         RectI work = TileWorkArea(layout);
-        const int gap = 8;
-        bool verticalSplit = open.Length == 2;
-        int primaryWidth = TilePrimaryWidth(open[0], work, (int)Math.Round(work.Width * 0.64));
-        int primaryHeight = TilePrimaryHeight(open[0], work, (int)Math.Round(work.Height * 0.60));
-        RectI primaryDivider = verticalSplit
-            ? new RectI(work.X + primaryWidth - 4, work.Y, 8 + gap, work.Height)
-            : new RectI(work.X, work.Y + primaryHeight - 4, work.Width, 8 + gap);
-
-        RectI rest = new(work.X, work.Y + primaryHeight + gap, work.Width, Math.Max(160, work.Height - primaryHeight - gap));
-        int stackWidth = open.Length == 3 ? TileStackWidth(open[1], rest, (rest.Width - gap) / 2) : 0;
-        RectI stackDivider = open.Length == 3
-            ? new RectI(rest.X + stackWidth - 4, rest.Y, 8 + gap, rest.Height)
-            : default;
-
-        if (_pointer.IsInside && _pointer.LeftPressed && !_previousPointer.LeftPressed)
+        if (_pointer.IsInside && _pointer.LeftPressed && !_previousPointer.LeftPressed && TryHitTileSplitter(layout, open, out AppWindow owner, out bool vertical, out int startSize))
         {
-            if (open.Length == 3 && stackDivider.Contains(_pointer.X, _pointer.Y))
-            {
-                _resizingTileSplit = true;
-                _resizingTileStackSplit = true;
-                _tileResizeStartX = _pointer.X;
-                _tileResizeStartY = _pointer.Y;
-                _tileResizeStartWidth = stackWidth;
-                _tileResizeStartHeight = primaryHeight;
-            }
-            else if (primaryDivider.Contains(_pointer.X, _pointer.Y))
-            {
-                _resizingTileSplit = true;
-                _resizingTileStackSplit = false;
-                _tileResizeStartX = _pointer.X;
-                _tileResizeStartY = _pointer.Y;
-                _tileResizeStartWidth = primaryWidth;
-                _tileResizeStartHeight = primaryHeight;
-            }
+            _resizingTileSplit = true;
+            _tileResizeVertical = vertical;
+            _tileResizeOwner = owner;
+            _tileResizeStartX = _pointer.X;
+            _tileResizeStartY = _pointer.Y;
+            _tileResizeStartWidth = startSize;
+            _tileResizeStartHeight = startSize;
         }
 
         if (!_pointer.LeftPressed)
         {
             _resizingTileSplit = false;
-            _resizingTileStackSplit = false;
         }
 
         if (!_resizingTileSplit)
@@ -861,27 +835,96 @@ internal sealed unsafe class ForgeApp : IDisposable
             return;
         }
 
-        if (_resizingTileStackSplit && open.Length == 3)
-        {
-            UiWindowConfig stackConfig = _config.Window(WindowKey(open[1]));
-            int width = _tileResizeStartWidth + (_pointer.X - _tileResizeStartX);
-            stackConfig.Width = Math.Clamp(width, 220, Math.Max(220, rest.Width - 220));
-            MarkConfigDirty();
-            return;
-        }
-
-        UiWindowConfig primaryConfig = _config.Window(WindowKey(open[0]));
-        if (verticalSplit)
+        UiWindowConfig ownerConfig = _config.Window(WindowKey(_tileResizeOwner));
+        if (_tileResizeVertical)
         {
             int width = _tileResizeStartWidth + (_pointer.X - _tileResizeStartX);
-            primaryConfig.Width = Math.Clamp(width, 240, Math.Max(240, work.Width - 240));
+            RectI bounds = TileResizeBounds(layout, _tileResizeOwner, vertical: true);
+            ownerConfig.Width = Math.Clamp(width, 160, Math.Max(160, bounds.Width - 160));
         }
         else
         {
             int height = _tileResizeStartHeight + (_pointer.Y - _tileResizeStartY);
-            primaryConfig.Height = Math.Clamp(height, 180, Math.Max(180, work.Height - 180));
+            RectI bounds = TileResizeBounds(layout, _tileResizeOwner, vertical: false);
+            ownerConfig.Height = Math.Clamp(height, 140, Math.Max(140, bounds.Height - 140));
         }
         MarkConfigDirty();
+    }
+
+    private bool TryHitTileSplitter(ForgeLayout layout, AppWindow[] open, out AppWindow owner, out bool vertical, out int startSize)
+    {
+        const int grip = 8;
+        owner = open[0];
+        vertical = true;
+        startSize = 0;
+
+        for (int i = 0; i < open.Length; i++)
+        {
+            RectI a = TiledWindowRect(layout, open[i]);
+            for (int j = 0; j < open.Length; j++)
+            {
+                if (i == j)
+                {
+                    continue;
+                }
+
+                RectI b = TiledWindowRect(layout, open[j]);
+                int y0 = Math.Max(a.Y, b.Y);
+                int y1 = Math.Min(a.Bottom, b.Bottom);
+                if (a.Right <= b.X && y1 - y0 > 24)
+                {
+                    RectI divider = new(a.Right - grip / 2, y0, Math.Max(grip, b.X - a.Right + grip), y1 - y0);
+                    if (divider.Contains(_pointer.X, _pointer.Y))
+                    {
+                        owner = open[i];
+                        vertical = true;
+                        startSize = a.Width;
+                        return true;
+                    }
+                }
+
+                int x0 = Math.Max(a.X, b.X);
+                int x1 = Math.Min(a.Right, b.Right);
+                if (a.Bottom <= b.Y && x1 - x0 > 24)
+                {
+                    RectI divider = new(x0, a.Bottom - grip / 2, x1 - x0, Math.Max(grip, b.Y - a.Bottom + grip));
+                    if (divider.Contains(_pointer.X, _pointer.Y))
+                    {
+                        owner = open[i];
+                        vertical = false;
+                        startSize = a.Height;
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private RectI TileResizeBounds(ForgeLayout layout, AppWindow owner, bool vertical)
+    {
+        RectI ownerRect = TiledWindowRect(layout, owner);
+        AppWindow[] open = OpenTiledWindows();
+        const int gap = 8;
+        if (!vertical)
+        {
+            return TileWorkArea(layout);
+        }
+
+        if (open.Length == 2 && owner == open[0])
+        {
+            return TileWorkArea(layout);
+        }
+
+        if (open.Length == 3 && owner == open[1])
+        {
+            RectI work = TileWorkArea(layout);
+            int primaryHeight = TilePrimaryHeight(open[0], work, (int)Math.Round(work.Height * 0.60));
+            return new RectI(work.X, work.Y + primaryHeight + gap, work.Width, Math.Max(160, work.Height - primaryHeight - gap));
+        }
+
+        return ownerRect;
     }
 
     private bool IsTileEditModifierDown()
@@ -1036,6 +1079,68 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
 
         MoveTileWindow(window, TileDropIndex(layout, draggedRect, open.Length));
+    }
+
+    private void DrawTileResizePreview(ForgeLayout layout)
+    {
+        if (_config.WindowMode != UiWindowMode.Tiled || !IsTileEditModifierDown())
+        {
+            return;
+        }
+
+        AppWindow[] open = OpenTiledWindows();
+        if (open.Length < 2)
+        {
+            return;
+        }
+
+        if (!TryHitTileSplitter(layout, open, out _, out _, out _) && !_resizingTileSplit)
+        {
+            return;
+        }
+
+        uint color = WithAlpha(_ui.Theme.Button.Colors.BorderActive, _resizingTileSplit ? 130 : 72);
+        foreach (RectI divider in TileSplitterRects(layout, open))
+        {
+            if (_resizingTileSplit || divider.Contains(_pointer.X, _pointer.Y))
+            {
+                _canvas.BlendRect(divider.X, divider.Y, divider.Width, divider.Height, color);
+            }
+        }
+    }
+
+    private IEnumerable<RectI> TileSplitterRects(ForgeLayout layout, AppWindow[] open)
+    {
+        const int grip = 6;
+        for (int i = 0; i < open.Length; i++)
+        {
+            RectI a = TiledWindowRect(layout, open[i]);
+            for (int j = i + 1; j < open.Length; j++)
+            {
+                RectI b = TiledWindowRect(layout, open[j]);
+                int y0 = Math.Max(a.Y, b.Y);
+                int y1 = Math.Min(a.Bottom, b.Bottom);
+                if (a.Right <= b.X && y1 - y0 > 24)
+                {
+                    yield return new RectI(a.Right - grip / 2, y0, Math.Max(grip, b.X - a.Right + grip), y1 - y0);
+                }
+                else if (b.Right <= a.X && y1 - y0 > 24)
+                {
+                    yield return new RectI(b.Right - grip / 2, y0, Math.Max(grip, a.X - b.Right + grip), y1 - y0);
+                }
+
+                int x0 = Math.Max(a.X, b.X);
+                int x1 = Math.Min(a.Right, b.Right);
+                if (a.Bottom <= b.Y && x1 - x0 > 24)
+                {
+                    yield return new RectI(x0, a.Bottom - grip / 2, x1 - x0, Math.Max(grip, b.Y - a.Bottom + grip));
+                }
+                else if (b.Bottom <= a.Y && x1 - x0 > 24)
+                {
+                    yield return new RectI(x0, b.Bottom - grip / 2, x1 - x0, Math.Max(grip, a.Y - b.Bottom + grip));
+                }
+            }
+        }
     }
 
     private void DrawTileDropPreview(ForgeLayout layout)
