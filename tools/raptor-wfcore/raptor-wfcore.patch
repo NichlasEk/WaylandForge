@@ -1,5 +1,5 @@
 diff --git a/src/i_video.cpp b/src/i_video.cpp
-index 482b9d8..4f1a8e3 100644
+index 482b9d8..18526ca 100644
 --- a/src/i_video.cpp
 +++ b/src/i_video.cpp
 @@ -20,6 +20,11 @@
@@ -22,7 +22,7 @@ index 482b9d8..4f1a8e3 100644
  #include "musapi.h"
  #include "prefapi.h"
  #include "joyapi.h"
-@@ -203,6 +209,26 @@ int screencoordpoint = 0;
+@@ -203,6 +209,28 @@ int screencoordpoint = 0;
  // When textmode is true not update pointer cursor
  static bool textmode = false;
  
@@ -32,6 +32,7 @@ index 482b9d8..4f1a8e3 100644
 +static uint64_t wfcore_frame_index = 0;
 +static uint32_t wfcore_last_buttons = 0;
 +static uint32_t wfcore_last_pointer_buttons = 0;
++static uint32_t wfcore_action_pointer_buttons = 0;
 +static uint8_t wfcore_input_buffer[256];
 +static size_t wfcore_input_buffer_used = 0;
 +
@@ -41,6 +42,7 @@ index 482b9d8..4f1a8e3 100644
 +static void wfcore_poll_input(void);
 +static void wfcore_apply_buttons(uint32_t buttons);
 +static void wfcore_apply_pointer(int32_t x, int32_t y, uint32_t buttons, bool inside);
++static void wfcore_move_menu_pointer(uint32_t buttons);
 +static void wfcore_set_key(int scancode, bool pressed);
 +static int wfcore_scancode_to_ascii(int scancode);
 +static int wfcore_raw_key_to_scancode(uint32_t raw_key);
@@ -49,7 +51,7 @@ index 482b9d8..4f1a8e3 100644
  void VIDEO_LoadPrefs(void)
  {
      fullscreen = INI_GetPreferenceLong("Video", "fullscreen", 0);
-@@ -210,6 +236,51 @@ void VIDEO_LoadPrefs(void)
+@@ -210,6 +238,51 @@ void VIDEO_LoadPrefs(void)
      txt_fullscreen = INI_GetPreferenceLong("Video", "txt_fullscreen", 0);
  }
  
@@ -101,7 +103,7 @@ index 482b9d8..4f1a8e3 100644
  static bool MouseShouldBeGrabbed()
  {
      // never grab the mouse when in screensaver mode
-@@ -280,11 +351,19 @@ static void SetShowCursor(bool show)
+@@ -280,11 +353,19 @@ static void SetShowCursor(bool show)
  
  void I_ShutdownGraphics(void)
  {
@@ -122,7 +124,7 @@ index 482b9d8..4f1a8e3 100644
  
          initialized = false;
      }
-@@ -423,6 +502,14 @@ void I_GetEvent(void)
+@@ -423,6 +504,14 @@ void I_GetEvent(void)
  
      SDL_Event sdlevent;
  
@@ -137,7 +139,7 @@ index 482b9d8..4f1a8e3 100644
      SDL_PumpEvents();
  
      while (SDL_PollEvent(&sdlevent))
-@@ -729,6 +816,13 @@ void I_FinishUpdate (void)
+@@ -729,6 +818,13 @@ void I_FinishUpdate (void)
      if (!initialized)
          return;
  
@@ -151,7 +153,7 @@ index 482b9d8..4f1a8e3 100644
      // if (noblit)
      //     return;
  
-@@ -1414,6 +1508,7 @@ void I_InitGraphics(uint8_t *pal)
+@@ -1414,6 +1510,7 @@ void I_InitGraphics(uint8_t *pal)
      SDL_Event dummy;
      char *env;
      int rw = 0, rh = 0;
@@ -159,7 +161,7 @@ index 482b9d8..4f1a8e3 100644
  
      // Pass through the XSCREENSAVER_WINDOW environment variable to
      // SDL_WINDOWID, to embed the SDL window into the Xscreensaver
-@@ -1432,6 +1527,38 @@ void I_InitGraphics(uint8_t *pal)
+@@ -1432,6 +1529,38 @@ void I_InitGraphics(uint8_t *pal)
          putenv(winenv);
      }
  
@@ -198,7 +200,7 @@ index 482b9d8..4f1a8e3 100644
      SetSDLVideoDriver();
  
      if (SDL_Init(SDL_INIT_VIDEO) < 0)
-@@ -1626,4 +1753,280 @@ bool I_GetNeedResize(bool setonlypos)
+@@ -1626,4 +1755,326 @@ bool I_GetNeedResize(bool setonlypos)
  void I_Settextmode(bool flag)
  {
      textmode = flag;
@@ -223,30 +225,57 @@ index 482b9d8..4f1a8e3 100644
 +static void wfcore_apply_buttons(uint32_t buttons)
 +{
 +    uint32_t pressed = buttons & ~wfcore_last_buttons;
-+    wfcore_set_key(SC_ESC, (buttons & (1u << 0)) != 0);
++    bool menu_mode = g_drawcursor != 0;
++
++    // WaylandForge owns window/session exit; keep Raptor ESC from dropping to DOS.
++    wfcore_set_key(SC_ESC, false);
 +    wfcore_set_key(SC_UP, (buttons & (1u << 1)) != 0);
 +    wfcore_set_key(SC_DOWN, (buttons & (1u << 2)) != 0);
 +    wfcore_set_key(SC_LEFT, (buttons & (1u << 3)) != 0);
 +    wfcore_set_key(SC_RIGHT, (buttons & (1u << 4)) != 0);
-+    wfcore_set_key(SC_ENTER, (buttons & (1u << 5)) != 0);
-+    wfcore_set_key(SC_CTRL, (buttons & (1u << 6)) != 0);
-+    wfcore_set_key(SC_ALT, (buttons & (1u << 7)) != 0);
-+    wfcore_set_key(SC_SPACE, (buttons & ((1u << 8) | (1u << 10))) != 0);
-+    wfcore_set_key(SC_RIGHT_SHIFT, (buttons & (1u << 9)) != 0);
-+    wfcore_set_key(SC_ENTER, (buttons & ((1u << 5) | (1u << 11))) != 0);
 +
-+    if ((pressed & (1u << 0)) != 0) lastscan = SC_ESC;
++    if (menu_mode)
++    {
++        wfcore_set_key(SC_ENTER, (buttons & ((1u << 5) | (1u << 6) | (1u << 11))) != 0);
++        wfcore_set_key(SC_CTRL, false);
++        wfcore_set_key(SC_ALT, false);
++        wfcore_set_key(SC_SPACE, false);
++        wfcore_set_key(SC_RIGHT_SHIFT, false);
++        wfcore_set_key(SC_P, false);
++        wfcore_action_pointer_buttons = 0;
++        if ((buttons & ((1u << 5) | (1u << 6) | (1u << 11))) != 0)
++            wfcore_action_pointer_buttons |= 1u;
++        if ((buttons & (1u << 7)) != 0)
++            wfcore_action_pointer_buttons |= 2u;
++    }
++    else
++    {
++        wfcore_set_key(SC_ENTER, false);
++        wfcore_set_key(SC_CTRL, (buttons & (1u << 6)) != 0);
++        wfcore_set_key(SC_ALT, (buttons & (1u << 7)) != 0);
++        wfcore_set_key(SC_SPACE, (buttons & ((1u << 8) | (1u << 10))) != 0);
++        wfcore_set_key(SC_RIGHT_SHIFT, (buttons & (1u << 9)) != 0);
++        wfcore_set_key(SC_P, (buttons & (1u << 5)) != 0);
++        wfcore_action_pointer_buttons = 0;
++    }
++
 +    if ((pressed & (1u << 1)) != 0) lastscan = SC_UP;
 +    if ((pressed & (1u << 2)) != 0) lastscan = SC_DOWN;
 +    if ((pressed & (1u << 3)) != 0) lastscan = SC_LEFT;
 +    if ((pressed & (1u << 4)) != 0) lastscan = SC_RIGHT;
-+    if ((pressed & (1u << 5)) != 0) lastscan = SC_ENTER;
-+    if ((pressed & (1u << 6)) != 0) lastscan = SC_CTRL;
-+    if ((pressed & (1u << 7)) != 0) lastscan = SC_ALT;
-+    if ((pressed & (1u << 8)) != 0) lastscan = SC_SPACE;
-+    if ((pressed & (1u << 9)) != 0) lastscan = SC_RIGHT_SHIFT;
-+    if ((pressed & (1u << 10)) != 0) lastscan = SC_SPACE;
-+    if ((pressed & (1u << 11)) != 0) lastscan = SC_ENTER;
++    if (menu_mode)
++    {
++        if ((pressed & ((1u << 5) | (1u << 6) | (1u << 11))) != 0) lastscan = SC_ENTER;
++    }
++    else
++    {
++        if ((pressed & (1u << 5)) != 0) lastscan = SC_P;
++        if ((pressed & (1u << 6)) != 0) lastscan = SC_CTRL;
++        if ((pressed & (1u << 7)) != 0) lastscan = SC_ALT;
++        if ((pressed & (1u << 8)) != 0) lastscan = SC_SPACE;
++        if ((pressed & (1u << 9)) != 0) lastscan = SC_RIGHT_SHIFT;
++        if ((pressed & (1u << 10)) != 0) lastscan = SC_SPACE;
++    }
 +    wfcore_last_buttons = buttons;
 +}
 +
@@ -330,7 +359,8 @@ index 482b9d8..4f1a8e3 100644
 +
 +static void wfcore_apply_pointer(int32_t x, int32_t y, uint32_t buttons, bool inside)
 +{
-+    if (inside)
++    bool menu_pointer_move = g_drawcursor && (wfcore_last_buttons & ((1u << 1) | (1u << 2) | (1u << 3) | (1u << 4))) != 0;
++    if (inside && !menu_pointer_move)
 +    {
 +        if (x < 0) x = 0;
 +        if (x >= SCREENWIDTH) x = SCREENWIDTH - 1;
@@ -340,14 +370,31 @@ index 482b9d8..4f1a8e3 100644
 +        cur_my = y;
 +    }
 +
-+    uint32_t pressed = buttons & ~wfcore_last_pointer_buttons;
-+    mouseb1 = (buttons & 1u) != 0 ? 1 : 0;
-+    mouseb2 = (buttons & 2u) != 0 ? 2 : 0;
-+    mouseb3 = (buttons & 4u) != 0 ? 4 : 0;
++    if (menu_pointer_move)
++        wfcore_move_menu_pointer(wfcore_last_buttons);
++
++    uint32_t effective_buttons = buttons | wfcore_action_pointer_buttons;
++    uint32_t pressed = effective_buttons & ~wfcore_last_pointer_buttons;
++    mouseb1 = (effective_buttons & 1u) != 0 ? 1 : 0;
++    mouseb2 = (effective_buttons & 2u) != 0 ? 2 : 0;
++    mouseb3 = (effective_buttons & 4u) != 0 ? 4 : 0;
 +    if ((pressed & 1u) != 0) mouse_b1_ack = 1;
 +    if ((pressed & 2u) != 0) mouse_b2_ack = 1;
 +    if ((pressed & 4u) != 0) mouse_b3_ack = 1;
-+    wfcore_last_pointer_buttons = buttons;
++    wfcore_last_pointer_buttons = effective_buttons;
++}
++
++static void wfcore_move_menu_pointer(uint32_t buttons)
++{
++    int step = (buttons & (1u << 9)) != 0 ? 8 : 4;
++    if ((buttons & (1u << 3)) != 0) cur_mx -= step;
++    if ((buttons & (1u << 4)) != 0) cur_mx += step;
++    if ((buttons & (1u << 1)) != 0) cur_my -= step;
++    if ((buttons & (1u << 2)) != 0) cur_my += step;
++    if (cur_mx < 0) cur_mx = 0;
++    if (cur_mx >= SCREENWIDTH) cur_mx = SCREENWIDTH - 1;
++    if (cur_my < 0) cur_my = 0;
++    if (cur_my >= SCREENHEIGHT) cur_my = SCREENHEIGHT - 1;
 +}
 +
 +static int wfcore_scancode_to_ascii(int scancode)
@@ -406,6 +453,7 @@ index 482b9d8..4f1a8e3 100644
 +
 +    switch (raw_key)
 +    {
++    case 1: return SC_NONE;
 +    case 103: return SC_UP;
 +    case 108: return SC_DOWN;
 +    case 105: return SC_LEFT;
