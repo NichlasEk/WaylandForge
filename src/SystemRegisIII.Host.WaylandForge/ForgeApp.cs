@@ -1479,10 +1479,15 @@ internal sealed unsafe class ForgeApp : IDisposable
         ApplyWindowConfig(AppWindow.Settings, "settings");
         ApplyWindowConfig(AppWindow.Style, "style_editor");
         AppWindow[] persistedOrder = Enum.GetValues<AppWindow>().OrderBy(window => _config.Window(WindowKey(window)).Order).ToArray();
+        AppWindow[] layoutOrder = TileRootLeaves(_config.Layout.Root).ToArray();
+        if (layoutOrder.Length == 0)
+        {
+            layoutOrder = persistedOrder;
+        }
         _windowOrder.Clear();
-        _windowOrder.AddRange(persistedOrder);
+        _windowOrder.AddRange(persistedOrder.Where(window => window != AppWindow.Viewport));
         _tileOrder.Clear();
-        _tileOrder.AddRange(NormalizeTileOrder(persistedOrder));
+        _tileOrder.AddRange(NormalizeTileOrder(layoutOrder));
     }
 
     private void ApplyWindowConfig(AppWindow window, string key)
@@ -1509,6 +1514,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         {
             _config.Window(WindowKey(_tileOrder[i])).Order = i * 10;
         }
+        _config.Layout.Root = FormatTileRoot(_tileOrder);
     }
 
     private void SnapshotWindow(AppWindow window, string key)
@@ -1603,6 +1609,79 @@ internal sealed unsafe class ForgeApp : IDisposable
         ViewportScaleMode.Stretch => "stretch",
         _ => "fit",
     };
+
+    private static IEnumerable<AppWindow> TileRootLeaves(string root)
+    {
+        int i = 0;
+        while (i < root.Length)
+        {
+            if (char.IsLetter(root[i]) || root[i] == '_')
+            {
+                int start = i;
+                i++;
+                while (i < root.Length && (char.IsLetterOrDigit(root[i]) || root[i] == '_'))
+                {
+                    i++;
+                }
+
+                string token = root[start..i];
+                if (TryWindowFromKey(token, out AppWindow window))
+                {
+                    yield return window;
+                }
+                continue;
+            }
+            i++;
+        }
+    }
+
+    private static string FormatTileRoot(IEnumerable<AppWindow> windows)
+    {
+        AppWindow[] order = windows.Distinct().ToArray();
+        if (order.Length == 0)
+        {
+            return string.Empty;
+        }
+        if (order.Length == 1)
+        {
+            return WindowKey(order[0]);
+        }
+        if (order.Length == 2)
+        {
+            return $"h({WindowKey(order[0])},{WindowKey(order[1])},0.64)";
+        }
+
+        string stack = WindowKey(order[^1]);
+        for (int i = order.Length - 2; i >= 1; i--)
+        {
+            stack = $"h({WindowKey(order[i])},{stack},0.50)";
+        }
+        return $"v({WindowKey(order[0])},{stack},0.62)";
+    }
+
+    private static bool TryWindowFromKey(string key, out AppWindow window)
+    {
+        switch (key.Trim().ToLowerInvariant())
+        {
+            case "viewport":
+                window = AppWindow.Viewport;
+                return true;
+            case "rom_picker":
+            case "rom":
+                window = AppWindow.Rom;
+                return true;
+            case "settings":
+                window = AppWindow.Settings;
+                return true;
+            case "style_editor":
+            case "style":
+                window = AppWindow.Style;
+                return true;
+            default:
+                window = default;
+                return false;
+        }
+    }
 
     private static AppWindow[] NormalizeTileOrder(AppWindow[] persistedOrder)
     {

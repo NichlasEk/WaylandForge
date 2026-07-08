@@ -16,6 +16,7 @@ internal sealed class UiConfig
     public string Theme { get; set; } = "dark";
     public string Scale { get; set; } = "fit";
     public UiStyleConfig Style { get; } = new();
+    public UiTileLayoutConfig Layout { get; } = new();
     public Dictionary<string, UiWindowConfig> Windows { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public static UiConfig Load(string defaultsPath, string localPath)
@@ -54,6 +55,9 @@ internal sealed class UiConfig
         writer.WriteLine($"effect_speed = {Style.EffectSpeed.ToString(CultureInfo.InvariantCulture)}");
         writer.WriteLine($"effect_strength = {Style.EffectStrength.ToString(CultureInfo.InvariantCulture)}");
         writer.WriteLine($"border_thickness = {Style.BorderThickness.ToString(CultureInfo.InvariantCulture)}");
+        writer.WriteLine();
+        writer.WriteLine("[ui.layout]");
+        writer.WriteLine($"root = \"{Layout.Root}\"");
         writer.WriteLine();
 
         foreach (KeyValuePair<string, UiWindowConfig> pair in Windows.OrderBy(static pair => pair.Value.Order).ThenBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase))
@@ -146,6 +150,15 @@ internal sealed class UiConfig
                 case "border_thickness":
                     Style.BorderThickness = Math.Clamp(ParseInt(value, Style.BorderThickness), 1, 4);
                     break;
+            }
+            return;
+        }
+
+        if (string.Equals(section, "ui.layout", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.Equals(key, "root", StringComparison.OrdinalIgnoreCase))
+            {
+                Layout.Root = value;
             }
             return;
         }
@@ -294,4 +307,9 @@ internal sealed class UiStyleConfig
     public int EffectSpeed { get; set; } = 1;
     public int EffectStrength { get; set; } = 1;
     public int BorderThickness { get; set; } = 1;
+}
+
+internal sealed class UiTileLayoutConfig
+{
+    public string Root { get; set; } = string.Empty;
 }
