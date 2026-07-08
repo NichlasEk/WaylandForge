@@ -6,6 +6,7 @@ AUDIO_DIR="$ROOT_DIR/tools/waylandforge-audiod"
 AUDIO_BIN="$AUDIO_DIR/waylandforge-audiod"
 AUDIO_SOCKET="/tmp/waylandforge-audio.sock"
 AUDIO_PID=""
+HOST_PID=""
 
 audio_ping() {
 python - "$AUDIO_SOCKET" <<'PY'
@@ -25,6 +26,10 @@ PY
 }
 
 cleanup() {
+    if [ -n "$HOST_PID" ]; then
+        kill "$HOST_PID" 2>/dev/null || true
+        wait "$HOST_PID" 2>/dev/null || true
+    fi
     if [ -n "$AUDIO_PID" ]; then
         kill "$AUDIO_PID" 2>/dev/null || true
         wait "$AUDIO_PID" 2>/dev/null || true
@@ -51,4 +56,7 @@ else
     fi
 fi
 
-dotnet run --project "$ROOT_DIR/src/SystemRegisIII.Host.WaylandForge"
+dotnet run --project "$ROOT_DIR/src/SystemRegisIII.Host.WaylandForge" &
+HOST_PID="$!"
+wait "$HOST_PID"
+HOST_PID=""
