@@ -471,6 +471,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
                     _socket = _socketListener?.Accept();
                     if (_socket is not null)
                     {
+                        _socket.Blocking = true;
                         break;
                     }
                 }
