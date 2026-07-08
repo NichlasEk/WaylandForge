@@ -133,6 +133,23 @@ Then run WaylandForge and press `EXT`. The host starts the local ignored OpenTyr
 
 Default UI configuration lives in `config/waylandforge.ui.toml`. Runtime changes are written to `config/waylandforge.ui.local.toml`, which is gitignored. The config currently persists theme, viewport scale, internal window mode, z-order, open state, floating window rectangles, and the tiled Settings split and dock side.
 
+## Audio Daemon Prototype
+
+`tools/waylandforge-audiod` is the first low-level PipeWire audio experiment. It creates a playback node named `EutherAudio Sinklet`, keeps a small F32 stereo ringbuffer, and listens on `/tmp/waylandforge-audio.sock` for a simple `PLAY_TEST` command.
+
+```sh
+cd tools/waylandforge-audiod
+make
+./waylandforge-audiod
+```
+
+In another terminal:
+
+```sh
+python -c 'import socket; s=socket.socket(socket.AF_UNIX); s.connect("/tmp/waylandforge-audio.sock"); s.sendall(b"PLAY_TEST\n"); print(s.recv(128).decode(), end="")'
+pw-top
+```
+
 ## Run
 
 ```sh
