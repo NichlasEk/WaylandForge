@@ -814,6 +814,10 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
 
         RectI work = TileWorkArea(layout);
+        const int gap = 8;
+        int primaryHeight = TilePrimaryHeight(open[0], work, (int)Math.Round(work.Height * 0.60));
+        RectI stackArea = new(work.X, work.Y + primaryHeight + gap, work.Width, Math.Max(160, work.Height - primaryHeight - gap));
+        int stackWidth = open.Length == 3 ? TileStackWidth(open[1], stackArea, (stackArea.Width - gap) / 2) : 0;
         if (_pointer.IsInside && _pointer.LeftPressed && !_previousPointer.LeftPressed && TryHitTileSplitter(layout, open, out AppWindow owner, out bool vertical, out int startSize))
         {
             _resizingTileSplit = true;
@@ -821,8 +825,8 @@ internal sealed unsafe class ForgeApp : IDisposable
             _tileResizeOwner = owner;
             _tileResizeStartX = _pointer.X;
             _tileResizeStartY = _pointer.Y;
-            _tileResizeStartWidth = startSize;
-            _tileResizeStartHeight = startSize;
+            _tileResizeStartWidth = open.Length == 3 ? stackWidth : startSize;
+            _tileResizeStartHeight = open.Length == 3 ? primaryHeight : startSize;
         }
 
         if (!_pointer.LeftPressed)
@@ -832,6 +836,18 @@ internal sealed unsafe class ForgeApp : IDisposable
 
         if (!_resizingTileSplit)
         {
+            return;
+        }
+
+        if (open.Length == 3)
+        {
+            UiWindowConfig primaryConfig = _config.Window(WindowKey(open[0]));
+            UiWindowConfig stackConfig = _config.Window(WindowKey(open[1]));
+            int height = _tileResizeStartHeight + (_pointer.Y - _tileResizeStartY);
+            int width = _tileResizeStartWidth + (_pointer.X - _tileResizeStartX);
+            primaryConfig.Height = Math.Clamp(height, 140, Math.Max(140, work.Height - 140));
+            stackConfig.Width = Math.Clamp(width, 160, Math.Max(160, stackArea.Width - 160));
+            MarkConfigDirty();
             return;
         }
 
