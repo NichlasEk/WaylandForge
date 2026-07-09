@@ -54,3 +54,15 @@ ffmpeg -hide_banner -i assets/stormakt3020/music/TRACK.wav \
 ```
 
 Required source format is PCM16, 48 kHz, stereo. Reject clipped, silent, vocal, comedic, obviously modern-pop, or structurally empty generations. Runtime looping does not require destructive edits to the source: `StormaktMusicLoop` blends the final 0.5 seconds into the opening and resumes after the overlapped head.
+
+## Sound effects
+
+Short effects are generated deterministically rather than through the long-form music model:
+
+```sh
+python tools/stormakt3020/build_sfx.py
+```
+
+The script uses fixed seeds, explicit oscillators, filtered noise and envelopes to rebuild five PCM16 stereo assets under `assets/stormakt3020/sfx/`: twin cannon, broadside, enemy explosion, hull hit and deploy chime. Each source peaks at about -1.3 dB.
+
+`StormaktMusicLoop` is also the core's mixer. Music is attenuated for headroom, effect triggers are queued thread-safely from gameplay, at most 32 voices overlap, the result is clamped below full scale, and 2048-frame packets keep effect latency near 0.1 seconds. Mixing before `WFAU` is essential: separate packets would play effects after queued music instead of on top of it.

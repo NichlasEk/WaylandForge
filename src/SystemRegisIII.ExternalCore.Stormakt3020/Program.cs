@@ -9,8 +9,9 @@ const byte StepCommand = (byte)'S';
 
 var input = Console.OpenStandardInput();
 var output = Console.OpenStandardOutput();
-var game = new StormaktGame(Width, Height, SpritePack.LoadDefault());
-using var music = StormaktMusicLoop.TryStartDefault();
+using var audio = StormaktMusicLoop.TryStartDefault();
+var game = new StormaktGame(Width, Height, SpritePack.LoadDefault(), audio);
+audio?.Trigger(StormaktSound.Deploy);
 var command = new byte[5];
 var header = new byte[32];
 var frame = new uint[Width * Height];
@@ -71,6 +72,7 @@ internal sealed class StormaktGame
     private readonly int _width;
     private readonly int _height;
     private readonly SpritePack? _sprites;
+    private readonly StormaktMusicLoop? _audio;
     private readonly Random _random = new(3020);
     private readonly List<Shot> _shots = [];
     private readonly List<Enemy> _enemies = [];
@@ -86,11 +88,12 @@ internal sealed class StormaktGame
     private uint _previousButtons;
     private bool _gameOver;
 
-    public StormaktGame(int width, int height, SpritePack? sprites)
+    public StormaktGame(int width, int height, SpritePack? sprites, StormaktMusicLoop? audio)
     {
         _width = width;
         _height = height;
         _sprites = sprites;
+        _audio = audio;
         Reset();
         for (int i = 0; i < _stars.Length; i++)
         {
@@ -105,6 +108,7 @@ internal sealed class StormaktGame
             if (Pressed(buttons, Start))
             {
                 Reset();
+                _audio?.Trigger(StormaktSound.Deploy);
             }
             _previousButtons = buttons;
             return;
@@ -127,6 +131,7 @@ internal sealed class StormaktGame
             _shots.Add(new Shot(_shipX + 4, _shipY - 12, 0, -7, 0xffffd66b, 3));
             _cooldown = 6;
             _heat = Math.Min(120, _heat + 7);
+            _audio?.Trigger(StormaktSound.TwinCannon);
         }
         if ((buttons & AltFire) != 0 && _altCooldown == 0)
         {
@@ -134,6 +139,7 @@ internal sealed class StormaktGame
             _shots.Add(new Shot(_shipX + 11, _shipY - 5, 2, -5, 0xff7fc7ff, 5));
             _altCooldown = 18;
             _heat = Math.Min(120, _heat + 15);
+            _audio?.Trigger(StormaktSound.Broadside);
         }
 
         StepShots();
@@ -219,6 +225,7 @@ internal sealed class StormaktGame
                     {
                         _score += enemy.Radius * 10;
                         _enemies.RemoveAt(i);
+                        _audio?.Trigger(StormaktSound.EnemyExplosion);
                         removed = true;
                     }
                     break;
@@ -234,6 +241,7 @@ internal sealed class StormaktGame
                 _enemies.RemoveAt(i);
                 _lives--;
                 _heat = 120;
+                _audio?.Trigger(StormaktSound.HullHit);
                 if (_lives <= 0)
                 {
                     _gameOver = true;

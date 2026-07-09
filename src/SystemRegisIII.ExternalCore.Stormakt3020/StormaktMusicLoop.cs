@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Text;
@@ -7,11 +8,14 @@ internal sealed class StormaktMusicLoop : IDisposable
 {
     private const int SampleRate = 48_000;
     private const int Channels = 2;
-    private const int PacketFrames = 4_096;
+    private const int PacketFrames = 2_048;
     private const int HeaderBytes = 24;
     private const string DefaultSocketPath = "/tmp/waylandforge-audio.sock";
 
     private readonly float[] _samples;
+    private readonly Dictionary<StormaktSound, LoadedEffect> _effects;
+    private readonly ConcurrentQueue<StormaktSound> _pendingEffects = new();
+    private readonly List<ActiveEffect> _activeEffects = [];
     private readonly int _totalFrames;
     private readonly int _crossfadeFrames;
     private readonly string _socketPath;
@@ -19,9 +23,10 @@ internal sealed class StormaktMusicLoop : IDisposable
     private readonly Thread _thread;
     private volatile bool _connectedOnce;
 
-    private StormaktMusicLoop(float[] samples, string socketPath)
+    private StormaktMusicLoop(float[] samples, Dictionary<StormaktSound, LoadedEffect> effects, string socketPath)
     {
         _samples = samples;
+        _effects = effects;
         _totalFrames = samples.Length / Channels;
         _crossfadeFrames = Math.Min(SampleRate / 2, _totalFrames / 8);
         _socketPath = socketPath;
@@ -62,9 +67,10 @@ internal sealed class StormaktMusicLoop : IDisposable
             try
             {
                 float[] samples = LoadPcm16StereoWav(path);
+                Dictionary<StormaktSound, LoadedEffect> effects = LoadEffects(path);
                 string socketPath = Environment.GetEnvironmentVariable("WAYLANDFORGE_AUDIO_SOCKET") ?? DefaultSocketPath;
-                Console.Error.WriteLine($"Stormakt music: loaded {Path.GetFileName(path)} ({samples.Length / Channels / SampleRate}s).");
-                return new StormaktMusicLoop(samples, socketPath);
+                Console.Error.WriteLine($"Stormakt audio: loaded {Path.GetFileName(path)} ({samples.Length / Channels / SampleRate}s) and {effects.Count} effects.");
+                return new StormaktMusicLoop(samples, effects, socketPath);
             }
             catch (Exception exception)
             {
@@ -76,6 +82,8 @@ internal sealed class StormaktMusicLoop : IDisposable
         Console.Error.WriteLine("Stormakt music disabled: soundtrack WAV not found.");
         return null;
     }
+
+    public void Trigger(StormaktSound sound) => _pendingEffects.Enqueue(sound);
 
     public void Dispose()
     {
@@ -114,7 +122,7 @@ internal sealed class StormaktMusicLoop : IDisposable
             }
 
             double bufferedSeconds = (acceptedFrames / (double)SampleRate) - clock.Elapsed.TotalSeconds;
-            if (bufferedSeconds > 0.55)
+            if (bufferedSeconds > 0.12)
             {
                 _stop.Token.WaitHandle.WaitOne(TimeSpan.FromMilliseconds(12));
                 continue;
@@ -128,7 +136,7 @@ internal sealed class StormaktMusicLoop : IDisposable
                 acceptedFrames += accepted;
                 if (!announcedConnection)
                 {
-                    Console.Error.WriteLine($"Stormakt music: streaming to {_socketPath}.");
+                    Console.Error.WriteLine($"Stormakt audio: streaming to {_socketPath}.");
                     announcedConnection = true;
                     _connectedOnce = true;
                 }
@@ -160,6 +168,18 @@ internal sealed class StormaktMusicLoop : IDisposable
         BinaryPrimitives.WriteUInt32LittleEndian(header[20..], (uint)(frames * Channels * sizeof(float)));
 
         Span<byte> payload = packet.AsSpan(HeaderBytes);
+        while (_pendingEffects.TryDequeue(out StormaktSound sound))
+        {
+            if (_effects.TryGetValue(sound, out LoadedEffect? effect) && effect is not null)
+            {
+                if (_activeEffects.Count >= 32)
+                {
+                    _activeEffects.RemoveAt(0);
+                }
+                _activeEffects.Add(new ActiveEffect(effect));
+            }
+        }
+
         for (int outputFrame = 0; outputFrame < frames; outputFrame++)
         {
             float left = _samples[frameIndex * Channels];
@@ -172,6 +192,22 @@ internal sealed class StormaktMusicLoop : IDisposable
                 left = (left * tailWeight) + (_samples[headFrame * Channels] * headWeight);
                 right = (right * tailWeight) + (_samples[(headFrame * Channels) + 1] * headWeight);
             }
+
+            left *= 0.68f;
+            right *= 0.68f;
+            for (int voiceIndex = _activeEffects.Count - 1; voiceIndex >= 0; voiceIndex--)
+            {
+                ActiveEffect voice = _activeEffects[voiceIndex];
+                left += voice.Effect.Samples[voice.Frame * Channels] * voice.Effect.Gain;
+                right += voice.Effect.Samples[(voice.Frame * Channels) + 1] * voice.Effect.Gain;
+                voice.Frame++;
+                if (voice.Frame >= voice.Effect.Samples.Length / Channels)
+                {
+                    _activeEffects.RemoveAt(voiceIndex);
+                }
+            }
+            left = Math.Clamp(left, -0.98f, 0.98f);
+            right = Math.Clamp(right, -0.98f, 0.98f);
 
             int byteOffset = outputFrame * Channels * sizeof(float);
             BinaryPrimitives.WriteSingleLittleEndian(payload[byteOffset..], left);
@@ -290,8 +326,46 @@ internal sealed class StormaktMusicLoop : IDisposable
     {
         if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_MUSIC_DEBUG"), "1", StringComparison.Ordinal))
         {
-            Console.Error.WriteLine($"Stormakt music debug: {message}");
+            Console.Error.WriteLine($"Stormakt audio debug: {message}");
         }
+    }
+
+    private static Dictionary<StormaktSound, LoadedEffect> LoadEffects(string soundtrackPath)
+    {
+        string soundtrackDirectory = Path.GetDirectoryName(soundtrackPath)!;
+        string parentDirectory = Path.GetDirectoryName(soundtrackDirectory) ?? soundtrackDirectory;
+        string[] directories =
+        [
+            Path.Combine(soundtrackDirectory, "sfx"),
+            Path.Combine(parentDirectory, "sfx"),
+            Path.Combine(Environment.CurrentDirectory, "assets", "stormakt3020", "sfx"),
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "assets", "stormakt3020", "sfx")),
+        ];
+        string? sfxDirectory = directories.FirstOrDefault(Directory.Exists);
+        if (sfxDirectory is null)
+        {
+            return [];
+        }
+
+        (StormaktSound Sound, string File, float Gain)[] entries =
+        [
+            (StormaktSound.TwinCannon, "twin-cannon.wav", 0.30f),
+            (StormaktSound.Broadside, "broadside.wav", 0.52f),
+            (StormaktSound.EnemyExplosion, "enemy-explosion.wav", 0.48f),
+            (StormaktSound.HullHit, "hull-hit.wav", 0.58f),
+            (StormaktSound.Deploy, "deploy-chime.wav", 0.42f),
+        ];
+
+        Dictionary<StormaktSound, LoadedEffect> effects = [];
+        foreach ((StormaktSound sound, string file, float gain) in entries)
+        {
+            string path = Path.Combine(sfxDirectory, file);
+            if (File.Exists(path))
+            {
+                effects[sound] = new LoadedEffect(LoadPcm16StereoWav(path), gain);
+            }
+        }
+        return effects;
     }
 
     private static float[] LoadPcm16StereoWav(string path)
@@ -353,4 +427,21 @@ internal sealed class StormaktMusicLoop : IDisposable
         }
         return samples;
     }
+
+    private sealed class ActiveEffect(LoadedEffect effect)
+    {
+        public LoadedEffect Effect { get; } = effect;
+        public int Frame { get; set; }
+    }
+
+    private sealed record LoadedEffect(float[] Samples, float Gain);
+}
+
+internal enum StormaktSound
+{
+    TwinCannon,
+    Broadside,
+    EnemyExplosion,
+    HullHit,
+    Deploy,
 }

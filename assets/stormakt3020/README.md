@@ -48,3 +48,13 @@ Additional scored roles live under `music/`:
 - `kronans-sista-salva-v1.wav`: monumental boss loop.
 
 `music/generation-manifest.json` records accepted task IDs, seeds, models, prompt files, and a rejected menu attempt. The complete local workflow is documented in `docs/stormakt3020-audio-toolchain.md`.
+
+## Sound effects
+
+Five deterministic 48 kHz stereo effects live under `sfx/`: twin cannon, broadside, enemy explosion, hull hit, and deploy chime. Rebuild them with:
+
+```sh
+python tools/stormakt3020/build_sfx.py
+```
+
+The external core triggers them from actual gameplay events and mixes up to 32 voices into the music stream with headroom before sending 2048-frame `WFAU` packets.
