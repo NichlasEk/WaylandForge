@@ -435,19 +435,24 @@ internal sealed unsafe class ForgeApp : IDisposable
                 DrawMetric(x, y, "SYNC", _lastSentAudioVolume == _config.Audio.Volume ? "OK" : "PENDING"); y += 18;
             }
 
-            if (_ui.Collapsible(new UiId("debug.input"), ref column, "INPUT", 142, out RectI inputSection))
+            if (_ui.Collapsible(new UiId("debug.input"), ref column, "INPUT", 198, out RectI inputSection))
             {
                 int x = inputSection.X;
                 int y = inputSection.Y;
+                UiInputConfig inputProfile = ActiveInputProfile();
+                string profileLabel = ActiveInputProfileLabel();
                 DrawMetric(x, y, "PTR", _pointer.IsInside ? $"{_pointer.X},{_pointer.Y}" : "OUT"); y += 18;
-                DrawMetric(x, y, "MBTN", _pointer.Buttons.ToString().ToUpperInvariant()); y += 20;
-                DrawInputLamp(x, y, "UP", ForgeInput.Up); y += 16;
-                DrawInputLamp(x, y, "DOWN", ForgeInput.Down); y += 16;
-                DrawInputLamp(x, y, "LEFT", ForgeInput.Left); y += 16;
-                DrawInputLamp(x, y, "RIGHT", ForgeInput.Right); y += 16;
-                DrawInputLamp(x, y, "START", ForgeInput.Start); y += 16;
-                DrawInputLamp(x, y, "A B C", ForgeInput.A | ForgeInput.B | ForgeInput.C); y += 16;
-                DrawInputLamp(x, y, "X Y Z", ForgeInput.X | ForgeInput.Y | ForgeInput.Z);
+                DrawMetric(x, y, "MBTN", _pointer.Buttons.ToString().ToUpperInvariant()); y += 18;
+                DrawMetric(x, y, "MAP", profileLabel); y += 20;
+                DrawInputLamp(x, y, "UP", ForgeInput.Up, inputProfile); y += 16;
+                DrawInputLamp(x, y, "DOWN", ForgeInput.Down, inputProfile); y += 16;
+                DrawInputLamp(x, y, "LEFT", ForgeInput.Left, inputProfile); y += 16;
+                DrawInputLamp(x, y, "RIGHT", ForgeInput.Right, inputProfile); y += 16;
+                DrawInputLamp(x, y, "START", ForgeInput.Start, inputProfile); y += 16;
+                DrawInputLamp(x, y, "A", ForgeInput.A, inputProfile); y += 16;
+                DrawInputLamp(x, y, "B", ForgeInput.B, inputProfile); y += 16;
+                DrawInputLamp(x, y, "C", ForgeInput.C, inputProfile); y += 16;
+                DrawInputLamp(x, y, "X/Y/Z", ForgeInput.X | ForgeInput.Y | ForgeInput.Z, inputProfile);
             }
 
             if (_ui.Collapsible(new UiId("debug.style"), ref column, "STYLE", 136, out RectI styleSection))
@@ -815,10 +820,13 @@ internal sealed unsafe class ForgeApp : IDisposable
         using UiScrollArea scroll = _ui.BeginScrollArea(new UiId("input.scroll"), content, contentHeight);
         var column = new UiColumn(scroll.Content.X + 10, scroll.Content.Y + 10, Math.Max(1, scroll.Content.Width - 20), 6);
 
+        UiInputConfig inputProfile = ActiveInputProfile();
+        string profileLabel = ActiveInputProfileLabel();
+
         _ui.Text(column.X, column.NextY, "PROFILE", UiTextKind.Muted);
-        _ui.Text(column.X + 72, column.NextY, "KEYBOARD", UiTextKind.Accent);
+        _ui.Text(column.X + 72, column.NextY, profileLabel, UiTextKind.Accent);
         column = column with { NextY = column.NextY + 18 };
-        _ui.Text(column.X, column.NextY, "MAP ACTIONS NOW. GAMEPAD CAN FEED THE SAME ACTIONS LATER.", UiTextKind.Muted);
+        _ui.Text(column.X, column.NextY, "MAPS THE ACTIVE CORE. GAMEPAD CAN FEED THE SAME ACTIONS LATER.", UiTextKind.Muted);
         column = column with { NextY = column.NextY + 24 };
 
         int actionWidth = Math.Min(96, Math.Max(58, column.Width / 4));
@@ -834,8 +842,8 @@ internal sealed unsafe class ForgeApp : IDisposable
             RectI rowRect = new(column.X, column.NextY - 2, Math.Max(1, column.Width - 8), 20);
             uint border = capturing ? _ui.Theme.Button.Colors.Accent : activeBinding ? _ui.Theme.Button.Colors.BorderHot : _ui.Theme.Button.Colors.Border;
             _canvas.DrawRect(rowRect.X, rowRect.Y, rowRect.Width, rowRect.Height, border);
-            _ui.Text(column.X + 6, column.NextY + 3, binding.Label, activeBinding ? UiTextKind.Accent : UiTextKind.Normal);
-            string keyText = capturing ? "PRESS KEY" : TruncateMiddle(BindingDisplay(binding.Id), Math.Max(8, keyWidth / 6));
+            _ui.Text(column.X + 6, column.NextY + 3, InputBindingLabel(binding), activeBinding ? UiTextKind.Accent : UiTextKind.Normal);
+            string keyText = capturing ? "PRESS KEY" : TruncateMiddle(BindingDisplay(binding.Id, inputProfile), Math.Max(8, keyWidth / 6));
             _ui.Text(column.X + actionWidth + 8, column.NextY + 3, keyText, capturing ? UiTextKind.Accent : UiTextKind.Muted);
 
             int buttonX = column.X + actionWidth + keyWidth + 18;
@@ -845,7 +853,7 @@ internal sealed unsafe class ForgeApp : IDisposable
             }
             if (_ui.Button(new UiId("input.clear." + binding.Id), new RectI(buttonX + 52, column.NextY, 52, 17), "CLEAR").Clicked)
             {
-                _config.Input.Bindings[binding.Id] = string.Empty;
+                inputProfile.Bindings[binding.Id] = string.Empty;
                 if (_capturingBinding?.Id == binding.Id)
                 {
                     _capturingBinding = null;
@@ -2329,6 +2337,19 @@ internal sealed unsafe class ForgeApp : IDisposable
         return _config.Input;
     }
 
+    private string ActiveInputProfileLabel()
+    {
+        if (ReferenceEquals(_core, _externalCore2))
+        {
+            return "RAPTOR";
+        }
+        if (ReferenceEquals(_core, _externalCore))
+        {
+            return "OPENTYRIAN";
+        }
+        return "HOST";
+    }
+
     private IEnumerable<uint> BoundKeyCodes(string actionId)
     {
         return BoundKeyCodes(actionId, _config.Input);
@@ -2355,9 +2376,14 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
     }
 
-    private string BindingDisplay(string actionId)
+    private string BindingDisplay(string actionId, UiInputConfig inputConfig)
     {
-        if (!_config.Input.Bindings.TryGetValue(actionId, out string? value) || string.IsNullOrWhiteSpace(value))
+        bool hasBinding = inputConfig.Bindings.TryGetValue(actionId, out string? value);
+        if (!hasBinding && !ReferenceEquals(inputConfig, _config.Input))
+        {
+            hasBinding = _config.Input.Bindings.TryGetValue(actionId, out value);
+        }
+        if (!hasBinding || string.IsNullOrWhiteSpace(value))
         {
             return "-";
         }
@@ -2366,8 +2392,43 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private void SetInputBinding(InputBinding binding, uint keyCode)
     {
-        _config.Input.Bindings[binding.Id] = FormatKeyName(keyCode);
+        ActiveInputProfile().Bindings[binding.Id] = FormatKeyName(keyCode);
         MarkConfigDirty();
+    }
+
+    private string InputBindingLabel(InputBinding binding)
+    {
+        if (ReferenceEquals(_core, _externalCore2))
+        {
+            return binding.Id switch
+            {
+                "a" => "A FIRE",
+                "b" => "B ALT/RMB",
+                "c" => "C SPACE",
+                "x" => "X SHIFT",
+                "y" => "Y SPACE",
+                "z" => "Z UNUSED",
+                "start" => "START/OK",
+                "escape" => "ESC DISABLED",
+                _ => binding.Label,
+            };
+        }
+
+        if (ReferenceEquals(_core, _externalCore))
+        {
+            return binding.Id switch
+            {
+                "a" => "A FIRE",
+                "b" => "B REAR",
+                "c" => "C MODE",
+                "x" => "X",
+                "y" => "Y",
+                "z" => "Z",
+                _ => binding.Label,
+            };
+        }
+
+        return binding.Label;
     }
 
     private static bool IsReservedMappingKey(uint keyCode)
@@ -2659,6 +2720,33 @@ internal sealed unsafe class ForgeApp : IDisposable
         _canvas.FillRect(x, y + 2, 8, 8, color);
         _canvas.DrawRect(x, y + 2, 8, 8, colors.BorderHot);
         _ui.Text(x + 16, y, label, active ? UiTextKind.Normal : UiTextKind.Muted);
+    }
+
+    private void DrawInputLamp(int x, int y, string label, ForgeInput bit, UiInputConfig inputProfile)
+    {
+        DrawInputLamp(x, y, label, bit);
+        string keys = InputKeysForBits(bit, inputProfile);
+        _ui.Text(x + 72, y, TruncateMiddle(keys, 14), UiTextKind.Muted);
+    }
+
+    private string InputKeysForBits(ForgeInput bits, UiInputConfig inputProfile)
+    {
+        List<string> keys = [];
+        foreach (InputBinding binding in InputBindings)
+        {
+            if ((binding.Bit & bits) == 0)
+            {
+                continue;
+            }
+
+            string value = BindingDisplay(binding.Id, inputProfile);
+            if (value != "-")
+            {
+                keys.Add(value);
+            }
+        }
+
+        return keys.Count == 0 ? "-" : string.Join("/", keys);
     }
 
     private void NextTheme()
