@@ -19,6 +19,7 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private readonly SoftwareCanvas _canvas = new();
     private readonly FakeSaturnCore _fakeCore = new();
+    private readonly SaturnBringupCore _saturnCore = new();
     private readonly ExternalProcessCore _externalCore;
     private readonly ExternalProcessCore _externalCore2;
     private ISystemCore _core;
@@ -79,7 +80,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         _config = UiConfig.Load(DefaultConfigPath, LocalConfigPath);
         _externalCore = new ExternalProcessCore(_config.ExternalCore, ResolveExternalDummyCorePath());
         _externalCore2 = new ExternalProcessCore(_config.ExternalCore2, ResolveExternalDummyCorePath());
-        _core = _fakeCore;
+        _core = _saturnCore;
         ApplyConfig();
     }
 
@@ -2836,6 +2837,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         return _core switch
         {
+            SaturnBringupCore => "SATURN BRINGUP",
             FakeSaturnCore => "FAKE SATURN",
             ExternalProcessCore external => external.Name,
             _ => _core.GetType().Name.ToUpperInvariant(),
@@ -2846,6 +2848,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         return _core switch
         {
+            SaturnBringupCore saturn => saturn.FrameIndex,
             FakeSaturnCore fake => fake.FrameIndex,
             ExternalProcessCore external => external.FrameIndex,
             _ => 0,

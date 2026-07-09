@@ -207,8 +207,22 @@ Or start the host together with the PipeWire audio daemon:
 ./start-waylandforge.sh
 ```
 
+The internal CORE viewport now boots the local Saturn bringup core from
+`~/SystemRegisIII`. To feed it a BIOS, either set:
+
+```sh
+export WAYLANDFORGE_SATURN_BIOS=/path/to/saturn-bios.bin
+```
+
+or place it at:
+
+```text
+local/saturn/bios.bin
+```
+
 Requirements:
 
+- .NET SDK with `net10.0` support
 - Wayland session with `WAYLAND_DISPLAY` set
 - `wayland-client`
 - `wayland-protocols`
