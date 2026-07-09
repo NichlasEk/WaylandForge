@@ -260,13 +260,14 @@ internal sealed class StormaktGame
         int x = _random.Next(24, _width - 24);
         int speed = _random.Next(1, 4);
         int health = radius < 10 ? 4 : 7;
-        uint color = _random.Next(3) switch
+        int kind = _random.Next(3);
+        uint color = kind switch
         {
             0 => 0xff9f6b38,
-            1 => 0xffb64040,
+            1 => 0xff1f5d9a,
             _ => 0xff6b7b86,
         };
-        _enemies.Add(new Enemy(x, -radius, speed, radius, health, color, _random.NextDouble() * Math.PI * 2.0));
+        _enemies.Add(new Enemy(x, -radius, speed, radius, health, color, kind, _random.NextDouble() * Math.PI * 2.0));
         _spawnTimer = Math.Max(12, 34 - _score / 450);
     }
 
@@ -325,14 +326,33 @@ internal sealed class StormaktGame
     {
         uint hull = _heat > 80 ? 0xffff8a4a : 0xffc69c58;
         uint brass = 0xffffd66b;
-        uint blue = 0xff6fb6d9;
-        FillTriangle(frame, _shipX, _shipY - 15, _shipX - 11, _shipY + 9, _shipX + 11, _shipY + 9, hull);
-        FillTriangle(frame, _shipX, _shipY - 7, _shipX - 18, _shipY + 8, _shipX - 8, _shipY + 13, 0xff6c4a2a);
-        FillTriangle(frame, _shipX, _shipY - 7, _shipX + 18, _shipY + 8, _shipX + 8, _shipY + 13, 0xff6c4a2a);
-        DrawRect(frame, _shipX - 4, _shipY - 2, 8, 5, blue);
-        DrawRect(frame, _shipX - 2, _shipY - 18, 4, 8, brass);
-        DrawRect(frame, _shipX - 13, _shipY + 8, 5, 4, 0xffff6b4a);
-        DrawRect(frame, _shipX + 8, _shipY + 8, 5, 4, 0xffff6b4a);
+        uint blue = 0xff1f5d9a;
+        uint dark = 0xff16202a;
+        uint copper = 0xff6c4a2a;
+
+        DrawRect(frame, _shipX - 16, _shipY - 1, 5, 17, dark);
+        DrawRect(frame, _shipX + 11, _shipY - 1, 5, 17, dark);
+        DrawRect(frame, _shipX - 15, _shipY + 1, 3, 12, 0xff9f6b38);
+        DrawRect(frame, _shipX + 12, _shipY + 1, 3, 12, 0xff9f6b38);
+        FillTriangle(frame, _shipX, _shipY - 18, _shipX - 10, _shipY + 11, _shipX + 10, _shipY + 11, hull);
+        FillTriangle(frame, _shipX, _shipY - 9, _shipX - 23, _shipY + 7, _shipX - 8, _shipY + 14, blue);
+        FillTriangle(frame, _shipX, _shipY - 9, _shipX + 23, _shipY + 7, _shipX + 8, _shipY + 14, blue);
+        DrawLine(frame, _shipX - 22, _shipY + 7, _shipX - 8, _shipY + 14, brass);
+        DrawLine(frame, _shipX + 22, _shipY + 7, _shipX + 8, _shipY + 14, brass);
+        DrawRect(frame, _shipX - 6, _shipY - 4, 12, 8, blue);
+        DrawCrown(frame, _shipX - 4, _shipY - 2, brass);
+        DrawCrown(frame, _shipX + 2, _shipY - 2, brass);
+        DrawCrown(frame, _shipX - 1, _shipY + 2, brass);
+        DrawRect(frame, _shipX - 2, _shipY - 21, 4, 8, brass);
+        DrawRect(frame, _shipX - 3, _shipY - 22, 6, 2, 0xffffec9a);
+        DrawRect(frame, _shipX - 12, _shipY + 12, 5, 5, _heat > 80 ? 0xffff6b4a : 0xff2fbfff);
+        DrawRect(frame, _shipX + 7, _shipY + 12, 5, 5, _heat > 80 ? 0xffff6b4a : 0xff2fbfff);
+        PutPixel(frame, _shipX - 17, _shipY - 4, 0xffd8e6f0);
+        PutPixel(frame, _shipX + 17, _shipY - 4, 0xffd8e6f0);
+        PutPixel(frame, _shipX - 18, _shipY - 6, 0xffb7c7d6);
+        PutPixel(frame, _shipX + 18, _shipY - 6, 0xffb7c7d6);
+        DrawRect(frame, _shipX - 19, _shipY + 4, 4, 3, copper);
+        DrawRect(frame, _shipX + 15, _shipY + 4, 4, 3, copper);
     }
 
     private void DrawShots(uint[] frame)
@@ -348,23 +368,66 @@ internal sealed class StormaktGame
     {
         foreach (Enemy enemy in _enemies)
         {
-            FillCircle(frame, enemy.X, enemy.Y, enemy.Radius, enemy.Color);
-            DrawRect(frame, enemy.X - 3, enemy.Y - enemy.Radius - 5, 6, 8, 0xff2f1d14);
-            DrawRect(frame, enemy.X - enemy.Radius - 3, enemy.Y - 1, 6, 3, 0xffd6b25e);
-            DrawRect(frame, enemy.X + enemy.Radius - 3, enemy.Y - 1, 6, 3, 0xffd6b25e);
-            PutPixel(frame, enemy.X - 3, enemy.Y - 2, 0xffffd66b);
-            PutPixel(frame, enemy.X + 3, enemy.Y - 2, 0xffffd66b);
+            DrawEnemy(frame, enemy);
         }
+    }
+
+    private void DrawEnemy(uint[] frame, Enemy enemy)
+    {
+        uint brass = 0xffd6b25e;
+        uint dark = 0xff18202a;
+        if (enemy.Kind == 1)
+        {
+            FillCircle(frame, enemy.X, enemy.Y, enemy.Radius, 0xff1f5d9a);
+            DrawRect(frame, enemy.X - enemy.Radius + 2, enemy.Y - 2, enemy.Radius * 2 - 4, 4, brass);
+            DrawRect(frame, enemy.X - 2, enemy.Y - enemy.Radius + 2, 4, enemy.Radius * 2 - 4, brass);
+            DrawCrown(frame, enemy.X - 3, enemy.Y - 4, brass);
+            DrawCrown(frame, enemy.X + 2, enemy.Y - 4, brass);
+            DrawCrown(frame, enemy.X - 1, enemy.Y + 2, brass);
+        }
+        else if (enemy.Kind == 2)
+        {
+            FillCircle(frame, enemy.X, enemy.Y, enemy.Radius, 0xff343c46);
+            DrawRect(frame, enemy.X - enemy.Radius + 3, enemy.Y - 4, enemy.Radius * 2 - 6, 8, 0xff1f5d9a);
+            DrawLine(frame, enemy.X - enemy.Radius + 2, enemy.Y - enemy.Radius + 2, enemy.X + enemy.Radius - 2, enemy.Y + enemy.Radius - 2, 0xffd8e6f0);
+            DrawLine(frame, enemy.X + enemy.Radius - 2, enemy.Y - enemy.Radius + 2, enemy.X - enemy.Radius + 2, enemy.Y + enemy.Radius - 2, 0xffd8e6f0);
+            DrawRect(frame, enemy.X - 2, enemy.Y - enemy.Radius - 6, 4, 6, brass);
+            DrawRect(frame, enemy.X - 1, enemy.Y - enemy.Radius - 9, 3, 4, 0xff2fbfff);
+        }
+        else
+        {
+            FillCircle(frame, enemy.X, enemy.Y, enemy.Radius, enemy.Color);
+            DrawRect(frame, enemy.X - 4, enemy.Y - enemy.Radius - 6, 8, 8, dark);
+            DrawRect(frame, enemy.X - 2, enemy.Y - enemy.Radius - 9, 4, 4, 0xffd6b25e);
+            DrawRect(frame, enemy.X - enemy.Radius - 3, enemy.Y - 1, 6, 3, brass);
+            DrawRect(frame, enemy.X + enemy.Radius - 3, enemy.Y - 1, 6, 3, brass);
+        }
+
+        PutPixel(frame, enemy.X - 3, enemy.Y - 2, 0xffffd66b);
+        PutPixel(frame, enemy.X + 3, enemy.Y - 2, 0xffffd66b);
+        DrawRect(frame, enemy.X - 2, enemy.Y + enemy.Radius - 1, 4, 3, 0xff101820);
     }
 
     private void DrawHud(uint[] frame)
     {
-        DrawText(frame, 6, 5, "STORMAKT 3020", 0xffffd66b);
+        DrawText(frame, 6, 5, "KARL CCLV", 0xffffd66b);
+        DrawText(frame, 76, 5, "STORMAKT 3020", 0xff7fc7ff);
         DrawText(frame, 204, 5, "POANG " + _score.ToString("000000"), 0xff7fc7ff);
         DrawText(frame, 6, _height - 9, "LIV " + _lives, 0xffff6b7f);
         DrawText(frame, 62, _height - 9, "Z ELD  X BREDSIDA", 0xffb7c7d6);
         DrawRect(frame, 268, _height - 8, 44, 4, 0xff2a3440);
         DrawRect(frame, 268, _height - 8, Math.Clamp(_heat, 0, 120) * 44 / 120, 4, _heat > 80 ? 0xffff6b4a : 0xffffd66b);
+    }
+
+    private void DrawCrown(uint[] frame, int x, int y, uint color)
+    {
+        PutPixel(frame, x, y + 1, color);
+        PutPixel(frame, x + 1, y, color);
+        PutPixel(frame, x + 2, y + 1, color);
+        PutPixel(frame, x + 3, y, color);
+        PutPixel(frame, x + 4, y + 1, color);
+        DrawRect(frame, x, y + 2, 5, 2, color);
+        PutPixel(frame, x + 2, y + 1, 0xffffec9a);
     }
 
     private void Clear(uint[] frame, uint color) => Array.Fill(frame, color);
@@ -525,6 +588,6 @@ internal sealed class StormaktGame
     }
 
     private record struct Shot(int X, int Y, int Vx, int Vy, uint Color, int Power);
-    private record struct Enemy(int X, int Y, int Speed, int Radius, int Health, uint Color, double Phase);
+    private record struct Enemy(int X, int Y, int Speed, int Radius, int Health, uint Color, int Kind, double Phase);
     private readonly record struct Star(int X, int Y, int Speed, int Brightness);
 }
