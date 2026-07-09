@@ -77,7 +77,7 @@ def build(input_path: Path, output_path: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build Stormakt 3020 WFSA sprites from a concept PNG.")
-    parser.add_argument("--input", type=Path, default=Path("assets/stormakt3020/karl-cclv-sprite-concept.png"))
+    parser.add_argument("--input", type=Path, default=Path("assets/stormakt3020/karl-cclv-swedish-hero-danish-enemies-v3.png"))
     parser.add_argument("--output", type=Path, default=Path("assets/stormakt3020/stormakt3020.wfsa"))
     args = parser.parse_args()
     build(args.input, args.output)

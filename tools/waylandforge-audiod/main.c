@@ -94,6 +94,14 @@ static size_t ring_queued_frames(struct audio_ring *ring)
     return RING_FRAMES - read_frame + write_frame;
 }
 
+static size_t ring_clear(struct audio_ring *ring)
+{
+    size_t queued = ring_queued_frames(ring);
+    size_t write_frame = atomic_load_explicit(&ring->write_frame, memory_order_acquire);
+    atomic_store_explicit(&ring->read_frame, write_frame, memory_order_release);
+    return queued;
+}
+
 static void enqueue_test_click(struct audiod *daemon)
 {
     const int frames = SAMPLE_RATE / 5;
@@ -321,6 +329,13 @@ static void handle_client(struct audiod *daemon, int client_fd)
                  atomic_load_explicit(&daemon->dropped_frames, memory_order_relaxed),
                  atomic_load_explicit(&daemon->underrun_frames, memory_order_relaxed),
                  atomic_load_explicit(&daemon->process_callbacks, memory_order_relaxed));
+        write_text(client_fd, response);
+        return;
+    }
+    if (strstr(command, "CLEAR") != NULL) {
+        size_t cleared = ring_clear(&daemon->ring);
+        char response[48];
+        snprintf(response, sizeof(response), "OK CLEAR frames=%zu\n", cleared);
         write_text(client_fd, response);
         return;
     }

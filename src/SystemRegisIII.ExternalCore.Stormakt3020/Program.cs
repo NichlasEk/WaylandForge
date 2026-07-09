@@ -10,6 +10,7 @@ const byte StepCommand = (byte)'S';
 var input = Console.OpenStandardInput();
 var output = Console.OpenStandardOutput();
 var game = new StormaktGame(Width, Height, SpritePack.LoadDefault());
+using var music = StormaktMusicLoop.TryStartDefault();
 var command = new byte[5];
 var header = new byte[32];
 var frame = new uint[Width * Height];
@@ -266,9 +267,9 @@ internal sealed class StormaktGame
         int kind = _random.Next(3);
         uint color = kind switch
         {
-            0 => 0xff9f6b38,
-            1 => 0xff1f5d9a,
-            _ => 0xff6b7b86,
+            0 => 0xffa71930,
+            1 => 0xffc51f35,
+            _ => 0xff7f1727,
         };
         _enemies.Add(new Enemy(x, -radius, speed, radius, health, color, kind, _random.NextDouble() * Math.PI * 2.0));
         _spawnTimer = Math.Max(12, 34 - _score / 450);
@@ -395,6 +396,9 @@ internal sealed class StormaktGame
     {
         uint brass = 0xffd6b25e;
         uint dark = 0xff18202a;
+        uint danishRed = 0xffc51f35;
+        uint danishDark = 0xff7f1727;
+        uint danishWhite = 0xfff2eee4;
         if (_sprites is not null)
         {
             string spriteName = enemy.Kind switch
@@ -412,21 +416,19 @@ internal sealed class StormaktGame
 
         if (enemy.Kind == 1)
         {
-            FillCircle(frame, enemy.X, enemy.Y, enemy.Radius, 0xff1f5d9a);
-            DrawRect(frame, enemy.X - enemy.Radius + 2, enemy.Y - 2, enemy.Radius * 2 - 4, 4, brass);
-            DrawRect(frame, enemy.X - 2, enemy.Y - enemy.Radius + 2, 4, enemy.Radius * 2 - 4, brass);
-            DrawCrown(frame, enemy.X - 3, enemy.Y - 4, brass);
-            DrawCrown(frame, enemy.X + 2, enemy.Y - 4, brass);
-            DrawCrown(frame, enemy.X - 1, enemy.Y + 2, brass);
+            FillCircle(frame, enemy.X, enemy.Y, enemy.Radius, danishRed);
+            DrawRect(frame, enemy.X - enemy.Radius + 2, enemy.Y - 2, enemy.Radius * 2 - 4, 4, danishWhite);
+            DrawRect(frame, enemy.X - 3, enemy.Y - enemy.Radius + 2, 4, enemy.Radius * 2 - 4, danishWhite);
+            DrawRect(frame, enemy.X - enemy.Radius + 1, enemy.Y - enemy.Radius + 1, enemy.Radius * 2 - 2, 1, brass);
         }
         else if (enemy.Kind == 2)
         {
-            FillCircle(frame, enemy.X, enemy.Y, enemy.Radius, 0xff343c46);
-            DrawRect(frame, enemy.X - enemy.Radius + 3, enemy.Y - 4, enemy.Radius * 2 - 6, 8, 0xff1f5d9a);
-            DrawLine(frame, enemy.X - enemy.Radius + 2, enemy.Y - enemy.Radius + 2, enemy.X + enemy.Radius - 2, enemy.Y + enemy.Radius - 2, 0xffd8e6f0);
-            DrawLine(frame, enemy.X + enemy.Radius - 2, enemy.Y - enemy.Radius + 2, enemy.X - enemy.Radius + 2, enemy.Y + enemy.Radius - 2, 0xffd8e6f0);
+            FillCircle(frame, enemy.X, enemy.Y, enemy.Radius, danishDark);
+            DrawRect(frame, enemy.X - enemy.Radius + 3, enemy.Y - 4, enemy.Radius * 2 - 6, 8, danishRed);
+            DrawLine(frame, enemy.X - enemy.Radius + 2, enemy.Y - enemy.Radius + 2, enemy.X + enemy.Radius - 2, enemy.Y + enemy.Radius - 2, danishWhite);
+            DrawLine(frame, enemy.X + enemy.Radius - 2, enemy.Y - enemy.Radius + 2, enemy.X - enemy.Radius + 2, enemy.Y + enemy.Radius - 2, danishWhite);
             DrawRect(frame, enemy.X - 2, enemy.Y - enemy.Radius - 6, 4, 6, brass);
-            DrawRect(frame, enemy.X - 1, enemy.Y - enemy.Radius - 9, 3, 4, 0xff2fbfff);
+            DrawRect(frame, enemy.X - 1, enemy.Y - enemy.Radius - 9, 3, 4, danishRed);
         }
         else
         {
@@ -435,10 +437,12 @@ internal sealed class StormaktGame
             DrawRect(frame, enemy.X - 2, enemy.Y - enemy.Radius - 9, 4, 4, 0xffd6b25e);
             DrawRect(frame, enemy.X - enemy.Radius - 3, enemy.Y - 1, 6, 3, brass);
             DrawRect(frame, enemy.X + enemy.Radius - 3, enemy.Y - 1, 6, 3, brass);
+            DrawRect(frame, enemy.X - enemy.Radius + 2, enemy.Y - 1, enemy.Radius * 2 - 4, 3, danishWhite);
+            DrawRect(frame, enemy.X - 3, enemy.Y - enemy.Radius + 2, 3, enemy.Radius * 2 - 4, danishWhite);
         }
 
-        PutPixel(frame, enemy.X - 3, enemy.Y - 2, 0xffffd66b);
-        PutPixel(frame, enemy.X + 3, enemy.Y - 2, 0xffffd66b);
+        PutPixel(frame, enemy.X - 3, enemy.Y - 2, 0xffffc46b);
+        PutPixel(frame, enemy.X + 3, enemy.Y - 2, 0xffffc46b);
         DrawRect(frame, enemy.X - 2, enemy.Y + enemy.Radius - 1, 4, 3, 0xff101820);
     }
 

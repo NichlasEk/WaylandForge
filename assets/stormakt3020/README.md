@@ -1,12 +1,12 @@
 # Stormakt 3020 Assets
 
-`karl-cclv-sprite-concept.png` is the first AI-generated visual target for the EXT3 shmup core.
+`karl-cclv-swedish-hero-danish-enemies-v3.png` is the active AI-generated visual target for the EXT3 shmup core. The original `karl-cclv-sprite-concept.png` and the first Danish-enemy pass remain as historical references.
 
 Prompt summary:
 
-- Player ship: Karl CCLV, ornate brass-and-blue steampunk spaceship.
-- Motifs: Swedish blue/yellow, three crowns, brass fittings, steam vents.
-- Enemies: drones loosely inspired by Karoliner uniforms and banners.
+- Player ship: Karl CCLV, ornate Swedish blue/yellow and brass steampunk spaceship.
+- Hero motifs: three crowns, deep royal blue panels, yellow-gold trim, brass fittings, steam vents.
+- Enemies: a fictional futuristic Danish royal navy in Dannebrog red/white, dark iron and restrained gold trim.
 - Use: 16-bit top-down shmup sprite sheet concept.
 
 Runtime note:
@@ -19,4 +19,24 @@ Rebuild the pack after editing/replacing the concept sheet:
 python tools/stormakt3020/build_assets.py
 ```
 
+To rebuild from another compatible sheet without changing the active default:
+
+```sh
+python tools/stormakt3020/build_assets.py --input path/to/sheet.png
+```
+
 `WFSA` is intentionally tiny: magic/version/count, then named ARGB8888 sprites. Runtime does not need PNG decoding.
+
+## Music concept
+
+`stormakt-over-oresund-v1.wav` is a 60-second instrumental ACE-Step concept for the main combat theme: a somber, grandiose D-minor march at 96 BPM with low strings, brass, field drums, timpani, organ and restrained harpsichord. The exact local generation request is preserved in `music-request.json`.
+
+Audition it locally with:
+
+```sh
+pw-play assets/stormakt3020/stormakt-over-oresund-v1.wav
+```
+
+The EXT3 core starts the track automatically and streams bounded 48 kHz stereo F32LE chunks over WaylandForge's existing `WFAU` audio socket. It keeps roughly half a second buffered, handles partially accepted packets without replaying samples, retries harmlessly while the audio daemon is unavailable, crossfades the final half-second into the opening, and clears queued PCM when the core starts or stops.
+
+Set `WAYLANDFORGE_STORMAKT_MUSIC=0` to disable music, `WAYLANDFORGE_STORMAKT_MUSIC_PATH` to audition another compatible 48 kHz stereo PCM16 WAV, or `WAYLANDFORGE_AUDIO_SOCKET` to use another audio-daemon socket.
