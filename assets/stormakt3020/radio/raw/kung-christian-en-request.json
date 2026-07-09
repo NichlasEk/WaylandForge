@@ -1,0 +1,7 @@
+{
+  "text": "You have broken the bailiff's seal. Now you face the Crown's fleet.",
+  "language": "en",
+  "output_format": "wav",
+  "model_backend": "grapheneos-matcha-en",
+  "normalize": false
+}

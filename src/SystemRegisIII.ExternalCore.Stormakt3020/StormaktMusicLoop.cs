@@ -14,8 +14,11 @@ internal sealed class StormaktMusicLoop : IDisposable
 
     private readonly float[] _samples;
     private readonly Dictionary<StormaktSound, LoadedEffect> _effects;
+    private readonly Dictionary<StormaktVoice, LoadedEffect> _voices;
     private readonly ConcurrentQueue<StormaktSound> _pendingEffects = new();
+    private readonly ConcurrentQueue<StormaktVoice> _pendingVoices = new();
     private readonly List<ActiveEffect> _activeEffects = [];
+    private ActiveEffect? _activeVoice;
     private readonly int _totalFrames;
     private readonly int _crossfadeFrames;
     private readonly string _socketPath;
@@ -23,10 +26,15 @@ internal sealed class StormaktMusicLoop : IDisposable
     private readonly Thread _thread;
     private volatile bool _connectedOnce;
 
-    private StormaktMusicLoop(float[] samples, Dictionary<StormaktSound, LoadedEffect> effects, string socketPath)
+    private StormaktMusicLoop(
+        float[] samples,
+        Dictionary<StormaktSound, LoadedEffect> effects,
+        Dictionary<StormaktVoice, LoadedEffect> voices,
+        string socketPath)
     {
         _samples = samples;
         _effects = effects;
+        _voices = voices;
         _totalFrames = samples.Length / Channels;
         _crossfadeFrames = Math.Min(SampleRate / 2, _totalFrames / 8);
         _socketPath = socketPath;
@@ -68,9 +76,10 @@ internal sealed class StormaktMusicLoop : IDisposable
             {
                 float[] samples = LoadPcm16StereoWav(path);
                 Dictionary<StormaktSound, LoadedEffect> effects = LoadEffects(path);
+                Dictionary<StormaktVoice, LoadedEffect> voices = LoadVoices(path);
                 string socketPath = Environment.GetEnvironmentVariable("WAYLANDFORGE_AUDIO_SOCKET") ?? DefaultSocketPath;
-                Console.Error.WriteLine($"Stormakt audio: loaded {Path.GetFileName(path)} ({samples.Length / Channels / SampleRate}s) and {effects.Count} effects.");
-                return new StormaktMusicLoop(samples, effects, socketPath);
+                Console.Error.WriteLine($"Stormakt audio: loaded {Path.GetFileName(path)} ({samples.Length / Channels / SampleRate}s), {effects.Count} effects and {voices.Count} radio voices.");
+                return new StormaktMusicLoop(samples, effects, voices, socketPath);
             }
             catch (Exception exception)
             {
@@ -84,6 +93,8 @@ internal sealed class StormaktMusicLoop : IDisposable
     }
 
     public void Trigger(StormaktSound sound) => _pendingEffects.Enqueue(sound);
+
+    public void TriggerVoice(StormaktVoice voice) => _pendingVoices.Enqueue(voice);
 
     public void Dispose()
     {
@@ -179,6 +190,13 @@ internal sealed class StormaktMusicLoop : IDisposable
                 _activeEffects.Add(new ActiveEffect(effect));
             }
         }
+        while (_pendingVoices.TryDequeue(out StormaktVoice voice))
+        {
+            if (_voices.TryGetValue(voice, out LoadedEffect? effect) && effect is not null)
+            {
+                _activeVoice = new ActiveEffect(effect);
+            }
+        }
 
         for (int outputFrame = 0; outputFrame < frames; outputFrame++)
         {
@@ -193,8 +211,9 @@ internal sealed class StormaktMusicLoop : IDisposable
                 right = (right * tailWeight) + (_samples[(headFrame * Channels) + 1] * headWeight);
             }
 
-            left *= 0.68f;
-            right *= 0.68f;
+            float musicGain = _activeVoice is null ? 0.68f : 0.34f;
+            left *= musicGain;
+            right *= musicGain;
             for (int voiceIndex = _activeEffects.Count - 1; voiceIndex >= 0; voiceIndex--)
             {
                 ActiveEffect voice = _activeEffects[voiceIndex];
@@ -204,6 +223,16 @@ internal sealed class StormaktMusicLoop : IDisposable
                 if (voice.Frame >= voice.Effect.Samples.Length / Channels)
                 {
                     _activeEffects.RemoveAt(voiceIndex);
+                }
+            }
+            if (_activeVoice is not null)
+            {
+                left += _activeVoice.Effect.Samples[_activeVoice.Frame * Channels] * _activeVoice.Effect.Gain;
+                right += _activeVoice.Effect.Samples[(_activeVoice.Frame * Channels) + 1] * _activeVoice.Effect.Gain;
+                _activeVoice.Frame++;
+                if (_activeVoice.Frame >= _activeVoice.Effect.Samples.Length / Channels)
+                {
+                    _activeVoice = null;
                 }
             }
             left = Math.Clamp(left, -0.98f, 0.98f);
@@ -368,6 +397,41 @@ internal sealed class StormaktMusicLoop : IDisposable
         return effects;
     }
 
+    private static Dictionary<StormaktVoice, LoadedEffect> LoadVoices(string soundtrackPath)
+    {
+        string soundtrackDirectory = Path.GetDirectoryName(soundtrackPath)!;
+        string parentDirectory = Path.GetDirectoryName(soundtrackDirectory) ?? soundtrackDirectory;
+        string[] directories =
+        [
+            Path.Combine(soundtrackDirectory, "radio", "voices"),
+            Path.Combine(parentDirectory, "radio", "voices"),
+            Path.Combine(Environment.CurrentDirectory, "assets", "stormakt3020", "radio", "voices"),
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "assets", "stormakt3020", "radio", "voices")),
+        ];
+        string? voiceDirectory = directories.FirstOrDefault(Directory.Exists);
+        if (voiceDirectory is null)
+        {
+            return [];
+        }
+
+        (StormaktVoice Voice, string File, float Gain)[] entries =
+        [
+            (StormaktVoice.EbbaGrip, "ebba-grip-en-radio.wav", 0.72f),
+            (StormaktVoice.RasmusGyldentold, "rasmus-gyldentold-en-radio.wav", 0.72f),
+            (StormaktVoice.KungChristian, "kung-christian-en-radio.wav", 0.76f),
+        ];
+        Dictionary<StormaktVoice, LoadedEffect> voices = [];
+        foreach ((StormaktVoice voice, string file, float gain) in entries)
+        {
+            string path = Path.Combine(voiceDirectory, file);
+            if (File.Exists(path))
+            {
+                voices[voice] = new LoadedEffect(LoadPcm16StereoWav(path), gain);
+            }
+        }
+        return voices;
+    }
+
     private static float[] LoadPcm16StereoWav(string path)
     {
         using FileStream stream = File.OpenRead(path);
@@ -444,4 +508,11 @@ internal enum StormaktSound
     EnemyExplosion,
     HullHit,
     Deploy,
+}
+
+internal enum StormaktVoice
+{
+    EbbaGrip,
+    RasmusGyldentold,
+    KungChristian,
 }

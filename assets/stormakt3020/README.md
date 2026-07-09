@@ -58,3 +58,15 @@ python tools/stormakt3020/build_sfx.py
 ```
 
 The external core triggers them from actual gameplay events and mixes up to 32 voices into the music stream with headroom before sending 2048-frame `WFAU` packets.
+
+## Radio voices
+
+The first videocom prototype uses three synthetic English placeholder voices under `radio/voices/`. They were rendered by EutherLink's GrapheneOS Matcha English backend without reference-voice cloning. Requests, raw output, job IDs, hashes and approval state are preserved under `radio/`; none of these voices are final casting.
+
+Rebuild the 48 kHz stereo radio-filtered runtime files from the raw WAV files with:
+
+```sh
+python tools/stormakt3020/build_radio_voices.py
+```
+
+The game keeps voice playback separate from ordinary effects and ducks music by about 6 dB while a radio line is active. Missing voice assets never suppress the deterministic subtitle card.

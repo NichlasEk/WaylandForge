@@ -1,0 +1,7 @@
+{
+  "text": "Karl C C L five, hold your course. The Great Belt is not lost yet.",
+  "language": "en",
+  "output_format": "wav",
+  "model_backend": "grapheneos-matcha-en",
+  "normalize": false
+}

@@ -1,6 +1,6 @@
 # Stormakt 3020 - videokomradio, dialog och TTS
 
-Status: design och pilotmanus. Ingen runtimeimplementation eller massgenererad dialog ännu.
+Status: första runtimeprototypen och tre engelska platshållarröster är implementerade. Svenska och danska slutröster återstår.
 
 ## Målbild
 
@@ -46,6 +46,14 @@ Det är däremot inte samma sak som officiellt språkstöd. Dots tekniska rappor
 - oprövad för acceptabel dansk prosodi tills ett språkmatchat A/B-prov har lyssnats igenom.
 
 EutherLinks automatiska referensfras behöver också rättas före dansk preset-generering: den väljer engelska för `en` och svensk text för alla andra språk. Danska får annars en svensk referensfras trots `DA`-tagg.
+
+## Engelsk platshållarpipeline
+
+EutherLink exponerar både GrapheneOS Matcha English och den tyngre VoxCPM2-modellen. Den första prototypen använder Matcha eftersom den är varm, snabb och inte behöver flytta de tunga GPU-resurserna. VoxCPM2 är kandidaten vi sannolikt mindes som bättre men mer krävande; den sparas till ett uttrycksfullt engelskt referensprov för Dots.
+
+Tre syntetiska engelska röster ligger under `assets/stormakt3020/radio/`. Råfiler, exakta requestfiler, jobb-id, hash och godkännandestatus finns i `voice-manifest.json`. Inga privata eller kända röstreferenser har använts. `tools/stormakt3020/build_radio_voices.py` samplar om till 48 kHz stereo och lägger på reproducerbart radiofilter.
+
+Runtime visar korten vid fasta simuleringsrutor, spelar separat voice-kanal och duckar musiken cirka 6 dB medan repliken hörs. Start hoppar över ett aktivt kort; saknad röstfil påverkar inte text eller simulering.
 
 Rekommenderad pilot:
 
@@ -97,8 +105,8 @@ De danska raderna ska granskas av en dansk talare eller åtminstone genom ett se
 
 ## Checkpoints
 
-1. **Radioprototyp:** en statisk svensk och en dansk textreplik med platshållarporträtt, ingen röst. Headless capture och push.
-2. **Voice pipeline:** två godkända referensröster, SV/DA-pilot, radiofilter och manifest med text/språk/seed/modell. Lyssningsbeslut och push.
+1. **Radioprototyp:** klar med tre engelska platshållarkort, kodritade porträtt och headless capture.
+2. **Voice pipeline:** engelsk Matcha-placeholder, radiofilter och manifest är klara. Två godkända SV/DA-referensröster, Dots-pilot och lyssningsbeslut återstår.
 3. **Bana 1-dialog:** fem tidsatta radiokort, riktiga porträtt, musikduckning och voice-mix. Full ban-capture och push.
 
 ## Acceptanskriterier

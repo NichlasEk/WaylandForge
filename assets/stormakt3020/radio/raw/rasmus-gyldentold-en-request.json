@@ -1,0 +1,7 @@
+{
+  "text": "Swedish vessel, heave to. The Crown's tithe falls due now.",
+  "language": "en",
+  "output_format": "wav",
+  "model_backend": "grapheneos-matcha-en",
+  "normalize": false
+}

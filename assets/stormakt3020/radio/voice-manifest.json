@@ -1,0 +1,51 @@
+{
+  "generated_at": "2026-07-09",
+  "status": "placeholder-not-approved",
+  "runtime_format": "PCM16 stereo 48000 Hz",
+  "source_backend": "grapheneos-matcha-en",
+  "source_service": "EutherLink /v1/tts/jobs",
+  "reference_audio": null,
+  "reference_ownership": "No cloned or third-party reference voice was used.",
+  "processing": {
+    "tool": "tools/stormakt3020/build_radio_voices.py",
+    "high_pass_hz": 180,
+    "low_pass_hz": 4500,
+    "compression": "deterministic tanh soft compression",
+    "noise": "deterministic low-level radio noise"
+  },
+  "voices": [
+    {
+      "speaker": "RIKSAMIRAL EBBA GRIP",
+      "language": "en",
+      "text": "Karl C C L five, hold your course. The Great Belt is not lost yet.",
+      "job_id": "8fb3a242263c4a8b956f6f65cdf787cc",
+      "request": "raw/ebba-grip-en-request.json",
+      "raw": "raw/ebba-grip-en-raw.wav",
+      "runtime": "voices/ebba-grip-en-radio.wav",
+      "runtime_sha256": "0113c76b072e890a85b5db88716a713385181082865f2f66b85ff6bd38362b96",
+      "approved": false
+    },
+    {
+      "speaker": "FOGDE RASMUS GYLDENTOLD",
+      "language": "en",
+      "text": "Swedish vessel, heave to. The Crown's tithe falls due now.",
+      "job_id": "ef0061f64a2848ca802b9c4c2fd6b135",
+      "request": "raw/rasmus-gyldentold-en-request.json",
+      "raw": "raw/rasmus-gyldentold-en-raw.wav",
+      "runtime": "voices/rasmus-gyldentold-en-radio.wav",
+      "runtime_sha256": "f324880d2dc8fb7e709ed5945be191eb9356486580dc41e13dd95444171fd79f",
+      "approved": false
+    },
+    {
+      "speaker": "KUNG CHRISTIAN",
+      "language": "en",
+      "text": "You have broken the bailiff's seal. Now you face the Crown's fleet.",
+      "job_id": "1d3cc66032344ba68676536b1fafbf90",
+      "request": "raw/kung-christian-en-request.json",
+      "raw": "raw/kung-christian-en-raw.wav",
+      "runtime": "voices/kung-christian-en-radio.wav",
+      "runtime_sha256": "14591eeabe73b2bcc856879a8b06263b05ea7f97bf31af616f0b3cbf6a930cf3",
+      "approved": false
+    }
+  ]
+}

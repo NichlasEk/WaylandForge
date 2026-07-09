@@ -77,6 +77,13 @@ internal sealed class StormaktGame
     private readonly List<Shot> _shots = [];
     private readonly List<Enemy> _enemies = [];
     private readonly Star[] _stars = new Star[92];
+    private readonly HashSet<int> _skippedRadioCards = [];
+    private static readonly RadioCard[] RadioCards =
+    [
+        new(90, 360, false, "EBBA GRIP", "HOLD YOUR COURSE", "BELT IS NOT LOST", StormaktVoice.EbbaGrip),
+        new(540, 300, true, "RASMUS", "SWEDISH VESSEL", "HEAVE TO NOW", StormaktVoice.RasmusGyldentold),
+        new(930, 315, true, "CHRISTIAN", "FACE THE CROWNS", "FINAL FLEET", StormaktVoice.KungChristian),
+    ];
     private int _shipX;
     private int _shipY;
     private int _cooldown;
@@ -85,6 +92,7 @@ internal sealed class StormaktGame
     private int _score;
     private int _lives = 3;
     private int _heat;
+    private int _missionFrame;
     private uint _previousButtons;
     private bool _gameOver;
 
@@ -113,6 +121,8 @@ internal sealed class StormaktGame
             _previousButtons = buttons;
             return;
         }
+
+        StepRadio(buttons);
 
         int speed = (buttons & Slow) != 0 ? 2 : 4;
         if ((buttons & Left) != 0) _shipX -= speed;
@@ -159,6 +169,7 @@ internal sealed class StormaktGame
         DrawEnemies(frame);
         DrawShip(frame);
         DrawHud(frame);
+        DrawRadio(frame);
         if (_gameOver)
         {
             DrawRect(frame, 76, 92, 168, 42, 0xdd090b10);
@@ -179,11 +190,31 @@ internal sealed class StormaktGame
         _score = 0;
         _lives = 3;
         _heat = 0;
+        _missionFrame = 0;
+        _skippedRadioCards.Clear();
         _previousButtons = 0;
         _gameOver = false;
     }
 
     private bool Pressed(uint buttons, uint button) => (buttons & button) != 0 && (_previousButtons & button) == 0;
+
+    private void StepRadio(uint buttons)
+    {
+        foreach (RadioCard card in RadioCards)
+        {
+            if (_missionFrame == card.StartFrame)
+            {
+                _audio?.TriggerVoice(card.Voice);
+            }
+            if (_missionFrame >= card.StartFrame &&
+                _missionFrame < card.StartFrame + card.DurationFrames &&
+                Pressed(buttons, Start))
+            {
+                _skippedRadioCards.Add(card.StartFrame);
+            }
+        }
+        _missionFrame++;
+    }
 
     private void StepShots()
     {
@@ -465,6 +496,60 @@ internal sealed class StormaktGame
         DrawRect(frame, 268, _height - 8, Math.Clamp(_heat, 0, 120) * 44 / 120, 4, _heat > 80 ? 0xffff6b4a : 0xffffd66b);
     }
 
+    private void DrawRadio(uint[] frame)
+    {
+        foreach (RadioCard card in RadioCards)
+        {
+            int elapsed = _missionFrame - card.StartFrame;
+            if (elapsed < 0 || elapsed >= card.DurationFrames || _skippedRadioCards.Contains(card.StartFrame))
+            {
+                continue;
+            }
+
+            const int width = 138;
+            const int height = 48;
+            int slide = Math.Min(8, Math.Min(elapsed + 1, card.DurationFrames - elapsed));
+            int x = card.Enemy
+                ? _width - (width * slide / 8) - 2
+                : -width + (width * slide / 8) + 2;
+            int y = 18;
+            uint frameColor = card.Enemy ? 0xffc92f42 : 0xff2f74c9;
+            uint lampColor = card.Enemy ? 0xfff4f1e8 : 0xffffd66b;
+            uint uniformColor = card.Enemy ? 0xff8f1f31 : 0xff245ca5;
+
+            DrawRect(frame, x, y, width, height, 0xff081019);
+            DrawLine(frame, x, y, x + width - 1, y, frameColor);
+            DrawLine(frame, x, y + height - 1, x + width - 1, y + height - 1, frameColor);
+            DrawLine(frame, x, y, x, y + height - 1, frameColor);
+            DrawLine(frame, x + width - 1, y, x + width - 1, y + height - 1, frameColor);
+            DrawRect(frame, x + 2, y + 2, 38, 38, 0xff162331);
+            DrawRadioPortrait(frame, x + 21, y + 21, uniformColor, lampColor, card.Enemy);
+            DrawRect(frame, x + 42, y + 3, 93, 9, frameColor);
+            DrawRect(frame, x + 44, y + 5, 3, 3, lampColor);
+            DrawText(frame, x + 50, y + 4, card.Speaker, 0xffffffff);
+            DrawText(frame, x + 43, y + 18, card.Line1, 0xffdce8f2);
+            DrawText(frame, x + 43, y + 30, card.Line2, 0xffdce8f2);
+            for (int scanY = y + 2; scanY < y + height - 1; scanY += 4)
+            {
+                DrawLine(frame, x + 2, scanY, x + 39, scanY, 0xff20303b);
+            }
+            return;
+        }
+    }
+
+    private void DrawRadioPortrait(uint[] frame, int x, int y, uint uniform, uint accent, bool enemy)
+    {
+        FillCircle(frame, x, y - 5, 8, 0xffd2a477);
+        DrawRect(frame, x - 9, y + 3, 18, 13, uniform);
+        DrawRect(frame, x - 5, y - 13, 10, 3, enemy ? 0xfff4f1e8 : 0xffffd66b);
+        DrawRect(frame, x - 8, y - 10, 16, 2, uniform);
+        DrawRect(frame, x - 4, y - 5, 2, 2, 0xff101820);
+        DrawRect(frame, x + 2, y - 5, 2, 2, 0xff101820);
+        DrawRect(frame, x - 2, y, 5, 1, 0xff713947);
+        DrawRect(frame, x - 8, y + 7, 4, 2, accent);
+        DrawRect(frame, x + 4, y + 7, 4, 2, accent);
+    }
+
     private void DrawCrown(uint[] frame, int x, int y, uint color)
     {
         PutPixel(frame, x, y + 1, color);
@@ -575,6 +660,7 @@ internal sealed class StormaktGame
         'T' => [0b11111, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100],
         'U' => [0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110],
         'V' => [0b10001, 0b10001, 0b10001, 0b10001, 0b01010, 0b01010, 0b00100],
+        'W' => [0b10001, 0b10001, 0b10001, 0b10101, 0b10101, 0b11011, 0b10001],
         'X' => [0b10001, 0b01010, 0b00100, 0b00100, 0b00100, 0b01010, 0b10001],
         'Y' => [0b10001, 0b01010, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100],
         'Z' => [0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b10000, 0b11111],
@@ -683,6 +769,14 @@ internal sealed class StormaktGame
     private record struct Shot(int X, int Y, int Vx, int Vy, uint Color, int Power);
     private record struct Enemy(int X, int Y, int Speed, int Radius, int Health, uint Color, int Kind, double Phase);
     private readonly record struct Star(int X, int Y, int Speed, int Brightness);
+    private readonly record struct RadioCard(
+        int StartFrame,
+        int DurationFrames,
+        bool Enemy,
+        string Speaker,
+        string Line1,
+        string Line2,
+        StormaktVoice Voice);
 }
 
 internal sealed class SpritePack
