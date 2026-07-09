@@ -50,7 +50,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     }
 
     public ulong FrameIndex { get; private set; }
-    public string Name => string.IsNullOrWhiteSpace(_command) ? "EXTERNAL DUMMY" : Path.GetFileName(_command).ToUpperInvariant();
+    public string Name => string.IsNullOrWhiteSpace(_command) ? "EXTERNAL DUMMY" : ExternalName();
     public string Mode => _mode;
     public string PointerDriver => _pointerDriver;
     public bool IsRunning => _process is { HasExited: false };
@@ -66,6 +66,20 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
                 return _stderrTail.ToArray();
             }
         }
+    }
+
+    private string ExternalName()
+    {
+        if (string.Equals(Path.GetFileName(_command), "dotnet", StringComparison.OrdinalIgnoreCase))
+        {
+            string? dll = SplitArguments(_args).FirstOrDefault(static arg => arg.EndsWith(".dll", StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(dll))
+            {
+                return Path.GetFileNameWithoutExtension(dll).ToUpperInvariant();
+            }
+        }
+
+        return Path.GetFileName(_command).ToUpperInvariant();
     }
 
     public void Configure(UiExternalCoreConfig config, string fallbackDllPath)

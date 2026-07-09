@@ -22,6 +22,7 @@ internal sealed class UiConfig
     public UiTileLayoutConfig Layout { get; } = new();
     public UiExternalCoreConfig ExternalCore { get; } = new();
     public UiExternalCoreConfig ExternalCore2 { get; } = new();
+    public UiExternalCoreConfig ExternalCore3 { get; } = new();
     public Dictionary<string, UiWindowConfig> Windows { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public static UiConfig Load(string defaultsPath, string localPath)
@@ -101,6 +102,16 @@ internal sealed class UiConfig
         writer.WriteLine($"wfex_path = \"{Escape(ExternalCore2.WfexPath)}\"");
         writer.WriteLine($"pointer_driver = \"{Escape(ExternalCore2.PointerDriver)}\"");
         writer.WriteLine($"socket_path = \"{Escape(ExternalCore2.SocketPath)}\"");
+        writer.WriteLine();
+        writer.WriteLine("[external_core3]");
+        writer.WriteLine($"mode = \"{Escape(ExternalCore3.Mode)}\"");
+        writer.WriteLine($"command = \"{Escape(ExternalCore3.Command)}\"");
+        writer.WriteLine($"args = \"{Escape(ExternalCore3.Args)}\"");
+        writer.WriteLine($"working_directory = \"{Escape(ExternalCore3.WorkingDirectory)}\"");
+        writer.WriteLine($"env = \"{Escape(ExternalCore3.Env)}\"");
+        writer.WriteLine($"wfex_path = \"{Escape(ExternalCore3.WfexPath)}\"");
+        writer.WriteLine($"pointer_driver = \"{Escape(ExternalCore3.PointerDriver)}\"");
+        writer.WriteLine($"socket_path = \"{Escape(ExternalCore3.SocketPath)}\"");
         writer.WriteLine();
 
         foreach (KeyValuePair<string, UiWindowConfig> pair in Windows.OrderBy(static pair => pair.Value.Order).ThenBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase))
@@ -244,11 +255,15 @@ internal sealed class UiConfig
         }
 
         if (string.Equals(section, "external_core", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(section, "external_core2", StringComparison.OrdinalIgnoreCase))
+            string.Equals(section, "external_core2", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(section, "external_core3", StringComparison.OrdinalIgnoreCase))
         {
-            UiExternalCoreConfig externalCore = string.Equals(section, "external_core2", StringComparison.OrdinalIgnoreCase)
-                ? ExternalCore2
-                : ExternalCore;
+            UiExternalCoreConfig externalCore = section.ToLowerInvariant() switch
+            {
+                "external_core2" => ExternalCore2,
+                "external_core3" => ExternalCore3,
+                _ => ExternalCore,
+            };
             switch (key.ToLowerInvariant())
             {
                 case "mode":

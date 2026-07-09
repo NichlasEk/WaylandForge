@@ -22,6 +22,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     private readonly SaturnBringupCore _saturnCore = new();
     private readonly ExternalProcessCore _externalCore;
     private readonly ExternalProcessCore _externalCore2;
+    private readonly ExternalProcessCore _externalCore3;
     private ISystemCore _core;
     private readonly ForgeInputSource _inputSource = new();
     private readonly FrameStore _frameStore = new();
@@ -80,6 +81,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         _config = UiConfig.Load(DefaultConfigPath, LocalConfigPath);
         _externalCore = new ExternalProcessCore(_config.ExternalCore, ResolveExternalDummyCorePath());
         _externalCore2 = new ExternalProcessCore(_config.ExternalCore2, ResolveExternalDummyCorePath());
+        _externalCore3 = new ExternalProcessCore(_config.ExternalCore3, ResolveExternalDummyCorePath());
         _core = _saturnCore;
         ApplyConfig();
     }
@@ -213,6 +215,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         SaveConfig(force: false);
         _externalCore.Dispose();
         _externalCore2.Dispose();
+        _externalCore3.Dispose();
     }
 
     private void DrawChrome(ForgeLayout layout)
@@ -289,6 +292,12 @@ internal sealed unsafe class ForgeApp : IDisposable
         if (_ui.Button(new UiId("toolbar.ext2"), ext2Rect, "EXT2", ReferenceEquals(_core, _externalCore2)).Clicked)
         {
             ToggleExternalCore2();
+        }
+
+        row = row.Next(50, out RectI ext3Rect);
+        if (_ui.Button(new UiId("toolbar.ext3"), ext3Rect, "EXT3", ReferenceEquals(_core, _externalCore3)).Clicked)
+        {
+            ToggleExternalCore3();
         }
 
         row = row.Next(50, out RectI coreRect);
@@ -2034,6 +2043,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         SetScaleMode(ParseScaleMode(_config.Scale), markDirty: false);
         _externalCore.Configure(_config.ExternalCore, ResolveExternalDummyCorePath());
         _externalCore2.Configure(_config.ExternalCore2, ResolveExternalDummyCorePath());
+        _externalCore3.Configure(_config.ExternalCore3, ResolveExternalDummyCorePath());
         ApplyWindowConfig(AppWindow.Viewport, "viewport");
         ApplyWindowConfig(AppWindow.Rom, "rom_picker");
         ApplyWindowConfig(AppWindow.Settings, "settings");
@@ -2384,6 +2394,10 @@ internal sealed unsafe class ForgeApp : IDisposable
         {
             return _config.CoreInput("external_core2");
         }
+        if (ReferenceEquals(_core, _externalCore3))
+        {
+            return _config.CoreInput("external_core3");
+        }
         if (ReferenceEquals(_core, _externalCore))
         {
             return _config.CoreInput("external_core");
@@ -2396,6 +2410,10 @@ internal sealed unsafe class ForgeApp : IDisposable
         if (ReferenceEquals(_core, _externalCore2))
         {
             return "RAPTOR";
+        }
+        if (ReferenceEquals(_core, _externalCore3))
+        {
+            return "STORMAKT 3020";
         }
         if (ReferenceEquals(_core, _externalCore))
         {
@@ -2464,6 +2482,19 @@ internal sealed unsafe class ForgeApp : IDisposable
                 "z" => "Z UNUSED",
                 "start" => "START/OK",
                 "escape" => "ESC DISABLED",
+                _ => binding.Label,
+            };
+        }
+
+        if (ReferenceEquals(_core, _externalCore3))
+        {
+            return binding.Id switch
+            {
+                "a" => "A FIRE",
+                "b" => "B BROADSIDE",
+                "c" => "C HOLD",
+                "x" => "X SLOW",
+                "start" => "START",
                 _ => binding.Label,
             };
         }
@@ -2769,6 +2800,42 @@ internal sealed unsafe class ForgeApp : IDisposable
     private static string FormatHex(uint value, int digits) =>
         "0X" + value.ToString("X" + digits.ToString(System.Globalization.CultureInfo.InvariantCulture), System.Globalization.CultureInfo.InvariantCulture);
 
+    private static IEnumerable<string> SplitCommandArguments(string args)
+    {
+        if (string.IsNullOrWhiteSpace(args))
+        {
+            yield break;
+        }
+
+        var builder = new StringBuilder();
+        bool quoted = false;
+        foreach (char ch in args)
+        {
+            if (ch == '"')
+            {
+                quoted = !quoted;
+                continue;
+            }
+
+            if (char.IsWhiteSpace(ch) && !quoted)
+            {
+                if (builder.Length > 0)
+                {
+                    yield return builder.ToString();
+                    builder.Clear();
+                }
+                continue;
+            }
+
+            builder.Append(ch);
+        }
+
+        if (builder.Length > 0)
+        {
+            yield return builder.ToString();
+        }
+    }
+
     private void DrawInputLamp(int x, int y, string label, ForgeInput bit)
     {
         bool active = (_lastInput & bit) != 0;
@@ -2821,6 +2888,11 @@ internal sealed unsafe class ForgeApp : IDisposable
         ToggleExternalCore(_externalCore2);
     }
 
+    private void ToggleExternalCore3()
+    {
+        ToggleExternalCore(_externalCore3);
+    }
+
     private void ToggleExternalCore(ExternalProcessCore target)
     {
         if (ReferenceEquals(_core, target))
@@ -2831,13 +2903,12 @@ internal sealed unsafe class ForgeApp : IDisposable
         else
         {
             _fakeCore.Reset();
-            if (ReferenceEquals(target, _externalCore))
+            foreach (ExternalProcessCore external in ExternalCores())
             {
-                _externalCore2.Reset();
-            }
-            else
-            {
-                _externalCore.Reset();
+                if (!ReferenceEquals(target, external))
+                {
+                    external.Reset();
+                }
             }
             _core = target;
         }
@@ -2876,9 +2947,15 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private string ExternalCommandLabel()
     {
-        UiExternalCoreConfig config = ReferenceEquals(ActiveExternalCore(), _externalCore2)
-            ? _config.ExternalCore2
-            : _config.ExternalCore;
+        UiExternalCoreConfig config = ActiveExternalCoreConfig();
+        if (string.Equals(Path.GetFileName(config.Command), "dotnet", StringComparison.OrdinalIgnoreCase))
+        {
+            string? dll = SplitCommandArguments(config.Args).FirstOrDefault(static arg => arg.EndsWith(".dll", StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(dll))
+            {
+                return TruncateMiddle(Path.GetFileNameWithoutExtension(dll), 18);
+            }
+        }
         return string.IsNullOrWhiteSpace(config.Command)
             ? "BUILTIN DUMMY"
             : TruncateMiddle(Path.GetFileName(config.Command), 18);
@@ -2886,7 +2963,25 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private ExternalProcessCore ActiveExternalCore()
     {
+        if (ReferenceEquals(_core, _externalCore3))
+        {
+            return _externalCore3;
+        }
         return ReferenceEquals(_core, _externalCore2) ? _externalCore2 : _externalCore;
+    }
+
+    private UiExternalCoreConfig ActiveExternalCoreConfig()
+    {
+        if (ReferenceEquals(_core, _externalCore3))
+        {
+            return _config.ExternalCore3;
+        }
+        return ReferenceEquals(_core, _externalCore2) ? _config.ExternalCore2 : _config.ExternalCore;
+    }
+
+    private ExternalProcessCore[] ExternalCores()
+    {
+        return [_externalCore, _externalCore2, _externalCore3];
     }
 
     private string CoreName()

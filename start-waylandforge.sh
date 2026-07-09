@@ -9,6 +9,7 @@ HOST_PROJECT="$ROOT_DIR/src/SystemRegisIII.Host.WaylandForge/SystemRegisIII.Host
 HOST_DLL="$ROOT_DIR/src/SystemRegisIII.Host.WaylandForge/bin/Debug/net10.0/SystemRegisIII.Host.WaylandForge.dll"
 LOCAL_OPENTYRIAN_BIN="$ROOT_DIR/local/opentyrian-wfcore/opentyrian"
 LOCAL_RAPTOR_BIN="$ROOT_DIR/local/raptor/build/bin/raptor"
+LOCAL_STORMAKT_DLL="$ROOT_DIR/src/SystemRegisIII.ExternalCore.Stormakt3020/bin/Debug/net8.0/SystemRegisIII.ExternalCore.Stormakt3020.dll"
 AUDIO_PID=""
 HOST_PID=""
 
@@ -89,7 +90,7 @@ stop_local_external_cores() {
             continue
         fi
         case "$args" in
-            *"$LOCAL_OPENTYRIAN_BIN"*|*"$LOCAL_RAPTOR_BIN"*|*"$ROOT_DIR/local/opentyrian-wfcore/"*|*"$ROOT_DIR/local/raptor/"*)
+            *"$LOCAL_OPENTYRIAN_BIN"*|*"$LOCAL_RAPTOR_BIN"*|*"$LOCAL_STORMAKT_DLL"*|*"$ROOT_DIR/local/opentyrian-wfcore/"*|*"$ROOT_DIR/local/raptor/"*)
                 echo "stopping stale external core pid $pid"
                 kill "$pid" 2>/dev/null || true
                 pids+=("$pid")

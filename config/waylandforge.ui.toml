@@ -54,6 +54,20 @@ x = "rightshift"
 y = "space"
 z = ""
 
+[input.external_core3]
+# Stormakt 3020 is a native WaylandForge shmup.
+up = "up"
+down = "down"
+left = "left"
+right = "right"
+start = "enter"
+a = "z"
+b = "x"
+c = "c"
+x = "leftshift,rightshift"
+y = "a"
+z = "s"
+
 [ui.layout]
 root = "v(viewport,h(rom_picker,h(settings,h(style_editor,input_mapper,0.50),0.50),0.58),0.62)"
 
@@ -76,6 +90,16 @@ env = "RAPTOR_WFCORE=1;SDL_VIDEODRIVER=dummy"
 wfex_path = "/tmp/waylandforge-raptor.wfex"
 pointer_driver = "raptor"
 socket_path = "/tmp/waylandforge-raptor.sock"
+
+[external_core3]
+mode = "stdio"
+command = "dotnet"
+args = "/home/nichlas/WaylandForge/src/SystemRegisIII.ExternalCore.Stormakt3020/bin/Debug/net8.0/SystemRegisIII.ExternalCore.Stormakt3020.dll"
+working_directory = "/home/nichlas/WaylandForge"
+env = ""
+wfex_path = "/tmp/waylandforge-stormakt3020.wfex"
+pointer_driver = "none"
+socket_path = "/tmp/waylandforge-stormakt3020.sock"
 
 [ui.tile]
 primary = "viewport"
