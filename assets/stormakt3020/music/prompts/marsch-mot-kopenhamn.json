@@ -1,0 +1,21 @@
+{
+  "prompt": "Instrumental menu and launch theme for a futuristic Swedish 17th-century space-navy shmup. Somber grandiose baroque procession in G minor at 72 BPM, low violas and cellos, noble restrained brass choir, distant field drum, deep timpani, pipe organ pedal, sparse harpsichord, cold Nordic sea fog atmosphere, dignified melancholy, memorable royal motif, steady circular harmony suitable for an endless game-menu loop, no large final cadence. No vocals, no sung choir, no lyrics, no EDM, no modern pop drums, no comedy, no cheerful major key.",
+  "lyrics": "[Instrumental]",
+  "vocal_language": "unknown",
+  "audio_duration": 48,
+  "audio_format": "wav",
+  "task_type": "text2music",
+  "batch_size": 1,
+  "thinking": false,
+  "use_format": false,
+  "bpm": 72,
+  "key_scale": "G minor",
+  "time_signature": "4/4",
+  "inference_steps": 8,
+  "guidance_scale": 7.0,
+  "use_random_seed": true,
+  "constrained_decoding": true,
+  "use_cot_caption": true,
+  "use_cot_language": true,
+  "lm_negative_prompt": "vocals, singing, lyrics, EDM, pop, comedy, cheerful major key, abrupt final cadence"
+}

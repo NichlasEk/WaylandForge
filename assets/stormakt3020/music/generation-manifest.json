@@ -1,0 +1,54 @@
+{
+  "generator": {
+    "service": "ACE-Step 1.5 local API",
+    "endpoint": "http://127.0.0.1:8001",
+    "lm_model": "acestep-5Hz-lm-1.7B",
+    "dit_model": "acestep-v15-turbo",
+    "source_format": "PCM16 stereo 48000 Hz"
+  },
+  "accepted": [
+    {
+      "role": "main_combat",
+      "file": "../stormakt-over-oresund-v1.wav",
+      "request": "../music-request.json",
+      "task_id": "742b6d7c-4574-4423-9e8a-37818d907f74",
+      "seed": "1440477215",
+      "duration_seconds": 60
+    },
+    {
+      "role": "menu_launch",
+      "file": "marsch-mot-kopenhamn-v1.wav",
+      "request": "prompts/marsch-mot-kopenhamn.json",
+      "task_id": "5eb65064-98d2-4589-8125-66ecdd5dc5a9",
+      "seed": "4087960323",
+      "duration_seconds": 48,
+      "thinking": false
+    },
+    {
+      "role": "combat_fast",
+      "file": "oresund-i-brand-v1.wav",
+      "request": "prompts/oresund-i-brand.json",
+      "task_id": "2d618f8a-6c8d-47fd-8166-d6e43e7fc349",
+      "seed": "4250100160",
+      "duration_seconds": 56,
+      "thinking": true
+    },
+    {
+      "role": "boss",
+      "file": "kronans-sista-salva-v1.wav",
+      "request": "prompts/kronans-sista-salva.json",
+      "task_id": "566d9d81-0ee1-44d1-a55c-69b5fdaeded8",
+      "seed": "2985970231",
+      "duration_seconds": 60,
+      "thinking": true
+    }
+  ],
+  "rejected": [
+    {
+      "role": "menu_launch",
+      "task_id": "09c107e1-e342-49ad-9b6a-e5274c02f3fe",
+      "seed": "568207100",
+      "reason": "LM rewrite changed the somber procession into a triumphant achievement jingle"
+    }
+  ]
+}

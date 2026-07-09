@@ -1,0 +1,21 @@
+{
+  "prompt": "Instrumental normal-combat loop for a futuristic Swedish 17th-century space-navy shmup. Urgent baroque orchestral battle music in D minor at 112 BPM, relentless harpsichord and low-string ostinato, crisp military snare and field drums, timpani accents, bright heroic brass calls, dark cello counterline, brief cannon-like orchestral impacts, cold Nordic tension and forward arcade momentum, repeating eight-bar architecture with no quiet intro and no terminal ending. No vocals, no sung choir, no lyrics, no EDM, no modern rock kit, no comedy.",
+  "lyrics": "[Instrumental]",
+  "vocal_language": "unknown",
+  "audio_duration": 56,
+  "audio_format": "wav",
+  "task_type": "text2music",
+  "batch_size": 1,
+  "thinking": true,
+  "use_format": true,
+  "bpm": 112,
+  "key_scale": "D minor",
+  "time_signature": "4/4",
+  "inference_steps": 8,
+  "guidance_scale": 7.0,
+  "use_random_seed": true,
+  "constrained_decoding": true,
+  "use_cot_caption": true,
+  "use_cot_language": true,
+  "lm_negative_prompt": "vocals, singing, lyrics, EDM, pop, rock drum kit, comedy, ambient intro, final cadence"
+}

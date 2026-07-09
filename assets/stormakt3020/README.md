@@ -40,3 +40,11 @@ pw-play assets/stormakt3020/stormakt-over-oresund-v1.wav
 The EXT3 core starts the track automatically and streams bounded 48 kHz stereo F32LE chunks over WaylandForge's existing `WFAU` audio socket. It keeps roughly half a second buffered, handles partially accepted packets without replaying samples, retries harmlessly while the audio daemon is unavailable, crossfades the final half-second into the opening, and clears queued PCM when the core starts or stops.
 
 Set `WAYLANDFORGE_STORMAKT_MUSIC=0` to disable music, `WAYLANDFORGE_STORMAKT_MUSIC_PATH` to audition another compatible 48 kHz stereo PCM16 WAV, or `WAYLANDFORGE_AUDIO_SOCKET` to use another audio-daemon socket.
+
+Additional scored roles live under `music/`:
+
+- `marsch-mot-kopenhamn-v1.wav`: somber menu and launch procession.
+- `oresund-i-brand-v1.wav`: faster normal-combat loop.
+- `kronans-sista-salva-v1.wav`: monumental boss loop.
+
+`music/generation-manifest.json` records accepted task IDs, seeds, models, prompt files, and a rejected menu attempt. The complete local workflow is documented in `docs/stormakt3020-audio-toolchain.md`.
