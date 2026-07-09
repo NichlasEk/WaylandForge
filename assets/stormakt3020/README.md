@@ -11,4 +11,12 @@ Prompt summary:
 
 Runtime note:
 
-The current EXT3 core still draws sprites in code for zero-dependency bringup. This image is art direction for the next asset-pipeline step.
+The EXT3 core can load `stormakt3020.wfsa`, a small raw sprite pack generated from the concept image. If the pack is missing, the core falls back to code-drawn sprites.
+
+Rebuild the pack after editing/replacing the concept sheet:
+
+```sh
+python tools/stormakt3020/build_assets.py
+```
+
+`WFSA` is intentionally tiny: magic/version/count, then named ARGB8888 sprites. Runtime does not need PNG decoding.

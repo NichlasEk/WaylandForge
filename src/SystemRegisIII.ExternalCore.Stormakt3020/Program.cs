@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Text;
 using System.Runtime.InteropServices;
 
 const int Width = 320;
@@ -8,7 +9,7 @@ const byte StepCommand = (byte)'S';
 
 var input = Console.OpenStandardInput();
 var output = Console.OpenStandardOutput();
-var game = new StormaktGame(Width, Height);
+var game = new StormaktGame(Width, Height, SpritePack.LoadDefault());
 var command = new byte[5];
 var header = new byte[32];
 var frame = new uint[Width * Height];
@@ -68,6 +69,7 @@ internal sealed class StormaktGame
 
     private readonly int _width;
     private readonly int _height;
+    private readonly SpritePack? _sprites;
     private readonly Random _random = new(3020);
     private readonly List<Shot> _shots = [];
     private readonly List<Enemy> _enemies = [];
@@ -83,10 +85,11 @@ internal sealed class StormaktGame
     private uint _previousButtons;
     private bool _gameOver;
 
-    public StormaktGame(int width, int height)
+    public StormaktGame(int width, int height, SpritePack? sprites)
     {
         _width = width;
         _height = height;
+        _sprites = sprites;
         Reset();
         for (int i = 0; i < _stars.Length; i++)
         {
@@ -324,6 +327,12 @@ internal sealed class StormaktGame
 
     private void DrawShip(uint[] frame)
     {
+        if (_sprites?.TryGet("player", out Sprite player) == true)
+        {
+            DrawSprite(frame, player, _shipX - (player.Width / 2), _shipY - (player.Height / 2));
+            return;
+        }
+
         uint hull = _heat > 80 ? 0xffff8a4a : 0xffc69c58;
         uint brass = 0xffffd66b;
         uint blue = 0xff1f5d9a;
@@ -359,6 +368,16 @@ internal sealed class StormaktGame
     {
         foreach (Shot shot in _shots)
         {
+            if (_sprites is not null)
+            {
+                string name = shot.Power > 4 ? "shot_broadside" : "shot_blue";
+                if (_sprites.TryGet(name, out Sprite sprite))
+                {
+                    DrawSprite(frame, sprite, shot.X - (sprite.Width / 2), shot.Y - (sprite.Height / 2));
+                    continue;
+                }
+            }
+
             DrawRect(frame, shot.X - 1, shot.Y - 4, 3, 8, shot.Color);
             PutPixel(frame, shot.X, shot.Y - 5, 0xffffffff);
         }
@@ -376,6 +395,21 @@ internal sealed class StormaktGame
     {
         uint brass = 0xffd6b25e;
         uint dark = 0xff18202a;
+        if (_sprites is not null)
+        {
+            string spriteName = enemy.Kind switch
+            {
+                1 => "enemy_crown",
+                2 => "enemy_caroline",
+                _ => "enemy_guard",
+            };
+            if (_sprites.TryGet(spriteName, out Sprite sprite))
+            {
+                DrawSprite(frame, sprite, enemy.X - (sprite.Width / 2), enemy.Y - (sprite.Height / 2));
+                return;
+            }
+        }
+
         if (enemy.Kind == 1)
         {
             FillCircle(frame, enemy.X, enemy.Y, enemy.Radius, 0xff1f5d9a);
@@ -428,6 +462,48 @@ internal sealed class StormaktGame
         PutPixel(frame, x + 4, y + 1, color);
         DrawRect(frame, x, y + 2, 5, 2, color);
         PutPixel(frame, x + 2, y + 1, 0xffffec9a);
+    }
+
+    private void DrawSprite(uint[] frame, Sprite sprite, int x, int y)
+    {
+        for (int sy = 0; sy < sprite.Height; sy++)
+        {
+            int py = y + sy;
+            if ((uint)py >= _height)
+            {
+                continue;
+            }
+
+            for (int sx = 0; sx < sprite.Width; sx++)
+            {
+                int px = x + sx;
+                if ((uint)px >= _width)
+                {
+                    continue;
+                }
+
+                uint src = sprite.Pixels[(sy * sprite.Width) + sx];
+                uint alpha = src >> 24;
+                if (alpha == 0)
+                {
+                    continue;
+                }
+
+                int index = (py * _width) + px;
+                if (alpha >= 250)
+                {
+                    frame[index] = src;
+                    continue;
+                }
+
+                uint dst = frame[index];
+                uint inv = 255 - alpha;
+                uint r = (((src >> 16) & 0xff) * alpha + ((dst >> 16) & 0xff) * inv) / 255;
+                uint g = (((src >> 8) & 0xff) * alpha + ((dst >> 8) & 0xff) * inv) / 255;
+                uint b = ((src & 0xff) * alpha + (dst & 0xff) * inv) / 255;
+                frame[index] = 0xff000000u | (r << 16) | (g << 8) | b;
+            }
+        }
     }
 
     private void Clear(uint[] frame, uint color) => Array.Fill(frame, color);
@@ -591,3 +667,100 @@ internal sealed class StormaktGame
     private record struct Enemy(int X, int Y, int Speed, int Radius, int Health, uint Color, int Kind, double Phase);
     private readonly record struct Star(int X, int Y, int Speed, int Brightness);
 }
+
+internal sealed class SpritePack
+{
+    private const uint Magic = 0x41534657; // WFSA
+    private readonly Dictionary<string, Sprite> _sprites;
+
+    private SpritePack(Dictionary<string, Sprite> sprites)
+    {
+        _sprites = sprites;
+    }
+
+    public static SpritePack? LoadDefault()
+    {
+        string[] paths =
+        [
+            Path.Combine(Environment.CurrentDirectory, "assets", "stormakt3020", "stormakt3020.wfsa"),
+            Path.Combine(AppContext.BaseDirectory, "assets", "stormakt3020", "stormakt3020.wfsa"),
+        ];
+
+        foreach (string path in paths)
+        {
+            if (File.Exists(path))
+            {
+                return Load(path);
+            }
+        }
+
+        return null;
+    }
+
+    public bool TryGet(string name, out Sprite sprite) => _sprites.TryGetValue(name, out sprite);
+
+    private static SpritePack Load(string path)
+    {
+        using FileStream stream = File.OpenRead(path);
+        Span<byte> fixedHeader = stackalloc byte[12];
+        ReadExactly(stream, fixedHeader);
+        uint magic = BinaryPrimitives.ReadUInt32LittleEndian(fixedHeader);
+        if (magic != Magic)
+        {
+            throw new InvalidDataException($"Invalid Stormakt sprite pack: {path}");
+        }
+
+        uint version = BinaryPrimitives.ReadUInt32LittleEndian(fixedHeader[4..]);
+        if (version != 1)
+        {
+            throw new InvalidDataException($"Unsupported Stormakt sprite pack version: {version}");
+        }
+
+        uint count = BinaryPrimitives.ReadUInt32LittleEndian(fixedHeader[8..]);
+        Dictionary<string, Sprite> sprites = new(StringComparer.Ordinal);
+        byte[] entryHeader = new byte[44];
+        for (int i = 0; i < count; i++)
+        {
+            ReadExactly(stream, entryHeader);
+            int nameLength = Array.IndexOf(entryHeader, (byte)0, 0, 32);
+            if (nameLength < 0)
+            {
+                nameLength = 32;
+            }
+
+            string name = Encoding.ASCII.GetString(entryHeader, 0, nameLength);
+            int width = BinaryPrimitives.ReadInt32LittleEndian(entryHeader.AsSpan(32));
+            int height = BinaryPrimitives.ReadInt32LittleEndian(entryHeader.AsSpan(36));
+            int byteLength = BinaryPrimitives.ReadInt32LittleEndian(entryHeader.AsSpan(40));
+            if (width <= 0 || height <= 0 || byteLength != width * height * sizeof(uint))
+            {
+                throw new InvalidDataException($"Invalid Stormakt sprite entry: {name}");
+            }
+
+            byte[] bytes = new byte[byteLength];
+            ReadExactly(stream, bytes);
+            uint[] pixels = new uint[width * height];
+            MemoryMarshal.Cast<byte, uint>(bytes).CopyTo(pixels);
+            sprites[name] = new Sprite(width, height, pixels);
+        }
+
+        return new SpritePack(sprites);
+    }
+
+    private static void ReadExactly(Stream stream, Span<byte> buffer)
+    {
+        int offset = 0;
+        while (offset < buffer.Length)
+        {
+            int read = stream.Read(buffer[offset..]);
+            if (read == 0)
+            {
+                throw new EndOfStreamException();
+            }
+
+            offset += read;
+        }
+    }
+}
+
+internal readonly record struct Sprite(int Width, int Height, uint[] Pixels);
