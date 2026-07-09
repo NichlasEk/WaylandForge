@@ -50,7 +50,23 @@ Boss/miniboss: först en hedersduell mot Sören, därefter gemensam strid mot j�
 
 Final över en barock rymdstad med spiror, dockor, urverk och en kronformad försvarsring. Tidigare val avgör vilka allierade skepp som syns i bakgrunden och vilka batterier som redan är utslagna.
 
-Slutboss: överfogden **Frederik Null**, först i ett pampigt tron-/slagskepp och sedan som den avskalade tullkärnan **Øresunds Øje**. Segern avslutar fogdemaskinen, inte Danmark.
+Överfogden **Frederik Null** är banans näst sista konfrontation, först i ett pampigt tron-/slagskepp och sedan som den avskalade tullkärnan **Øresunds Øje**. När tullkärnan brister öppnas Köpenhamns kronring och spelaren tror för ett ögonblick att slaget är vunnet.
+
+Då anländer **Kung Christians Superarmada** ur en gyllene hyperrymdsport. Det är kampanjens riktiga final: en kunglig rödvit superfregatt omgiven av flera lager specialiserade drönare, mindre fregattskärmar och en hel bakgrundsflotta som får himlen att kännas större än spelplanen.
+
+#### Finalsekvens - Superarmadan
+
+1. **Dannebrogsvingarna:** röda/vita jaktdrönare bygger roterande korsformationer. Skjut ett hörn för att öppna en flyktväg genom formationen. Räddade svenska skepp och Sörens snapphanar håller undan bakgrundsflankerna.
+2. **Fregattskärmen:** två mindre skärmfregatter gör växelvisa bredsidor från kanterna medan reparationsdrönare försöker återställa deras kanontorn. De är delmål, inte fulla bossar.
+3. **Kung Christians superfregatt:** flaggskeppet **KONG CHRISTIAN - SUPERFREGATT** fyller övre halvan av skärmen. Vapnen sitter i separata sektioner: drönarbuk, babords bredsida, styrbords bredsida och kronreaktor.
+4. **Den kungliga salvan:** under 40 procent fäller fregatten ut en enorm vit korsram, låser skärmens fyra kvadranter i turordning och blandar långsamma kanonkulor med snabba drönarrusningar. Förstör korsramens fyra noder för att blotta kronreaktorn.
+5. **Sista hållet:** när reaktorn öppnas går Karl CCLV och Sören in från varsin sida. Spelaren avlossar den avgörande bredsidan; fregatten bryts i flera stora, långsamma explosioner medan Superarmadan tappar formation och flyr tillbaka genom porten.
+
+Kung Christian behöver inte visas som människa i första kampanjen. Hans närvaro bärs av vapensköld, ordertext och den orimligt stora fregatten; det sparar en personlig duell till en eventuell fortsättning.
+
+Finalmusik: ett eget spår, arbetsnamn **Kung Christians Superarmada**, som börjar med en kort kunglig fanfar, går över i snabb sorgmättad bossmarsch och lägger till snapphanarnas kopparslag när allierade anländer. `kronans-sista-salva-v1.wav` kan användas som prototyp men ska inte vara slutlig finalmusik.
+
+Segern slår sönder fogdemaskinen och tvingar Superarmadan till reträtt, men utplånar varken Danmark eller den danska kronan. Slutbilden visar Karl CCLV och snapphanarnas kapare mot den slocknade kronringen.
 
 ## Återkommande systemspråk
 
@@ -60,6 +76,7 @@ Slutboss: överfogden **Frederik Null**, först i ett pampigt tron-/slagskepp oc
 - Marktorn telegrapherar med en ljuskägla före skott; broar visar sprickor i två steg före kollaps.
 - Bakgrunder ska röra sig i minst tre hastigheter men aldrig försämra projektilernas läsbarhet.
 - Varje boss får ett eget musikspår eller en tydlig bossvariant, en namnskylt, minst två faser och en unik dödssekvens.
+- Superarmadans drönare ska uppträda som läsbara formationer med svaga bakgrundsdubbletter; känslan av hundratals skepp får aldrig bli hundratals aktiva kollisionsobjekt.
 
 ## Byggordning
 
