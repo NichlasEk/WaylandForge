@@ -77,6 +77,7 @@ Segern slår sönder fogdemaskinen och tvingar Superarmadan till reträtt, men u
 - Bakgrunder ska röra sig i minst tre hastigheter men aldrig försämra projektilernas läsbarhet.
 - Varje boss får ett eget musikspår eller en tydlig bossvariant, en namnskylt, minst två faser och en unik dödssekvens.
 - Superarmadans drönare ska uppträda som läsbara formationer med svaga bakgrundsdubbletter; känslan av hundratals skepp får aldrig bli hundratals aktiva kollisionsobjekt.
+- Namngivna allierade, fogdar, snapphanar och kungliga befäl får korta videokominslag enligt `docs/stormakt3020-radio-dialogue-plan.md`; röster förgenereras lokalt och undertexter är alltid primära.
 
 ## Byggordning
 

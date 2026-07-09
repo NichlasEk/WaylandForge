@@ -32,6 +32,7 @@ Palett: marinblå, sotgrå, kall turkos och koppar. Danska hot använder rött/v
 
 - Musik: `marsch-mot-kopenhamn-v1.wav` i låg nivå eller en framtida särskild reträttvariant.
 - Deploy-signal och bantitel: `ÅTERTÅGET ÖVER STORA BÄLT-NEBULOSAN`.
+- Svensk radio, vänster: Ebba Grip - `KARL CCLV` / `HÅLL KURSEN.`
 - Två långsamma danska spanardrönarpar lär spelaren dubbelkanonen.
 - Ett tomt, tydligt brosegment visar vad som räknas som mark.
 
@@ -39,6 +40,7 @@ Palett: marinblå, sotgrå, kall turkos och koppar. Danska hot använder rött/v
 
 - Musik växlar till `stormakt-over-oresund-v1.wav` med kort korsfade.
 - Röda/vita tullbojar kommer i alternerande V-formationer.
+- Dansk radio, höger före första tornet: Rasmus Gyldentold - `SVENSKE FARTØJ` / `LÆG BI.`
 - Första marktornet låser med en rödvit ljuskägla i 0.8 sekunder och skjuter sedan tre långsamma kulor.
 - Tornets energiledning blinkar på bron. Förstör ledningen och tornet slocknar; förstör tornet direkt för högre risk och poäng.
 
@@ -55,12 +57,15 @@ Palett: marinblå, sotgrå, kall turkos och koppar. Danska hot använder rött/v
 - En elitvåg med två vaktskepp och ett tungt tullsigill anfaller.
 - Tullfyren sveper över skärmen. Svepet är visuellt, men markerar bossens kommande inflygningslinje.
 - Sista tio sekunderna tunnas fienderna ut och musiken får andas före bossbytet.
+- Fogderadio, höger: `KRONENS TIENDE` / `TAGER ALT.`
 
 ### 2:45-4:00 - Boss: Kronens Tiende
 
 Fogdeskeppet är en bred rödvit indrivningsgaljon med ett enormt vitt kors, guldkant, kedjor och ett mekaniskt sigill i fören. Namnskylt: `KRONENS TIENDE - FOGDESKEPP`.
 
 Musik: `kronans-sista-salva-v1.wav`, startad vid bossnamnet med 0.5 sekunders korsfade.
+
+Bossradion visas färdigt före första skottmönstret och följer reglerna i `docs/stormakt3020-radio-dialogue-plan.md`.
 
 #### Fas 1 - Indrivningen, 100-65 procent
 
@@ -112,7 +117,7 @@ Musik: `kronans-sista-salva-v1.wav`, startad vid bossnamnet med 0.5 sekunders ko
 
 - Ingen förgrenad rutt.
 - Ingen permanent uppgraderingsmeny.
-- Ingen dialogruta eller röst.
+- Ingen full dialogscen eller dynamisk/runtimegenererad TTS; bana 1 använder endast korta förgenererade radiokort när radioprototypen är godkänd.
 - Ingen full kampanjlagring.
 - Ingen adaptiv musik utöver tydliga spårbyten och korsfade.
 
