@@ -21,6 +21,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     private string _env = string.Empty;
     private string _wfexPath = string.Empty;
     private string _socketPath = string.Empty;
+    private string _pointerDriver = "absolute";
     private string _fallbackDllPath = string.Empty;
     private Process? _process;
     private Stream? _wfexStream;
@@ -51,6 +52,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     public ulong FrameIndex { get; private set; }
     public string Name => string.IsNullOrWhiteSpace(_command) ? "EXTERNAL DUMMY" : Path.GetFileName(_command).ToUpperInvariant();
     public string Mode => _mode;
+    public string PointerDriver => _pointerDriver;
     public bool IsRunning => _process is { HasExited: false };
     public int? ExitCode => _process is { HasExited: true } process ? process.ExitCode : _lastExitCode;
     public string Status => IsRunning ? "RUNNING" : ExitCode is int code ? $"EXIT {code}" : "STOPPED";
@@ -84,6 +86,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         _env = config.Env.Trim();
         _wfexPath = config.WfexPath.Trim();
         _socketPath = config.SocketPath.Trim();
+        _pointerDriver = string.IsNullOrWhiteSpace(config.PointerDriver) ? "absolute" : config.PointerDriver.Trim().ToLowerInvariant();
         _fallbackDllPath = fallbackDllPath;
         _startBlockedAfterExit = false;
     }

@@ -36,6 +36,24 @@ tile_fullscreen = "f11"
 shift = "leftshift,rightshift"
 super = "leftmeta,rightmeta"
 
+[input.external_core]
+# OpenTyrian profile. Defaults to the host keyboard layout for now.
+
+[input.external_core2]
+# Raptor uses raw keyboard text fields, so avoid letter keys for game actions.
+escape = ""
+up = "up"
+down = "down"
+left = "left"
+right = "right"
+start = "enter"
+a = "leftctrl"
+b = "leftalt"
+c = "space"
+x = "rightshift"
+y = "space"
+z = ""
+
 [ui.layout]
 root = "v(viewport,h(rom_picker,h(settings,h(style_editor,input_mapper,0.50),0.50),0.58),0.62)"
 
@@ -46,6 +64,7 @@ args = ""
 working_directory = "/home/nichlas/WaylandForge/local/opentyrian-wfcore"
 env = "OPENTYRIAN_WFCORE=1;SDL_VIDEODRIVER=dummy"
 wfex_path = "/tmp/waylandforge-opentyrian.wfex"
+pointer_driver = "absolute"
 socket_path = "/tmp/waylandforge-wfcore.sock"
 
 [external_core2]
@@ -55,6 +74,7 @@ args = ""
 working_directory = "/home/nichlas/WaylandForge/local/raptor"
 env = "RAPTOR_WFCORE=1;SDL_VIDEODRIVER=dummy"
 wfex_path = "/tmp/waylandforge-raptor.wfex"
+pointer_driver = "raptor"
 socket_path = "/tmp/waylandforge-raptor.sock"
 
 [ui.tile]

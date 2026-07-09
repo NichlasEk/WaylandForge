@@ -102,15 +102,16 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         _clock.Tick();
         ProcessRawKey(textInput);
-        ForgeInput mappedInput = MapInputFromPressedKeys();
-        _lastInput = mappedInput;
+        ForgeInput hostInput = MapInputFromPressedKeys(_config.Input);
+        ForgeInput coreInput = MapInputFromPressedKeys(ActiveInputProfile());
+        _lastInput = coreInput;
         _pointer = pointer;
         _textInput = textInput;
         _scrollInput = scrollInput;
         _hostFrameIndex = frameIndex;
-        HandleHostShortcuts(mappedInput);
+        HandleHostShortcuts(hostInput);
 
-        _inputSource.Update(mappedInput);
+        _inputSource.Update(coreInput);
         SyncExternalPointerState();
         if (!_paused || _stepRequested || _frameStore.Pixels.IsEmpty)
         {
@@ -121,7 +122,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         SaveConfigIfDue();
         SyncAudioVolumeIfDue();
         SyncAudioStatusIfDue();
-        _previousInput = mappedInput;
+        _previousInput = hostInput;
     }
 
     private void Draw(int width, int height)
@@ -184,12 +185,12 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
     }
 
-    private ForgeInput MapInputFromPressedKeys()
+    private ForgeInput MapInputFromPressedKeys(UiInputConfig inputConfig)
     {
         ForgeInput input = ForgeInput.None;
         foreach (InputBinding binding in InputBindings)
         {
-            foreach (uint keyCode in BoundKeyCodes(binding.Id))
+            foreach (uint keyCode in BoundKeyCodes(binding.Id, inputConfig))
             {
                 if (_pressedKeys.Contains(keyCode))
                 {
@@ -2310,9 +2311,32 @@ internal sealed unsafe class ForgeApp : IDisposable
         _ => throw new ArgumentOutOfRangeException(nameof(window)),
     };
 
+    private UiInputConfig ActiveInputProfile()
+    {
+        if (ReferenceEquals(_core, _externalCore2))
+        {
+            return _config.CoreInput("external_core2");
+        }
+        if (ReferenceEquals(_core, _externalCore))
+        {
+            return _config.CoreInput("external_core");
+        }
+        return _config.Input;
+    }
+
     private IEnumerable<uint> BoundKeyCodes(string actionId)
     {
-        if (!_config.Input.Bindings.TryGetValue(actionId, out string? value))
+        return BoundKeyCodes(actionId, _config.Input);
+    }
+
+    private IEnumerable<uint> BoundKeyCodes(string actionId, UiInputConfig inputConfig)
+    {
+        bool hasBinding = inputConfig.Bindings.TryGetValue(actionId, out string? value);
+        if (!hasBinding && !ReferenceEquals(inputConfig, _config.Input))
+        {
+            hasBinding = _config.Input.Bindings.TryGetValue(actionId, out value);
+        }
+        if (!hasBinding || string.IsNullOrWhiteSpace(value))
         {
             yield break;
         }
@@ -2453,7 +2477,7 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private void PushCurrentInputState(uint rawKeyCode = 0, uint rawKeySerial = 0, bool rawKeyPressed = false)
     {
-        ForgeInput mappedInput = MapInputFromPressedKeys();
+        ForgeInput mappedInput = MapInputFromPressedKeys(ActiveInputProfile());
         _lastInput = mappedInput;
         _inputSource.Update(mappedInput);
         SyncExternalPointerState();
@@ -2475,13 +2499,26 @@ internal sealed unsafe class ForgeApp : IDisposable
         int sourceHeight = Math.Max(1, _frameStore.Height);
         int coreX = 0;
         int coreY = 0;
-        bool inside = _pointer.IsInside && content.Width > 0 && content.Height > 0 && content.Contains(_pointer.X, _pointer.Y);
+        string pointerDriver = external.PointerDriver;
+        if (pointerDriver == "none")
+        {
+            external.SetPointerState(0, 0, 0, false);
+            return;
+        }
+
+        bool hasContent = content.Width > 0 && content.Height > 0;
+        bool insideContent = _pointer.IsInside && hasContent && content.Contains(_pointer.X, _pointer.Y);
+        bool capturePointer = pointerDriver is "capture" or "raptor";
+        bool inside = insideContent || (capturePointer && _pointer.IsInside && hasContent);
         if (inside)
         {
-            coreX = Math.Clamp((_pointer.X - content.X) * sourceWidth / content.Width, 0, sourceWidth - 1);
-            coreY = Math.Clamp((_pointer.Y - content.Y) * sourceHeight / content.Height, 0, sourceHeight - 1);
+            int relativeX = Math.Clamp(_pointer.X - content.X, 0, content.Width - 1);
+            int relativeY = Math.Clamp(_pointer.Y - content.Y, 0, content.Height - 1);
+            coreX = Math.Clamp(relativeX * sourceWidth / content.Width, 0, sourceWidth - 1);
+            coreY = Math.Clamp(relativeY * sourceHeight / content.Height, 0, sourceHeight - 1);
         }
-        external.SetPointerState(coreX, coreY, (uint)_pointer.Buttons, inside);
+        uint buttons = inside || capturePointer ? (uint)_pointer.Buttons : 0u;
+        external.SetPointerState(coreX, coreY, buttons, inside);
     }
 
     private bool HandleTileKeyboardShortcuts(ForgeInput input)

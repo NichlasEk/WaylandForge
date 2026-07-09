@@ -18,6 +18,7 @@ internal sealed class UiConfig
     public UiStyleConfig Style { get; } = new();
     public UiAudioConfig Audio { get; } = new();
     public UiInputConfig Input { get; } = new();
+    public Dictionary<string, UiInputConfig> CoreInputs { get; } = new(StringComparer.OrdinalIgnoreCase);
     public UiTileLayoutConfig Layout { get; } = new();
     public UiExternalCoreConfig ExternalCore { get; } = new();
     public UiExternalCoreConfig ExternalCore2 { get; } = new();
@@ -69,6 +70,15 @@ internal sealed class UiConfig
             writer.WriteLine($"{pair.Key} = \"{Escape(pair.Value)}\"");
         }
         writer.WriteLine();
+        foreach (KeyValuePair<string, UiInputConfig> profile in CoreInputs.OrderBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            writer.WriteLine($"[input.{profile.Key}]");
+            foreach (KeyValuePair<string, string> pair in profile.Value.Bindings.OrderBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase))
+            {
+                writer.WriteLine($"{pair.Key} = \"{Escape(pair.Value)}\"");
+            }
+            writer.WriteLine();
+        }
         writer.WriteLine("[ui.layout]");
         writer.WriteLine($"root = \"{Layout.Root}\"");
         writer.WriteLine();
@@ -79,6 +89,7 @@ internal sealed class UiConfig
         writer.WriteLine($"working_directory = \"{Escape(ExternalCore.WorkingDirectory)}\"");
         writer.WriteLine($"env = \"{Escape(ExternalCore.Env)}\"");
         writer.WriteLine($"wfex_path = \"{Escape(ExternalCore.WfexPath)}\"");
+        writer.WriteLine($"pointer_driver = \"{Escape(ExternalCore.PointerDriver)}\"");
         writer.WriteLine($"socket_path = \"{Escape(ExternalCore.SocketPath)}\"");
         writer.WriteLine();
         writer.WriteLine("[external_core2]");
@@ -88,6 +99,7 @@ internal sealed class UiConfig
         writer.WriteLine($"working_directory = \"{Escape(ExternalCore2.WorkingDirectory)}\"");
         writer.WriteLine($"env = \"{Escape(ExternalCore2.Env)}\"");
         writer.WriteLine($"wfex_path = \"{Escape(ExternalCore2.WfexPath)}\"");
+        writer.WriteLine($"pointer_driver = \"{Escape(ExternalCore2.PointerDriver)}\"");
         writer.WriteLine($"socket_path = \"{Escape(ExternalCore2.SocketPath)}\"");
         writer.WriteLine();
 
@@ -114,6 +126,16 @@ internal sealed class UiConfig
             Windows[key] = window;
         }
         return window;
+    }
+
+    public UiInputConfig CoreInput(string key)
+    {
+        if (!CoreInputs.TryGetValue(key, out UiInputConfig? input))
+        {
+            input = new UiInputConfig(withDefaults: false);
+            CoreInputs[key] = input;
+        }
+        return input;
     }
 
     private void Apply(IEnumerable<string> lines)
@@ -209,6 +231,18 @@ internal sealed class UiConfig
             return;
         }
 
+        const string inputPrefix = "input.";
+        if (section.StartsWith(inputPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            string profileName = section[inputPrefix.Length..].Trim().ToLowerInvariant();
+            if (profileName.Length == 0)
+            {
+                return;
+            }
+            CoreInput(profileName).Bindings[key.Trim().ToLowerInvariant()] = value.Trim();
+            return;
+        }
+
         if (string.Equals(section, "external_core", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(section, "external_core2", StringComparison.OrdinalIgnoreCase))
         {
@@ -234,6 +268,9 @@ internal sealed class UiConfig
                     break;
                 case "wfex_path":
                     externalCore.WfexPath = value;
+                    break;
+                case "pointer_driver":
+                    externalCore.PointerDriver = ParsePointerDriver(value, externalCore.PointerDriver);
                     break;
                 case "socket_path":
                     externalCore.SocketPath = value;
@@ -323,6 +360,18 @@ internal sealed class UiConfig
         };
     }
 
+    private static string ParsePointerDriver(string value, string fallback)
+    {
+        return value.Trim().ToLowerInvariant() switch
+        {
+            "absolute" => "absolute",
+            "capture" => "capture",
+            "raptor" => "raptor",
+            "none" => "none",
+            _ => fallback,
+        };
+    }
+
     private static string StripComment(string line)
     {
         bool inString = false;
@@ -400,7 +449,22 @@ internal sealed class UiAudioConfig
 
 internal sealed class UiInputConfig
 {
-    public Dictionary<string, string> Bindings { get; } = new(StringComparer.OrdinalIgnoreCase)
+    public UiInputConfig(bool withDefaults = true)
+    {
+        if (!withDefaults)
+        {
+            return;
+        }
+
+        foreach (KeyValuePair<string, string> pair in DefaultBindings)
+        {
+            Bindings[pair.Key] = pair.Value;
+        }
+    }
+
+    public Dictionary<string, string> Bindings { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    private static readonly Dictionary<string, string> DefaultBindings = new(StringComparer.OrdinalIgnoreCase)
     {
         ["escape"] = "esc",
         ["up"] = "up",
@@ -437,5 +501,6 @@ internal sealed class UiExternalCoreConfig
     public string WorkingDirectory { get; set; } = string.Empty;
     public string Env { get; set; } = string.Empty;
     public string WfexPath { get; set; } = string.Empty;
+    public string PointerDriver { get; set; } = "absolute";
     public string SocketPath { get; set; } = string.Empty;
 }
