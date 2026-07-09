@@ -404,7 +404,14 @@ internal sealed unsafe class ForgeApp : IDisposable
                 DrawMetric(x, y, "DRAW MS", _clock.DrawMilliseconds.ToString("0.0")); y += 18;
             }
 
-            if (_ui.Collapsible(new UiId("debug.external"), ref column, "EXT CORE", 194, out RectI externalSection))
+            if (ReferenceEquals(_core, _saturnCore))
+            {
+                if (_ui.Collapsible(new UiId("debug.saturn"), ref column, "CORE STATUS", 308, out RectI saturnSection))
+                {
+                    DrawSaturnCoreStatus(saturnSection);
+                }
+            }
+            else if (_ui.Collapsible(new UiId("debug.external"), ref column, "EXT CORE", 194, out RectI externalSection))
             {
                 int x = externalSection.X;
                 int y = externalSection.Y;
@@ -490,6 +497,40 @@ internal sealed unsafe class ForgeApp : IDisposable
         {
             _ui.Text(layout.Width - 610, layout.Height - 16, "F11 FULL TILE  SUPER+ARROWS FOCUS  SUPER+SHIFT+ARROWS SWAP", UiTextKind.Muted);
         }
+    }
+
+    private void DrawSaturnCoreStatus(RectI section)
+    {
+        SaturnCoreStatus status = _saturnCore.Status;
+        int x = section.X;
+        int y = section.Y;
+        DrawMetric(x, y, "STATUS", status.HasRuntime ? "RUNNING" : "WAITING"); y += 18;
+        DrawMetric(x, y, "BIOS", TruncateMiddle(status.BiosName, 18)); y += 18;
+        DrawMetric(x, y, "FAULT", string.IsNullOrEmpty(status.Fault) ? "-" : TruncateMiddle(status.Fault, 18)); y += 18;
+        DrawMetric(x, y, "FRAME", status.FrameIndex.ToString()); y += 18;
+        DrawMetric(x, y, "INSTR", status.InstructionIndex.ToString()); y += 20;
+
+        _ui.Text(x, y, "SH2", UiTextKind.Muted); y += 14;
+        DrawMetric(x, y, "M PC", FormatHex(status.MasterPc, 8)); y += 18;
+        DrawMetric(x, y, "M SR", FormatHex(status.MasterSr, 8)); y += 18;
+        DrawMetric(x, y, "S PC", FormatHex(status.SlavePc, 8)); y += 20;
+
+        _ui.Text(x, y, "IRQ/SMPC", UiTextKind.Muted); y += 14;
+        DrawMetric(x, y, "VBI", status.VBlankInCount.ToString()); y += 18;
+        DrawMetric(x, y, "VBO", status.VBlankOutCount.ToString()); y += 18;
+        DrawMetric(x, y, "SMPC", FormatHex(status.SmpcLastCommand, 2)); y += 18;
+        DrawMetric(x, y, "SIRQ", status.SmpcInterruptCount.ToString()); y += 20;
+
+        _ui.Text(x, y, "VDP", UiTextKind.Muted); y += 14;
+        DrawVdpStatus(x, ref y, status.Vdp1);
+        DrawVdpStatus(x, ref y, status.Vdp2);
+        DrawVdpStatus(x, ref y, status.Cram);
+    }
+
+    private void DrawVdpStatus(int x, ref int y, VdpDebugStatus status)
+    {
+        DrawMetric(x, y, status.Label, status.WriteCount.ToString()); y += 18;
+        DrawMetric(x, y, "LAST", status.LastWriteOffset is uint offset ? FormatHex(offset, 5) : "-"); y += 18;
     }
 
     private void DrawChildWindows(ForgeLayout layout)
@@ -2712,6 +2753,9 @@ internal sealed unsafe class ForgeApp : IDisposable
         _ui.Text(x, y, label, UiTextKind.Muted);
         _ui.Text(x + 72, y, value);
     }
+
+    private static string FormatHex(uint value, int digits) =>
+        "0X" + value.ToString("X" + digits.ToString(System.Globalization.CultureInfo.InvariantCulture), System.Globalization.CultureInfo.InvariantCulture);
 
     private void DrawInputLamp(int x, int y, string label, ForgeInput bit)
     {

@@ -35,9 +35,13 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
     private string _fault = string.Empty;
     private ulong _frameIndex;
     private long _instructionIndex;
+    private long _vblankInCount;
+    private long _vblankOutCount;
+    private long _smpcInterruptCount;
     private HostCore.SaturnButtons _lastButtons;
 
     public ulong FrameIndex => _frameIndex;
+    public SaturnCoreStatus Status => CreateStatus();
 
     public void Reset()
     {
@@ -45,6 +49,9 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
         _fault = string.Empty;
         _frameIndex = 0;
         _instructionIndex = 0;
+        _vblankInCount = 0;
+        _vblankOutCount = 0;
+        _smpcInterruptCount = 0;
         _lastButtons = HostCore.SaturnButtons.None;
     }
 
@@ -128,13 +135,18 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
                 if (_instructionIndex > 0 && _instructionIndex % VBlankIntervalInstructions == 0)
                 {
                     runtime.Scu.RaiseVBlankIn();
+                    _vblankInCount++;
                 }
                 else if (_instructionIndex > 0 && _instructionIndex % VBlankIntervalInstructions == vblankOutOffset)
                 {
                     runtime.Scu.RaiseVBlankOut();
+                    _vblankOutCount++;
                 }
 
-                DeliverPendingInterrupt(runtime);
+                if (DeliverPendingInterrupt(runtime))
+                {
+                    _smpcInterruptCount++;
+                }
                 runtime.Master.StepInstruction();
 
                 if (runtime.Smpc.SlaveSh2Enabled)
@@ -157,13 +169,14 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
         }
     }
 
-    private static void DeliverPendingInterrupt(SaturnRuntime runtime)
+    private static bool DeliverPendingInterrupt(SaturnRuntime runtime)
     {
         if (runtime.Scu.HasPendingVBlankIn)
         {
             if (runtime.Master.RequestInterrupt(15, 0x40))
             {
                 runtime.Scu.AcknowledgeVBlankIn();
+                return false;
             }
         }
         else if (runtime.Scu.HasPendingVBlankOut)
@@ -171,12 +184,61 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
             if (runtime.Master.RequestInterrupt(14, 0x41))
             {
                 runtime.Scu.AcknowledgeVBlankOut();
+                return false;
             }
         }
         else if (runtime.Scu.HasPendingSmpc && runtime.Master.RequestInterrupt(8, 0x47))
         {
             runtime.Scu.AcknowledgeSmpc();
+            return true;
         }
+
+        return false;
+    }
+
+    private SaturnCoreStatus CreateStatus()
+    {
+        if (_runtime is null)
+        {
+            return new SaturnCoreStatus(
+                _biosPath ?? "-",
+                false,
+                _fault,
+                _frameIndex,
+                _instructionIndex,
+                0,
+                0,
+                0,
+                0,
+                0,
+                _vblankInCount,
+                _vblankOutCount,
+                _smpcInterruptCount,
+                _lastButtons.ToString(),
+                VdpDebugStatus.Empty,
+                VdpDebugStatus.Empty,
+                VdpDebugStatus.Empty);
+        }
+
+        SaturnRuntime runtime = _runtime;
+        return new SaturnCoreStatus(
+            runtime.BiosName,
+            true,
+            _fault,
+            _frameIndex,
+            _instructionIndex,
+            runtime.Master.Registers.ProgramCounter,
+            runtime.Master.Registers.StatusRegister,
+            runtime.Slave.Registers.ProgramCounter,
+            runtime.Smpc.LastCommand,
+            runtime.Smpc.PendingInterrupts,
+            _vblankInCount,
+            _vblankOutCount,
+            _smpcInterruptCount,
+            _lastButtons.ToString(),
+            VdpDebugStatus.From("VDP1", runtime.SystemMap.Vdp1Area),
+            VdpDebugStatus.From("VDP2", runtime.SystemMap.Vdp2Vram),
+            VdpDebugStatus.From("CRAM", runtime.SystemMap.Vdp2Cram));
     }
 
     private void RenderDiagnosticFrame()
@@ -405,4 +467,36 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
     {
         public bool SlaveWasEnabled { get; set; }
     }
+}
+
+internal readonly record struct SaturnCoreStatus(
+    string BiosName,
+    bool HasRuntime,
+    string Fault,
+    ulong FrameIndex,
+    long InstructionIndex,
+    uint MasterPc,
+    uint MasterSr,
+    uint SlavePc,
+    byte SmpcLastCommand,
+    int SmpcPendingInterrupts,
+    long VBlankInCount,
+    long VBlankOutCount,
+    long SmpcInterruptCount,
+    string Input,
+    VdpDebugStatus Vdp1,
+    VdpDebugStatus Vdp2,
+    VdpDebugStatus Cram);
+
+internal readonly record struct VdpDebugStatus(
+    string Label,
+    long ReadCount,
+    long WriteCount,
+    uint? LastReadOffset,
+    uint? LastWriteOffset)
+{
+    public static VdpDebugStatus Empty => new("-", 0, 0, null, null);
+
+    public static VdpDebugStatus From(string label, SaturnBus.DebugMemoryBusDevice device) =>
+        new(label, device.ReadCount, device.WriteCount, device.LastReadOffset, device.LastWriteOffset);
 }
