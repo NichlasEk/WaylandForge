@@ -94,7 +94,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         Draw(width, height);
         _clock.RecordDraw(Stopwatch.GetElapsedTime(drawStart).TotalMilliseconds);
         _previousPointer = pointer;
-        return _fullscreenTile is not null ? 1u : 0u;
+        return ShouldHideNativeCursor() ? 1u : 0u;
     }
 
     public void RawKeyInput(uint keyCode, uint keySerial, bool pressed)
@@ -2549,6 +2549,19 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
         uint buttons = inside || capturePointer ? (uint)_pointer.Buttons : 0u;
         external.SetPointerState(coreX, coreY, buttons, inside);
+    }
+
+    private bool ShouldHideNativeCursor()
+    {
+        if (_fullscreenTile is not null)
+        {
+            return true;
+        }
+        if (_core is not ExternalProcessCore external || external.PointerDriver != "raptor")
+        {
+            return false;
+        }
+        return _pointer.IsInside && _viewport.ContentRect.Contains(_pointer.X, _pointer.Y);
     }
 
     private bool HandleTileKeyboardShortcuts(ForgeInput input)

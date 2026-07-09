@@ -510,7 +510,7 @@ index 70822cf..ceb1c52 100644
 @@ -25,0 +26 @@ int PTR_Init(int type);
 +void PTR_SetUpdateFlag(void);
 diff --git a/src/windows.cpp b/src/windows.cpp
-index 98a975d..d3f1456 100644
+index 98a975d..5de8cab 100644
 --- a/src/windows.cpp
 +++ b/src/windows.cpp
 @@ -2,0 +3 @@
@@ -519,5 +519,8 @@ index 98a975d..d3f1456 100644
 +    if (getenv("WFCORE_SOCKET"))
 +        return;
 +
+@@ -945 +949 @@ WIN_Register(
+-                SWD_GetFieldText(window, REG_CALLSIGN, tp.name);
++                SWD_GetFieldText(window, REG_NAME, tp.name);
 @@ -2237 +2240,0 @@ menu_exit:
 -
