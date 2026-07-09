@@ -67,6 +67,11 @@ internal sealed unsafe class ForgeApp : IDisposable
     private double _lastAudioVolumeAttemptSeconds;
     private double _lastAudioStatusAttemptSeconds;
     private string _audioStatus = "OFFLINE";
+    private bool _externalPointerInitialized;
+    private int _externalPointerX;
+    private int _externalPointerY;
+    private int _lastExternalPointerHostX;
+    private int _lastExternalPointerHostY;
 
     public ForgeApp()
     {
@@ -2510,8 +2515,33 @@ internal sealed unsafe class ForgeApp : IDisposable
         bool insideContent = _pointer.IsInside && hasContent && content.Contains(_pointer.X, _pointer.Y);
         bool capturePointer = pointerDriver is "capture" or "raptor";
         bool inside = insideContent || (capturePointer && _pointer.IsInside && hasContent);
-        if (inside)
+        if (inside && pointerDriver == "raptor")
         {
+            int relativeX = Math.Clamp(_pointer.X - content.X, 0, content.Width - 1);
+            int relativeY = Math.Clamp(_pointer.Y - content.Y, 0, content.Height - 1);
+            int absoluteX = Math.Clamp(relativeX * sourceWidth / content.Width, 0, sourceWidth - 1);
+            int absoluteY = Math.Clamp(relativeY * sourceHeight / content.Height, 0, sourceHeight - 1);
+            if (!_externalPointerInitialized)
+            {
+                _externalPointerX = absoluteX;
+                _externalPointerY = absoluteY;
+                _externalPointerInitialized = true;
+            }
+            else
+            {
+                int deltaX = _pointer.X - _lastExternalPointerHostX;
+                int deltaY = _pointer.Y - _lastExternalPointerHostY;
+                _externalPointerX = Math.Clamp(_externalPointerX + deltaX * sourceWidth / Math.Max(1, content.Width), 0, sourceWidth - 1);
+                _externalPointerY = Math.Clamp(_externalPointerY + deltaY * sourceHeight / Math.Max(1, content.Height), 0, sourceHeight - 1);
+            }
+            _lastExternalPointerHostX = _pointer.X;
+            _lastExternalPointerHostY = _pointer.Y;
+            coreX = _externalPointerX;
+            coreY = _externalPointerY;
+        }
+        else if (inside)
+        {
+            _externalPointerInitialized = false;
             int relativeX = Math.Clamp(_pointer.X - content.X, 0, content.Width - 1);
             int relativeY = Math.Clamp(_pointer.Y - content.Y, 0, content.Height - 1);
             coreX = Math.Clamp(relativeX * sourceWidth / content.Width, 0, sourceWidth - 1);
