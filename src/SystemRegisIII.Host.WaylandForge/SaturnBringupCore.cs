@@ -204,10 +204,59 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
         DrawText(14, y, $"SMPC IRQ {runtime.Smpc.PendingInterrupts}", 0xff91a1ad); y += 18;
         DrawText(14, y, $"INPUT {_lastButtons}", 0xff7cc7ff); y += 18;
         DrawText(14, y, $"INSTR {_instructionIndex}", 0xff91a1ad); y += 18;
+
+        int rightX = 178;
+        int rightY = 14;
+        DrawText(rightX, rightY, "VDP TELEMETRY", 0xffffffff); rightY += 18;
+        DrawDebugDevice(rightX, ref rightY, "VDP1", runtime.SystemMap.Vdp1Area);
+        DrawDebugDevice(rightX, ref rightY, "VDP2", runtime.SystemMap.Vdp2Vram);
+        DrawDebugDevice(rightX, ref rightY, "CRAM", runtime.SystemMap.Vdp2Cram);
+        rightY += 4;
+        DrawText(rightX, rightY, "CRAM PALETTE", 0xff91a1ad);
+        DrawCramPalette(runtime.SystemMap.Vdp2Cram, rightX, rightY + 14);
+
         if (!string.IsNullOrEmpty(_fault))
         {
             DrawText(14, y, "FAULT " + _fault.ToUpperInvariant(), 0xffff5c8a);
         }
+    }
+
+    private void DrawDebugDevice(
+        int x,
+        ref int y,
+        string label,
+        SaturnBus.DebugMemoryBusDevice device)
+    {
+        string last = device.LastWriteOffset is uint offset ? $"0X{offset:X5}" : "-";
+        DrawText(x, y, $"{label} W {device.WriteCount}", device.WriteCount > 0 ? 0xff7cc7ff : 0xff91a1ad);
+        y += 14;
+        DrawText(x, y, $"LAST {last}", 0xff91a1ad);
+        y += 18;
+    }
+
+    private void DrawCramPalette(SaturnBus.DebugMemoryBusDevice cram, int x, int y)
+    {
+        const int columns = 16;
+        const int swatch = 7;
+        const int gap = 1;
+        for (int i = 0; i < 64; i++)
+        {
+            int px = x + (i % columns) * (swatch + gap);
+            int py = y + (i / columns) * (swatch + gap);
+            uint color = SaturnColorToArgb(cram.ReadBigEndianWord((uint)(i * 2)));
+            FillRect(px, py, swatch, swatch, color);
+        }
+    }
+
+    private static uint SaturnColorToArgb(ushort color)
+    {
+        uint r = (uint)((color >> 10) & 0x1f);
+        uint g = (uint)((color >> 5) & 0x1f);
+        uint b = (uint)(color & 0x1f);
+        r = (r << 3) | (r >> 2);
+        g = (g << 3) | (g >> 2);
+        b = (b << 3) | (b >> 2);
+        return 0xff000000u | (r << 16) | (g << 8) | b;
     }
 
     private void FillBackground()
@@ -268,6 +317,22 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
         }
 
         _frame[(y * FrameWidth) + x] = color;
+    }
+
+    private void FillRect(int x, int y, int width, int height, uint color)
+    {
+        int minY = Math.Max(0, y);
+        int maxY = Math.Min(FrameHeight, y + height);
+        int minX = Math.Max(0, x);
+        int maxX = Math.Min(FrameWidth, x + width);
+        for (int py = minY; py < maxY; py++)
+        {
+            int row = py * FrameWidth;
+            for (int px = minX; px < maxX; px++)
+            {
+                _frame[row + px] = color;
+            }
+        }
     }
 
     private static SaturnInput.SaturnInputState MapInput(HostCore.SaturnButtons buttons)
