@@ -1,5 +1,5 @@
 diff --git a/src/i_video.cpp b/src/i_video.cpp
-index 482b9d8..e707a9a 100644
+index 482b9d8..61e1d0d 100644
 --- a/src/i_video.cpp
 +++ b/src/i_video.cpp
 @@ -22,0 +23,5 @@
@@ -92,16 +92,18 @@ index 482b9d8..e707a9a 100644
 +        {
 +            SDL_QuitSubSystem(SDL_INIT_VIDEO);
 +        }
-@@ -425,0 +508,8 @@ void I_GetEvent(void)
+@@ -425,0 +508,10 @@ void I_GetEvent(void)
 +    if (wfcore_mode)
 +    {
 +        wfcore_poll_input();
++        if (!textmode)
++            PTR_UpdateCursor();
 +        IPT_GetButtons();
 +        MUS_Poll();
 +        return;
 +    }
 +
-@@ -731,0 +822,7 @@ void I_FinishUpdate (void)
+@@ -731,0 +824,7 @@ void I_FinishUpdate (void)
 +    if (wfcore_mode)
 +    {
 +        wfcore_poll_input();
@@ -109,9 +111,9 @@ index 482b9d8..e707a9a 100644
 +        return;
 +    }
 +
-@@ -1416,0 +1514 @@ void I_InitGraphics(uint8_t *pal)
+@@ -1416,0 +1516 @@ void I_InitGraphics(uint8_t *pal)
 +    wfcore_mode = getenv("RAPTOR_WFCORE") != NULL;
-@@ -1434,0 +1533,32 @@ void I_InitGraphics(uint8_t *pal)
+@@ -1434,0 +1535,32 @@ void I_InitGraphics(uint8_t *pal)
 +    if (wfcore_mode)
 +    {
 +        if (SDL_Init(SDL_INIT_TIMER) < 0)
@@ -144,7 +146,7 @@ index 482b9d8..e707a9a 100644
 +        return;
 +    }
 +
-@@ -1629 +1759,349 @@ void I_Settextmode(bool flag)
+@@ -1629 +1761,354 @@ void I_Settextmode(bool flag)
 -}
 \ No newline at end of file
 +}
@@ -312,6 +314,8 @@ index 482b9d8..e707a9a 100644
 +static void wfcore_apply_pointer(int32_t x, int32_t y, uint32_t buttons, bool inside)
 +{
 +    bool menu_pointer_move = g_drawcursor && (wfcore_last_buttons & ((1u << 1) | (1u << 2) | (1u << 3) | (1u << 4))) != 0;
++    int old_x = cur_mx;
++    int old_y = cur_my;
 +    if (inside && !menu_pointer_move)
 +    {
 +        if (x < 0) x = 0;
@@ -324,6 +328,9 @@ index 482b9d8..e707a9a 100644
 +
 +    if (menu_pointer_move)
 +        wfcore_move_menu_pointer(wfcore_last_buttons);
++
++    if (old_x != cur_mx || old_y != cur_my)
++        PTR_SetUpdateFlag();
 +
 +    uint32_t effective_buttons = buttons | wfcore_action_pointer_buttons;
 +    uint32_t pressed = effective_buttons & ~wfcore_last_pointer_buttons;
@@ -496,6 +503,12 @@ index 482b9d8..e707a9a 100644
 +    }
 +    return true;
 +}
+diff --git a/src/ptrapi.h b/src/ptrapi.h
+index 70822cf..ceb1c52 100644
+--- a/src/ptrapi.h
++++ b/src/ptrapi.h
+@@ -25,0 +26 @@ int PTR_Init(int type);
++void PTR_SetUpdateFlag(void);
 diff --git a/src/windows.cpp b/src/windows.cpp
 index 98a975d..d3f1456 100644
 --- a/src/windows.cpp
