@@ -162,8 +162,8 @@ internal sealed class StormaktGame
         if (_gameOver)
         {
             DrawRect(frame, 76, 92, 168, 42, 0xdd090b10);
-            DrawText(frame, 92, 102, "FLOTTAN FOLL", 0xffff6b7f);
-            DrawText(frame, 98, 118, "START REKRYTERAR", 0xffffd66b);
+            DrawText(frame, 92, 102, "FLOTTAN FÖLL", 0xffff6b7f);
+            DrawText(frame, 98, 118, "START ÅTERKALLAR", 0xffffd66b);
         }
     }
 
@@ -458,7 +458,7 @@ internal sealed class StormaktGame
     {
         DrawText(frame, 6, 5, "KARL CCLV", 0xffffd66b);
         DrawText(frame, 76, 5, "STORMAKT 3020", 0xff7fc7ff);
-        DrawText(frame, 204, 5, "POANG " + _score.ToString("000000"), 0xff7fc7ff);
+        DrawText(frame, 204, 5, "POÄNG " + _score.ToString("000000"), 0xff7fc7ff);
         DrawText(frame, 6, _height - 9, "LIV " + _lives, 0xffff6b7f);
         DrawText(frame, 62, _height - 9, "Z ELD  X BREDSIDA", 0xffb7c7d6);
         DrawRect(frame, 268, _height - 8, 44, 4, 0xff2a3440);
@@ -550,6 +550,9 @@ internal sealed class StormaktGame
     private static ReadOnlySpan<byte> Glyph(char ch) => ch switch
     {
         'A' => [0b01110, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001],
+        'Å' => [0b00100, 0b01010, 0b01110, 0b10001, 0b11111, 0b10001, 0b10001],
+        'Ä' => [0b01010, 0b00000, 0b01110, 0b10001, 0b11111, 0b10001, 0b10001],
+        'Æ' => [0b01111, 0b10100, 0b10100, 0b11110, 0b10100, 0b10100, 0b10111],
         'B' => [0b11110, 0b10001, 0b10001, 0b11110, 0b10001, 0b10001, 0b11110],
         'C' => [0b01111, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b01111],
         'D' => [0b11110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b11110],
@@ -564,6 +567,8 @@ internal sealed class StormaktGame
         'M' => [0b10001, 0b11011, 0b10101, 0b10101, 0b10001, 0b10001, 0b10001],
         'N' => [0b10001, 0b11001, 0b10101, 0b10011, 0b10001, 0b10001, 0b10001],
         'O' => [0b01110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110],
+        'Ö' => [0b01010, 0b00000, 0b01110, 0b10001, 0b10001, 0b10001, 0b01110],
+        'Ø' => [0b01111, 0b10011, 0b10101, 0b10101, 0b11001, 0b10001, 0b11110],
         'P' => [0b11110, 0b10001, 0b10001, 0b11110, 0b10000, 0b10000, 0b10000],
         'R' => [0b11110, 0b10001, 0b10001, 0b11110, 0b10100, 0b10010, 0b10001],
         'S' => [0b01111, 0b10000, 0b10000, 0b01110, 0b00001, 0b00001, 0b11110],
