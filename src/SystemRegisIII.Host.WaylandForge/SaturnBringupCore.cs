@@ -62,6 +62,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
 
         if (_runtime is not null && string.IsNullOrEmpty(_fault))
         {
+            _runtime.Smpc.SetDigitalPadState(MapInput(_lastButtons));
             StepRuntime();
         }
 
@@ -217,7 +218,9 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
                 _lastButtons.ToString(),
                 VdpDebugStatus.Empty,
                 VdpDebugStatus.Empty,
-                VdpDebugStatus.Empty);
+                VdpDebugStatus.Empty,
+                VdpDebugStatus.Empty,
+                CdBlockStatus.Empty);
         }
 
         SaturnRuntime runtime = _runtime;
@@ -238,7 +241,9 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
             _lastButtons.ToString(),
             VdpDebugStatus.From("VDP1", runtime.SystemMap.Vdp1Area),
             VdpDebugStatus.From("VDP2", runtime.SystemMap.Vdp2Vram),
-            VdpDebugStatus.From("CRAM", runtime.SystemMap.Vdp2Cram));
+            VdpDebugStatus.From("CRAM", runtime.SystemMap.Vdp2Cram),
+            VdpDebugStatus.From("REGS", runtime.SystemMap.Vdp2Registers),
+            CdBlockStatus.From(runtime.SystemMap.CdBlock));
     }
 
     private void RenderDiagnosticFrame()
@@ -273,6 +278,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
         DrawDebugDevice(rightX, ref rightY, "VDP1", runtime.SystemMap.Vdp1Area);
         DrawDebugDevice(rightX, ref rightY, "VDP2", runtime.SystemMap.Vdp2Vram);
         DrawDebugDevice(rightX, ref rightY, "CRAM", runtime.SystemMap.Vdp2Cram);
+        DrawDebugDevice(rightX, ref rightY, "REGS", runtime.SystemMap.Vdp2Registers);
         rightY += 4;
         DrawText(rightX, rightY, "CRAM PALETTE", 0xff91a1ad);
         DrawCramPalette(runtime.SystemMap.Vdp2Cram, rightX, rightY + 14);
@@ -486,7 +492,9 @@ internal readonly record struct SaturnCoreStatus(
     string Input,
     VdpDebugStatus Vdp1,
     VdpDebugStatus Vdp2,
-    VdpDebugStatus Cram);
+    VdpDebugStatus Cram,
+    VdpDebugStatus Vdp2Registers,
+    CdBlockStatus CdBlock);
 
 internal readonly record struct VdpDebugStatus(
     string Label,
@@ -499,4 +507,40 @@ internal readonly record struct VdpDebugStatus(
 
     public static VdpDebugStatus From(string label, SaturnBus.DebugMemoryBusDevice device) =>
         new(label, device.ReadCount, device.WriteCount, device.LastReadOffset, device.LastWriteOffset);
+}
+
+internal readonly record struct CdBlockStatus(
+    bool HasDisc,
+    string DiscName,
+    long SectorCount,
+    byte AuthenticationType,
+    bool AuthStartupCompleted,
+    byte LastCommand,
+    ushort Cr1,
+    ushort Cr2,
+    ushort Cr3,
+    ushort Cr4,
+    ushort ResponseCr1,
+    ushort ResponseCr2,
+    ushort ResponseCr3,
+    ushort ResponseCr4)
+{
+    public static CdBlockStatus Empty => new(false, "-", 0, 0, false, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+    public static CdBlockStatus From(SaturnCd.CdBlockRegisterBusDevice cdBlock) =>
+        new(
+            cdBlock.HasDisc,
+            cdBlock.DiscName ?? "-",
+            cdBlock.DiscSectorCount,
+            cdBlock.AuthenticationType,
+            cdBlock.AuthStartupCompleted,
+            cdBlock.LastCommandCode,
+            cdBlock.LastCommandCr1,
+            cdBlock.LastCommandCr2,
+            cdBlock.LastCommandCr3,
+            cdBlock.LastCommandCr4,
+            cdBlock.ResponseCr1,
+            cdBlock.ResponseCr2,
+            cdBlock.ResponseCr3,
+            cdBlock.ResponseCr4);
 }

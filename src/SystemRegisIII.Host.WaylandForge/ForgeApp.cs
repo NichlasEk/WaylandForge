@@ -406,7 +406,7 @@ internal sealed unsafe class ForgeApp : IDisposable
 
             if (ReferenceEquals(_core, _saturnCore))
             {
-                if (_ui.Collapsible(new UiId("debug.saturn"), ref column, "CORE STATUS", 308, out RectI saturnSection))
+                if (_ui.Collapsible(new UiId("debug.saturn"), ref column, "CORE STATUS", 426, out RectI saturnSection))
                 {
                     DrawSaturnCoreStatus(saturnSection);
                 }
@@ -519,12 +519,24 @@ internal sealed unsafe class ForgeApp : IDisposable
         DrawMetric(x, y, "VBI", status.VBlankInCount.ToString()); y += 18;
         DrawMetric(x, y, "VBO", status.VBlankOutCount.ToString()); y += 18;
         DrawMetric(x, y, "SMPC", FormatHex(status.SmpcLastCommand, 2)); y += 18;
-        DrawMetric(x, y, "SIRQ", status.SmpcInterruptCount.ToString()); y += 20;
+        DrawMetric(x, y, "SIRQ", status.SmpcInterruptCount.ToString()); y += 18;
+        DrawMetric(x, y, "PAD", TruncateMiddle(status.Input.ToUpperInvariant(), 18)); y += 20;
 
         _ui.Text(x, y, "VDP", UiTextKind.Muted); y += 14;
         DrawVdpStatus(x, ref y, status.Vdp1);
         DrawVdpStatus(x, ref y, status.Vdp2);
         DrawVdpStatus(x, ref y, status.Cram);
+        DrawVdpStatus(x, ref y, status.Vdp2Registers);
+        y += 2;
+
+        _ui.Text(x, y, "CD BLOCK", UiTextKind.Muted); y += 14;
+        DrawMetric(x, y, "DISC", status.CdBlock.HasDisc ? "YES" : "NO"); y += 18;
+        DrawMetric(x, y, "AUTH", $"{FormatHex(status.CdBlock.AuthenticationType, 2)} {(status.CdBlock.AuthStartupCompleted ? "OK" : "WAIT")}"); y += 18;
+        DrawMetric(x, y, "CMD", FormatHex(status.CdBlock.LastCommand, 2)); y += 18;
+        DrawMetric(x, y, "CR1", FormatHex(status.CdBlock.Cr1, 4)); y += 18;
+        DrawMetric(x, y, "CR2", FormatHex(status.CdBlock.Cr2, 4)); y += 18;
+        DrawMetric(x, y, "RCR1", FormatHex(status.CdBlock.ResponseCr1, 4)); y += 18;
+        DrawMetric(x, y, "RCR2", FormatHex(status.CdBlock.ResponseCr2, 4)); y += 18;
     }
 
     private void DrawVdpStatus(int x, ref int y, VdpDebugStatus status)
