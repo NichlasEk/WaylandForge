@@ -1,6 +1,15 @@
 # Bana 1 - Återtåget över Stora Bält-nebulosan
 
-Status: planerad, inte implementerad.
+Status: checkpoint 1, banskelettet, är implementerat. Brokriget och bossen återstår.
+
+## Implementerad checkpoint 1 - 2026-07-10
+
+- En 60-sekunders, ramstyrd flythrough loopar deterministiskt och använder fem deklarerade vågposter i stället för slumpmässig spawn.
+- Titelplaketten visar `ÅTERTÅGET ÖVER` / `STORA BÄLT NEBULOSAN` före första fiendevågen.
+- Fjärrymd/norrsken, turkos-roströd nebulosa, stjärnor och Bältruiner rör sig i separata hastigheter.
+- Ruinlagret innehåller drivande sten, ett avlägset svenskt linjekryssarvrak och en sönderskjuten gravitationsbro märkt `3020`.
+- Radiofönstren är flyttade till lugna platser i bantidslinjen: Ebba vid 3 sekunder, Rasmus vid 15 och Christian vid 25.
+- Reset återställer även slumpgenerator och stjärnfält. Två fristående 3 600-rutorskörningar med samma svepande eldinput gav samma slutbild: SHA-256 `71fe1ad83b88632b480bef546ff58d9ce086b384def2cf2e875e04e5787233b5`.
 
 ## Banans löfte
 
@@ -123,7 +132,7 @@ Bossradion visas färdigt före första skottmönstret och följer reglerna i `d
 
 ## Byggskivor och checkpoints
 
-1. **Banskelett:** ramstyrd tidslinje, titel, tre parallaxlager och deterministisk 60-sekunders genomflygning. Commit och push.
+1. **Banskelett:** klart - ramstyrd tidslinje, titel, tre parallaxlager och deterministisk 60-sekunders genomflygning.
 2. **Brokriget:** marklager, torn, energiledningar, förstörbara brospann och vågor fram till 2:45. Commit och push.
 3. **Fogdeskeppet:** bossmodell, tre faser, delmål, bossmusik och dödssekvens. Commit och push.
 4. **Polish:** bakgrundsassets, skadebilder, nya SFX, poängbalans och full fyraminuters capture. Commit och push.

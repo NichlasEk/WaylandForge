@@ -60,6 +60,7 @@ static bool ReadExact(Stream stream, Span<byte> buffer)
 
 internal sealed class StormaktGame
 {
+    private const int FlythroughFrames = 60 * 60;
     private const uint Up = 1u << 1;
     private const uint Down = 1u << 2;
     private const uint Left = 1u << 3;
@@ -73,22 +74,29 @@ internal sealed class StormaktGame
     private readonly int _height;
     private readonly SpritePack? _sprites;
     private readonly StormaktMusicLoop? _audio;
-    private readonly Random _random = new(3020);
+    private Random _random = new(3020);
     private readonly List<Shot> _shots = [];
     private readonly List<Enemy> _enemies = [];
     private readonly Star[] _stars = new Star[92];
     private readonly HashSet<int> _skippedRadioCards = [];
     private static readonly RadioCard[] RadioCards =
     [
-        new(90, 360, false, "EBBA GRIP", "HOLD YOUR COURSE", "BELT IS NOT LOST", StormaktVoice.EbbaGrip),
-        new(540, 300, true, "RASMUS", "SWEDISH VESSEL", "HEAVE TO NOW", StormaktVoice.RasmusGyldentold),
-        new(930, 315, true, "CHRISTIAN", "FACE THE CROWNS", "FINAL FLEET", StormaktVoice.KungChristian),
+        new(180, 360, false, "EBBA GRIP", "HOLD YOUR COURSE", "BELT IS NOT LOST", StormaktVoice.EbbaGrip),
+        new(900, 300, true, "RASMUS", "SWEDISH VESSEL", "HEAVE TO NOW", StormaktVoice.RasmusGyldentold),
+        new(1500, 315, true, "CHRISTIAN", "FACE THE CROWNS", "FINAL FLEET", StormaktVoice.KungChristian),
+    ];
+    private static readonly EnemyWave[] EnemyWaves =
+    [
+        new(240, 720, 180, 0, 2),
+        new(720, 1_500, 150, 1, 3),
+        new(1_500, 2_280, 120, 0, 3),
+        new(2_280, 3_060, 150, 2, 2),
+        new(3_060, FlythroughFrames, 105, 1, 3),
     ];
     private int _shipX;
     private int _shipY;
     private int _cooldown;
     private int _altCooldown;
-    private int _spawnTimer;
     private int _score;
     private int _lives = 3;
     private int _heat;
@@ -103,10 +111,6 @@ internal sealed class StormaktGame
         _sprites = sprites;
         _audio = audio;
         Reset();
-        for (int i = 0; i < _stars.Length; i++)
-        {
-            _stars[i] = new Star(_random.Next(width), _random.Next(height), 1 + _random.Next(3), _random.Next(50, 180));
-        }
     }
 
     public void Step(uint buttons)
@@ -162,13 +166,16 @@ internal sealed class StormaktGame
     public void Render(uint[] frame, ulong frameIndex)
     {
         Clear(frame, 0xff061018);
-        DrawSky(frame, frameIndex);
+        DrawSky(frame);
+        DrawNebula(frame);
         DrawStars(frame);
+        DrawBeltRuins(frame);
         DrawBorder(frame);
         DrawShots(frame);
         DrawEnemies(frame);
         DrawShip(frame);
         DrawHud(frame);
+        DrawMissionTitle(frame);
         DrawRadio(frame);
         if (_gameOver)
         {
@@ -182,11 +189,15 @@ internal sealed class StormaktGame
     {
         _shots.Clear();
         _enemies.Clear();
+        _random = new Random(3020);
+        for (int i = 0; i < _stars.Length; i++)
+        {
+            _stars[i] = new Star(_random.Next(_width), _random.Next(_height), 1 + _random.Next(3), _random.Next(50, 180));
+        }
         _shipX = _width / 2;
         _shipY = _height - 36;
         _cooldown = 0;
         _altCooldown = 0;
-        _spawnTimer = 20;
         _score = 0;
         _lives = 3;
         _heat = 0;
@@ -293,25 +304,39 @@ internal sealed class StormaktGame
 
     private void SpawnEnemies()
     {
-        _spawnTimer--;
-        if (_spawnTimer > 0)
+        int timelineFrame = _missionFrame % FlythroughFrames;
+        foreach (EnemyWave wave in EnemyWaves)
         {
-            return;
-        }
+            if (timelineFrame < wave.StartFrame || timelineFrame >= wave.EndFrame ||
+                (timelineFrame - wave.StartFrame) % wave.IntervalFrames != 0)
+            {
+                continue;
+            }
 
-        int radius = _random.Next(7, 13);
-        int x = _random.Next(24, _width - 24);
-        int speed = _random.Next(1, 4);
-        int health = radius < 10 ? 4 : 7;
-        int kind = _random.Next(3);
-        uint color = kind switch
+            int volley = (timelineFrame - wave.StartFrame) / wave.IntervalFrames;
+            SpawnFormation(wave, volley);
+        }
+    }
+
+    private void SpawnFormation(EnemyWave wave, int volley)
+    {
+        int center = 62 + ((volley * 71 + wave.Kind * 43) % 196);
+        int radius = wave.Kind == 2 ? 12 : wave.Kind == 1 ? 10 : 8;
+        int speed = wave.Kind == 2 ? 1 : 2;
+        int health = wave.Kind == 2 ? 8 : wave.Kind == 1 ? 6 : 4;
+        uint color = wave.Kind switch
         {
             0 => 0xffa71930,
             1 => 0xffc51f35,
             _ => 0xff7f1727,
         };
-        _enemies.Add(new Enemy(x, -radius, speed, radius, health, color, kind, _random.NextDouble() * Math.PI * 2.0));
-        _spawnTimer = Math.Max(12, 34 - _score / 450);
+        for (int index = 0; index < wave.Count; index++)
+        {
+            int offset = (index - ((wave.Count - 1) / 2)) * 28;
+            int y = -radius - (Math.Abs(index - wave.Count / 2) * 12);
+            double phase = ((volley * 17 + index * 29 + wave.Kind * 11) % 100) * Math.PI / 50.0;
+            _enemies.Add(new Enemy(Math.Clamp(center + offset, 20, _width - 20), y, speed, radius, health, color, wave.Kind, phase));
+        }
     }
 
     private void StepStars()
@@ -328,7 +353,7 @@ internal sealed class StormaktGame
         }
     }
 
-    private void DrawSky(uint[] frame, ulong frameIndex)
+    private void DrawSky(uint[] frame)
     {
         for (int y = 0; y < _height; y++)
         {
@@ -338,10 +363,83 @@ internal sealed class StormaktGame
             uint b = (uint)(24 + y / 3);
             for (int x = 0; x < _width; x++)
             {
-                uint fog = (uint)((Math.Sin((x + (double)frameIndex * 2.0) * 0.025 + y * 0.04) + 1.0) * 8.0);
-                frame[row + x] = 0xff000000u | ((r + fog) << 16) | ((g + fog) << 8) | Math.Min(255u, b + fog);
+                uint fog = (uint)((Math.Sin(x * 0.025 + _missionFrame * 0.004 + y * 0.04) + 1.0) * 6.0);
+                double auroraCenter = 48.0 + Math.Sin(x * 0.023 + _missionFrame * 0.0015) * 15.0;
+                uint aurora = (uint)Math.Max(0.0, 11.0 - Math.Abs(y - auroraCenter) * 0.7);
+                frame[row + x] = 0xff000000u |
+                    (Math.Min(255u, r + fog) << 16) |
+                    (Math.Min(255u, g + fog + aurora) << 8) |
+                    Math.Min(255u, b + fog + aurora * 2);
             }
         }
+    }
+
+    private void DrawNebula(uint[] frame)
+    {
+        double scroll = _missionFrame * 0.0028;
+        for (int y = 22; y < _height - 20; y += 2)
+        {
+            for (int x = 0; x < _width; x += 2)
+            {
+                double gas = Math.Sin(x * 0.019 + scroll) + Math.Sin(y * 0.047 - scroll * 0.7) +
+                    Math.Sin((x + y) * 0.011 + scroll * 0.35);
+                if (gas > 1.25)
+                {
+                    uint color = ((x + y + _missionFrame / 8) % 17) < 3 ? 0xff6a3b3b : 0xff28545d;
+                    BlendPixel(frame, x, y, color, 38);
+                    BlendPixel(frame, x + 1, y, color, 24);
+                    BlendPixel(frame, x, y + 1, color, 24);
+                }
+            }
+        }
+    }
+
+    private void DrawBeltRuins(uint[] frame)
+    {
+        for (int index = 0; index < 7; index++)
+        {
+            int y = ((index * 83 + _missionFrame / 3) % 310) - 50;
+            int x = 18 + ((index * 97) % 284);
+            uint stone = index % 2 == 0 ? 0xff29343d : 0xff35424a;
+            FillCircle(frame, x, y, 3 + index % 5, stone);
+            DrawLine(frame, x - 10, y + 4, x + 12, y - 5, 0xff33424c);
+        }
+
+        int wreckY = ((_missionFrame * 3 / 4 + 170) % 760) - 120;
+        DrawDistantWreck(frame, 246, wreckY);
+
+        int bridgeY = ((_missionFrame * 3 / 4 + 510) % 980) - 180;
+        DrawBrokenBridge(frame, bridgeY);
+    }
+
+    private void DrawDistantWreck(uint[] frame, int x, int y)
+    {
+        uint iron = 0xff27333d;
+        uint fadedBlue = 0xff244862;
+        FillTriangle(frame, x, y - 22, x - 14, y + 20, x + 11, y + 17, iron);
+        FillTriangle(frame, x - 2, y - 6, x - 30, y + 12, x - 8, y + 16, fadedBlue);
+        DrawLine(frame, x - 25, y + 11, x + 15, y + 17, 0xff6d5935);
+        DrawCrown(frame, x - 3, y + 4, 0xff74683f);
+        DrawLine(frame, x + 8, y - 2, x + 25, y - 18, 0xff443b37);
+    }
+
+    private void DrawBrokenBridge(uint[] frame, int y)
+    {
+        uint iron = 0xff303943;
+        uint copper = 0xff654632;
+        DrawRect(frame, -8, y, 91, 14, iron);
+        DrawRect(frame, 237, y + 8, 91, 14, iron);
+        DrawLine(frame, 0, y - 18, 82, y, copper);
+        DrawLine(frame, 238, y + 8, 319, y - 12, copper);
+        for (int x = 8; x < 82; x += 18)
+        {
+            DrawLine(frame, x, y, x + 9, y + 13, 0xff18242c);
+        }
+        for (int x = 244; x < 319; x += 18)
+        {
+            DrawLine(frame, x, y + 9, x + 9, y + 21, 0xff18242c);
+        }
+        DrawText(frame, 14, y + 3, "3020", 0xff78664b);
     }
 
     private void DrawStars(uint[] frame)
@@ -494,6 +592,22 @@ internal sealed class StormaktGame
         DrawText(frame, 62, _height - 9, "Z ELD  X BREDSIDA", 0xffb7c7d6);
         DrawRect(frame, 268, _height - 8, 44, 4, 0xff2a3440);
         DrawRect(frame, 268, _height - 8, Math.Clamp(_heat, 0, 120) * 44 / 120, 4, _heat > 80 ? 0xffff6b4a : 0xffffd66b);
+    }
+
+    private void DrawMissionTitle(uint[] frame)
+    {
+        if (_missionFrame < 15 || _missionFrame >= 165)
+        {
+            return;
+        }
+
+        int edge = Math.Min(_missionFrame - 14, 165 - _missionFrame);
+        int y = 73 - Math.Min(12, edge);
+        DrawRect(frame, 24, y, 272, 39, 0xff080f18);
+        DrawLine(frame, 24, y, 295, y, 0xff8a6b38);
+        DrawLine(frame, 24, y + 38, 295, y + 38, 0xff2f74c9);
+        DrawText(frame, 119, y + 8, "ÅTERTÅGET ÖVER", 0xffffd66b);
+        DrawText(frame, 97, y + 22, "STORA BÄLT NEBULOSAN", 0xff9bd4dc);
     }
 
     private void DrawRadio(uint[] frame)
@@ -766,6 +880,21 @@ internal sealed class StormaktGame
         frame[(y * _width) + x] = color;
     }
 
+    private void BlendPixel(uint[] frame, int x, int y, uint color, uint alpha)
+    {
+        if ((uint)x >= _width || (uint)y >= _height)
+        {
+            return;
+        }
+        int index = (y * _width) + x;
+        uint destination = frame[index];
+        uint inverse = 255 - alpha;
+        uint r = (((color >> 16) & 0xff) * alpha + ((destination >> 16) & 0xff) * inverse) / 255;
+        uint g = (((color >> 8) & 0xff) * alpha + ((destination >> 8) & 0xff) * inverse) / 255;
+        uint b = ((color & 0xff) * alpha + (destination & 0xff) * inverse) / 255;
+        frame[index] = 0xff000000u | (r << 16) | (g << 8) | b;
+    }
+
     private record struct Shot(int X, int Y, int Vx, int Vy, uint Color, int Power);
     private record struct Enemy(int X, int Y, int Speed, int Radius, int Health, uint Color, int Kind, double Phase);
     private readonly record struct Star(int X, int Y, int Speed, int Brightness);
@@ -777,6 +906,12 @@ internal sealed class StormaktGame
         string Line1,
         string Line2,
         StormaktVoice Voice);
+    private readonly record struct EnemyWave(
+        int StartFrame,
+        int EndFrame,
+        int IntervalFrames,
+        int Kind,
+        int Count);
 }
 
 internal sealed class SpritePack
