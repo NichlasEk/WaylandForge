@@ -1,6 +1,6 @@
 # Bana 1 - Återtåget över Stora Bält-nebulosan
 
-Status: checkpoint 1 är klar och checkpoint 2A-2C har infört brospann, energiledning, marktorn, kollaps, fogdeslupar och dubbel brokorridor. Bossen återstår.
+Status: checkpoint 1 och 2A-2C är klara. Bosscheckpoint 3A har infört Kronens Tiendes presentation, delmål och hela fas 1; fas 2-3 och dödssekvens återstår.
 
 ## Implementerad checkpoint 1 - 2026-07-10
 
@@ -35,6 +35,16 @@ Status: checkpoint 1 är klar och checkpoint 2A-2C har infört brospann, energil
 - Mitten lämnas öppen som säker korridor, medan bredsidan kan träffa båda markgruppernas inre komponenter.
 - Brogrupperna har separata länknings-id:n: spelaren kan fälla ena sidan, öppna ett bredare flyktutrymme och lämna andra tornet aktivt.
 - Två fristående 3 600-rutorskörningar efter 2C gav samma slutbild: SHA-256 `55d01afcc9d2384d7bd7442a81055423086ec74015caf1ad9b819e8962da01f1`.
+
+## Implementerad checkpoint 3A - Kronens Tiende, fas 1
+
+- Vanliga vågor tystnar före ruta 3 300. Fogde Rasmus anropar, därefter glider `KRONENS TIENDE - FOGDESKEPP` in med låst skrov under radio och namnskylt.
+- Bossmodellen är en bred rödvit indrivningsgaljon med korspaneler, kedjor, tredubbel krona, mekaniskt tullsigill och två separata sidokanoner.
+- Varje sidokanon har 70 egen hälsa, kan förstöras separat och försvinner då ur kommande salvor.
+- Fas 1 skjuter två femkulors solfjädrar med avsiktliga luckor. Ett kedjeankare markerar sin lodräta kolumn i 48 rutor innan det dras upp från skärmens nederkant.
+- Skrovets fas-1-segment går från 100 till 65 procent. Vid tröskeln rensas aktiva salvor och ankare och övergångsskylten `BROFOGDENS VREDE` visas; fas 2 är ännu passiv.
+- `WAYLANDFORGE_STORMAKT_INVINCIBLE=1` finns endast som opt-in för deterministiska fullbanecaptures. Normal körning påverkas inte.
+- Två 4 251-rutors bosskörningar med samma testinput gav samma fas-2-övergångsbild: SHA-256 `398f461fbe5c42911dd1cd41858ff3763104693916d06b006fdc6503a0fca246`.
 
 ## Banans löfte
 
@@ -159,7 +169,7 @@ Bossradion visas färdigt före första skottmönstret och följer reglerna i `d
 
 1. **Banskelett:** klart - ramstyrd tidslinje, titel, tre parallaxlager och deterministisk 60-sekunders genomflygning.
 2. **Brokriget:** marklager, torn, energiledningar, förstörbara brospann och vågor fram till 2:45. Commit och push.
-3. **Fogdeskeppet:** bossmodell, tre faser, delmål, bossmusik och dödssekvens. Commit och push.
+3. **Fogdeskeppet:** 3A klar med modell, presentation, delmål och fas 1. Fas 2-3, bossmusik och dödssekvens återstår.
 4. **Polish:** bakgrundsassets, skadebilder, nya SFX, poängbalans och full fyraminuters capture. Commit och push.
 
 ## Acceptanskriterier
