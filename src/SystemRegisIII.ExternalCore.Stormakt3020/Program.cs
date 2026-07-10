@@ -92,9 +92,9 @@ internal sealed class StormaktGame
     private readonly HashSet<int> _skippedRadioCards = [];
     private static readonly RadioCard[] RadioCards =
     [
-        new(180, 360, false, "EBBA GRIP", "HOLD YOUR COURSE", "BELT IS NOT LOST", StormaktVoice.EbbaGrip),
-        new(900, 300, true, "RASMUS", "SWEDISH VESSEL", "HEAVE TO NOW", StormaktVoice.RasmusGyldentold),
-        new(BossArrivalFrame, 300, true, "FOGDE RASMUS", "CROWNS TENTH", "TAKES EVERYTHING", StormaktVoice.RasmusGyldentold),
+        new(180, 360, false, "EBBA GRIP", "HOLD YOUR COURSE", "BELT IS NOT LOST", StormaktVoice.EbbaGrip, "portrait_ebba"),
+        new(900, 300, true, "RASMUS", "SWEDISH VESSEL", "HEAVE TO NOW", StormaktVoice.RasmusGyldentold, "portrait_rasmus"),
+        new(BossArrivalFrame, 300, true, "FOGDE RASMUS", "CROWNS TENTH", "TAKES EVERYTHING", StormaktVoice.RasmusGyldentold, "portrait_rasmus"),
     ];
     private static readonly EnemyWave[] EnemyWaves =
     [
@@ -1707,7 +1707,16 @@ internal sealed class StormaktGame
             DrawLine(frame, x, y, x, y + height - 1, frameColor);
             DrawLine(frame, x + width - 1, y, x + width - 1, y + height - 1, frameColor);
             DrawRect(frame, x + 2, y + 2, 38, 38, 0xff162331);
-            DrawRadioPortrait(frame, x + 21, y + 21, uniformColor, lampColor, card.Enemy);
+            bool speaking = elapsed >= 8 && elapsed < card.DurationFrames - 20 && ((elapsed / 8) & 1) != 0;
+            string portraitName = card.PortraitBase + (speaking ? "_speak" : "_neutral");
+            if (_sprites?.TryGet(portraitName, out Sprite portrait) == true)
+            {
+                DrawSprite(frame, portrait, x + 2 + (38 - portrait.Width) / 2, y + 2 + (38 - portrait.Height) / 2);
+            }
+            else
+            {
+                DrawRadioPortrait(frame, x + 21, y + 21, uniformColor, lampColor, card.Enemy);
+            }
             DrawRect(frame, x + 42, y + 3, 93, 9, frameColor);
             DrawRect(frame, x + 44, y + 5, 3, 3, lampColor);
             DrawText(frame, x + 50, y + 4, card.Speaker, 0xffffffff);
@@ -1715,7 +1724,10 @@ internal sealed class StormaktGame
             DrawText(frame, x + 43, y + 30, card.Line2, 0xffdce8f2);
             for (int scanY = y + 2; scanY < y + height - 1; scanY += 4)
             {
-                DrawLine(frame, x + 2, scanY, x + 39, scanY, 0xff20303b);
+                for (int scanX = x + 2; scanX <= x + 39; scanX++)
+                {
+                    BlendPixel(frame, scanX, scanY, 0xff081019, 54);
+                }
             }
             return;
         }
@@ -1997,7 +2009,8 @@ internal sealed class StormaktGame
         string Speaker,
         string Line1,
         string Line2,
-        StormaktVoice Voice);
+        StormaktVoice Voice,
+        string PortraitBase);
     private readonly record struct EnemyWave(
         int StartFrame,
         int EndFrame,

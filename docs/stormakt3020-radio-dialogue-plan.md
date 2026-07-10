@@ -1,6 +1,6 @@
 # Stormakt 3020 - videokomradio, dialog och TTS
 
-Status: första runtimeprototypen och tre engelska platshållarröster är implementerade. Svenska och danska slutröster återstår.
+Status: första runtimeprototypen, tre engelska platshållarröster och genererade produktionsporträtt för Ebba Grip och Fogde Rasmus är implementerade. Kung Christians två porträttrutor är färdigpackade för hans kommande radiokort. Svenska och danska slutröster återstår.
 
 ## Målbild
 
@@ -97,17 +97,17 @@ De danska raderna ska granskas av en dansk talare eller åtminstone genom ett se
 
 ## Porträtt och karaktärsspråk
 
-- Porträtt byggs som separata pixelark efter respektive banplan, med neutral mun och talbild samt en brusmask.
+- Porträtt byggs som separata pixelark efter respektive banplan, med neutral mun och talbild samt en brusmask. Första produktionsarket är klart; runtime växlar munruta var åttonde simuleringsruta och faller tillbaka till det kodritade ansiktet om en asset saknas.
 - Ebba Grip: svensk amiral, blå uniform, gul mässing, kallt lugn.
 - Rasmus Gyldentold: fogde, rödvit rock, överdimensionerat mekaniskt tullsigill, självsäker men inte komisk.
 - Sören Svartkrut: sotad kopparmask, svart rock och grön signalglöd; hans bild bryter ibland upp i två positioner.
-- Kung Christian visas först som vapensköld/siluett. Ett fullständigt ansikte sparas tills vi uttryckligen bestämmer att han ska synas.
+- Kung Christian har nu ett fullständigt neutral/talande porträtt i assetpaketet. Det visas först när hans eget radiokort kopplas till Kung Christians Superarmada.
 
 ## Checkpoints
 
-1. **Radioprototyp:** klar med tre engelska platshållarkort, kodritade porträtt och headless capture.
+1. **Radioprototyp:** klar med tre engelska platshållarkort, riktiga neutral/talande porträtt för Ebba och Rasmus, kodritad fallback och headless capture.
 2. **Voice pipeline:** engelsk Matcha-placeholder, radiofilter och manifest är klara. Två godkända SV/DA-referensröster, Dots-pilot och lyssningsbeslut återstår.
-3. **Bana 1-dialog:** fem tidsatta radiokort, riktiga porträtt, musikduckning och voice-mix. Full ban-capture och push.
+3. **Bana 1-dialog:** tre tidsatta radiokort, riktiga porträtt, musikduckning och voice-mix är klara. Två ytterligare kort och full ban-capture återstår.
 
 ## Acceptanskriterier
 

@@ -1,6 +1,6 @@
 # Stormakt 3020 Assets
 
-`karl-cclv-swedish-hero-danish-enemies-v3.png` is the hero/standard-enemy source sheet. `stormakt-danish-boss-enemies-v1.png` is the transparent production sheet for Kronens Tiende, fogde sloops and the tax-seal drone. The `-source.png` sibling preserves the original flat green generation, and the exact image prompt is versioned beside it.
+`karl-cclv-swedish-hero-danish-enemies-v3.png` is the hero/standard-enemy source sheet. `stormakt-danish-boss-enemies-v1.png` is the transparent production sheet for Kronens Tiende, fogde sloops and the tax-seal drone. `stormakt-radio-portraits-v1.png` supplies paired neutral/speaking portraits for Ebba Grip, Fogde Rasmus and Kung Christian. Each `-source.png` sibling preserves the original flat green generation, and the exact image prompts are versioned beside them.
 
 Prompt summary:
 
@@ -19,7 +19,7 @@ Rebuild the pack after editing/replacing the concept sheet:
 python tools/stormakt3020/build_assets.py
 ```
 
-The builder currently packs 13 named sprites, including `boss_kronens_tiende`, `boss_kronens_tiende_damaged`, `fogde_sloop`, `fogde_sloop_breakaway` and `enemy_tax_seal`. It trims alpha and downsamples with high-quality filtering; gameplay keeps separate deterministic hitboxes.
+The builder currently packs 19 named sprites, including `boss_kronens_tiende`, `boss_kronens_tiende_damaged`, `fogde_sloop`, `fogde_sloop_breakaway`, `enemy_tax_seal` and six 38x38 radio portraits. Active radio cards alternate their neutral and speaking frames every eight simulation frames; the old code-drawn face remains a missing-asset fallback. The builder trims alpha and downsamples with high-quality filtering; gameplay keeps separate deterministic hitboxes.
 
 To rebuild the transparent generated sheet from its chroma-key source:
 
@@ -30,6 +30,8 @@ python ~/.codex/skills/.system/imagegen/scripts/remove_chroma_key.py \
   --auto-key border --soft-matte --transparent-threshold 12 \
   --opaque-threshold 220 --despill
 ```
+
+The radio portrait sheet uses the same command with `stormakt-radio-portraits-v1-source.png` as input and `stormakt-radio-portraits-v1.png` as output.
 
 To rebuild from another compatible sheet without changing the active default:
 

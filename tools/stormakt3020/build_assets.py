@@ -27,6 +27,15 @@ DANISH_SPRITES = [
     ("enemy_tax_seal", (720, 1055, 1040, 1395), (36, 36)),
 ]
 
+RADIO_PORTRAITS = [
+    ("portrait_ebba_neutral", (0, 0, 512, 512), (38, 38)),
+    ("portrait_ebba_speak", (512, 0, 1024, 512), (38, 38)),
+    ("portrait_rasmus_neutral", (0, 512, 512, 1024), (38, 38)),
+    ("portrait_rasmus_speak", (512, 512, 1024, 1024), (38, 38)),
+    ("portrait_christian_neutral", (0, 1024, 512, 1536), (38, 38)),
+    ("portrait_christian_speak", (512, 1024, 1024, 1536), (38, 38)),
+]
+
 
 def chroma_alpha(image: Image.Image) -> Image.Image:
     rgba = image.convert("RGBA")
@@ -72,12 +81,14 @@ def append_sprites(
         entries.append((name, sprite))
 
 
-def build(input_path: Path, danish_input_path: Path, output_path: Path) -> None:
+def build(input_path: Path, danish_input_path: Path, portrait_input_path: Path, output_path: Path) -> None:
     source = Image.open(input_path)
     danish_source = Image.open(danish_input_path)
+    portrait_source = Image.open(portrait_input_path)
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
     append_sprites(entries, danish_source, DANISH_SPRITES)
+    append_sprites(entries, portrait_source, RADIO_PORTRAITS)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("wb") as handle:
@@ -101,9 +112,14 @@ def main() -> None:
         type=Path,
         default=Path("assets/stormakt3020/stormakt-danish-boss-enemies-v1.png"),
     )
+    parser.add_argument(
+        "--portrait-input",
+        type=Path,
+        default=Path("assets/stormakt3020/stormakt-radio-portraits-v1.png"),
+    )
     parser.add_argument("--output", type=Path, default=Path("assets/stormakt3020/stormakt3020.wfsa"))
     args = parser.parse_args()
-    build(args.input, args.danish_input, args.output)
+    build(args.input, args.danish_input, args.portrait_input, args.output)
 
 
 if __name__ == "__main__":
