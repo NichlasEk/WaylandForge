@@ -11,6 +11,7 @@ using SaturnSmpc = SaturnEmulator::SystemRegisIII.Core.Core.Smpc;
 using SaturnTrace = SaturnEmulator::SystemRegisIII.Core.Tools.TraceViewer;
 using SaturnSystem = SaturnEmulator::SystemRegisIII.Core.Core;
 using SaturnVdp1 = SaturnEmulator::SystemRegisIII.Core.Core.Vdp1;
+using SaturnVdp2 = SaturnEmulator::SystemRegisIII.Core.Core.Vdp2;
 
 namespace SystemRegisIII.Host.WaylandForge;
 
@@ -203,11 +204,22 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
     private void TryRenderVdp1Frame(SaturnRuntime runtime)
     {
         IReadOnlyList<SaturnVdp1.Vdp1Command> commands = ReadVdp1CommandChain(runtime.SystemMap.Vdp1Area.Snapshot.Span);
-        if (!commands.Any(static command => command.End) ||
-            !commands.Any(static command =>
+        uint[] backgroundRows = SaturnVdp2.Vdp2BackScreenRenderer.CreateRows(
+            runtime.SystemMap.Vdp2Vram.Snapshot.Span,
+            runtime.SystemMap.Vdp2Registers.Snapshot.Span,
+            FrameHeight);
+        bool hasCompleteSprites = commands.Any(static command => command.End) &&
+            commands.Any(static command =>
                 !command.Skip && command.CommandCode == 0 &&
-                command.CharacterWidth > 0 && command.CharacterHeight > 0))
+                command.CharacterWidth > 0 && command.CharacterHeight > 0);
+        if (!hasCompleteSprites)
         {
+            for (int y = 0; y < FrameHeight; y++)
+            {
+                _frame.AsSpan(y * FrameWidth, FrameWidth).Fill(backgroundRows[y]);
+            }
+
+            _hasVideoFrame = runtime.SystemMap.Vdp2Registers.WriteCount > 0;
             return;
         }
 
@@ -215,12 +227,9 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
             runtime.SystemMap.Vdp1Area.Snapshot.Span,
             runtime.SystemMap.Vdp2Cram.Snapshot.Span,
             commands,
+            backgroundRows,
             FrameWidth,
             FrameHeight);
-        if (rendered.DrawnPixels == 0)
-        {
-            return;
-        }
 
         rendered.Frame.BgraPixels.Span.CopyTo(_frame);
         _hasVideoFrame = true;

@@ -224,7 +224,7 @@ Use the `ROM` toolbar button to pick a Saturn `.cue` or raw disc image. The pick
 
 The CORE viewport renders completed VDP1 normal-sprite command lists directly from SystemRegisIII VRAM/CRAM. Until the first visible VDP1 list arrives it retains the diagnostic bringup screen.
 
-The first current frame proves the live path with the Saturn BIOS Sega logo. Small direct-RGB copyright glyphs still show a core-side texture artifact that is also present in the raw SystemRegisIII PPM dump; it is not introduced by WaylandForge scaling.
+The first current frame proves the live path with the Saturn BIOS Sega logo. The host now composes current VDP1 sprites over the VDP2 `BKTA` back-screen on every VBlank and clears stale sprites when the command list disappears. This prevents the early black-background logo phase from remaining frozen after BIOS rendering has moved on.
 
 Requirements:
 
