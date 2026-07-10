@@ -213,6 +213,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     public void Dispose()
     {
         SaveConfig(force: false);
+        _saturnCore.Dispose();
         _externalCore.Dispose();
         _externalCore2.Dispose();
         _externalCore3.Dispose();
@@ -518,6 +519,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         DrawMetric(x, y, "FAULT", string.IsNullOrEmpty(status.Fault) ? "-" : TruncateMiddle(status.Fault, 18)); y += 18;
         DrawMetric(x, y, "FRAME", status.FrameIndex.ToString()); y += 18;
         DrawMetric(x, y, "INSTR", status.InstructionIndex.ToString()); y += 20;
+        DrawMetric(x, y, "VIDEO", status.HasVideoFrame ? "VDP1" : "DIAG"); y += 20;
 
         _ui.Text(x, y, "SH2", UiTextKind.Muted); y += 14;
         DrawMetric(x, y, "M PC", FormatHex(status.MasterPc, 8)); y += 18;
@@ -620,7 +622,7 @@ internal sealed unsafe class ForgeApp : IDisposable
             UiFilePickerResult result = _filePicker.Draw(_ui, window.Content, "");
             if (result.Accepted && result.SelectedPath is not null)
             {
-                _romPath = result.SelectedPath;
+                LoadSaturnDisc(result.SelectedPath);
                 _filePickerWindow.IsOpen = false;
                 MarkConfigDirty();
             }
@@ -2044,6 +2046,8 @@ internal sealed unsafe class ForgeApp : IDisposable
         _externalCore.Configure(_config.ExternalCore, ResolveExternalDummyCorePath());
         _externalCore2.Configure(_config.ExternalCore2, ResolveExternalDummyCorePath());
         _externalCore3.Configure(_config.ExternalCore3, ResolveExternalDummyCorePath());
+        _romPath = string.IsNullOrWhiteSpace(_config.Saturn.LastDisc) ? null : _config.Saturn.LastDisc;
+        _saturnCore.LoadDisc(_romPath);
         ApplyWindowConfig(AppWindow.Viewport, "viewport");
         ApplyWindowConfig(AppWindow.Rom, "rom_picker");
         ApplyWindowConfig(AppWindow.Settings, "settings");
@@ -2076,6 +2080,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         _config.Theme = _ui.Theme.Name.ToLowerInvariant();
         _config.Scale = FormatScaleMode(_viewport.ScaleMode);
+        _config.Saturn.LastDisc = _romPath ?? string.Empty;
         SnapshotWindow(AppWindow.Viewport, "viewport");
         SnapshotWindow(AppWindow.Rom, "rom_picker");
         SnapshotWindow(AppWindow.Settings, "settings");
@@ -2881,6 +2886,22 @@ internal sealed unsafe class ForgeApp : IDisposable
     private void ToggleExternalCore()
     {
         ToggleExternalCore(_externalCore);
+    }
+
+    private void LoadSaturnDisc(string path)
+    {
+        _romPath = Path.GetFullPath(path);
+        foreach (ExternalProcessCore external in ExternalCores())
+        {
+            external.Reset();
+        }
+
+        _saturnCore.LoadDisc(_romPath);
+        _core = _saturnCore;
+        _coreFault = string.Empty;
+        _paused = false;
+        _stepRequested = false;
+        StepActiveCore();
     }
 
     private void ToggleExternalCore2()

@@ -15,6 +15,9 @@ border_thickness = 1
 [audio]
 volume = 80
 
+[saturn]
+last_disc = "" # runtime ROM-picker selection is persisted in waylandforge.ui.local.toml
+
 [input]
 escape = "esc"
 up = "up"

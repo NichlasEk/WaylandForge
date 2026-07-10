@@ -220,6 +220,12 @@ or place it at:
 local/saturn/bios.bin
 ```
 
+Use the `ROM` toolbar button to pick a Saturn `.cue` or raw disc image. The picker switches back to the internal Saturn core, mounts the selected disc, resets bringup, and persists the path as `[saturn].last_disc` in `config/waylandforge.ui.local.toml`. That disc is mounted automatically on the next launch.
+
+The CORE viewport renders completed VDP1 normal-sprite command lists directly from SystemRegisIII VRAM/CRAM. Until the first visible VDP1 list arrives it retains the diagnostic bringup screen.
+
+The first current frame proves the live path with the Saturn BIOS Sega logo. Small direct-RGB copyright glyphs still show a core-side texture artifact that is also present in the raw SystemRegisIII PPM dump; it is not introduced by WaylandForge scaling.
+
 Requirements:
 
 - .NET SDK with `net10.0` support

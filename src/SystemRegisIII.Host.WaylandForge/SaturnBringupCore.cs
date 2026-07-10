@@ -10,15 +10,16 @@ using SaturnScu = SaturnEmulator::SystemRegisIII.Core.Core.Scu;
 using SaturnSmpc = SaturnEmulator::SystemRegisIII.Core.Core.Smpc;
 using SaturnTrace = SaturnEmulator::SystemRegisIII.Core.Tools.TraceViewer;
 using SaturnSystem = SaturnEmulator::SystemRegisIII.Core.Core;
+using SaturnVdp1 = SaturnEmulator::SystemRegisIII.Core.Core.Vdp1;
 
 namespace SystemRegisIII.Host.WaylandForge;
 
-internal sealed class SaturnBringupCore : HostCore.ISystemCore
+internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
 {
     private const int FrameWidth = 320;
     private const int FrameHeight = 224;
-    private const int InstructionsPerHostFrame = 2_000;
-    private const int VBlankIntervalInstructions = 1_000_000;
+    private const int InstructionsPerHostFrame = 10_000;
+    private const int VBlankIntervalInstructions = 100_000;
 
     private readonly uint[] _frame = new uint[FrameWidth * FrameHeight];
     private readonly string[] _biosCandidates =
@@ -39,12 +40,27 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
     private long _vblankOutCount;
     private long _smpcInterruptCount;
     private HostCore.SaturnButtons _lastButtons;
+    private string? _discPath;
+    private bool _hasVideoFrame;
 
     public ulong FrameIndex => _frameIndex;
     public SaturnCoreStatus Status => CreateStatus();
 
+    public void LoadDisc(string? path)
+    {
+        string? normalized = string.IsNullOrWhiteSpace(path) ? null : Path.GetFullPath(path);
+        if (string.Equals(_discPath, normalized, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _discPath = normalized;
+        Reset();
+    }
+
     public void Reset()
     {
+        _runtime?.DiscImage?.Dispose();
         _runtime = null;
         _fault = string.Empty;
         _frameIndex = 0;
@@ -53,7 +69,10 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
         _vblankOutCount = 0;
         _smpcInterruptCount = 0;
         _lastButtons = HostCore.SaturnButtons.None;
+        _hasVideoFrame = false;
     }
+
+    public void Dispose() => Reset();
 
     public void StepFrame(HostCore.IInputSource input, HostCore.IFrameSink frameSink)
     {
@@ -66,7 +85,10 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
             StepRuntime();
         }
 
-        RenderDiagnosticFrame();
+        if (!_hasVideoFrame)
+        {
+            RenderDiagnosticFrame();
+        }
         frameSink.Present(_frame, FrameWidth, FrameHeight, FrameWidth);
         _frameIndex++;
     }
@@ -85,16 +107,20 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
             return;
         }
 
+        SaturnCd.IDiscImage? discImage = null;
         try
         {
             byte[] biosBytes = File.ReadAllBytes(_biosPath);
             var bios = new SaturnMemory.BiosImage(Path.GetFileName(_biosPath), biosBytes);
             var trace = new SaturnTrace.RingTraceEventSink(2048);
+            discImage = OpenDiscImage(_discPath);
             var systemMap = SaturnSystem.SaturnSystemMap.CreateBringup(
                 bios,
                 new SaturnSystem.SaturnBringupOptions
                 {
-                    SimulateSlaveReady = true,
+                    SimulateScspCommandAck = true,
+                    DiscImage = discImage,
+                    MountedDiscInitialStatus = discImage is null ? null : SaturnCd.CdBlockDriveStatus.Standby,
                     DigitalPadState = MapInput(_lastButtons),
                 });
             var masterInternalBus = new SaturnCpu.Sh2InternalRegisterBus(systemMap.Bus, SaturnCpu.Sh2CpuRole.Master);
@@ -111,10 +137,13 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
                 slave,
                 systemMap.Stubs.OfType<SaturnSmpc.SmpcRegisterBusDevice>().Single(),
                 systemMap.Stubs.OfType<SaturnScu.ScuRegisterBusDevice>().Single(),
-                trace);
+                trace,
+                discImage);
+            discImage = null;
         }
         catch (Exception ex)
         {
+            discImage?.Dispose();
             _fault = ex.GetType().Name + ": " + ex.Message;
         }
     }
@@ -135,6 +164,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
 
                 if (_instructionIndex > 0 && _instructionIndex % VBlankIntervalInstructions == 0)
                 {
+                    TryRenderVdp1Frame(runtime);
                     runtime.Scu.RaiseVBlankIn();
                     _vblankInCount++;
                 }
@@ -168,6 +198,91 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
         {
             _fault = ex.GetType().Name + ": " + ex.Message;
         }
+    }
+
+    private void TryRenderVdp1Frame(SaturnRuntime runtime)
+    {
+        IReadOnlyList<SaturnVdp1.Vdp1Command> commands = ReadVdp1CommandChain(runtime.SystemMap.Vdp1Area.Snapshot.Span);
+        if (!commands.Any(static command => command.End) ||
+            !commands.Any(static command =>
+                !command.Skip && command.CommandCode == 0 &&
+                command.CharacterWidth > 0 && command.CharacterHeight > 0))
+        {
+            return;
+        }
+
+        SaturnVdp1.Vdp1RenderResult rendered = SaturnVdp1.Vdp1SoftwareRenderer.Render(
+            runtime.SystemMap.Vdp1Area.Snapshot.Span,
+            runtime.SystemMap.Vdp2Cram.Snapshot.Span,
+            commands,
+            FrameWidth,
+            FrameHeight);
+        if (rendered.DrawnPixels == 0)
+        {
+            return;
+        }
+
+        rendered.Frame.BgraPixels.Span.CopyTo(_frame);
+        _hasVideoFrame = true;
+    }
+
+    private static IReadOnlyList<SaturnVdp1.Vdp1Command> ReadVdp1CommandChain(ReadOnlySpan<byte> vram)
+    {
+        var commands = new List<SaturnVdp1.Vdp1Command>(256);
+        var visited = new HashSet<uint>();
+        uint address = 0;
+        uint? returnAddress = null;
+
+        while (commands.Count < 256 && address <= vram.Length - 0x20 && visited.Add(address))
+        {
+            SaturnVdp1.Vdp1Command command = SaturnVdp1.Vdp1Command.Read(vram, address);
+            commands.Add(command);
+            if (command.End)
+            {
+                break;
+            }
+
+            uint sequentialAddress = address + 0x20;
+            switch (command.JumpMode)
+            {
+                case 0:
+                    address = sequentialAddress;
+                    break;
+                case 1:
+                    address = command.LinkAddress;
+                    break;
+                case 2:
+                    returnAddress ??= sequentialAddress;
+                    address = command.LinkAddress;
+                    break;
+                case 3 when returnAddress is uint target:
+                    address = target;
+                    returnAddress = null;
+                    break;
+                default:
+                    address = sequentialAddress;
+                    break;
+            }
+        }
+
+        return commands;
+    }
+
+    private static SaturnCd.IDiscImage? OpenDiscImage(string? path)
+    {
+        if (path is null)
+        {
+            return null;
+        }
+
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException("Saturn disc image not found.", path);
+        }
+
+        return Path.GetExtension(path).Equals(".cue", StringComparison.OrdinalIgnoreCase)
+            ? new SaturnCd.CueDiscImage(path)
+            : new SaturnCd.RawDiscImage(path);
     }
 
     private static bool DeliverPendingInterrupt(SaturnRuntime runtime)
@@ -216,6 +331,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
                 _vblankOutCount,
                 _smpcInterruptCount,
                 _lastButtons.ToString(),
+                _hasVideoFrame,
                 VdpDebugStatus.Empty,
                 VdpDebugStatus.Empty,
                 VdpDebugStatus.Empty,
@@ -239,6 +355,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
             _vblankOutCount,
             _smpcInterruptCount,
             _lastButtons.ToString(),
+            _hasVideoFrame,
             VdpDebugStatus.From("VDP1", runtime.SystemMap.Vdp1Area),
             VdpDebugStatus.From("VDP2", runtime.SystemMap.Vdp2Vram),
             VdpDebugStatus.From("CRAM", runtime.SystemMap.Vdp2Cram),
@@ -474,7 +591,8 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore
         SaturnCpu.Sh2Cpu Slave,
         SaturnSmpc.SmpcRegisterBusDevice Smpc,
         SaturnScu.ScuRegisterBusDevice Scu,
-        SaturnTrace.RingTraceEventSink Trace)
+        SaturnTrace.RingTraceEventSink Trace,
+        SaturnCd.IDiscImage? DiscImage)
     {
         public bool SlaveWasEnabled { get; set; }
     }
@@ -495,6 +613,7 @@ internal readonly record struct SaturnCoreStatus(
     long VBlankOutCount,
     long SmpcInterruptCount,
     string Input,
+    bool HasVideoFrame,
     VdpDebugStatus Vdp1,
     VdpDebugStatus Vdp2,
     VdpDebugStatus Cram,

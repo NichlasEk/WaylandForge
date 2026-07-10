@@ -17,6 +17,7 @@ internal sealed class UiConfig
     public string Scale { get; set; } = "fit";
     public UiStyleConfig Style { get; } = new();
     public UiAudioConfig Audio { get; } = new();
+    public UiSaturnConfig Saturn { get; } = new();
     public UiInputConfig Input { get; } = new();
     public Dictionary<string, UiInputConfig> CoreInputs { get; } = new(StringComparer.OrdinalIgnoreCase);
     public UiTileLayoutConfig Layout { get; } = new();
@@ -64,6 +65,9 @@ internal sealed class UiConfig
         writer.WriteLine();
         writer.WriteLine("[audio]");
         writer.WriteLine($"volume = {Audio.Volume.ToString(CultureInfo.InvariantCulture)}");
+        writer.WriteLine();
+        writer.WriteLine("[saturn]");
+        writer.WriteLine($"last_disc = \"{Escape(Saturn.LastDisc)}\"");
         writer.WriteLine();
         writer.WriteLine("[input]");
         foreach (KeyValuePair<string, string> pair in Input.Bindings.OrderBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase))
@@ -232,6 +236,15 @@ internal sealed class UiConfig
             if (string.Equals(key, "volume", StringComparison.OrdinalIgnoreCase))
             {
                 Audio.Volume = Math.Clamp(ParseInt(value, Audio.Volume), 0, 100);
+            }
+            return;
+        }
+
+        if (string.Equals(section, "saturn", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.Equals(key, "last_disc", StringComparison.OrdinalIgnoreCase))
+            {
+                Saturn.LastDisc = value;
             }
             return;
         }
@@ -460,6 +473,11 @@ internal sealed class UiStyleConfig
 internal sealed class UiAudioConfig
 {
     public int Volume { get; set; } = 80;
+}
+
+internal sealed class UiSaturnConfig
+{
+    public string LastDisc { get; set; } = string.Empty;
 }
 
 internal sealed class UiInputConfig
