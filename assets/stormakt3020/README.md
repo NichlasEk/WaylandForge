@@ -59,7 +59,9 @@ Additional scored roles live under `music/`:
 - `oresund-i-brand-v1.wav`: faster normal-combat loop.
 - `kronans-sista-salva-v1.wav`: monumental boss loop.
 
-`kronans-sista-salva-v1.wav` is now preloaded with the combat score. Kronens Tiende requests a 0.5-second in-stream crossfade at arrival, and restarting the stage requests the same crossfade back to the combat loop. Track-transition progress advances only by audio frames accepted by the daemon.
+`kronans-sista-salva-v1.wav` is the preserved 60-second generation; its final 12.09 seconds are effectively silent. `kronans-sista-salva-loop-v2.wav` is the active non-destructive edit: 40.000 seconds, exactly 14 four-beat bars at 84 BPM, cut before the generated fade. Rebuild it with `python tools/stormakt3020/build_music_loops.py`.
+
+The loop edit is preloaded with the combat score. Kronens Tiende requests a 0.5-second in-stream crossfade at arrival, and restarting the stage requests the same crossfade back to the combat loop. Track-transition and loop positions advance only by audio frames accepted by the daemon. If loop-v2 is absent, runtime falls back to the preserved v1 generation.
 
 `music/generation-manifest.json` records accepted task IDs, seeds, models, prompt files, and a rejected menu attempt. The complete local workflow is documented in `docs/stormakt3020-audio-toolchain.md`.
 

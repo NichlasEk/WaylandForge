@@ -43,6 +43,19 @@
       "thinking": true
     }
   ],
+  "derived": [
+    {
+      "role": "boss_runtime_loop",
+      "file": "kronans-sista-salva-loop-v2.wav",
+      "source": "kronans-sista-salva-v1.wav",
+      "tool": "../../../tools/stormakt3020/build_music_loops.py",
+      "bpm": 84,
+      "bars": 14,
+      "duration_seconds": 40,
+      "runtime_crossfade_seconds": 0.5,
+      "sha256": "1c6caa3b1875216c3a86eea8d64773ffdf2cb477ef77ccdd100325dbcfe37ccb"
+    }
+  ],
   "rejected": [
     {
       "role": "menu_launch",

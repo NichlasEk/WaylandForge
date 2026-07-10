@@ -45,7 +45,8 @@ Status: checkpoint 1 och 2A-2C är klara. Bosscheckpoint 3A-3B har infört Krone
 - Skrovets fas-1-segment går från 100 till 65 procent. Vid tröskeln rensas aktiva salvor och ankare och övergångsskylten `BROFOGDENS VREDE` visas; fas 2 är ännu passiv.
 - `WAYLANDFORGE_STORMAKT_INVINCIBLE=1` finns endast som opt-in för deterministiska fullbanecaptures. Normal körning påverkas inte.
 - Två 4 251-rutors bosskörningar med samma testinput gav samma fas-2-övergångsbild: SHA-256 `398f461fbe5c42911dd1cd41858ff3763104693916d06b006fdc6503a0fca246`.
-- Bossinträdet begär nu en halvsekunds korsfade till `kronans-sista-salva-v1.wav`; stage-reset korsfadar tillbaka till normal stridsmusik.
+- Bossinträdet begär en halvsekunds korsfade till bossloopen; stage-reset korsfadar tillbaka till normal stridsmusik.
+- Bossmusiken använder nu den tystnadsfria `kronans-sista-salva-loop-v2.wav`: 40 sekunder vid en exakt 84 BPM-taktgräns, med v1 kvar som orörd källa och fallback.
 - Kronens Tiendes intakta och skadade fas, fogdesluparnas två lägen och tullsigilldrönaren använder nu ett separat AI-genererat 16-bitars spriteark. Kodgrafiken finns kvar som fallback och hitboxarna är fortsatt frikopplade från bildytan.
 - Två 4 251-rutors körningar med det nya arket gav samma fas-2-bild: SHA-256 `a08c9ac3c424c0c7cd7500148d9b58311b7d9d64703654edecdcb98e5b92b1a9`. En ombyggnad av WFSA-paketet gav reproducerbart SHA-256 `c76414d0c565ae93400aafb7042f526d5e7f1285b52ecf4fdd4983cb5fa60165`.
 

@@ -86,13 +86,17 @@ internal sealed class StormaktMusicLoop : IDisposable
             try
             {
                 float[] samples = LoadPcm16StereoWav(path);
-                string bossPath = Path.Combine(Path.GetDirectoryName(path)!, "music", "kronans-sista-salva-v1.wav");
+                string musicDirectory = Path.Combine(Path.GetDirectoryName(path)!, "music");
+                string loopedBossPath = Path.Combine(musicDirectory, "kronans-sista-salva-loop-v2.wav");
+                string originalBossPath = Path.Combine(musicDirectory, "kronans-sista-salva-v1.wav");
+                string bossPath = File.Exists(loopedBossPath) ? loopedBossPath : originalBossPath;
                 float[]? bossSamples = File.Exists(bossPath) ? LoadPcm16StereoWav(bossPath) : null;
                 Dictionary<StormaktSound, LoadedEffect> effects = LoadEffects(path);
                 Dictionary<StormaktVoice, LoadedEffect> voices = LoadVoices(path);
                 string socketPath = Environment.GetEnvironmentVariable("WAYLANDFORGE_AUDIO_SOCKET") ?? DefaultSocketPath;
+                string bossDescription = bossSamples is null ? "missing" : $"ready ({bossSamples.Length / Channels / SampleRate}s)";
                 Console.Error.WriteLine($"Stormakt audio: loaded {Path.GetFileName(path)} ({samples.Length / Channels / SampleRate}s), " +
-                    $"boss score={(bossSamples is null ? "missing" : "ready")}, {effects.Count} effects and {voices.Count} radio voices.");
+                    $"boss score={bossDescription}, {effects.Count} effects and {voices.Count} radio voices.");
                 return new StormaktMusicLoop(samples, bossSamples, effects, voices, socketPath);
             }
             catch (Exception exception)
