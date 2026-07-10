@@ -287,6 +287,21 @@ internal sealed class StormaktGame
             target.Y++;
             target.Age++;
 
+            if (target.CollapseFrames > 0)
+            {
+                target.Y += 2;
+                target.CollapseFrames--;
+                if (target.CollapseFrames == 0 || target.Y > _height + 42)
+                {
+                    _groundTargets.RemoveAt(index);
+                }
+                else
+                {
+                    _groundTargets[index] = target;
+                }
+                continue;
+            }
+
             if (target.Type == GroundTargetType.Turret && target.Enabled && target.Y is > 24 and < 174)
             {
                 int cycle = target.Age % 180;
@@ -317,6 +332,12 @@ internal sealed class StormaktGame
             if (destroyed)
             {
                 _score += target.Type == GroundTargetType.Turret ? 450 : target.Type == GroundTargetType.EnergyNode ? 250 : 180;
+                if (target.Type == GroundTargetType.BridgeSpan)
+                {
+                    CollapseBridgeGroup(target.Group);
+                    _audio?.Trigger(StormaktSound.Broadside);
+                    continue;
+                }
                 if (target.Type == GroundTargetType.EnergyNode)
                 {
                     DisableLinkedTurret(target.Group);
@@ -331,6 +352,18 @@ internal sealed class StormaktGame
                 continue;
             }
             _groundTargets[index] = target;
+        }
+    }
+
+    private void CollapseBridgeGroup(int group)
+    {
+        for (int index = 0; index < _groundTargets.Count; index++)
+        {
+            GroundTarget target = _groundTargets[index];
+            if (target.Group == group)
+            {
+                _groundTargets[index] = target with { Enabled = false, CollapseFrames = 45 };
+            }
         }
     }
 
@@ -376,10 +409,30 @@ internal sealed class StormaktGame
         for (int i = _enemies.Count - 1; i >= 0; i--)
         {
             Enemy enemy = _enemies[i];
-            enemy.Y += enemy.Speed;
-            enemy.Phase += 0.08;
-            int wobble = (int)(Math.Sin(enemy.Phase) * 2.0);
-            enemy.X += wobble;
+            if (enemy.Kind == 3)
+            {
+                GroundTarget? bridge = FindActiveBridge(enemy.BridgeGroup);
+                if (bridge is GroundTarget cover)
+                {
+                    int desiredX = cover.X + enemy.EscortOffset;
+                    int desiredY = cover.Y - 27 - Math.Abs(enemy.EscortOffset) / 5;
+                    enemy.X += Math.Clamp(desiredX - enemy.X, -2, 2);
+                    enemy.Y += Math.Clamp(desiredY - enemy.Y, -2, 2);
+                }
+                else
+                {
+                    enemy.Breakaway = true;
+                    enemy.Y += 2;
+                    enemy.X += enemy.EscortOffset < 0 ? -2 : 2;
+                }
+            }
+            else
+            {
+                enemy.Y += enemy.Speed;
+                enemy.Phase += 0.08;
+                int wobble = (int)(Math.Sin(enemy.Phase) * 2.0);
+                enemy.X += wobble;
+            }
 
             bool removed = false;
             for (int s = _shots.Count - 1; s >= 0; s--)
@@ -422,6 +475,18 @@ internal sealed class StormaktGame
         }
     }
 
+    private GroundTarget? FindActiveBridge(int group)
+    {
+        foreach (GroundTarget target in _groundTargets)
+        {
+            if (target.Group == group && target.Type == GroundTargetType.BridgeSpan && target.CollapseFrames == 0)
+            {
+                return target;
+            }
+        }
+        return null;
+    }
+
     private void SpawnEnemies()
     {
         int timelineFrame = _missionFrame % FlythroughFrames;
@@ -455,7 +520,9 @@ internal sealed class StormaktGame
             int offset = (index - ((wave.Count - 1) / 2)) * 28;
             int y = -radius - (Math.Abs(index - wave.Count / 2) * 12);
             double phase = ((volley * 17 + index * 29 + wave.Kind * 11) % 100) * Math.PI / 50.0;
-            _enemies.Add(new Enemy(Math.Clamp(center + offset, 20, _width - 20), y, speed, radius, health, color, wave.Kind, phase));
+            _enemies.Add(new Enemy(
+                Math.Clamp(center + offset, 20, _width - 20), y, speed, radius, health, color, wave.Kind, phase,
+                0, 0, false));
         }
     }
 
@@ -470,9 +537,11 @@ internal sealed class StormaktGame
         bool left = timelineFrame != 1_920;
         int x = left ? 52 : _width - 52;
         int group = _missionFrame;
-        _groundTargets.Add(new GroundTarget(x, -22, GroundTargetType.BridgeSpan, 24, group, 0, true));
-        _groundTargets.Add(new GroundTarget(x, -29, GroundTargetType.Turret, 16, group, -48, true));
-        _groundTargets.Add(new GroundTarget(x + (left ? 25 : -25), -13, GroundTargetType.EnergyNode, 7, group, 0, true));
+        _groundTargets.Add(new GroundTarget(x, -22, GroundTargetType.BridgeSpan, 24, group, 0, true, 0));
+        _groundTargets.Add(new GroundTarget(x, -29, GroundTargetType.Turret, 16, group, -48, true, 0));
+        _groundTargets.Add(new GroundTarget(x + (left ? 25 : -25), -13, GroundTargetType.EnergyNode, 7, group, 0, true, 0));
+        _enemies.Add(new Enemy(x - 19, -54, 0, 11, 8, 0xff7f1727, 3, 0.0, group, -19, false));
+        _enemies.Add(new Enemy(x + 19, -58, 0, 11, 8, 0xff7f1727, 3, Math.PI, group, 19, false));
     }
 
     private void StepStars()
@@ -642,6 +711,11 @@ internal sealed class StormaktGame
     {
         foreach (GroundTarget target in _groundTargets)
         {
+            if (target.CollapseFrames > 0)
+            {
+                DrawCollapsingGroundTarget(frame, target);
+                continue;
+            }
             if (target.Type == GroundTargetType.BridgeSpan)
             {
                 uint hull = target.Health < 9 ? 0xff57403c : target.Health < 17 ? 0xff45434a : 0xff343e47;
@@ -655,6 +729,11 @@ internal sealed class StormaktGame
                 if (target.Health < 17)
                 {
                     DrawLine(frame, target.X - 8, target.Y - 8, target.X + 4, target.Y + 8, 0xffb36b4a);
+                }
+                if (target.Health < 9)
+                {
+                    DrawLine(frame, target.X - 31, target.Y + 7, target.X - 18, target.Y - 8, 0xffff6b4a);
+                    DrawLine(frame, target.X + 17, target.Y - 8, target.X + 32, target.Y + 7, 0xffff6b4a);
                 }
                 continue;
             }
@@ -679,6 +758,27 @@ internal sealed class StormaktGame
                 DrawLine(frame, target.X, target.Y + 8, _shipX, _shipY, lockColor);
                 DrawRect(frame, target.X - 2, target.Y - 11, 5, 3, 0xffff6b62);
             }
+        }
+    }
+
+    private void DrawCollapsingGroundTarget(uint[] frame, GroundTarget target)
+    {
+        int fall = 45 - target.CollapseFrames;
+        int direction = (target.Group & 1) == 0 ? 1 : -1;
+        int x = target.X + direction * fall / 3;
+        uint ember = (fall & 5) < 3 ? 0xffff8a4a : 0xffb34c38;
+        if (target.Type == GroundTargetType.BridgeSpan)
+        {
+            DrawRect(frame, x - 43, target.Y - 8, 25, 13, 0xff4b3c3d);
+            DrawRect(frame, x - 12, target.Y - 4 + fall / 5, 27, 12, 0xff393a40);
+            DrawRect(frame, x + 22, target.Y - 10 + fall / 3, 21, 11, 0xff503b38);
+            PutPixel(frame, x - 15, target.Y + fall / 2, ember);
+            PutPixel(frame, x + 19, target.Y + 5 + fall / 2, ember);
+        }
+        else
+        {
+            FillCircle(frame, x, target.Y, target.Type == GroundTargetType.Turret ? 8 : 5, 0xff44383a);
+            DrawLine(frame, x - 7, target.Y - 5, x + 8, target.Y + 7, ember);
         }
     }
 
@@ -728,7 +828,7 @@ internal sealed class StormaktGame
         uint danishRed = 0xffc51f35;
         uint danishDark = 0xff7f1727;
         uint danishWhite = 0xfff2eee4;
-        if (_sprites is not null)
+        if (_sprites is not null && enemy.Kind != 3)
         {
             string spriteName = enemy.Kind switch
             {
@@ -743,7 +843,11 @@ internal sealed class StormaktGame
             }
         }
 
-        if (enemy.Kind == 1)
+        if (enemy.Kind == 3)
+        {
+            DrawFogdeSloop(frame, enemy, brass, danishRed, danishWhite, dark);
+        }
+        else if (enemy.Kind == 1)
         {
             FillCircle(frame, enemy.X, enemy.Y, enemy.Radius, danishRed);
             DrawRect(frame, enemy.X - enemy.Radius + 2, enemy.Y - 2, enemy.Radius * 2 - 4, 4, danishWhite);
@@ -773,6 +877,23 @@ internal sealed class StormaktGame
         PutPixel(frame, enemy.X - 3, enemy.Y - 2, 0xffffc46b);
         PutPixel(frame, enemy.X + 3, enemy.Y - 2, 0xffffc46b);
         DrawRect(frame, enemy.X - 2, enemy.Y + enemy.Radius - 1, 4, 3, 0xff101820);
+    }
+
+    private void DrawFogdeSloop(uint[] frame, Enemy enemy, uint brass, uint red, uint white, uint dark)
+    {
+        uint hull = enemy.Breakaway ? 0xffa52a3d : 0xff751b2c;
+        FillTriangle(frame, enemy.X, enemy.Y + 13, enemy.X - 10, enemy.Y - 8, enemy.X + 10, enemy.Y - 8, hull);
+        DrawRect(frame, enemy.X - 13, enemy.Y - 5, 26, 7, red);
+        DrawRect(frame, enemy.X - 2, enemy.Y - 9, 4, 18, white);
+        DrawRect(frame, enemy.X - 12, enemy.Y - 2, 24, 3, white);
+        DrawRect(frame, enemy.X - 4, enemy.Y - 13, 8, 5, dark);
+        DrawCrown(frame, enemy.X - 2, enemy.Y - 12, brass);
+        PutPixel(frame, enemy.X - 7, enemy.Y + 4, 0xffff8a4a);
+        PutPixel(frame, enemy.X + 7, enemy.Y + 4, 0xffff8a4a);
+        if (!enemy.Breakaway)
+        {
+            DrawLine(frame, enemy.X - 10, enemy.Y + 10, enemy.X + 10, enemy.Y + 10, 0xff8ba8b8);
+        }
     }
 
     private void DrawHud(uint[] frame)
@@ -1089,7 +1210,18 @@ internal sealed class StormaktGame
 
     private record struct Shot(int X, int Y, int Vx, int Vy, uint Color, int Power);
     private record struct EnemyShot(double X, double Y, double Vx, double Vy);
-    private record struct Enemy(int X, int Y, int Speed, int Radius, int Health, uint Color, int Kind, double Phase);
+    private record struct Enemy(
+        int X,
+        int Y,
+        int Speed,
+        int Radius,
+        int Health,
+        uint Color,
+        int Kind,
+        double Phase,
+        int BridgeGroup,
+        int EscortOffset,
+        bool Breakaway);
     private record struct GroundTarget(
         int X,
         int Y,
@@ -1097,7 +1229,8 @@ internal sealed class StormaktGame
         int Health,
         int Group,
         int Age,
-        bool Enabled);
+        bool Enabled,
+        int CollapseFrames);
     private readonly record struct Star(int X, int Y, int Speed, int Brightness);
     private readonly record struct RadioCard(
         int StartFrame,
