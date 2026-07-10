@@ -21,8 +21,10 @@ internal sealed class StormaktMusicLoop : IDisposable
     private readonly ConcurrentQueue<StormaktSound> _pendingEffects = new();
     private readonly ConcurrentQueue<StormaktVoice> _pendingVoices = new();
     private readonly ConcurrentQueue<StormaktMusicTrack> _pendingTracks = new();
+    private readonly ConcurrentQueue<int> _pendingMusicDucks = new();
     private readonly List<ActiveEffect> _activeEffects = [];
     private ActiveEffect? _activeVoice;
+    private int _musicDuckFrames;
     private int _totalFrames;
     private int _crossfadeFrames;
     private float[]? _transitionSamples;
@@ -115,6 +117,8 @@ internal sealed class StormaktMusicLoop : IDisposable
     public void TriggerVoice(StormaktVoice voice) => _pendingVoices.Enqueue(voice);
 
     public void SwitchMusic(StormaktMusicTrack track) => _pendingTracks.Enqueue(track);
+
+    public void DuckMusic(int milliseconds) => _pendingMusicDucks.Enqueue(Math.Max(0, milliseconds) * SampleRate / 1_000);
 
     public void Dispose()
     {
@@ -234,6 +238,11 @@ internal sealed class StormaktMusicLoop : IDisposable
                 Console.Error.WriteLine($"Stormakt audio: crossfading to {track.ToString().ToLowerInvariant()} score.");
             }
         }
+        while (_pendingMusicDucks.TryDequeue(out int duckFrames))
+        {
+            _musicDuckFrames = Math.Max(_musicDuckFrames, duckFrames);
+            Console.Error.WriteLine($"Stormakt audio: ducking music for {duckFrames * 1_000 / SampleRate}ms.");
+        }
 
         for (int outputFrame = 0; outputFrame < frames; outputFrame++)
         {
@@ -251,9 +260,10 @@ internal sealed class StormaktMusicLoop : IDisposable
                 right = right * currentWeight + incomingRight * incomingWeight;
             }
 
-            float musicGain = _activeVoice is null ? 0.68f : 0.34f;
+            float musicGain = _activeVoice is not null ? 0.34f : _musicDuckFrames > 0 ? 0.22f : 0.68f;
             left *= musicGain;
             right *= musicGain;
+            _musicDuckFrames = Math.Max(0, _musicDuckFrames - 1);
             for (int voiceIndex = _activeEffects.Count - 1; voiceIndex >= 0; voiceIndex--)
             {
                 ActiveEffect voice = _activeEffects[voiceIndex];

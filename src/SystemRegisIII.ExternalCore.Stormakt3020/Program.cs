@@ -114,6 +114,8 @@ internal sealed class StormaktGame
     private int _missionFrame;
     private int _invulnerabilityFrames;
     private BossState? _boss;
+    private bool _stageClear;
+    private int _stageClearAge;
     private uint _previousButtons;
     private bool _gameOver;
 
@@ -134,6 +136,21 @@ internal sealed class StormaktGame
             {
                 Reset();
                 _audio?.Trigger(StormaktSound.Deploy);
+            }
+            _previousButtons = buttons;
+            return;
+        }
+        if (_stageClear)
+        {
+            if (Pressed(buttons, Start))
+            {
+                Reset();
+                _audio?.Trigger(StormaktSound.Deploy);
+            }
+            else
+            {
+                _stageClearAge++;
+                StepStars();
             }
             _previousButtons = buttons;
             return;
@@ -203,6 +220,7 @@ internal sealed class StormaktGame
         DrawBossIntroduction(frame);
         DrawMissionTitle(frame);
         DrawRadio(frame);
+        DrawStageClear(frame);
         if (_gameOver)
         {
             DrawRect(frame, 76, 92, 168, 42, 0xdd090b10);
@@ -233,6 +251,8 @@ internal sealed class StormaktGame
         _missionFrame = 0;
         _invulnerabilityFrames = 0;
         _boss = null;
+        _stageClear = false;
+        _stageClearAge = 0;
         _skippedRadioCards.Clear();
         _previousButtons = 0;
         _gameOver = false;
@@ -461,6 +481,14 @@ internal sealed class StormaktGame
         {
             boss.Y = Math.Min(58.0, boss.Y + 0.66);
         }
+        else if (boss.Phase == 3)
+        {
+            StepBossPhaseThreeMovement(boss);
+        }
+        else if (boss.Phase == 4)
+        {
+            boss.Y = 58.0;
+        }
         else
         {
             boss.X = (_width / 2.0) + Math.Sin((boss.Age - 180) * 0.012) * 54.0;
@@ -472,7 +500,7 @@ internal sealed class StormaktGame
             int bossX = (int)Math.Round(boss.X);
             int bossY = (int)Math.Round(boss.Y);
             bool hit = false;
-            if (boss.Age >= 500 && boss.LeftCannonHealth > 0 && Math.Abs(shot.X - (bossX - BossCannonOffset)) <= 13 && Math.Abs(shot.Y - (bossY + 7)) <= 14)
+            if (boss.Phase < 4 && boss.Age >= 500 && boss.LeftCannonHealth > 0 && Math.Abs(shot.X - (bossX - BossCannonOffset)) <= 13 && Math.Abs(shot.Y - (bossY + 7)) <= 14)
             {
                 boss.LeftCannonHealth -= shot.Power;
                 hit = true;
@@ -482,7 +510,7 @@ internal sealed class StormaktGame
                     _audio?.Trigger(StormaktSound.EnemyExplosion);
                 }
             }
-            else if (boss.Age >= 500 && boss.RightCannonHealth > 0 && Math.Abs(shot.X - (bossX + BossCannonOffset)) <= 13 && Math.Abs(shot.Y - (bossY + 7)) <= 14)
+            else if (boss.Phase < 4 && boss.Age >= 500 && boss.RightCannonHealth > 0 && Math.Abs(shot.X - (bossX + BossCannonOffset)) <= 13 && Math.Abs(shot.Y - (bossY + 7)) <= 14)
             {
                 boss.RightCannonHealth -= shot.Power;
                 hit = true;
@@ -541,10 +569,29 @@ internal sealed class StormaktGame
                         boss.Health = BossPhaseThreeThreshold;
                         boss.Phase = 3;
                         boss.PhaseAge = 0;
+                        boss.RushX = boss.X;
                         _enemyShots.Clear();
                         _anchorHazards.Clear();
                         _audio?.Trigger(StormaktSound.Broadside);
                     }
+                }
+            }
+            else if (boss.Phase == 3 && boss.PhaseAge >= 180 &&
+                Math.Abs(shot.X - bossX) <= 46 && Math.Abs(shot.Y - bossY) <= 30)
+            {
+                boss.Health -= Math.Max(1, (shot.Power + 1) / 2);
+                hit = true;
+                if (boss.Health <= 0)
+                {
+                    boss.Health = 0;
+                    boss.Phase = 4;
+                    boss.PhaseAge = 0;
+                    _score += 5_000;
+                    _shots.Clear();
+                    _enemyShots.Clear();
+                    _anchorHazards.Clear();
+                    _audio?.Trigger(StormaktSound.Broadside);
+                    break;
                 }
             }
             if (hit)
@@ -569,6 +616,14 @@ internal sealed class StormaktGame
         else if (boss.Phase == 2 && boss.PhaseAge >= 180)
         {
             StepBossPhaseTwoAttacks(boss);
+        }
+        else if (boss.Phase == 3 && boss.PhaseAge >= 180)
+        {
+            StepBossPhaseThreeAttacks(boss);
+        }
+        else if (boss.Phase == 4)
+        {
+            StepBossDeath(boss);
         }
     }
 
@@ -659,6 +714,99 @@ internal sealed class StormaktGame
         double vx = dx / length;
         double vy = dy / length;
         _enemyShots.Add(new EnemyShot(x, y, (vx - vy * spread) * 2.45, (vy + vx * spread) * 2.45, 2));
+    }
+
+    private void StepBossPhaseThreeMovement(BossState boss)
+    {
+        if (boss.PhaseAge < 180)
+        {
+            boss.X = (_width / 2.0) + Math.Sin(boss.PhaseAge * 0.018) * 28.0;
+            boss.Y = 58.0;
+            return;
+        }
+
+        int attackFrame = boss.PhaseAge - 180;
+        if (attackFrame is 0 or 130)
+        {
+            boss.RushX = boss.X;
+        }
+        boss.X = boss.RushX;
+        if (attackFrame is >= 48 and < 82)
+        {
+            boss.Y = 58.0 + (attackFrame - 48) * (92.0 / 34.0);
+        }
+        else if (attackFrame is >= 82 and < 120)
+        {
+            boss.Y = 150.0 - (attackFrame - 82) * (92.0 / 38.0);
+        }
+        else if (attackFrame is >= 178 and < 212)
+        {
+            boss.Y = 58.0 + (attackFrame - 178) * (92.0 / 34.0);
+        }
+        else if (attackFrame is >= 212 and < 250)
+        {
+            boss.Y = 150.0 - (attackFrame - 212) * (92.0 / 38.0);
+        }
+        else
+        {
+            boss.Y = 58.0;
+            if (attackFrame > 250)
+            {
+                boss.X = (_width / 2.0) + Math.Sin((attackFrame - 250) * 0.018) * 34.0;
+                boss.RushX = boss.X;
+            }
+        }
+
+        if (boss.Y > 95 && Math.Abs(_shipX - boss.X) < 48 && Math.Abs(_shipY - boss.Y) < 34)
+        {
+            DamageShip();
+        }
+    }
+
+    private void StepBossPhaseThreeAttacks(BossState boss)
+    {
+        int attackFrame = boss.PhaseAge - 180;
+        if (attackFrame % 8 == 0)
+        {
+            double angle = attackFrame * 0.115;
+            int x = (int)Math.Round(boss.X);
+            int y = (int)Math.Round(boss.Y) + 16;
+            _enemyShots.Add(new EnemyShot(x, y, Math.Cos(angle) * 1.32, Math.Sin(angle) * 1.32, 4));
+            _enemyShots.Add(new EnemyShot(x, y, -Math.Cos(angle) * 1.32, -Math.Sin(angle) * 1.32, 4));
+        }
+        if (attackFrame is 48 or 178)
+        {
+            _audio?.Trigger(StormaktSound.Broadside);
+        }
+        bool rushing = attackFrame is >= 48 and < 120 or >= 178 and < 250;
+        if (rushing && attackFrame % 10 == 0)
+        {
+            int x = (int)Math.Round(boss.X);
+            int y = (int)Math.Round(boss.Y) + 18;
+            _enemyShots.Add(new EnemyShot(x - 46, y, -0.75, 2.15, 3));
+            _enemyShots.Add(new EnemyShot(x + 46, y, 0.75, 2.15, 3));
+        }
+    }
+
+    private void StepBossDeath(BossState boss)
+    {
+        if (boss.PhaseAge is 1 or 30 or 60 or 90 or 120 or 155)
+        {
+            _audio?.Trigger(boss.PhaseAge == 155 ? StormaktSound.Broadside : StormaktSound.EnemyExplosion);
+            if (boss.PhaseAge == 155)
+            {
+                _audio?.DuckMusic(2_600);
+            }
+        }
+        if (boss.PhaseAge < 210)
+        {
+            return;
+        }
+        _boss = null;
+        _stageClear = true;
+        _stageClearAge = 0;
+        _enemyShots.Clear();
+        _shots.Clear();
     }
 
     private void StepAnchorHazards()
@@ -1025,6 +1173,7 @@ internal sealed class StormaktGame
                 DrawBossCannon(frame, x + BossCannonOffset, y + 7, 0, 0, 0, 0xff202932);
             }
             DrawBossPhaseAttachments(frame, boss, x, y);
+            DrawBossFinalEffects(frame, boss, x, y);
             return;
         }
         uint red = boss.Phase == 1 ? 0xff8f1f31 : 0xffb02a3e;
@@ -1056,6 +1205,69 @@ internal sealed class StormaktGame
             FillCircle(frame, x + 61, y - 4 + link * 8, 2, brass);
         }
         DrawBossPhaseAttachments(frame, boss, x, y);
+        DrawBossFinalEffects(frame, boss, x, y);
+    }
+
+    private void DrawBossFinalEffects(uint[] frame, BossState boss, int x, int y)
+    {
+        if (boss.Phase < 3)
+        {
+            return;
+        }
+        for (int scanY = y - 26; scanY <= y + 30; scanY += 7)
+        {
+            DrawLine(frame, x - 49, scanY, x + 49, scanY, 0xff5d1a24);
+        }
+        DrawCircleOutline(frame, x, y + 15, 11 + ((_missionFrame / 5) & 1), 0xffff6b4a);
+
+        if (boss.Phase == 3 && boss.PhaseAge >= 180)
+        {
+            int attackFrame = boss.PhaseAge - 180;
+            bool warning = attackFrame is >= 0 and < 48 or >= 130 and < 178;
+            if (warning)
+            {
+                uint color = (attackFrame & 7) < 4 ? 0xffff6b62 : 0xff7f2632;
+                int warningX = (int)Math.Round(boss.RushX);
+                DrawLine(frame, warningX - 3, y + 25, warningX - 3, _height - 14, color);
+                DrawLine(frame, warningX + 3, y + 25, warningX + 3, _height - 14, color);
+                DrawLine(frame, warningX - 14, _height - 29, warningX + 14, _height - 29, color);
+            }
+        }
+        if (boss.Phase == 4)
+        {
+            DrawBossDeathEffects(frame, boss, x, y);
+        }
+    }
+
+    private void DrawBossDeathEffects(uint[] frame, BossState boss, int x, int y)
+    {
+        (int X, int Y, int Start)[] blasts =
+        [
+            (-42, 5, 0),
+            (38, -7, 30),
+            (-18, -18, 60),
+            (21, 18, 90),
+            (0, 4, 120),
+        ];
+        foreach ((int offsetX, int offsetY, int start) in blasts)
+        {
+            int age = boss.PhaseAge - start;
+            if (age < 0 || age >= 42)
+            {
+                continue;
+            }
+            int radius = Math.Min(13, 2 + age / 3);
+            FillCircle(frame, x + offsetX, y + offsetY, radius, 0xffb33b2e);
+            FillCircle(frame, x + offsetX, y + offsetY, Math.Max(1, radius - 4), 0xffff8a34);
+            PutPixel(frame, x + offsetX, y + offsetY, 0xffffec9a);
+        }
+        if (boss.PhaseAge >= 150)
+        {
+            int radius = Math.Min(52, 8 + (boss.PhaseAge - 150) * 2);
+            FillCircle(frame, x, y + 5, radius, 0xffe05a2a);
+            FillCircle(frame, x, y + 5, Math.Max(3, radius - 12), 0xffffd66b);
+            FillCircle(frame, x, y + 5, Math.Max(2, radius - 23), 0xffffffff);
+        }
     }
 
     private void DrawBossPhaseAttachments(uint[] frame, BossState boss, int x, int y)
@@ -1246,9 +1458,23 @@ internal sealed class StormaktGame
         {
             int x = (int)Math.Round(shot.X);
             int y = (int)Math.Round(shot.Y);
-            uint outer = shot.Kind == 1 ? 0xffd6b25e : shot.Kind == 2 ? 0xfff2eee4 : 0xffc51f35;
-            uint core = shot.Kind == 1 ? 0xffffec9a : shot.Kind == 2 ? 0xffff6b62 : 0xffffd6b0;
-            int radius = shot.Kind == 1 ? 2 : 3;
+            uint outer = shot.Kind switch
+            {
+                1 => 0xffd6b25e,
+                2 => 0xfff2eee4,
+                3 => 0xff554039,
+                4 => 0xffb34c38,
+                _ => 0xffc51f35,
+            };
+            uint core = shot.Kind switch
+            {
+                1 => 0xffffec9a,
+                2 => 0xffff6b62,
+                3 => 0xffff8a4a,
+                4 => 0xffffc46b,
+                _ => 0xffffd6b0,
+            };
+            int radius = shot.Kind is 1 or 4 ? 2 : 3;
             FillCircle(frame, x, y, radius, outer);
             PutPixel(frame, x, y, core);
             PutPixel(frame, x, y - radius - 1, core);
@@ -1404,6 +1630,38 @@ internal sealed class StormaktGame
             DrawRect(frame, 79, 88, 162, 27, 0xff160b0e);
             DrawText(frame, 110, 98, "TIONDET BRISTER", 0xffff8a4a);
         }
+    }
+
+    private void DrawStageClear(uint[] frame)
+    {
+        if (!_stageClear)
+        {
+            return;
+        }
+        DrawSnapphaneSilhouette(frame, 258, 67);
+        int reveal = Math.Min(150, _stageClearAge);
+        int width = 196 * reveal / 150;
+        DrawRect(frame, 62, 86, width, 45, 0xff080d12);
+        if (_stageClearAge >= 45)
+        {
+            DrawLine(frame, 62, 86, 257, 86, 0xffd6b25e);
+            DrawLine(frame, 62, 130, 257, 130, 0xff2f74c9);
+            DrawText(frame, 113, 99, "BÄLTET ÄR ÖPPET", 0xffffd66b);
+            DrawText(frame, 101, 116, "KRONARKIV SÄKRAT", 0xff9bd4dc);
+        }
+    }
+
+    private void DrawSnapphaneSilhouette(uint[] frame, int x, int y)
+    {
+        int flicker = ((_stageClearAge / 7) & 1) == 0 ? 0 : 2;
+        uint blackCopper = flicker == 0 ? 0xff171719 : 0xff251d1a;
+        FillTriangle(frame, x, y - 15, x - 17, y + 12, x + 17, y + 12, blackCopper);
+        FillTriangle(frame, x - 5, y - 3, x - 25, y + 8, x - 8, y + 14, 0xff2a201c);
+        FillTriangle(frame, x + 5, y - 3, x + 25, y + 8, x + 8, y + 14, 0xff2a201c);
+        DrawLine(frame, x - 20, y + 9, x + 20, y + 9, 0xff765139);
+        DrawRect(frame, x - 3, y - 5, 6, 5, 0xff315b42);
+        PutPixel(frame, x - 8, y + 13, 0xff7a4d31);
+        PutPixel(frame, x + 8, y + 13, 0xff7a4d31);
     }
 
     private void DrawMissionTitle(uint[] frame)
@@ -1766,6 +2024,7 @@ internal sealed class StormaktGame
         public int Age { get; set; }
         public int Phase { get; set; }
         public int PhaseAge { get; set; }
+        public double RushX { get; set; }
     }
 }
 

@@ -1,6 +1,6 @@
 # Bana 1 - Återtåget över Stora Bält-nebulosan
 
-Status: checkpoint 1 och 2A-2C är klara. Bosscheckpoint 3A-3B har infört Kronens Tiendes presentation, delmål, fas 1 och fas 2; fas 3 och dödssekvens återstår.
+Status: checkpoint 1, 2A-2C och bosscheckpoint 3A-3C är klara. Bana 1 har nu spelbar genomflygning, tre bossfaser och resultatsekvens; separat polish- och balanspass återstår.
 
 ## Implementerad checkpoint 1 - 2026-07-10
 
@@ -58,6 +58,16 @@ Status: checkpoint 1 och 2A-2C är klara. Bosscheckpoint 3A-3B har infört Krone
 - Kärnan visar kall blågrå sköld när den är stängd och orange sigill när den är sårbar. Med docktornen kvar är skadefönstret 60 rutor; när båda förstörts blir det 160 rutor.
 - Fas-2-segmentet går från 65 till 25 procent. Vid tröskeln rensas projektilfältet och `TIONDET BRISTER` visas; fas 3 är ännu passiv.
 - Två fristående 4 601-rutorskörningar gav samma aktiva fas-2-bild: SHA-256 `4e4a8f395997fe889f610b3f31314b34fe624058779a0f892140bddc0b1037d8`. En längre 6 201-rutorskörning nådde den avsedda fas-3-skylten.
+
+## Implementerad checkpoint 3C - Tiondet brister, fas 3 och död
+
+- Efter `TIONDET BRISTER` är järnkärnan permanent sårbar och bossen får rött nödljus över det genererade skadade spritearket.
+- Två vertikalrusningar föregås av 48-rutors dubbla röda varningslinjer. Under rusningen slits mörka, glödande vrakdelar ut mot skärmkanterna.
+- Sigillet skjuter en permanent långsam tvåarmad orange spiral. Fas-3-skadan är balanserad för att en träffsäker dubbelkanon ska hinna uppleva båda rusningarna före noll hälsa.
+- Dödsekvensen spränger vänsterkanon, högerkanon, pansar, sigill och kärna i tidsordning. Bossmusiken duckas till cirka en tredjedel under den 2,6 sekunder långa huvudbrisningen.
+- Efter 210 dödsrutor tas bossens träffytor bort och resultatkortet visar `BÄLTET ÄR ÖPPET` / `KRONARKIV SÄKRAT`.
+- En liten svart/kopparfärgad snapphane med grön signalglöd betraktar vrakplatsen ordlöst. Start återställer hela den deterministiska banan och stridsmusiken.
+- Två fristående 6 501-rutorskörningar gav samma aktiva fas-3-bild: SHA-256 `6bbeb1153f48e0312ccaeb815d3fd146e4ec6bccf9429a644b5df2136a5219dc`. En 6 901-rutorskörning nådde det färdiga resultatkortet.
 
 ## Banans löfte
 
@@ -182,7 +192,7 @@ Bossradion visas färdigt före första skottmönstret och följer reglerna i `d
 
 1. **Banskelett:** klart - ramstyrd tidslinje, titel, tre parallaxlager och deterministisk 60-sekunders genomflygning.
 2. **Brokriget:** marklager, torn, energiledningar, förstörbara brospann och vågor fram till 2:45. Commit och push.
-3. **Fogdeskeppet:** 3A-3B klara med modell, presentation, delmål, bossmusik samt fas 1-2. Fas 3 och dödssekvens återstår.
+3. **Fogdeskeppet:** klart - modell, presentation, delmål, bossmusik, tre faser och dödssekvens.
 4. **Polish:** bakgrundsassets, skadebilder, nya SFX, poängbalans och full fyraminuters capture. Commit och push.
 
 ## Acceptanskriterier
