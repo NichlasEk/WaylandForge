@@ -1,6 +1,6 @@
 # Bana 1 - Återtåget över Stora Bält-nebulosan
 
-Status: checkpoint 1 är klar och checkpoint 2A/2B har infört brospann, energiledning, marktorn, kollaps och fogdeslupar. Fler broformationer och bossen återstår.
+Status: checkpoint 1 är klar och checkpoint 2A-2C har infört brospann, energiledning, marktorn, kollaps, fogdeslupar och dubbel brokorridor. Bossen återstår.
 
 ## Implementerad checkpoint 1 - 2026-07-10
 
@@ -28,6 +28,13 @@ Status: checkpoint 1 är klar och checkpoint 2A/2B har infört brospann, energil
 - Vid noll hälsa övergår hela brogruppen till en 45-rutors kollaps i stället för att försvinna direkt. Spann, torn och nod faller i olika sektioner med glödande splitter.
 - Kollapsen använder befintlig bredsideknall som tillfälligt tungt ljud; ett eget brospricke- och kollapsljud återstår till polishskivan.
 - Två fristående 3 600-rutorskörningar efter 2B gav samma slutbild: SHA-256 `58ef331d8281cb0024f626dd033c3b01edb58292ce1fd0954b221e9101dfa8aa`.
+
+## Implementerad checkpoint 2C - bredsidekorridoren
+
+- Den sista brogruppen i flythroughn består av två samtidiga spann från vänster och höger med egna torn, noder och fogdeeskorter.
+- Mitten lämnas öppen som säker korridor, medan bredsidan kan träffa båda markgruppernas inre komponenter.
+- Brogrupperna har separata länknings-id:n: spelaren kan fälla ena sidan, öppna ett bredare flyktutrymme och lämna andra tornet aktivt.
+- Två fristående 3 600-rutorskörningar efter 2C gav samma slutbild: SHA-256 `55d01afcc9d2384d7bd7442a81055423086ec74015caf1ad9b819e8962da01f1`.
 
 ## Banans löfte
 

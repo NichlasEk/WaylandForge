@@ -535,8 +535,16 @@ internal sealed class StormaktGame
         }
 
         bool left = timelineFrame != 1_920;
-        int x = left ? 52 : _width - 52;
-        int group = _missionFrame;
+        int group = _missionFrame * 2;
+        SpawnBridgeGroup(left ? 52 : _width - 52, left, group);
+        if (timelineFrame == 2_760)
+        {
+            SpawnBridgeGroup(_width - 52, false, group + 1);
+        }
+    }
+
+    private void SpawnBridgeGroup(int x, bool left, int group)
+    {
         _groundTargets.Add(new GroundTarget(x, -22, GroundTargetType.BridgeSpan, 24, group, 0, true, 0));
         _groundTargets.Add(new GroundTarget(x, -29, GroundTargetType.Turret, 16, group, -48, true, 0));
         _groundTargets.Add(new GroundTarget(x + (left ? 25 : -25), -13, GroundTargetType.EnergyNode, 7, group, 0, true, 0));
