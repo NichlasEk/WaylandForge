@@ -64,7 +64,9 @@ internal sealed class StormaktGame
     private const int BossArrivalFrame = 3_300;
     private const int BossPhaseOneHealth = 450;
     private const int BossPhaseTwoThreshold = 293;
+    private const int BossPhaseThreeThreshold = 113;
     private const int BossCannonOffset = 54;
+    private const int BossDockOffset = 68;
     private const uint Up = 1u << 1;
     private const uint Down = 1u << 2;
     private const uint Left = 1u << 3;
@@ -390,7 +392,7 @@ internal sealed class StormaktGame
         double dx = _shipX - x;
         double dy = _shipY - y;
         double length = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
-        _enemyShots.Add(new EnemyShot(x, y + 7, dx / length * 2.15, dy / length * 2.15));
+        _enemyShots.Add(new EnemyShot(x, y + 7, dx / length * 2.15, dy / length * 2.15, 0));
         _audio?.Trigger(StormaktSound.TwinCannon);
     }
 
@@ -499,9 +501,50 @@ internal sealed class StormaktGame
                     boss.Health = BossPhaseTwoThreshold;
                     boss.Phase = 2;
                     boss.PhaseAge = 0;
+                    boss.LeftDockHealth = 50;
+                    boss.RightDockHealth = 50;
                     _enemyShots.Clear();
                     _anchorHazards.Clear();
                     _audio?.Trigger(StormaktSound.Broadside);
+                }
+            }
+            else if (boss.Phase == 2 && boss.LeftDockHealth > 0 &&
+                Math.Abs(shot.X - (bossX - BossDockOffset)) <= 11 && Math.Abs(shot.Y - (bossY + 17)) <= 13)
+            {
+                boss.LeftDockHealth -= shot.Power;
+                hit = true;
+                if (boss.LeftDockHealth <= 0)
+                {
+                    _score += 900;
+                    _audio?.Trigger(StormaktSound.EnemyExplosion);
+                }
+            }
+            else if (boss.Phase == 2 && boss.RightDockHealth > 0 &&
+                Math.Abs(shot.X - (bossX + BossDockOffset)) <= 11 && Math.Abs(shot.Y - (bossY + 17)) <= 13)
+            {
+                boss.RightDockHealth -= shot.Power;
+                hit = true;
+                if (boss.RightDockHealth <= 0)
+                {
+                    _score += 900;
+                    _audio?.Trigger(StormaktSound.EnemyExplosion);
+                }
+            }
+            else if (boss.Phase == 2 && Math.Abs(shot.X - bossX) <= 28 && Math.Abs(shot.Y - (bossY + 12)) <= 24)
+            {
+                hit = true;
+                if (IsBossCoreVulnerable(boss))
+                {
+                    boss.Health -= shot.Power;
+                    if (boss.Health <= BossPhaseThreeThreshold)
+                    {
+                        boss.Health = BossPhaseThreeThreshold;
+                        boss.Phase = 3;
+                        boss.PhaseAge = 0;
+                        _enemyShots.Clear();
+                        _anchorHazards.Clear();
+                        _audio?.Trigger(StormaktSound.Broadside);
+                    }
                 }
             }
             if (hit)
@@ -523,6 +566,21 @@ internal sealed class StormaktGame
                 _anchorHazards.Add(new AnchorHazard(72 + ((anchorIndex * 83) % 176), 0));
             }
         }
+        else if (boss.Phase == 2 && boss.PhaseAge >= 180)
+        {
+            StepBossPhaseTwoAttacks(boss);
+        }
+    }
+
+    private static bool IsBossCoreVulnerable(BossState boss)
+    {
+        if (boss.Phase != 2 || boss.PhaseAge < 180)
+        {
+            return false;
+        }
+        int cycle = (boss.PhaseAge - 180) % 300;
+        bool docksDestroyed = boss.LeftDockHealth <= 0 && boss.RightDockHealth <= 0;
+        return docksDestroyed ? cycle is >= 105 and < 265 : cycle is >= 165 and < 225;
     }
 
     private void FireBossFans(BossState boss)
@@ -545,8 +603,62 @@ internal sealed class StormaktGame
         {
             double vx = bias + index * 0.48;
             double vy = 1.72 + (2 - Math.Abs(index)) * 0.16;
-            _enemyShots.Add(new EnemyShot(x, y, vx, vy));
+            _enemyShots.Add(new EnemyShot(x, y, vx, vy, 0));
         }
+    }
+
+    private void StepBossPhaseTwoAttacks(BossState boss)
+    {
+        int attackFrame = boss.PhaseAge - 180;
+        int cycle = attackFrame % 300;
+        if (cycle is 0 or 18 or 36)
+        {
+            FireSealRing(boss, cycle / 18, attackFrame / 300);
+            if (cycle == 0)
+            {
+                _audio?.Trigger(StormaktSound.Broadside);
+            }
+        }
+        if (cycle is 90 or 102 or 114)
+        {
+            if (boss.LeftCannonHealth > 0)
+            {
+                FireAimedBossShot((int)Math.Round(boss.X) - BossCannonOffset, (int)Math.Round(boss.Y) + 13, -0.12);
+            }
+            if (boss.RightCannonHealth > 0)
+            {
+                FireAimedBossShot((int)Math.Round(boss.X) + BossCannonOffset, (int)Math.Round(boss.Y) + 13, 0.12);
+            }
+            _audio?.Trigger(StormaktSound.TwinCannon);
+        }
+    }
+
+    private void FireSealRing(BossState boss, int ringIndex, int volley)
+    {
+        double gapAngle = Math.PI / 2.0 + ((volley % 3) - 1) * 0.58;
+        double speed = 1.05 + ringIndex * 0.28;
+        int x = (int)Math.Round(boss.X);
+        int y = (int)Math.Round(boss.Y) + 15;
+        for (int index = 0; index < 28; index++)
+        {
+            double angle = index * Math.PI * 2.0 / 28.0;
+            double difference = Math.Abs(Math.Atan2(Math.Sin(angle - gapAngle), Math.Cos(angle - gapAngle)));
+            if (difference < 0.40)
+            {
+                continue;
+            }
+            _enemyShots.Add(new EnemyShot(x, y, Math.Cos(angle) * speed, Math.Sin(angle) * speed, 1));
+        }
+    }
+
+    private void FireAimedBossShot(int x, int y, double spread)
+    {
+        double dx = _shipX - x;
+        double dy = _shipY - y;
+        double length = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
+        double vx = dx / length;
+        double vy = dy / length;
+        _enemyShots.Add(new EnemyShot(x, y, (vx - vy * spread) * 2.45, (vy + vx * spread) * 2.45, 2));
     }
 
     private void StepAnchorHazards()
@@ -912,6 +1024,7 @@ internal sealed class StormaktGame
             {
                 DrawBossCannon(frame, x + BossCannonOffset, y + 7, 0, 0, 0, 0xff202932);
             }
+            DrawBossPhaseAttachments(frame, boss, x, y);
             return;
         }
         uint red = boss.Phase == 1 ? 0xff8f1f31 : 0xffb02a3e;
@@ -941,6 +1054,59 @@ internal sealed class StormaktGame
         {
             FillCircle(frame, x - 61, y - 4 + link * 8, 2, brass);
             FillCircle(frame, x + 61, y - 4 + link * 8, 2, brass);
+        }
+        DrawBossPhaseAttachments(frame, boss, x, y);
+    }
+
+    private void DrawBossPhaseAttachments(uint[] frame, BossState boss, int x, int y)
+    {
+        if (boss.Phase != 2)
+        {
+            return;
+        }
+        DrawLine(frame, x - 52, y + 12, x - BossDockOffset, y + 17, 0xff8a6b38);
+        DrawLine(frame, x + 52, y + 12, x + BossDockOffset, y + 17, 0xff8a6b38);
+        DrawDockTower(frame, x - BossDockOffset, y + 17, boss.LeftDockHealth);
+        DrawDockTower(frame, x + BossDockOffset, y + 17, boss.RightDockHealth);
+
+        bool vulnerable = IsBossCoreVulnerable(boss);
+        uint seal = vulnerable ? 0xffff8a4a : 0xff7894a5;
+        int pulse = ((_missionFrame / 4) & 1) == 0 ? 8 : 10;
+        DrawCircleOutline(frame, x, y + 15, pulse, seal);
+        DrawCircleOutline(frame, x, y + 15, pulse + 3, vulnerable ? 0xffd6b25e : 0xff344d5c);
+    }
+
+    private void DrawDockTower(uint[] frame, int x, int y, int health)
+    {
+        if (health <= 0)
+        {
+            DrawLine(frame, x - 7, y - 8, x + 7, y + 8, 0xff8d4938);
+            DrawLine(frame, x + 7, y - 8, x - 7, y + 8, 0xff3a3031);
+            PutPixel(frame, x, y + 11, 0xffff8a4a);
+            return;
+        }
+        DrawRect(frame, x - 8, y - 8, 16, 16, 0xff29343d);
+        DrawRect(frame, x - 6, y - 6, 12, 12, 0xff8f2635);
+        DrawRect(frame, x - 2, y - 9, 4, 18, 0xfff2eee4);
+        DrawRect(frame, x - 2, y + 7, 5, 9, 0xffc39a52);
+        if (health < 25)
+        {
+            DrawLine(frame, x - 5, y - 5, x + 4, y + 5, 0xffff6b4a);
+        }
+    }
+
+    private void DrawCircleOutline(uint[] frame, int centerX, int centerY, int radius, uint color)
+    {
+        int previousX = centerX + radius;
+        int previousY = centerY;
+        for (int step = 1; step <= 20; step++)
+        {
+            double angle = step * Math.PI * 2.0 / 20.0;
+            int x = centerX + (int)Math.Round(Math.Cos(angle) * radius);
+            int y = centerY + (int)Math.Round(Math.Sin(angle) * radius);
+            DrawLine(frame, previousX, previousY, x, y, color);
+            previousX = x;
+            previousY = y;
         }
     }
 
@@ -1080,9 +1246,12 @@ internal sealed class StormaktGame
         {
             int x = (int)Math.Round(shot.X);
             int y = (int)Math.Round(shot.Y);
-            FillCircle(frame, x, y, 3, 0xffc51f35);
-            PutPixel(frame, x, y, 0xffffd6b0);
-            PutPixel(frame, x, y - 4, 0xffff6b62);
+            uint outer = shot.Kind == 1 ? 0xffd6b25e : shot.Kind == 2 ? 0xfff2eee4 : 0xffc51f35;
+            uint core = shot.Kind == 1 ? 0xffffec9a : shot.Kind == 2 ? 0xffff6b62 : 0xffffd6b0;
+            int radius = shot.Kind == 1 ? 2 : 3;
+            FillCircle(frame, x, y, radius, outer);
+            PutPixel(frame, x, y, core);
+            PutPixel(frame, x, y - radius - 1, core);
         }
     }
 
@@ -1229,6 +1398,11 @@ internal sealed class StormaktGame
         {
             DrawRect(frame, 68, 88, 184, 27, 0xff160b0e);
             DrawText(frame, 88, 98, "BROFOGDENS VREDE", 0xffff6b62);
+        }
+        else if (boss.Phase == 3 && boss.PhaseAge < 180)
+        {
+            DrawRect(frame, 79, 88, 162, 27, 0xff160b0e);
+            DrawText(frame, 110, 98, "TIONDET BRISTER", 0xffff8a4a);
         }
     }
 
@@ -1534,7 +1708,7 @@ internal sealed class StormaktGame
     }
 
     private record struct Shot(int X, int Y, int Vx, int Vy, uint Color, int Power);
-    private record struct EnemyShot(double X, double Y, double Vx, double Vy);
+    private record struct EnemyShot(double X, double Y, double Vx, double Vy, int Kind);
     private record struct AnchorHazard(int X, int Age);
     private record struct Enemy(
         int X,
@@ -1587,6 +1761,8 @@ internal sealed class StormaktGame
         public int Health { get; set; }
         public int LeftCannonHealth { get; set; }
         public int RightCannonHealth { get; set; }
+        public int LeftDockHealth { get; set; }
+        public int RightDockHealth { get; set; }
         public int Age { get; set; }
         public int Phase { get; set; }
         public int PhaseAge { get; set; }
