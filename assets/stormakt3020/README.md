@@ -47,6 +47,8 @@ Additional scored roles live under `music/`:
 - `oresund-i-brand-v1.wav`: faster normal-combat loop.
 - `kronans-sista-salva-v1.wav`: monumental boss loop.
 
+`kronans-sista-salva-v1.wav` is now preloaded with the combat score. Kronens Tiende requests a 0.5-second in-stream crossfade at arrival, and restarting the stage requests the same crossfade back to the combat loop. Track-transition progress advances only by audio frames accepted by the daemon.
+
 `music/generation-manifest.json` records accepted task IDs, seeds, models, prompt files, and a rejected menu attempt. The complete local workflow is documented in `docs/stormakt3020-audio-toolchain.md`.
 
 ## Sound effects

@@ -45,6 +45,7 @@ Status: checkpoint 1 och 2A-2C är klara. Bosscheckpoint 3A har infört Kronens 
 - Skrovets fas-1-segment går från 100 till 65 procent. Vid tröskeln rensas aktiva salvor och ankare och övergångsskylten `BROFOGDENS VREDE` visas; fas 2 är ännu passiv.
 - `WAYLANDFORGE_STORMAKT_INVINCIBLE=1` finns endast som opt-in för deterministiska fullbanecaptures. Normal körning påverkas inte.
 - Två 4 251-rutors bosskörningar med samma testinput gav samma fas-2-övergångsbild: SHA-256 `398f461fbe5c42911dd1cd41858ff3763104693916d06b006fdc6503a0fca246`.
+- Bossinträdet begär nu en halvsekunds korsfade till `kronans-sista-salva-v1.wav`; stage-reset korsfadar tillbaka till normal stridsmusik.
 
 ## Banans löfte
 
@@ -169,7 +170,7 @@ Bossradion visas färdigt före första skottmönstret och följer reglerna i `d
 
 1. **Banskelett:** klart - ramstyrd tidslinje, titel, tre parallaxlager och deterministisk 60-sekunders genomflygning.
 2. **Brokriget:** marklager, torn, energiledningar, förstörbara brospann och vågor fram till 2:45. Commit och push.
-3. **Fogdeskeppet:** 3A klar med modell, presentation, delmål och fas 1. Fas 2-3, bossmusik och dödssekvens återstår.
+3. **Fogdeskeppet:** 3A klar med modell, presentation, delmål, bossmusik och fas 1. Fas 2-3 och dödssekvens återstår.
 4. **Polish:** bakgrundsassets, skadebilder, nya SFX, poängbalans och full fyraminuters capture. Commit och push.
 
 ## Acceptanskriterier

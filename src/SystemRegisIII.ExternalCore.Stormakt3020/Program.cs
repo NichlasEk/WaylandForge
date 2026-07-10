@@ -233,6 +233,7 @@ internal sealed class StormaktGame
         _skippedRadioCards.Clear();
         _previousButtons = 0;
         _gameOver = false;
+        _audio?.SwitchMusic(StormaktMusicTrack.Combat);
     }
 
     private bool Pressed(uint buttons, uint button) => (buttons & button) != 0 && (_previousButtons & button) == 0;
@@ -439,6 +440,7 @@ internal sealed class StormaktGame
                 Phase = 1,
             };
             _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.SwitchMusic(StormaktMusicTrack.Boss);
         }
     }
 

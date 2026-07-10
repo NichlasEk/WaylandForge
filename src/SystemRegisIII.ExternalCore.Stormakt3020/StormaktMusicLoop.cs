@@ -9,18 +9,26 @@ internal sealed class StormaktMusicLoop : IDisposable
     private const int SampleRate = 48_000;
     private const int Channels = 2;
     private const int PacketFrames = 2_048;
+    private const int TrackCrossfadeFrames = SampleRate / 2;
     private const int HeaderBytes = 24;
     private const string DefaultSocketPath = "/tmp/waylandforge-audio.sock";
 
-    private readonly float[] _samples;
+    private float[] _samples;
+    private readonly float[] _combatSamples;
+    private readonly float[]? _bossSamples;
     private readonly Dictionary<StormaktSound, LoadedEffect> _effects;
     private readonly Dictionary<StormaktVoice, LoadedEffect> _voices;
     private readonly ConcurrentQueue<StormaktSound> _pendingEffects = new();
     private readonly ConcurrentQueue<StormaktVoice> _pendingVoices = new();
+    private readonly ConcurrentQueue<StormaktMusicTrack> _pendingTracks = new();
     private readonly List<ActiveEffect> _activeEffects = [];
     private ActiveEffect? _activeVoice;
-    private readonly int _totalFrames;
-    private readonly int _crossfadeFrames;
+    private int _totalFrames;
+    private int _crossfadeFrames;
+    private float[]? _transitionSamples;
+    private int _transitionFrame;
+    private StormaktMusicTrack _currentTrack = StormaktMusicTrack.Combat;
+    private StormaktMusicTrack? _transitionTrack;
     private readonly string _socketPath;
     private readonly CancellationTokenSource _stop = new();
     private readonly Thread _thread;
@@ -28,11 +36,14 @@ internal sealed class StormaktMusicLoop : IDisposable
 
     private StormaktMusicLoop(
         float[] samples,
+        float[]? bossSamples,
         Dictionary<StormaktSound, LoadedEffect> effects,
         Dictionary<StormaktVoice, LoadedEffect> voices,
         string socketPath)
     {
         _samples = samples;
+        _combatSamples = samples;
+        _bossSamples = bossSamples;
         _effects = effects;
         _voices = voices;
         _totalFrames = samples.Length / Channels;
@@ -75,11 +86,14 @@ internal sealed class StormaktMusicLoop : IDisposable
             try
             {
                 float[] samples = LoadPcm16StereoWav(path);
+                string bossPath = Path.Combine(Path.GetDirectoryName(path)!, "music", "kronans-sista-salva-v1.wav");
+                float[]? bossSamples = File.Exists(bossPath) ? LoadPcm16StereoWav(bossPath) : null;
                 Dictionary<StormaktSound, LoadedEffect> effects = LoadEffects(path);
                 Dictionary<StormaktVoice, LoadedEffect> voices = LoadVoices(path);
                 string socketPath = Environment.GetEnvironmentVariable("WAYLANDFORGE_AUDIO_SOCKET") ?? DefaultSocketPath;
-                Console.Error.WriteLine($"Stormakt audio: loaded {Path.GetFileName(path)} ({samples.Length / Channels / SampleRate}s), {effects.Count} effects and {voices.Count} radio voices.");
-                return new StormaktMusicLoop(samples, effects, voices, socketPath);
+                Console.Error.WriteLine($"Stormakt audio: loaded {Path.GetFileName(path)} ({samples.Length / Channels / SampleRate}s), " +
+                    $"boss score={(bossSamples is null ? "missing" : "ready")}, {effects.Count} effects and {voices.Count} radio voices.");
+                return new StormaktMusicLoop(samples, bossSamples, effects, voices, socketPath);
             }
             catch (Exception exception)
             {
@@ -95,6 +109,8 @@ internal sealed class StormaktMusicLoop : IDisposable
     public void Trigger(StormaktSound sound) => _pendingEffects.Enqueue(sound);
 
     public void TriggerVoice(StormaktVoice voice) => _pendingVoices.Enqueue(voice);
+
+    public void SwitchMusic(StormaktMusicTrack track) => _pendingTracks.Enqueue(track);
 
     public void Dispose()
     {
@@ -144,6 +160,7 @@ internal sealed class StormaktMusicLoop : IDisposable
             if (accepted >= 0)
             {
                 frameIndex = AdvanceFrameIndex(frameIndex, accepted);
+                AdvanceTrackTransition(ref frameIndex, accepted);
                 acceptedFrames += accepted;
                 if (!announcedConnection)
                 {
@@ -197,18 +214,37 @@ internal sealed class StormaktMusicLoop : IDisposable
                 _activeVoice = new ActiveEffect(effect);
             }
         }
+        while (_pendingTracks.TryDequeue(out StormaktMusicTrack track))
+        {
+            float[]? requestedSamples = track switch
+            {
+                StormaktMusicTrack.Combat => _combatSamples,
+                StormaktMusicTrack.Boss => _bossSamples,
+                _ => null,
+            };
+            if (requestedSamples is not null && _currentTrack != track && _transitionTrack != track)
+            {
+                _transitionSamples = requestedSamples;
+                _transitionFrame = 0;
+                _transitionTrack = track;
+                Console.Error.WriteLine($"Stormakt audio: crossfading to {track.ToString().ToLowerInvariant()} score.");
+            }
+        }
 
         for (int outputFrame = 0; outputFrame < frames; outputFrame++)
         {
-            float left = _samples[frameIndex * Channels];
-            float right = _samples[(frameIndex * Channels) + 1];
-            if (frameIndex >= _totalFrames - _crossfadeFrames)
+            ReadLoopSample(_samples, frameIndex, _totalFrames, _crossfadeFrames, out float left, out float right);
+            if (_transitionSamples is not null)
             {
-                int headFrame = frameIndex - (_totalFrames - _crossfadeFrames);
-                float headWeight = headFrame / (float)_crossfadeFrames;
-                float tailWeight = 1.0f - headWeight;
-                left = (left * tailWeight) + (_samples[headFrame * Channels] * headWeight);
-                right = (right * tailWeight) + (_samples[(headFrame * Channels) + 1] * headWeight);
+                int incomingTotalFrames = _transitionSamples.Length / Channels;
+                int incomingCrossfadeFrames = Math.Min(SampleRate / 2, incomingTotalFrames / 8);
+                int incomingFrame = NormalizeFrame(_transitionFrame + outputFrame, incomingTotalFrames, incomingCrossfadeFrames);
+                ReadLoopSample(_transitionSamples, incomingFrame, incomingTotalFrames, incomingCrossfadeFrames,
+                    out float incomingLeft, out float incomingRight);
+                float incomingWeight = Math.Min(1.0f, (_transitionFrame + outputFrame + 1) / (float)TrackCrossfadeFrames);
+                float currentWeight = 1.0f - incomingWeight;
+                left = left * currentWeight + incomingLeft * incomingWeight;
+                right = right * currentWeight + incomingRight * incomingWeight;
             }
 
             float musicGain = _activeVoice is null ? 0.68f : 0.34f;
@@ -244,6 +280,59 @@ internal sealed class StormaktMusicLoop : IDisposable
 
             frameIndex = AdvanceFrameIndex(frameIndex, 1);
         }
+    }
+
+    private void AdvanceTrackTransition(ref int frameIndex, int acceptedFrames)
+    {
+        if (_transitionSamples is null || _transitionTrack is null)
+        {
+            return;
+        }
+        _transitionFrame += acceptedFrames;
+        if (_transitionFrame < TrackCrossfadeFrames)
+        {
+            return;
+        }
+
+        _samples = _transitionSamples;
+        _totalFrames = _samples.Length / Channels;
+        _crossfadeFrames = Math.Min(SampleRate / 2, _totalFrames / 8);
+        frameIndex = NormalizeFrame(_transitionFrame, _totalFrames, _crossfadeFrames);
+        _currentTrack = _transitionTrack.Value;
+        Console.Error.WriteLine($"Stormakt audio: {_currentTrack.ToString().ToLowerInvariant()} score active.");
+        _transitionSamples = null;
+        _transitionTrack = null;
+        _transitionFrame = 0;
+    }
+
+    private static void ReadLoopSample(
+        float[] samples,
+        int frameIndex,
+        int totalFrames,
+        int crossfadeFrames,
+        out float left,
+        out float right)
+    {
+        left = samples[frameIndex * Channels];
+        right = samples[(frameIndex * Channels) + 1];
+        if (frameIndex < totalFrames - crossfadeFrames)
+        {
+            return;
+        }
+        int headFrame = frameIndex - (totalFrames - crossfadeFrames);
+        float headWeight = headFrame / (float)crossfadeFrames;
+        float tailWeight = 1.0f - headWeight;
+        left = left * tailWeight + samples[headFrame * Channels] * headWeight;
+        right = right * tailWeight + samples[(headFrame * Channels) + 1] * headWeight;
+    }
+
+    private static int NormalizeFrame(int frameIndex, int totalFrames, int crossfadeFrames)
+    {
+        while (frameIndex >= totalFrames)
+        {
+            frameIndex = crossfadeFrames + (frameIndex - totalFrames);
+        }
+        return frameIndex;
     }
 
     private int AdvanceFrameIndex(int frameIndex, int frames)
@@ -515,4 +604,10 @@ internal enum StormaktVoice
     EbbaGrip,
     RasmusGyldentold,
     KungChristian,
+}
+
+internal enum StormaktMusicTrack
+{
+    Combat,
+    Boss,
 }

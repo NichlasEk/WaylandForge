@@ -66,3 +66,5 @@ python tools/stormakt3020/build_sfx.py
 The script uses fixed seeds, explicit oscillators, filtered noise and envelopes to rebuild five PCM16 stereo assets under `assets/stormakt3020/sfx/`: twin cannon, broadside, enemy explosion, hull hit and deploy chime. Each source peaks at about -1.3 dB.
 
 `StormaktMusicLoop` is also the core's mixer. Music is attenuated for headroom, effect triggers are queued thread-safely from gameplay, at most 32 voices overlap, the result is clamped below full scale, and 2048-frame packets keep effect latency near 0.1 seconds. Mixing before `WFAU` is essential: separate packets would play effects after queued music instead of on top of it.
+
+Combat and boss scores are preloaded. A gameplay track request starts a 24,000-frame crossfade inside the same stream; both the outgoing loop position and transition position advance from the daemon's accepted-frame count, including partially accepted packets. Stage reset requests the combat score so boss music cannot leak into a new run.
