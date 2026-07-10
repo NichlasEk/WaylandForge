@@ -77,6 +77,8 @@ internal sealed class StormaktGame
     private Random _random = new(3020);
     private readonly List<Shot> _shots = [];
     private readonly List<Enemy> _enemies = [];
+    private readonly List<EnemyShot> _enemyShots = [];
+    private readonly List<GroundTarget> _groundTargets = [];
     private readonly Star[] _stars = new Star[92];
     private readonly HashSet<int> _skippedRadioCards = [];
     private static readonly RadioCard[] RadioCards =
@@ -101,6 +103,7 @@ internal sealed class StormaktGame
     private int _lives = 3;
     private int _heat;
     private int _missionFrame;
+    private int _invulnerabilityFrames;
     private uint _previousButtons;
     private bool _gameOver;
 
@@ -139,6 +142,7 @@ internal sealed class StormaktGame
         _cooldown = Math.Max(0, _cooldown - 1);
         _altCooldown = Math.Max(0, _altCooldown - 1);
         _heat = Math.Max(0, _heat - 1);
+        _invulnerabilityFrames = Math.Max(0, _invulnerabilityFrames - 1);
         if ((buttons & Fire) != 0 && _cooldown == 0)
         {
             _shots.Add(new Shot(_shipX - 4, _shipY - 12, 0, -7, 0xffffd66b, 3));
@@ -157,8 +161,11 @@ internal sealed class StormaktGame
         }
 
         StepShots();
+        StepEnemyShots();
         StepEnemies();
+        StepGroundTargets();
         SpawnEnemies();
+        SpawnGroundEncounters();
         StepStars();
         _previousButtons = buttons;
     }
@@ -170,8 +177,10 @@ internal sealed class StormaktGame
         DrawNebula(frame);
         DrawStars(frame);
         DrawBeltRuins(frame);
+        DrawGroundTargets(frame);
         DrawBorder(frame);
         DrawShots(frame);
+        DrawEnemyShots(frame);
         DrawEnemies(frame);
         DrawShip(frame);
         DrawHud(frame);
@@ -189,6 +198,8 @@ internal sealed class StormaktGame
     {
         _shots.Clear();
         _enemies.Clear();
+        _enemyShots.Clear();
+        _groundTargets.Clear();
         _random = new Random(3020);
         for (int i = 0; i < _stars.Length; i++)
         {
@@ -202,6 +213,7 @@ internal sealed class StormaktGame
         _lives = 3;
         _heat = 0;
         _missionFrame = 0;
+        _invulnerabilityFrames = 0;
         _skippedRadioCards.Clear();
         _previousButtons = 0;
         _gameOver = false;
@@ -245,6 +257,120 @@ internal sealed class StormaktGame
         }
     }
 
+    private void StepEnemyShots()
+    {
+        for (int index = _enemyShots.Count - 1; index >= 0; index--)
+        {
+            EnemyShot shot = _enemyShots[index];
+            shot.X += shot.Vx;
+            shot.Y += shot.Vy;
+            if (shot.Y < -10 || shot.Y > _height + 10 || shot.X < -10 || shot.X > _width + 10)
+            {
+                _enemyShots.RemoveAt(index);
+                continue;
+            }
+            if (Math.Abs(_shipX - shot.X) < 7 && Math.Abs(_shipY - shot.Y) < 7)
+            {
+                _enemyShots.RemoveAt(index);
+                DamageShip();
+                continue;
+            }
+            _enemyShots[index] = shot;
+        }
+    }
+
+    private void StepGroundTargets()
+    {
+        for (int index = _groundTargets.Count - 1; index >= 0; index--)
+        {
+            GroundTarget target = _groundTargets[index];
+            target.Y++;
+            target.Age++;
+
+            if (target.Type == GroundTargetType.Turret && target.Enabled && target.Y is > 24 and < 174)
+            {
+                int cycle = target.Age % 180;
+                if (cycle is 88 or 96 or 104)
+                {
+                    FireGroundShot(target.X, target.Y);
+                }
+            }
+
+            bool destroyed = false;
+            int halfWidth = target.Type == GroundTargetType.BridgeSpan ? 42 : 10;
+            int halfHeight = target.Type == GroundTargetType.BridgeSpan ? 9 : 11;
+            for (int shotIndex = _shots.Count - 1; shotIndex >= 0; shotIndex--)
+            {
+                Shot shot = _shots[shotIndex];
+                if (Math.Abs(shot.X - target.X) <= halfWidth && Math.Abs(shot.Y - target.Y) <= halfHeight)
+                {
+                    target.Health -= shot.Power;
+                    _shots.RemoveAt(shotIndex);
+                    if (target.Health <= 0)
+                    {
+                        destroyed = true;
+                    }
+                    break;
+                }
+            }
+
+            if (destroyed)
+            {
+                _score += target.Type == GroundTargetType.Turret ? 450 : target.Type == GroundTargetType.EnergyNode ? 250 : 180;
+                if (target.Type == GroundTargetType.EnergyNode)
+                {
+                    DisableLinkedTurret(target.Group);
+                }
+                _groundTargets.RemoveAt(index);
+                _audio?.Trigger(StormaktSound.EnemyExplosion);
+                continue;
+            }
+            if (target.Y > _height + 42)
+            {
+                _groundTargets.RemoveAt(index);
+                continue;
+            }
+            _groundTargets[index] = target;
+        }
+    }
+
+    private void FireGroundShot(int x, int y)
+    {
+        double dx = _shipX - x;
+        double dy = _shipY - y;
+        double length = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
+        _enemyShots.Add(new EnemyShot(x, y + 7, dx / length * 2.15, dy / length * 2.15));
+        _audio?.Trigger(StormaktSound.TwinCannon);
+    }
+
+    private void DisableLinkedTurret(int group)
+    {
+        for (int index = 0; index < _groundTargets.Count; index++)
+        {
+            GroundTarget target = _groundTargets[index];
+            if (target.Group == group && target.Type == GroundTargetType.Turret)
+            {
+                _groundTargets[index] = target with { Enabled = false };
+            }
+        }
+    }
+
+    private void DamageShip()
+    {
+        if (_invulnerabilityFrames > 0)
+        {
+            return;
+        }
+        _lives--;
+        _heat = 120;
+        _invulnerabilityFrames = 90;
+        _audio?.Trigger(StormaktSound.HullHit);
+        if (_lives <= 0)
+        {
+            _gameOver = true;
+        }
+    }
+
     private void StepEnemies()
     {
         for (int i = _enemies.Count - 1; i >= 0; i--)
@@ -281,13 +407,7 @@ internal sealed class StormaktGame
             if (Math.Abs(_shipX - enemy.X) < enemy.Radius + 8 && Math.Abs(_shipY - enemy.Y) < enemy.Radius + 8)
             {
                 _enemies.RemoveAt(i);
-                _lives--;
-                _heat = 120;
-                _audio?.Trigger(StormaktSound.HullHit);
-                if (_lives <= 0)
-                {
-                    _gameOver = true;
-                }
+                DamageShip();
                 continue;
             }
 
@@ -337,6 +457,22 @@ internal sealed class StormaktGame
             double phase = ((volley * 17 + index * 29 + wave.Kind * 11) % 100) * Math.PI / 50.0;
             _enemies.Add(new Enemy(Math.Clamp(center + offset, 20, _width - 20), y, speed, radius, health, color, wave.Kind, phase));
         }
+    }
+
+    private void SpawnGroundEncounters()
+    {
+        int timelineFrame = _missionFrame % FlythroughFrames;
+        if (timelineFrame is not (720 or 1_920 or 2_760))
+        {
+            return;
+        }
+
+        bool left = timelineFrame != 1_920;
+        int x = left ? 52 : _width - 52;
+        int group = _missionFrame;
+        _groundTargets.Add(new GroundTarget(x, -22, GroundTargetType.BridgeSpan, 24, group, 0, true));
+        _groundTargets.Add(new GroundTarget(x, -29, GroundTargetType.Turret, 16, group, -48, true));
+        _groundTargets.Add(new GroundTarget(x + (left ? 25 : -25), -13, GroundTargetType.EnergyNode, 7, group, 0, true));
     }
 
     private void StepStars()
@@ -502,6 +638,50 @@ internal sealed class StormaktGame
         DrawRect(frame, _shipX + 15, _shipY + 4, 4, 3, copper);
     }
 
+    private void DrawGroundTargets(uint[] frame)
+    {
+        foreach (GroundTarget target in _groundTargets)
+        {
+            if (target.Type == GroundTargetType.BridgeSpan)
+            {
+                uint hull = target.Health < 9 ? 0xff57403c : target.Health < 17 ? 0xff45434a : 0xff343e47;
+                DrawRect(frame, target.X - 43, target.Y - 9, 86, 18, hull);
+                DrawLine(frame, target.X - 42, target.Y - 8, target.X + 41, target.Y - 8, 0xff785c3b);
+                DrawLine(frame, target.X - 42, target.Y + 8, target.X + 41, target.Y + 8, 0xff1a252d);
+                for (int x = target.X - 35; x < target.X + 35; x += 18)
+                {
+                    DrawLine(frame, x, target.Y - 7, x + 10, target.Y + 7, 0xff222d35);
+                }
+                if (target.Health < 17)
+                {
+                    DrawLine(frame, target.X - 8, target.Y - 8, target.X + 4, target.Y + 8, 0xffb36b4a);
+                }
+                continue;
+            }
+
+            if (target.Type == GroundTargetType.EnergyNode)
+            {
+                uint pulse = ((_missionFrame / 6) & 1) == 0 ? 0xffff6b62 : 0xffc51f35;
+                FillCircle(frame, target.X, target.Y, 7, 0xff272f36);
+                FillCircle(frame, target.X, target.Y, 3, pulse);
+                DrawLine(frame, target.X - 12, target.Y, target.X + 12, target.Y, 0xff8f2635);
+                continue;
+            }
+
+            uint turret = target.Enabled ? 0xff8f2635 : 0xff3b4145;
+            FillCircle(frame, target.X, target.Y, 10, 0xff252d34);
+            DrawRect(frame, target.X - 7, target.Y - 6, 14, 12, turret);
+            DrawLine(frame, target.X, target.Y, target.X, target.Y + 16, target.Enabled ? 0xfff2eee4 : 0xff62696c);
+            int cycle = target.Age % 180;
+            if (target.Enabled && cycle is >= 40 and < 88 && target.Y is > 24 and < 174)
+            {
+                uint lockColor = (cycle & 7) < 4 ? 0xffc51f35 : 0xff6f2631;
+                DrawLine(frame, target.X, target.Y + 8, _shipX, _shipY, lockColor);
+                DrawRect(frame, target.X - 2, target.Y - 11, 5, 3, 0xffff6b62);
+            }
+        }
+    }
+
     private void DrawShots(uint[] frame)
     {
         foreach (Shot shot in _shots)
@@ -518,6 +698,18 @@ internal sealed class StormaktGame
 
             DrawRect(frame, shot.X - 1, shot.Y - 4, 3, 8, shot.Color);
             PutPixel(frame, shot.X, shot.Y - 5, 0xffffffff);
+        }
+    }
+
+    private void DrawEnemyShots(uint[] frame)
+    {
+        foreach (EnemyShot shot in _enemyShots)
+        {
+            int x = (int)Math.Round(shot.X);
+            int y = (int)Math.Round(shot.Y);
+            FillCircle(frame, x, y, 3, 0xffc51f35);
+            PutPixel(frame, x, y, 0xffffd6b0);
+            PutPixel(frame, x, y - 4, 0xffff6b62);
         }
     }
 
@@ -896,7 +1088,16 @@ internal sealed class StormaktGame
     }
 
     private record struct Shot(int X, int Y, int Vx, int Vy, uint Color, int Power);
+    private record struct EnemyShot(double X, double Y, double Vx, double Vy);
     private record struct Enemy(int X, int Y, int Speed, int Radius, int Health, uint Color, int Kind, double Phase);
+    private record struct GroundTarget(
+        int X,
+        int Y,
+        GroundTargetType Type,
+        int Health,
+        int Group,
+        int Age,
+        bool Enabled);
     private readonly record struct Star(int X, int Y, int Speed, int Brightness);
     private readonly record struct RadioCard(
         int StartFrame,
@@ -912,6 +1113,13 @@ internal sealed class StormaktGame
         int IntervalFrames,
         int Kind,
         int Count);
+
+    private enum GroundTargetType
+    {
+        BridgeSpan,
+        Turret,
+        EnergyNode,
+    }
 }
 
 internal sealed class SpritePack

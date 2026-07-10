@@ -1,6 +1,6 @@
 # Bana 1 - Återtåget över Stora Bält-nebulosan
 
-Status: checkpoint 1, banskelettet, är implementerat. Brokriget och bossen återstår.
+Status: checkpoint 1 är klar och checkpoint 2A har infört första spelbara brospannet, energiledningen och marktornet. Fler broformationer och bossen återstår.
 
 ## Implementerad checkpoint 1 - 2026-07-10
 
@@ -10,6 +10,15 @@ Status: checkpoint 1, banskelettet, är implementerat. Brokriget och bossen åte
 - Ruinlagret innehåller drivande sten, ett avlägset svenskt linjekryssarvrak och en sönderskjuten gravitationsbro märkt `3020`.
 - Radiofönstren är flyttade till lugna platser i bantidslinjen: Ebba vid 3 sekunder, Rasmus vid 15 och Christian vid 25.
 - Reset återställer även slumpgenerator och stjärnfält. Två fristående 3 600-rutorskörningar med samma svepande eldinput gav samma slutbild: SHA-256 `71fe1ad83b88632b480bef546ff58d9ce086b384def2cf2e875e04e5787233b5`.
+
+## Implementerad checkpoint 2A - första brohotet
+
+- Tre brogrupper ligger i 60-sekunderstidslinjen och växlar sida för att skapa tydliga korridorer.
+- Varje grupp består av ett skadebart brospann, ett marktorn och en separat pulserande energiledning.
+- Marktornets första synliga låsstråle varar 48 simuleringsrutor, exakt 0,8 sekunder vid 60 Hz, före en riktad treskottssalva.
+- Förstörd energiledning slår av det kopplade tornet; torn och brospann kan också förstöras direkt för olika poäng.
+- Marktornens projektiler är en separat grupp med egen rörelse, spelarkollision och 90 rutors träffimmunitet så en treskottssalva inte tar alla liv samtidigt.
+- Efter markhotet gav två nya fristående 3 600-rutorskörningar med identisk input samma slutbild: SHA-256 `45e237634c0ec1da712e909506eb6f97ef7248076c73ad55845ec5291310e960`.
 
 ## Banans löfte
 
