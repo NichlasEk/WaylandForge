@@ -1,6 +1,6 @@
 # Stormakt 3020 Assets
 
-`karl-cclv-swedish-hero-danish-enemies-v3.png` is the active AI-generated visual target for the EXT3 shmup core. The original `karl-cclv-sprite-concept.png` and the first Danish-enemy pass remain as historical references.
+`karl-cclv-swedish-hero-danish-enemies-v3.png` is the hero/standard-enemy source sheet. `stormakt-danish-boss-enemies-v1.png` is the transparent production sheet for Kronens Tiende, fogde sloops and the tax-seal drone. The `-source.png` sibling preserves the original flat green generation, and the exact image prompt is versioned beside it.
 
 Prompt summary:
 
@@ -11,12 +11,24 @@ Prompt summary:
 
 Runtime note:
 
-The EXT3 core can load `stormakt3020.wfsa`, a small raw sprite pack generated from the concept image. If the pack is missing, the core falls back to code-drawn sprites.
+The EXT3 core can load `stormakt3020.wfsa`, a small raw sprite pack generated from both production sheets. If the pack or a named sprite is missing, the core falls back to code-drawn sprites.
 
 Rebuild the pack after editing/replacing the concept sheet:
 
 ```sh
 python tools/stormakt3020/build_assets.py
+```
+
+The builder currently packs 13 named sprites, including `boss_kronens_tiende`, `boss_kronens_tiende_damaged`, `fogde_sloop`, `fogde_sloop_breakaway` and `enemy_tax_seal`. It trims alpha and downsamples with high-quality filtering; gameplay keeps separate deterministic hitboxes.
+
+To rebuild the transparent generated sheet from its chroma-key source:
+
+```sh
+python ~/.codex/skills/.system/imagegen/scripts/remove_chroma_key.py \
+  --input assets/stormakt3020/stormakt-danish-boss-enemies-v1-source.png \
+  --out assets/stormakt3020/stormakt-danish-boss-enemies-v1.png \
+  --auto-key border --soft-matte --transparent-threshold 12 \
+  --opaque-threshold 220 --despill
 ```
 
 To rebuild from another compatible sheet without changing the active default:

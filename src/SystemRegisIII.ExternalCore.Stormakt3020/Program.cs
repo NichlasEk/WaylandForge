@@ -64,6 +64,7 @@ internal sealed class StormaktGame
     private const int BossArrivalFrame = 3_300;
     private const int BossPhaseOneHealth = 450;
     private const int BossPhaseTwoThreshold = 293;
+    private const int BossCannonOffset = 54;
     private const uint Up = 1u << 1;
     private const uint Down = 1u << 2;
     private const uint Left = 1u << 3;
@@ -469,7 +470,7 @@ internal sealed class StormaktGame
             int bossX = (int)Math.Round(boss.X);
             int bossY = (int)Math.Round(boss.Y);
             bool hit = false;
-            if (boss.Age >= 500 && boss.LeftCannonHealth > 0 && Math.Abs(shot.X - (bossX - 43)) <= 13 && Math.Abs(shot.Y - (bossY + 7)) <= 14)
+            if (boss.Age >= 500 && boss.LeftCannonHealth > 0 && Math.Abs(shot.X - (bossX - BossCannonOffset)) <= 13 && Math.Abs(shot.Y - (bossY + 7)) <= 14)
             {
                 boss.LeftCannonHealth -= shot.Power;
                 hit = true;
@@ -479,7 +480,7 @@ internal sealed class StormaktGame
                     _audio?.Trigger(StormaktSound.EnemyExplosion);
                 }
             }
-            else if (boss.Age >= 500 && boss.RightCannonHealth > 0 && Math.Abs(shot.X - (bossX + 43)) <= 13 && Math.Abs(shot.Y - (bossY + 7)) <= 14)
+            else if (boss.Age >= 500 && boss.RightCannonHealth > 0 && Math.Abs(shot.X - (bossX + BossCannonOffset)) <= 13 && Math.Abs(shot.Y - (bossY + 7)) <= 14)
             {
                 boss.RightCannonHealth -= shot.Power;
                 hit = true;
@@ -529,11 +530,11 @@ internal sealed class StormaktGame
         int y = (int)Math.Round(boss.Y) + 13;
         if (boss.LeftCannonHealth > 0)
         {
-            FireBossFan((int)Math.Round(boss.X) - 43, y, -0.22);
+            FireBossFan((int)Math.Round(boss.X) - BossCannonOffset, y, -0.22);
         }
         if (boss.RightCannonHealth > 0)
         {
-            FireBossFan((int)Math.Round(boss.X) + 43, y, 0.22);
+            FireBossFan((int)Math.Round(boss.X) + BossCannonOffset, y, 0.22);
         }
         _audio?.Trigger(StormaktSound.Broadside);
     }
@@ -899,6 +900,20 @@ internal sealed class StormaktGame
         }
         int x = (int)Math.Round(boss.X);
         int y = (int)Math.Round(boss.Y);
+        string generatedSpriteName = boss.Phase == 1 ? "boss_kronens_tiende" : "boss_kronens_tiende_damaged";
+        if (_sprites?.TryGet(generatedSpriteName, out Sprite generatedBoss) == true)
+        {
+            DrawSprite(frame, generatedBoss, x - generatedBoss.Width / 2, y - generatedBoss.Height / 2);
+            if (boss.LeftCannonHealth <= 0)
+            {
+                DrawBossCannon(frame, x - BossCannonOffset, y + 7, 0, 0, 0, 0xff202932);
+            }
+            if (boss.RightCannonHealth <= 0)
+            {
+                DrawBossCannon(frame, x + BossCannonOffset, y + 7, 0, 0, 0, 0xff202932);
+            }
+            return;
+        }
         uint red = boss.Phase == 1 ? 0xff8f1f31 : 0xffb02a3e;
         uint darkRed = 0xff571724;
         uint white = 0xfff2eee4;
@@ -920,8 +935,8 @@ internal sealed class StormaktGame
         DrawLine(frame, x - 53, y - 18, x - 67, y - 31, brass);
         DrawLine(frame, x + 53, y - 18, x + 67, y - 31, brass);
 
-        DrawBossCannon(frame, x - 43, y + 7, boss.LeftCannonHealth, red, white, iron);
-        DrawBossCannon(frame, x + 43, y + 7, boss.RightCannonHealth, red, white, iron);
+        DrawBossCannon(frame, x - BossCannonOffset, y + 7, boss.LeftCannonHealth, red, white, iron);
+        DrawBossCannon(frame, x + BossCannonOffset, y + 7, boss.RightCannonHealth, red, white, iron);
         for (int link = 0; link < 4; link++)
         {
             FillCircle(frame, x - 61, y - 4 + link * 8, 2, brass);
@@ -1086,12 +1101,21 @@ internal sealed class StormaktGame
         uint danishRed = 0xffc51f35;
         uint danishDark = 0xff7f1727;
         uint danishWhite = 0xfff2eee4;
+        if (_sprites is not null && enemy.Kind == 3)
+        {
+            string sloopName = enemy.Breakaway ? "fogde_sloop_breakaway" : "fogde_sloop";
+            if (_sprites.TryGet(sloopName, out Sprite sloopSprite))
+            {
+                DrawSprite(frame, sloopSprite, enemy.X - sloopSprite.Width / 2, enemy.Y - sloopSprite.Height / 2);
+                return;
+            }
+        }
         if (_sprites is not null && enemy.Kind != 3)
         {
             string spriteName = enemy.Kind switch
             {
                 1 => "enemy_crown",
-                2 => "enemy_caroline",
+                2 => "enemy_tax_seal",
                 _ => "enemy_guard",
             };
             if (_sprites.TryGet(spriteName, out Sprite sprite))

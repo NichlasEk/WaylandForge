@@ -8,7 +8,7 @@ from pathlib import Path
 from PIL import Image
 
 
-SPRITES = [
+PRIMARY_SPRITES = [
     ("player", (330, 25, 620, 410), (44, 58)),
     ("enemy_crown", (85, 525, 380, 855), (34, 38)),
     ("enemy_caroline", (465, 525, 760, 840), (34, 34)),
@@ -17,6 +17,14 @@ SPRITES = [
     ("shot_broadside", (475, 930, 650, 1010), (20, 10)),
     ("shot_cannon", (655, 895, 875, 1015), (18, 9)),
     ("burst", (955, 870, 1210, 1065), (32, 28)),
+]
+
+DANISH_SPRITES = [
+    ("boss_kronens_tiende", (70, 15, 1015, 555), (124, 74)),
+    ("boss_kronens_tiende_damaged", (70, 545, 1015, 1045), (124, 74)),
+    ("fogde_sloop", (50, 1025, 365, 1425), (34, 44)),
+    ("fogde_sloop_breakaway", (385, 1025, 705, 1425), (36, 44)),
+    ("enemy_tax_seal", (720, 1055, 1040, 1395), (36, 36)),
 ]
 
 
@@ -52,14 +60,24 @@ def argb_pixels(image: Image.Image) -> bytes:
     return bytes(data)
 
 
-def build(input_path: Path, output_path: Path) -> None:
-    source = Image.open(input_path)
-    entries: list[tuple[str, Image.Image]] = []
-    for name, crop, size in SPRITES:
+def append_sprites(
+    entries: list[tuple[str, Image.Image]],
+    source: Image.Image,
+    definitions: list[tuple[str, tuple[int, int, int, int], tuple[int, int]]],
+) -> None:
+    for name, crop, size in definitions:
         sprite = chroma_alpha(source.crop(crop))
         sprite = trim_alpha(sprite)
         sprite.thumbnail(size, Image.Resampling.LANCZOS)
         entries.append((name, sprite))
+
+
+def build(input_path: Path, danish_input_path: Path, output_path: Path) -> None:
+    source = Image.open(input_path)
+    danish_source = Image.open(danish_input_path)
+    entries: list[tuple[str, Image.Image]] = []
+    append_sprites(entries, source, PRIMARY_SPRITES)
+    append_sprites(entries, danish_source, DANISH_SPRITES)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("wb") as handle:
@@ -78,9 +96,14 @@ def build(input_path: Path, output_path: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build Stormakt 3020 WFSA sprites from a concept PNG.")
     parser.add_argument("--input", type=Path, default=Path("assets/stormakt3020/karl-cclv-swedish-hero-danish-enemies-v3.png"))
+    parser.add_argument(
+        "--danish-input",
+        type=Path,
+        default=Path("assets/stormakt3020/stormakt-danish-boss-enemies-v1.png"),
+    )
     parser.add_argument("--output", type=Path, default=Path("assets/stormakt3020/stormakt3020.wfsa"))
     args = parser.parse_args()
-    build(args.input, args.output)
+    build(args.input, args.danish_input, args.output)
 
 
 if __name__ == "__main__":
