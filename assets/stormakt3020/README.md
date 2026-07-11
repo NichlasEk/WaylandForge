@@ -2,6 +2,8 @@
 
 `karl-cclv-dark-frigate-v1.png` is the active dark Swedish player-frigate sheet, with matched normal and overheated states. Its painted flame area is cropped during asset packing; runtime draws two pulsing thrust jets only while a movement direction is held. `karl-cclv-swedish-hero-danish-enemies-v3.png` remains the standard-enemy/projectile source and preserves the superseded bright player concept. `stormakt-danish-boss-enemies-v1.png` is the transparent production sheet for Kronens Tiende, fogde sloops and the tax-seal drone. `stormakt-radio-portraits-v1.png` supplies paired neutral/speaking portraits for Ebba Grip, Fogde Rasmus and Kung Christian. `stormakt-stora-balt-environment-v1.png` contains physical bridge and parallax props, while `stormakt-stora-balt-background-v1.png` is the tall scrolling nebula plate. Each `-source.png` sibling preserves the original flat green generation, and the exact image prompts are versioned beside them.
 
+`stormakt3020-logo-v1.png` is the transparent dark-blue, iron and gold three-crowns title emblem used by the level-select screen. Its chroma-key source and exact prompt are preserved alongside it.
+
 `stormakt-bridge-cannons-projectiles-v1.png` adds three bridge-collapse pieces, intact/destroyed Danish bridge cannon states, a detachable boss broadside cannon and red/white/gold enemy projectile families. Runtime uses the wreck pieces during the existing 45-frame collapse and mirrors the broadside module for the boss's right side.
 
 Prompt summary:

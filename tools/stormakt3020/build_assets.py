@@ -131,6 +131,7 @@ def build(
     environment_input_path: Path,
     combat_detail_input_path: Path,
     background_input_path: Path,
+    logo_input_path: Path,
     output_path: Path,
 ) -> None:
     source = Image.open(input_path)
@@ -140,6 +141,7 @@ def build(
     environment_source = Image.open(environment_input_path)
     combat_detail_source = Image.open(combat_detail_input_path)
     background_source = Image.open(background_input_path).convert("RGBA")
+    logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
     append_sprites(entries, danish_source, DANISH_SPRITES)
@@ -149,6 +151,12 @@ def build(
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
     entries.append(("stora_balt_background", mirrored_background(background_source, 320, 700)))
     entries.append(("stora_balt_background_wide", mirrored_background(background_source, 400, 875)))
+    logo_wide = logo_source.copy()
+    logo_wide.thumbnail((210, 105), Image.Resampling.LANCZOS)
+    entries.append(("stormakt_logo_wide", logo_wide))
+    logo_legacy = logo_source.copy()
+    logo_legacy.thumbnail((150, 75), Image.Resampling.LANCZOS)
+    entries.append(("stormakt_logo_legacy", logo_legacy))
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("wb") as handle:
@@ -197,6 +205,11 @@ def main() -> None:
         type=Path,
         default=Path("assets/stormakt3020/stormakt-bridge-cannons-projectiles-v1.png"),
     )
+    parser.add_argument(
+        "--logo-input",
+        type=Path,
+        default=Path("assets/stormakt3020/stormakt3020-logo-v1.png"),
+    )
     parser.add_argument("--output", type=Path, default=Path("assets/stormakt3020/stormakt3020.wfsa"))
     args = parser.parse_args()
     build(
@@ -207,6 +220,7 @@ def main() -> None:
         args.environment_input,
         args.combat_detail_input,
         args.background_input,
+        args.logo_input,
         args.output,
     )
 

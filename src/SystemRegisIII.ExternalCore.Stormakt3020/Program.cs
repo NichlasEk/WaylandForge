@@ -1982,18 +1982,26 @@ internal sealed class StormaktGame
     {
         int panelWidth = Math.Min(340, _width - 24);
         int panelX = (_width - panelWidth) / 2;
-        int panelTop = _height <= 224 ? 24 : 28;
+        bool legacy = _height <= 224;
+        int panelTop = legacy ? 67 : 103;
         int panelBottom = _height - 12;
-        int listY = _height <= 224 ? 70 : 82;
-        int rowHeight = _height <= 224 ? 19 : 23;
+        int listY = legacy ? 82 : 120;
+        int rowHeight = legacy ? 18 : 21;
+        string logoName = legacy ? "stormakt_logo_legacy" : "stormakt_logo_wide";
+        if (_sprites?.TryGet(logoName, out Sprite logo) == true)
+        {
+            DrawSprite(frame, logo, (_width - logo.Width) / 2, legacy ? 0 : 1);
+        }
+        else
+        {
+            DrawText(frame, (_width - 78) / 2, legacy ? 22 : 45, "STORMAKT 3020", 0xffffd66b);
+        }
         DrawRect(frame, panelX, panelTop, panelWidth, panelBottom - panelTop + 1, 0xff080d12);
         DrawLine(frame, panelX, panelTop, panelX + panelWidth - 1, panelTop, 0xffffd66b);
         DrawLine(frame, panelX, panelBottom, panelX + panelWidth - 1, panelBottom, 0xff2f74c9);
-        DrawRect(frame, panelX + 8, panelTop + 6, panelWidth - 16, 32, 0xff101b25);
-        DrawLine(frame, panelX + 16, panelTop + 10, panelX + 70, panelTop + 10, 0xff8a6b38);
-        DrawLine(frame, panelX + panelWidth - 71, panelTop + 10, panelX + panelWidth - 17, panelTop + 10, 0xff8a6b38);
-        DrawText(frame, (_width - 78) / 2, panelTop + 8, "STORMAKT 3020", 0xffffd66b);
-        DrawText(frame, (_width - 72) / 2, panelTop + 23, "VÄLJ FÄLTTÅG", 0xff9bd4dc);
+        DrawLine(frame, panelX + 12, panelTop + 8, panelX + 102, panelTop + 8, 0xff8a6b38);
+        DrawLine(frame, panelX + panelWidth - 103, panelTop + 8, panelX + panelWidth - 13, panelTop + 8, 0xff8a6b38);
+        DrawText(frame, (_width - 72) / 2, panelTop + 4, "VÄLJ FÄLTTÅG", 0xff9bd4dc);
 
         for (int index = 0; index < CampaignNames.Length; index++)
         {
