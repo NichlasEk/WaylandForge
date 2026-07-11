@@ -1,0 +1,80 @@
+{
+  "records": [
+    {
+      "kind": "reference",
+      "role": "ebba-grip",
+      "job_id": "02e9630bac9845ea8d7fbf405b509219",
+      "file": "assets/stormakt3020/radio/references/ebba-grip-reference.wav",
+      "sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1",
+      "request": {
+        "text": "Karl CCLV, lyssna noga. Flottan håller kursen genom mörkret och ingen lämnas bakom oss. Instrumenten visar främmande signaler mellan gruvmånarna. Jag vill ha lugn eld, öppna ögon och full kontroll över skeppet tills vi vet vem som följer oss.",
+        "language": "sv",
+        "voice_instruction": "An adult Swedish female general-admiral, composed and authoritative, low warm register, crisp military diction, restrained urgency, natural Swedish pronunciation, never theatrical or breathy.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302021
+      }
+    },
+    {
+      "kind": "reference",
+      "role": "soren-svartkrut",
+      "job_id": "a572686db571433aa8d8513e32011d55",
+      "file": "assets/stormakt3020/radio/references/soren-svartkrut-reference.wav",
+      "sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b",
+      "request": {
+        "text": "Ni blårockar färdas långt från era kartor. Här bär varje sten ett namn och varje mörk signal har ett minne. Jag heter Sören Svartkrut. Håll fingret från avtryckaren, så kanske skogen låter er passera med både skepp och stolthet i behåll.",
+        "language": "sv",
+        "voice_instruction": "An adult Scanian male outlaw captain, rugged baritone, dry wit and controlled menace, clear Swedish with a subtle southern Scanian color, intelligent and charismatic, never comic or exaggerated.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302022
+      }
+    },
+    {
+      "kind": "line",
+      "line": "ebba-skanska-signal",
+      "role": "ebba-grip",
+      "job_id": "30dbb807d70a4f46a2c54df7c2389084",
+      "file": "assets/stormakt3020/radio/raw/ebba-skanska-signal-sv-raw.wav",
+      "sha256": "5328d83d05a5d884c40c29833115a9eb2a3a7ad82cee400ce8b567cc556b12d9",
+      "request": "assets/stormakt3020/radio/raw/ebba-skanska-signal-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "soren-svarta-skogen",
+      "role": "soren-svartkrut",
+      "job_id": "3296dcf00936401192a6cfd315e7bf48",
+      "file": "assets/stormakt3020/radio/raw/soren-svarta-skogen-sv-raw.wav",
+      "sha256": "e6ff6efc491c15f19454b56a419c472ead0455c70af92bb21b2432dd9c4b7e0f",
+      "request": "assets/stormakt3020/radio/raw/soren-svarta-skogen-sv-request.json",
+      "reference_sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-identifierar-soren",
+      "role": "ebba-grip",
+      "job_id": "ddfb61acb1484a92966b5b2c0f70371d",
+      "file": "assets/stormakt3020/radio/raw/ebba-identifierar-soren-sv-raw.wav",
+      "sha256": "683d599a568e69e4c6b8d5c41198611748c57bf4beb5d084ce3e4c0fb411f1da",
+      "request": "assets/stormakt3020/radio/raw/ebba-identifierar-soren-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "soren-fogdekonvoj",
+      "role": "soren-svartkrut",
+      "job_id": "b3ad07c7c28142589e8b96e1e9b2fd2e",
+      "file": "assets/stormakt3020/radio/raw/soren-fogdekonvoj-sv-raw.wav",
+      "sha256": "8d985f75c320342ae024afcd458c97f2da9096b1b7cd0b25ee49d155fd1b0ec4",
+      "request": "assets/stormakt3020/radio/raw/soren-fogdekonvoj-sv-request.json",
+      "reference_sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b"
+    }
+  ],
+  "service": "http://127.0.0.1:8765",
+  "reference_backend": "voxcpm2",
+  "dialogue_backend": "dots.tts-mf",
+  "reference_ownership": "Fully synthetic role references generated locally; no real-person or third-party voice reference is used."
+}

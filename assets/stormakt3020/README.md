@@ -97,11 +97,19 @@ The external core triggers them from actual gameplay events and mixes up to 32 v
 
 ## Radio voices
 
-The first videocom prototype uses three synthetic English placeholder voices under `radio/voices/`. They were rendered by EutherLink's GrapheneOS Matcha English backend without reference-voice cloning. Requests, raw output, job IDs, hashes and approval state are preserved under `radio/`; none of these voices are final casting.
+The first videocom prototype uses three synthetic English placeholder voices under `radio/voices/`. Skånska skuggor adds four Swedish pilot lines through a two-stage local casting pipeline: VoxCPM2 creates fully synthetic Ebba and Sören reference performances, then Dots MF renders versioned dialogue from each reference WAV and exact transcript. Requests, raw output, job IDs, hashes and approval state are preserved under `radio/`; no known or third-party voice is cloned and none of these voices are final casting until listened to and approved.
 
 Rebuild the 48 kHz stereo radio-filtered runtime files from the raw WAV files with:
 
 ```sh
+python tools/stormakt3020/build_radio_voices.py
+```
+
+Create or refresh the synthetic casting references and Dots dialogue with:
+
+```sh
+python tools/stormakt3020/render_radio_cast.py references
+python tools/stormakt3020/render_radio_cast.py lines
 python tools/stormakt3020/build_radio_voices.py
 ```
 

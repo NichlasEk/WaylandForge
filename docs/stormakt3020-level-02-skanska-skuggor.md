@@ -8,6 +8,8 @@ Sören's generated three-state corsair crosses the background without collision 
 
 Current audio slice: `skanska-skuggor-loop-v1.wav` is the dedicated runtime score, selected through the level id and isolated from Stora Bält combat music.
 
+Current dialogue slice: four Swedish pilot lines for Ebba and Sören are generated through synthetic VoxCPM2 casting references and Dots MF line rendering, then passed through the deterministic runtime radio filter. Sören transmissions use their own copper/green frame rather than Danish red/white.
+
 ## Dramatiskt löfte
 
 Efter reträtten över Stora Bält söker Karl CCLV reservdelar i ett mörkt asteroidbälte av kristallgranar, gruvmånar och glödande kolmilor. Danska fogdekonvojer plundrar samma område, men en tredje svart/kopparfärgad styrka slår mot båda sidor. Spelaren möter framtidens snapphane **Sören Svartkrut**: först störsändare och kapare, sedan miniboss och till sist en motvillig möjlig allierad.

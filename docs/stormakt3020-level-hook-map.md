@@ -87,7 +87,7 @@ First asset batch:
 
 - `StormaktMusicLoop` already preloads and crossfades menu/combat/boss tracks.
 - Level 2 selects `StormaktMusicTrack.Skanska`: a 21-bar 92 BPM loop derived from the generated source at an exact bar boundary, using the shared runtime crossfade.
-- `StormaktVoice` and `LoadVoices` need a Sören entry; placeholder English voice is acceptable.
+- The repo-local casting spine is `radio/skanska-cast.json` -> VoxCPM2 synthetic role reference -> Dots MF line render -> `build_radio_voices.py` deterministic runtime filter. Four Skåne line IDs are wired through `StormaktVoice`, `LoadVoices` and the level-specific radio table.
 - New SFX should enter the existing bounded mixer queue. Do not open a second audio stream.
 
 ## Skånska build checkpoints

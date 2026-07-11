@@ -111,8 +111,10 @@ internal sealed class StormaktGame
     ];
     private static readonly RadioCard[] SkanskaRadioCards =
     [
-        new(90, 330, false, "EBBA GRIP", "OKÄND SIGNAL", "HÅLL KURSEN", StormaktVoice.EbbaGrip, "portrait_ebba"),
-        new(900, 360, true, "SÖREN SVARTKRUT", "NI FÄRDAS I", "VÅR SVARTA SKOG", null, "portrait_soren"),
+        new(90, 330, false, "EBBA GRIP", "OKÄND SIGNAL", "HÅLL KURSEN", StormaktVoice.EbbaSkanskaSignal, "portrait_ebba"),
+        new(900, 360, true, "SÖREN SVARTKRUT", "NI FÄRDAS I", "VÅR SVARTA SKOG", StormaktVoice.SorenSvartaSkogen, "portrait_soren", true),
+        new(1_500, 330, false, "EBBA GRIP", "SÖREN SVARTKRUT", "KAPARE OCH VÄG", StormaktVoice.EbbaIdentifierarSoren, "portrait_ebba"),
+        new(2_280, 270, true, "SÖREN SVARTKRUT", "FOGDEKONVOJ", "SKJUT PRYDLIGT", StormaktVoice.SorenFogdekonvoj, "portrait_soren", true),
     ];
     private static readonly EnemyWave[] EnemyWaves =
     [
@@ -2223,9 +2225,9 @@ internal sealed class StormaktGame
                 ? _width - (width * slide / 8) - 2
                 : -width + (width * slide / 8) + 2;
             int y = 18;
-            uint frameColor = card.Enemy ? 0xffc92f42 : 0xff2f74c9;
-            uint lampColor = card.Enemy ? 0xfff4f1e8 : 0xffffd66b;
-            uint uniformColor = card.Enemy ? 0xff8f1f31 : 0xff245ca5;
+            uint frameColor = card.Snapphane ? 0xff87583a : card.Enemy ? 0xffc92f42 : 0xff2f74c9;
+            uint lampColor = card.Snapphane ? 0xff65c58a : card.Enemy ? 0xfff4f1e8 : 0xffffd66b;
+            uint uniformColor = card.Snapphane ? 0xff27332b : card.Enemy ? 0xff8f1f31 : 0xff245ca5;
 
             DrawRect(frame, x, y, width, height, 0xff081019);
             DrawLine(frame, x, y, x + width - 1, y, frameColor);
@@ -2578,7 +2580,8 @@ internal sealed class StormaktGame
         string Line1,
         string Line2,
         StormaktVoice? Voice,
-        string PortraitBase);
+        string PortraitBase,
+        bool Snapphane = false);
     private readonly record struct EnemyWave(
         int StartFrame,
         int EndFrame,

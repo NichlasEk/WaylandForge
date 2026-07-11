@@ -5,16 +5,17 @@ import math
 import random
 import struct
 import wave
+import zlib
 from pathlib import Path
 
 
 RATE = 48_000
 RAW = Path("assets/stormakt3020/radio/raw")
 OUTPUT = Path("assets/stormakt3020/radio/voices")
-VOICES = {
-    "ebba-grip-en-raw.wav": "ebba-grip-en-radio.wav",
-    "rasmus-gyldentold-en-raw.wav": "rasmus-gyldentold-en-radio.wav",
-    "kung-christian-en-raw.wav": "kung-christian-en-radio.wav",
+LEGACY_SEEDS = {
+    "ebba-grip-en-raw.wav": 302_100,
+    "rasmus-gyldentold-en-raw.wav": 302_101,
+    "kung-christian-en-raw.wav": 302_102,
 }
 
 
@@ -87,9 +88,12 @@ def write_stereo(path: Path, samples: list[float]) -> None:
 
 
 def main() -> None:
-    for index, (source_name, output_name) in enumerate(VOICES.items()):
-        rate, samples = read_mono(RAW / source_name)
-        processed = radio_filter(resample(samples, rate), 302_100 + index)
+    sources = sorted(RAW.glob("*-raw.wav"))
+    for source in sources:
+        output_name = source.name.replace("-raw.wav", "-radio.wav")
+        rate, samples = read_mono(source)
+        seed = LEGACY_SEEDS.get(source.name, 400_000 + zlib.crc32(source.name.encode("utf-8")) % 100_000)
+        processed = radio_filter(resample(samples, rate), seed)
         write_stereo(OUTPUT / output_name, processed)
         print(f"Wrote {output_name}: {len(processed) / RATE:.2f}s")
 

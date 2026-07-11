@@ -1,0 +1,62 @@
+{
+  "service": "http://127.0.0.1:8765",
+  "reference_backend": "voxcpm2",
+  "dialogue_backend": "dots.tts-mf",
+  "reference_ownership": "Fully synthetic role references generated locally; no real-person or third-party voice reference is used.",
+  "roles": [
+    {
+      "id": "ebba-grip",
+      "speaker": "RIKSAMIRAL EBBA GRIP",
+      "language": "sv",
+      "voice_instruction": "An adult Swedish female general-admiral, composed and authoritative, low warm register, crisp military diction, restrained urgency, natural Swedish pronunciation, never theatrical or breathy.",
+      "reference_text": "Karl CCLV, lyssna noga. Flottan håller kursen genom mörkret och ingen lämnas bakom oss. Instrumenten visar främmande signaler mellan gruvmånarna. Jag vill ha lugn eld, öppna ögon och full kontroll över skeppet tills vi vet vem som följer oss.",
+      "reference_seed": 302021
+    },
+    {
+      "id": "soren-svartkrut",
+      "speaker": "SÖREN SVARTKRUT",
+      "language": "sv",
+      "voice_instruction": "An adult Scanian male outlaw captain, rugged baritone, dry wit and controlled menace, clear Swedish with a subtle southern Scanian color, intelligent and charismatic, never comic or exaggerated.",
+      "reference_text": "Ni blårockar färdas långt från era kartor. Här bär varje sten ett namn och varje mörk signal har ett minne. Jag heter Sören Svartkrut. Håll fingret från avtryckaren, så kanske skogen låter er passera med både skepp och stolthet i behåll.",
+      "reference_seed": 302022
+    }
+  ],
+  "lines": [
+    {
+      "id": "ebba-skanska-signal",
+      "role": "ebba-grip",
+      "level": 2,
+      "frame": 90,
+      "text": "Karl CCLV. Okänd signal i skogen. Håll kursen.",
+      "subtitle_lines": ["OKÄND SIGNAL", "HÅLL KURSEN"],
+      "seed": 302121
+    },
+    {
+      "id": "soren-svarta-skogen",
+      "role": "soren-svartkrut",
+      "level": 2,
+      "frame": 900,
+      "text": "Ni färdas i vår svarta skog, blårockar.",
+      "subtitle_lines": ["NI FÄRDAS I", "VÅR SVARTA SKOG"],
+      "seed": 302122
+    },
+    {
+      "id": "ebba-identifierar-soren",
+      "role": "ebba-grip",
+      "level": 2,
+      "frame": 1500,
+      "text": "Sören Svartkrut. Kapare, sabotör och möjligen vår enda väg framåt.",
+      "subtitle_lines": ["SÖREN SVARTKRUT", "KAPARE OCH VÄG"],
+      "seed": 302123
+    },
+    {
+      "id": "soren-fogdekonvoj",
+      "role": "soren-svartkrut",
+      "level": 2,
+      "frame": 2280,
+      "text": "Fogdekonvoj föröver. Skjut prydligt för en gångs skull.",
+      "subtitle_lines": ["FOGDEKONVOJ", "SKJUT PRYDLIGT"],
+      "seed": 302124
+    }
+  ]
+}
