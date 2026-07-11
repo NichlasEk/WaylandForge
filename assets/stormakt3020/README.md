@@ -2,6 +2,8 @@
 
 `karl-cclv-dark-frigate-v1.png` is the active dark Swedish player-frigate sheet, with matched normal and overheated states. Its painted flame area is cropped during asset packing; runtime draws two pulsing thrust jets only while a movement direction is held. `karl-cclv-swedish-hero-danish-enemies-v3.png` remains the standard-enemy/projectile source and preserves the superseded bright player concept. `stormakt-danish-boss-enemies-v1.png` is the transparent production sheet for Kronens Tiende, fogde sloops and the tax-seal drone. `stormakt-radio-portraits-v1.png` supplies paired neutral/speaking portraits for Ebba Grip, Fogde Rasmus and Kung Christian. `stormakt-stora-balt-environment-v1.png` contains physical bridge and parallax props, while `stormakt-stora-balt-background-v1.png` is the tall scrolling nebula plate. Each `-source.png` sibling preserves the original flat green generation, and the exact image prompts are versioned beside them.
 
+`stormakt-bridge-cannons-projectiles-v1.png` adds three bridge-collapse pieces, intact/destroyed Danish bridge cannon states, a detachable boss broadside cannon and red/white/gold enemy projectile families. Runtime uses the wreck pieces during the existing 45-frame collapse and mirrors the broadside module for the boss's right side.
+
 Prompt summary:
 
 - Player ship: Karl CCLV, ornate Swedish blue/yellow and brass steampunk spaceship.
@@ -19,7 +21,7 @@ Rebuild the pack after editing/replacing the concept sheet:
 python tools/stormakt3020/build_assets.py
 ```
 
-The builder currently packs 30 named sprites, including normal/hot player states, eight environment parts and separate 320- and 400-pixel-wide scrolling backgrounds. Each background is followed by its vertical mirror, making both wrap boundaries exact instead of exposing a hard seam. Active radio cards alternate their neutral and speaking frames every eight simulation frames. All former code-drawn backgrounds, faces, player ship and physical bridge pieces remain missing-asset fallbacks. The builder trims alpha and downsamples with high-quality filtering; gameplay keeps separate deterministic hitboxes.
+The builder currently packs 39 named sprites, including normal/hot player states, environment parts, combat-detail assets and separate 320- and 400-pixel-wide scrolling backgrounds. Each background is followed by its vertical mirror, making both wrap boundaries exact instead of exposing a hard seam. Active radio cards alternate their neutral and speaking frames every eight simulation frames. All former code-drawn backgrounds, faces, player ship, bridge pieces, cannons and projectiles remain missing-asset fallbacks. The builder trims alpha and downsamples with high-quality filtering; gameplay keeps separate deterministic hitboxes.
 
 To rebuild the transparent generated sheet from its chroma-key source:
 

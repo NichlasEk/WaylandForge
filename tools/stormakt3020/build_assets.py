@@ -52,6 +52,18 @@ ENVIRONMENT_SPRITES = [
     ("belt_asteroids_generated", (530, 1113, 1060, 1484), (88, 62)),
 ]
 
+COMBAT_DETAIL_SPRITES = [
+    ("bridge_debris_slab", (0, 0, 500, 350), (54, 34)),
+    ("bridge_debris_rail", (500, 0, 1000, 350), (50, 22)),
+    ("bridge_debris_machine", (1000, 0, 1499, 350), (36, 30)),
+    ("enemy_bridge_cannon", (0, 350, 500, 700), (38, 42)),
+    ("boss_broadside_cannon", (500, 350, 1000, 700), (44, 30)),
+    ("enemy_bridge_cannon_wreck", (1000, 350, 1499, 700), (38, 42)),
+    ("enemy_shot_red", (0, 700, 500, 1049), (8, 12)),
+    ("enemy_shot_white", (500, 700, 1000, 1049), (8, 12)),
+    ("enemy_shot_seal", (1000, 700, 1499, 1049), (10, 10)),
+]
+
 
 def chroma_alpha(image: Image.Image) -> Image.Image:
     rgba = image.convert("RGBA")
@@ -112,6 +124,7 @@ def build(
     portrait_input_path: Path,
     player_input_path: Path,
     environment_input_path: Path,
+    combat_detail_input_path: Path,
     background_input_path: Path,
     output_path: Path,
 ) -> None:
@@ -120,6 +133,7 @@ def build(
     portrait_source = Image.open(portrait_input_path)
     player_source = Image.open(player_input_path)
     environment_source = Image.open(environment_input_path)
+    combat_detail_source = Image.open(combat_detail_input_path)
     background_source = Image.open(background_input_path).convert("RGBA")
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
@@ -127,6 +141,7 @@ def build(
     append_sprites(entries, portrait_source, RADIO_PORTRAITS)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
+    append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
     entries.append(("stora_balt_background", mirrored_background(background_source, 320, 700)))
     entries.append(("stora_balt_background_wide", mirrored_background(background_source, 400, 875)))
 
@@ -172,6 +187,11 @@ def main() -> None:
         type=Path,
         default=Path("assets/stormakt3020/stormakt-stora-balt-background-v1.png"),
     )
+    parser.add_argument(
+        "--combat-detail-input",
+        type=Path,
+        default=Path("assets/stormakt3020/stormakt-bridge-cannons-projectiles-v1.png"),
+    )
     parser.add_argument("--output", type=Path, default=Path("assets/stormakt3020/stormakt3020.wfsa"))
     args = parser.parse_args()
     build(
@@ -180,6 +200,7 @@ def main() -> None:
         args.portrait_input,
         args.player_input,
         args.environment_input,
+        args.combat_detail_input,
         args.background_input,
         args.output,
     )

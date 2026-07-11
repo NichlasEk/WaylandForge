@@ -1229,6 +1229,17 @@ internal sealed class StormaktGame
         if (_sprites?.TryGet(generatedSpriteName, out Sprite generatedBoss) == true)
         {
             DrawSprite(frame, generatedBoss, x - generatedBoss.Width / 2, y - generatedBoss.Height / 2);
+            if (_sprites.TryGet("boss_broadside_cannon", out Sprite broadsideCannon))
+            {
+                if (boss.LeftCannonHealth > 0)
+                {
+                    DrawSprite(frame, broadsideCannon, x - BossCannonOffset - broadsideCannon.Width / 2, y + 7 - broadsideCannon.Height / 2);
+                }
+                if (boss.RightCannonHealth > 0)
+                {
+                    DrawSpriteFlippedX(frame, broadsideCannon, x + BossCannonOffset - broadsideCannon.Width / 2, y + 7 - broadsideCannon.Height / 2);
+                }
+            }
             if (boss.LeftCannonHealth <= 0)
             {
                 DrawBossCannon(frame, x - BossCannonOffset, y + 7, 0, 0, 0, 0xff202932);
@@ -1480,6 +1491,19 @@ internal sealed class StormaktGame
             }
 
             uint turret = target.Enabled ? 0xff8f2635 : 0xff3b4145;
+            string cannonName = target.Enabled ? "enemy_bridge_cannon" : "enemy_bridge_cannon_wreck";
+            if (_sprites?.TryGet(cannonName, out Sprite cannon) == true)
+            {
+                DrawSprite(frame, cannon, target.X - cannon.Width / 2, target.Y - cannon.Height / 2);
+                int generatedCycle = target.Age % 180;
+                if (target.Enabled && generatedCycle is >= 40 and < 88 && target.Y > 24 && target.Y < _height - 50)
+                {
+                    uint lockColor = (generatedCycle & 7) < 4 ? 0xffc51f35 : 0xff6f2631;
+                    DrawLine(frame, target.X, target.Y + 16, _shipX, _shipY, lockColor);
+                    DrawRect(frame, target.X - 2, target.Y - 19, 5, 3, 0xffff6b62);
+                }
+                continue;
+            }
             if (_sprites?.TryGet("bridge_turret_generated", out Sprite generatedTurret) == true)
             {
                 DrawSprite(frame, generatedTurret, target.X - generatedTurret.Width / 2, target.Y - generatedTurret.Height / 2);
@@ -1517,6 +1541,17 @@ internal sealed class StormaktGame
         uint ember = (fall & 5) < 3 ? 0xffff8a4a : 0xffb34c38;
         if (target.Type == GroundTargetType.BridgeSpan)
         {
+            if (_sprites?.TryGet("bridge_debris_slab", out Sprite slab) == true &&
+                _sprites.TryGet("bridge_debris_rail", out Sprite rail) &&
+                _sprites.TryGet("bridge_debris_machine", out Sprite machine))
+            {
+                DrawSprite(frame, slab, x - 44, target.Y - 16 + fall / 4);
+                DrawSprite(frame, rail, x - 5, target.Y - 12 + fall / 2);
+                DrawSprite(frame, machine, x + 22, target.Y - 8 + fall * 2 / 3);
+                PutPixel(frame, x - 10, target.Y + fall / 2, ember);
+                PutPixel(frame, x + 18, target.Y + 5 + fall / 2, ember);
+                return;
+            }
             DrawRect(frame, x - 43, target.Y - 8, 25, 13, 0xff4b3c3d);
             DrawRect(frame, x - 12, target.Y - 4 + fall / 5, 27, 12, 0xff393a40);
             DrawRect(frame, x + 22, target.Y - 10 + fall / 3, 21, 11, 0xff503b38);
@@ -1525,6 +1560,13 @@ internal sealed class StormaktGame
         }
         else
         {
+            if (target.Type == GroundTargetType.Turret &&
+                _sprites?.TryGet("enemy_bridge_cannon_wreck", out Sprite cannonWreck) == true)
+            {
+                DrawSprite(frame, cannonWreck, x - cannonWreck.Width / 2, target.Y - cannonWreck.Height / 2 + fall / 2);
+                DrawLine(frame, x - 7, target.Y - 5, x + 8, target.Y + 7, ember);
+                return;
+            }
             FillCircle(frame, x, target.Y, target.Type == GroundTargetType.Turret ? 8 : 5, 0xff44383a);
             DrawLine(frame, x - 7, target.Y - 5, x + 8, target.Y + 7, ember);
         }
@@ -1555,6 +1597,18 @@ internal sealed class StormaktGame
         {
             int x = (int)Math.Round(shot.X);
             int y = (int)Math.Round(shot.Y);
+            string? generatedShotName = shot.Kind switch
+            {
+                0 => "enemy_shot_red",
+                1 or 4 => "enemy_shot_seal",
+                2 => "enemy_shot_white",
+                _ => null,
+            };
+            if (generatedShotName is not null && _sprites?.TryGet(generatedShotName, out Sprite generatedShot) == true)
+            {
+                DrawSprite(frame, generatedShot, x - generatedShot.Width / 2, y - generatedShot.Height / 2);
+                continue;
+            }
             uint outer = shot.Kind switch
             {
                 1 => 0xffd6b25e,
@@ -1888,6 +1942,48 @@ internal sealed class StormaktGame
 
                 int index = (py * _width) + px;
                 if (alpha >= 250)
+                {
+                    frame[index] = src;
+                    continue;
+                }
+
+                uint dst = frame[index];
+                uint inv = 255 - alpha;
+                uint r = (((src >> 16) & 0xff) * alpha + ((dst >> 16) & 0xff) * inv) / 255;
+                uint g = (((src >> 8) & 0xff) * alpha + ((dst >> 8) & 0xff) * inv) / 255;
+                uint b = ((src & 0xff) * alpha + (dst & 0xff) * inv) / 255;
+                frame[index] = 0xff000000u | (r << 16) | (g << 8) | b;
+            }
+        }
+    }
+
+    private void DrawSpriteFlippedX(uint[] frame, Sprite sprite, int x, int y)
+    {
+        for (int sy = 0; sy < sprite.Height; sy++)
+        {
+            int py = y + sy;
+            if ((uint)py >= _height)
+            {
+                continue;
+            }
+
+            for (int sx = 0; sx < sprite.Width; sx++)
+            {
+                int px = x + sx;
+                if ((uint)px >= _width)
+                {
+                    continue;
+                }
+
+                uint src = sprite.Pixels[(sy * sprite.Width) + (sprite.Width - 1 - sx)];
+                uint alpha = src >> 24;
+                if (alpha == 0)
+                {
+                    continue;
+                }
+
+                int index = py * _width + px;
+                if (alpha == 255)
                 {
                     frame[index] = src;
                     continue;

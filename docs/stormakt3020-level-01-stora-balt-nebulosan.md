@@ -9,6 +9,13 @@ Status: checkpoint 1, 2A-2C, bosscheckpoint 3A-3C och den första grafikpolishen
 - Fiendeformationer, kedjeankare, bossens sidledspass och fas-3-rusning använder hela det bredare fältet.
 - WFSA innehåller separata sömlösa 320- och 400-pixelsbakgrunder. `WAYLANDFORGE_STORMAKT_LEGACY_320=1` återställer prototypfältet för A/B-test.
 
+## Combat detail-polish - 2026-07-11
+
+- Brokollapsen använder tre separata genererade vrakdelar: tungt däck, räls/truss och maskinkärna. Delarna faller med olika vertikal förskjutning under samma deterministiska 45 rutor.
+- Marktornet har separata hela och utslagna rödvita kanonassets. Kronens Tiende får en genererad bredsidekanon som speglas för styrbordssidan och fortfarande kan förstöras separat.
+- Riktade röda skott, vita kungliga salvor och guldsigillets ring/spiral använder egna små genererade projektilsprites. Kollisionsradier och banor är oförändrade.
+- Kodritade vrak, kanoner och projektiler ligger kvar som fallback om ett assetnamn saknas.
+
 ## Implementerad grafikpolish - 2026-07-11
 
 - Den kodritade himlen/nebulosan har ersatts av en genererad, hög vertikal Stora Bält-plåt som rullar långsamt bakom stjärnlagret. Mittkorridoren är avsiktligt mörk och lågkontrast.
