@@ -34,19 +34,27 @@ En tät mark- och bromiljö där spelaren flyger längs en enorm orbital ringbro
 
 Boss: en tvådelad brofästning, **Helsingör/Helsingborg**, som anfaller från varsin skärmkant och delar livsmätare.
 
-### Bana 4 - Fogdens tionde värld
+### Bana 4 - Silverkroppen i skogen
+
+Ebba upptäcker en massiv silverkropp under en skogsmåne och beordrar Karl CCLV att landa för att säkra fälttågets krigskassa. Kampanjen växlar till ett kompakt top-down-RTS: ångkraft, silverkross, barack, djurhall, försvarstorn och karoliner ridande på bepansrade älgar mot fogdens allt vansinnigare marktrupper.
+
+Markboss: det mobila indrivningsfortet **Møntgrevens Toldhus**.
+
+Plan: `docs/stormakt3020-level-04-silverkroppen-i-skogen.md`.
+
+### Bana 5 - Fogdens tionde värld
 
 Infiltration av ett mekaniskt skattearkiv där beslagtagna skepp hänger i kedjor. Smalare korridorer, roterande tullportar och magnetiska myntminor ger en mer teknisk bana. Här avslöjas att fogdesystemet fortsätter kriget för att motivera sin egen existens.
 
 Boss: revisionsmaskinen **Rigsregnskabet**, en modulär valvkoloss som bygger om sin rustning av indrivna skeppsdelar.
 
-### Bana 5 - Snapphanens ed
+### Bana 6 - Snapphanens ed
 
 Sören leder spelaren genom en storm av vrak och falska fyrar mot fogdens kommandokedja. Banan har valbara riskkorridorer: hjälp rebellflottan och få mindre eldkraft nu men stöd i finalen, eller rusa mot målet för högre poäng.
 
 Boss/miniboss: först en hedersduell mot Sören, därefter gemensam strid mot jägarflottan **De Røde Hunde**.
 
-### Bana 6 - Köpenhamns sista ring
+### Bana 7 - Köpenhamns sista ring
 
 Final över en barock rymdstad med spiror, dockor, urverk och en kronformad försvarsring. Tidigare val avgör vilka allierade skepp som syns i bakgrunden och vilka batterier som redan är utslagna.
 
