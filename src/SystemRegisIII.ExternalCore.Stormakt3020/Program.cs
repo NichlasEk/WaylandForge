@@ -78,6 +78,9 @@ internal sealed class StormaktGame
     private const int BossPhaseThreeThreshold = 113;
     private const int BossCannonOffset = 54;
     private const int BossDockOffset = 68;
+    private const int GlimmingeMaxHealth = 720;
+    private const int GlimmingePhaseTwoHealth = 420;
+    private const int GlimmingeBurningHealth = 210;
     private const uint Up = 1u << 1;
     private const uint Down = 1u << 2;
     private const uint Left = 1u << 3;
@@ -119,7 +122,12 @@ internal sealed class StormaktGame
         new(900, 360, true, "SÖREN SVARTKRUT", "NI FÄRDAS I", "VÅR SVARTA SKOG", StormaktVoice.SorenSvartaSkogen, "portrait_soren", true),
         new(1_500, 330, false, "EBBA GRIP", "SÖREN SVARTKRUT", "KAPARE OCH VÄG", StormaktVoice.EbbaIdentifierarSoren, "portrait_ebba"),
         new(2_280, 300, true, "SÖREN SVARTKRUT", "FOGDEKONVOJ", "FÖRÖVER", StormaktVoice.SorenFogdekonvoj, "portrait_soren", true),
+        new(3_600, 480, true, "BIRGITTE BILLE", "JEG ER BIRGITTE", "JERN BØJER IKKE", StormaktVoice.BirgitteGlimmingeIntro, "portrait_birgitte"),
     ];
+    private static readonly RadioCard BirgittePhaseTwoRadio =
+        new(0, 420, true, "BIRGITTE BILLE", "FOLD BORENE UD!", "MAL HAM TIL STØV", StormaktVoice.BirgitteGlimmingeBor, "portrait_birgitte");
+    private static readonly RadioCard BirgitteDeathRadio =
+        new(0, 330, true, "BIRGITTE BILLE", "FALDER IKKE!", "DANMARK REJSER", StormaktVoice.BirgitteGlimmingeFalder, "portrait_birgitte");
     private static readonly RadioCard RasmusPhaseTwoRadio =
         new(0, 330, true, "FOGDE RASMUS", "HVAD LAVER I?", "STOP SKYDNINGEN!", StormaktVoice.RasmusBossFornaekter, "portrait_rasmus");
     private static readonly RadioCard RasmusPhaseThreeRadio =
@@ -660,7 +668,7 @@ internal sealed class StormaktGame
                 {
                     X = _width / 2.0,
                     Y = -72.0,
-                    Health = 360,
+                    Health = GlimmingeMaxHealth,
                     Phase = 1,
                 };
                 _enemyShots.Clear();
@@ -757,6 +765,10 @@ internal sealed class StormaktGame
         }
         boss.Age++;
         boss.PhaseAge++;
+        if (boss.BurningTransitionAge is > 0 and < 60)
+        {
+            boss.BurningTransitionAge++;
+        }
         if (boss.Phase == 3)
         {
             if (boss.PhaseAge is 1 or 35 or 70 or 110 or 155 or 210 or 270)
@@ -779,22 +791,52 @@ internal sealed class StormaktGame
             boss.Y = Math.Min(64.0, boss.Y + 0.92);
             return;
         }
-        boss.X = _width / 2.0 + Math.Sin((boss.Age - 150) * (boss.Phase == 1 ? 0.011 : 0.018)) *
-            (_width <= 320 ? 42.0 : 55.0);
+        double sweep = _width <= 320 ? 42.0 : 55.0;
+        if (boss.Phase == 1)
+        {
+            boss.X = _width / 2.0 + Math.Sin((boss.Age - 150) * 0.011) * sweep;
+        }
+        else
+        {
+            double phaseTwoX = _width / 2.0 + Math.Sin(boss.PhaseAge * 0.018) * sweep;
+            if (boss.PhaseAge < 60)
+            {
+                double t = boss.PhaseAge / 60.0;
+                double eased = t * t * (3.0 - 2.0 * t);
+                boss.X = boss.PhaseTransitionX + (phaseTwoX - boss.PhaseTransitionX) * eased;
+            }
+            else
+            {
+                boss.X = phaseTwoX;
+            }
+        }
+        bool shieldBraced = boss.Phase == 1 && boss.PhaseAge % 84 is >= 24 and <= 58;
 
         for (int shotIndex = _shots.Count - 1; shotIndex >= 0; shotIndex--)
         {
             Shot shot = _shots[shotIndex];
             if (Math.Abs(shot.X - boss.X) <= 56 && Math.Abs(shot.Y - boss.Y) <= 32)
             {
+                if (shieldBraced)
+                {
+                    _shots.RemoveAt(shotIndex);
+                    continue;
+                }
+                int previousHealth = boss.Health;
                 boss.Health -= shot.Power;
                 _shots.RemoveAt(shotIndex);
-                if (boss.Phase == 1 && boss.Health <= 210)
+                if (boss.Phase == 2 && previousHealth > GlimmingeBurningHealth && boss.Health <= GlimmingeBurningHealth)
                 {
-                    boss.Health = 210;
+                    boss.BurningTransitionAge = 1;
+                }
+                if (boss.Phase == 1 && boss.Health <= GlimmingePhaseTwoHealth)
+                {
+                    boss.Health = GlimmingePhaseTwoHealth;
                     boss.Phase = 2;
                     boss.PhaseAge = 0;
+                    boss.PhaseTransitionX = boss.X;
                     _enemyShots.Clear();
+                    ActivateBossRadio(BirgittePhaseTwoRadio);
                     _audio?.Trigger(StormaktSound.Broadside);
                 }
                 else if (boss.Phase == 2 && boss.Health <= 0)
@@ -805,7 +847,9 @@ internal sealed class StormaktGame
                     _score += 7_500;
                     _shots.Clear();
                     _enemyShots.Clear();
+                    _enemies.Clear();
                     _crystalSpears.Clear();
+                    ActivateBossRadio(BirgitteDeathRadio);
                     _audio?.Trigger(StormaktSound.Broadside);
                     break;
                 }
@@ -816,20 +860,58 @@ internal sealed class StormaktGame
         {
             FireGlimmingeWall(boss);
         }
+        if (boss.Phase == 1 && boss.PhaseAge % 240 == 120)
+        {
+            SpawnGlimmingeEscorts(boss, 2);
+        }
         else if (boss.Phase == 2)
         {
-            if (boss.PhaseAge % 66 == 24)
+            bool burningStage = boss.Health <= GlimmingeBurningHealth;
+            int drillInterval = burningStage ? 42 : 66;
+            int spearInterval = burningStage ? 90 : 150;
+            if (boss.PhaseAge % drillInterval == 24)
             {
                 FireEnemyShot((int)boss.X - 38, (int)boss.Y + 25, 4, 2.05);
                 FireEnemyShot((int)boss.X + 38, (int)boss.Y + 25, 4, 2.05);
             }
-            if (boss.PhaseAge % 150 == 60)
+            if (boss.PhaseAge % spearInterval == 60)
             {
                 int span = Math.Max(1, _width - 96);
-                int spearX = 48 + ((boss.PhaseAge / 150 * 97 + 41) % span);
+                int spearX = 48 + ((boss.PhaseAge / spearInterval * 97 + 41) % span);
                 _crystalSpears.Add(new CrystalSpear(spearX, 0));
             }
+            if (burningStage && boss.PhaseAge % 72 == 12)
+            {
+                FireGlimmingeEmbers(boss);
+            }
+            int escortInterval = burningStage ? 120 : 180;
+            if (boss.PhaseAge % escortInterval == 80)
+            {
+                SpawnGlimmingeEscorts(boss, burningStage ? 3 : 2);
+            }
         }
+    }
+
+    private void SpawnGlimmingeEscorts(GlimmingeState boss, int count)
+    {
+        for (int index = 0; index < count; index++)
+        {
+            int side = (index & 1) == 0 ? -1 : 1;
+            int spread = count == 3 && index == 2 ? 0 : side * 58;
+            _enemies.Add(new Enemy(
+                Math.Clamp((int)Math.Round(boss.X) + spread, 20, _width - 20),
+                (int)Math.Round(boss.Y) + 25 - index * 8,
+                1,
+                11,
+                12,
+                0xff3a3030,
+                6,
+                index * 1.7,
+                boss.PhaseAge + index * 37,
+                spread,
+                false));
+        }
+        _audio?.Trigger(StormaktSound.Deploy);
     }
 
     private void FireGlimmingeWall(GlimmingeState boss)
@@ -845,6 +927,18 @@ internal sealed class StormaktGame
             _enemyShots.Add(new EnemyShot(x, boss.Y + 24, 0, 1.65, 6));
         }
         _audio?.Trigger(StormaktSound.Broadside);
+    }
+
+    private void FireGlimmingeEmbers(GlimmingeState boss)
+    {
+        int x = (int)Math.Round(boss.X);
+        int y = (int)Math.Round(boss.Y) + 15;
+        for (int index = 0; index < 8; index++)
+        {
+            double angle = Math.PI / 8.0 + index * Math.PI / 4.0;
+            _enemyShots.Add(new EnemyShot(x, y, Math.Cos(angle) * 1.45, Math.Sin(angle) * 1.45, 4));
+        }
+        _audio?.Trigger(StormaktSound.EnemyExplosion);
     }
 
     private void StepCrystalSpears()
@@ -1291,13 +1385,16 @@ internal sealed class StormaktGame
                 enemy.X += wobble;
             }
 
-            if (enemy.Kind is 4 or 5 && enemy.Y > 24 && enemy.Y < _height - 64)
+            if (enemy.Kind is 4 or 5 or 6 && enemy.Y > 24 && enemy.Y < _height - 64)
             {
-                int attackCycle = (_missionFrame + enemy.BridgeGroup) % (enemy.Kind == 4 ? 150 : 210);
-                if (attackCycle == (enemy.Kind == 4 ? 96 : 132))
+                int attackPeriod = enemy.Kind switch { 4 => 150, 5 => 210, _ => 120 };
+                int fireFrame = enemy.Kind switch { 4 => 96, 5 => 132, _ => 64 };
+                int attackCycle = (_missionFrame + enemy.BridgeGroup) % attackPeriod;
+                if (attackCycle == fireFrame)
                 {
-                    FireEnemyShot(enemy.X, enemy.Y + enemy.Radius, enemy.Kind == 4 ? 5 : 0,
-                        enemy.Kind == 4 ? 2.35 : 1.85);
+                    int shotKind = enemy.Kind switch { 4 => 5, 5 => 7, 6 => 6, _ => 0 };
+                    double shotSpeed = enemy.Kind switch { 4 => 2.35, 6 => 2.55, _ => 1.85 };
+                    FireEnemyShot(enemy.X, enemy.Y + enemy.Radius, shotKind, shotSpeed);
                 }
             }
 
@@ -1790,6 +1887,11 @@ internal sealed class StormaktGame
 
     private void DrawSorenDecoy(uint[] frame, int x, int y, int phase)
     {
+        if (_sprites?.TryGet("soren_radar_decoy", out Sprite decoy) == true)
+        {
+            DrawSprite(frame, decoy, x - decoy.Width / 2, y - decoy.Height / 2);
+            return;
+        }
         uint signal = (phase / 5 & 1) == 0 ? 0xff2f7650 : 0xff315f47;
         DrawLine(frame, x, y - 13, x - 14, y + 11, signal);
         DrawLine(frame, x, y - 13, x + 14, y + 11, signal);
@@ -1812,18 +1914,59 @@ internal sealed class StormaktGame
         uint white = 0xffd8d2c5;
         uint crystal = 0xff536f69;
 
-        string generatedName = boss.Phase >= 2 ? "glimminge_jarn_damaged" : "glimminge_jarn";
-        if (_sprites?.TryGet(generatedName, out Sprite generatedBoss) == true)
+        if (_sprites is not null &&
+            _sprites.TryGet("glimminge_jarn", out Sprite intact) &&
+            _sprites.TryGet("glimminge_shield_braced", out Sprite shield) &&
+            _sprites.TryGet("glimminge_jarn_damaged", out Sprite damaged) &&
+            _sprites.TryGet("glimminge_burning", out Sprite burning) &&
+            _sprites.TryGet("glimminge_wreck", out Sprite wreck))
         {
-            DrawSprite(frame, generatedBoss, x - generatedBoss.Width / 2, y - generatedBoss.Height / 2 + deathFall);
+            if (boss.Phase == 1)
+            {
+                int shieldCycle = boss.PhaseAge % 84;
+                int shieldAlpha = shieldCycle switch
+                {
+                    < 18 => 0,
+                    < 30 => (shieldCycle - 18) * 255 / 12,
+                    <= 52 => 255,
+                    < 68 => (68 - shieldCycle) * 255 / 16,
+                    _ => 0,
+                };
+                DrawSprite(frame, intact, x - intact.Width / 2, y - intact.Height / 2);
+                if (shieldAlpha > 0)
+                {
+                    DrawSpriteAlpha(frame, shield, x - shield.Width / 2, y - shield.Height / 2, (uint)shieldAlpha);
+                }
+            }
+            else if (boss.Phase == 2 && boss.PhaseAge < 60)
+            {
+                DrawSprite(frame, intact, x - intact.Width / 2, y - intact.Height / 2);
+                DrawSpriteAlpha(frame, damaged, x - damaged.Width / 2, y - damaged.Height / 2,
+                    (uint)(boss.PhaseAge * 255 / 60));
+            }
+            else if (boss.Phase == 2 && boss.BurningTransitionAge is > 0 and < 60)
+            {
+                DrawSprite(frame, damaged, x - damaged.Width / 2, y - damaged.Height / 2);
+                DrawSpriteAlpha(frame, burning, x - burning.Width / 2, y - burning.Height / 2,
+                    (uint)(boss.BurningTransitionAge * 255 / 60));
+            }
+            else if (boss.Phase == 2)
+            {
+                Sprite current = boss.Health <= GlimmingeBurningHealth ? burning : damaged;
+                DrawSprite(frame, current, x - current.Width / 2, y - current.Height / 2);
+            }
+            else
+            {
+                int wreckAlpha = Math.Min(255, boss.PhaseAge * 255 / 60);
+                int wreckY = y - wreck.Height / 2 + Math.Min(22, deathFall);
+                DrawSprite(frame, burning, x - burning.Width / 2, y - burning.Height / 2);
+                DrawSpriteAlpha(frame, wreck, x - wreck.Width / 2, wreckY, (uint)wreckAlpha);
+            }
             if (boss.Phase == 2)
             {
-                DrawGlimmingeDrill(frame, x - 43, y + 29, -1, boss.PhaseAge, crystal);
-                DrawGlimmingeDrill(frame, x + 43, y + 29, 1, boss.PhaseAge, crystal);
-            }
-            if (boss.Phase == 3)
-            {
-                DrawGlimmingeDeathBlocks(frame, boss, x, y, deathFall);
+                uint drillAlpha = (uint)Math.Min(255, boss.PhaseAge * 255 / 60);
+                DrawGlimmingeDrill(frame, x - 43, y + 29, -1, boss.PhaseAge, crystal, drillAlpha);
+                DrawGlimmingeDrill(frame, x + 43, y + 29, 1, boss.PhaseAge, crystal, drillAlpha);
             }
             return;
         }
@@ -1866,7 +2009,7 @@ internal sealed class StormaktGame
         }
     }
 
-    private void DrawGlimmingeDrill(uint[] frame, int x, int y, int direction, int age, uint crystal)
+    private void DrawGlimmingeDrill(uint[] frame, int x, int y, int direction, int age, uint crystal, uint alpha = 255)
     {
         if (_sprites?.TryGet("glimminge_drill_turret", out Sprite drill) == true)
         {
@@ -1874,11 +2017,18 @@ internal sealed class StormaktGame
             int drawY = y - drill.Height / 2 + (age / 4 & 3);
             if (direction < 0)
             {
-                DrawSpriteFlippedX(frame, drill, drawX, drawY);
+                if (alpha >= 255)
+                {
+                    DrawSpriteFlippedX(frame, drill, drawX, drawY);
+                }
+                else
+                {
+                    DrawSpriteFlippedXAlpha(frame, drill, drawX, drawY, alpha);
+                }
             }
             else
             {
-                DrawSprite(frame, drill, drawX, drawY);
+                DrawSpriteAlpha(frame, drill, drawX, drawY, alpha);
             }
             return;
         }
@@ -1900,6 +2050,11 @@ internal sealed class StormaktGame
                 continue;
             }
             int y = 18 + (spear.Age - 48) * 5;
+            if (_sprites?.TryGet("glimminge_crystal_spear", out Sprite crystalSpear) == true)
+            {
+                DrawSprite(frame, crystalSpear, spear.X - crystalSpear.Width / 2, y - crystalSpear.Height / 2);
+                continue;
+            }
             FillTriangle(frame, spear.X, y + 22, spear.X - 9, y - 13, spear.X + 9, y - 13, 0xff29463f);
             DrawLine(frame, spear.X, y - 10, spear.X, y + 18, 0xff78a389);
         }
@@ -2217,6 +2372,12 @@ internal sealed class StormaktGame
 
             if (target.Type == GroundTargetType.SignalBeacon)
             {
+                string beaconName = target.Health <= 5 ? "skanska_signal_beacon_damaged" : "skanska_signal_beacon";
+                if (_sprites?.TryGet(beaconName, out Sprite beacon) == true)
+                {
+                    DrawSprite(frame, beacon, target.X - beacon.Width / 2, target.Y - beacon.Height / 2);
+                    continue;
+                }
                 uint signal = ((target.Age / 6) & 1) == 0 ? 0xff65c58a : 0xff2f7650;
                 uint copper = target.Health <= 5 ? 0xff6b4230 : 0xffa66b3f;
                 DrawRect(frame, target.X - 8, target.Y + 2, 17, 7, 0xff171d1b);
@@ -2341,6 +2502,10 @@ internal sealed class StormaktGame
                 0 => "enemy_shot_red",
                 1 or 4 => "enemy_shot_seal",
                 2 => "enemy_shot_white",
+                3 => "soren_copper_shot",
+                5 => "skanska_shot_signal",
+                6 => "glimminge_shot_iron",
+                7 => "fogde_convoy_shot",
                 _ => null,
             };
             if (generatedShotName is not null && _sprites?.TryGet(generatedShotName, out Sprite generatedShot) == true)
@@ -2418,13 +2583,29 @@ internal sealed class StormaktGame
         {
             int attackCycle = (_missionFrame + enemy.BridgeGroup) % 150;
             bool revealed = attackCycle is >= 78 and <= 108;
+            if (_sprites is not null && _sprites.TryGet("snapphane_mist_drone", out Sprite mistDrone))
+            {
+                if (revealed)
+                {
+                    DrawSprite(frame, mistDrone, enemy.X - mistDrone.Width / 2, enemy.Y - mistDrone.Height / 2);
+                }
+                return;
+            }
             uint hull = revealed ? 0xff253b32 : 0xff111916;
             uint copper = revealed ? 0xffa66b3f : 0xff3b3028;
             uint signal = 0xff65c58a;
-            FillTriangle(frame, enemy.X, enemy.Y - enemy.Radius, enemy.X - enemy.Radius, enemy.Y + enemy.Radius,
-                enemy.X + enemy.Radius, enemy.Y + enemy.Radius, hull);
-            DrawLine(frame, enemy.X - enemy.Radius + 2, enemy.Y + 4, enemy.X + enemy.Radius - 2, enemy.Y + 4, copper);
-            DrawRect(frame, enemy.X - 3, enemy.Y - 4, 6, 7, 0xff0d1211);
+            if (revealed)
+            {
+                FillTriangle(frame, enemy.X, enemy.Y - enemy.Radius, enemy.X - enemy.Radius, enemy.Y + enemy.Radius,
+                    enemy.X + enemy.Radius, enemy.Y + enemy.Radius, hull);
+                DrawLine(frame, enemy.X - enemy.Radius + 2, enemy.Y + 4, enemy.X + enemy.Radius - 2, enemy.Y + 4, copper);
+                DrawRect(frame, enemy.X - 3, enemy.Y - 4, 6, 7, 0xff0d1211);
+            }
+            else
+            {
+                DrawLine(frame, enemy.X - 5, enemy.Y + 3, enemy.X, enemy.Y - 5, hull);
+                DrawLine(frame, enemy.X, enemy.Y - 5, enemy.X + 5, enemy.Y + 3, hull);
+            }
             if (revealed)
             {
                 PutPixel(frame, enemy.X, enemy.Y - 2, signal);
@@ -2433,6 +2614,12 @@ internal sealed class StormaktGame
         }
         else if (enemy.Kind == 5)
         {
+            string bargeName = enemy.Health <= 3 ? "fogde_convoy_barge_damaged" : "fogde_convoy_barge";
+            if (_sprites?.TryGet(bargeName, out Sprite barge) == true)
+            {
+                DrawSprite(frame, barge, enemy.X - barge.Width / 2, enemy.Y - barge.Height / 2);
+                return;
+            }
             DrawRect(frame, enemy.X - enemy.Radius, enemy.Y - 7, enemy.Radius * 2 + 1, 15, 0xff2b3033);
             FillTriangle(frame, enemy.X, enemy.Y + enemy.Radius, enemy.X - enemy.Radius, enemy.Y + 5,
                 enemy.X + enemy.Radius, enemy.Y + 5, 0xff171c20);
@@ -2440,6 +2627,22 @@ internal sealed class StormaktGame
             DrawRect(frame, enemy.X - 2, enemy.Y - 7, 4, 15, danishWhite);
             DrawRect(frame, enemy.X - 7, enemy.Y + 1, 5, 4, 0xffb88745);
             DrawRect(frame, enemy.X + 3, enemy.Y + 1, 5, 4, 0xffb88745);
+        }
+        else if (enemy.Kind == 6)
+        {
+            int attackCycle = (_missionFrame + enemy.BridgeGroup) % 120;
+            string ravenName = enemy.Health <= 5
+                ? "glimminge_iron_raven_damaged"
+                : attackCycle is >= 45 and <= 76 ? "glimminge_iron_raven_attack" : "glimminge_iron_raven";
+            if (_sprites?.TryGet(ravenName, out Sprite raven) == true)
+            {
+                DrawSprite(frame, raven, enemy.X - raven.Width / 2, enemy.Y - raven.Height / 2);
+                return;
+            }
+            FillTriangle(frame, enemy.X, enemy.Y - 14, enemy.X - 12, enemy.Y + 11,
+                enemy.X + 12, enemy.Y + 11, 0xff202527);
+            DrawRect(frame, enemy.X - 11, enemy.Y + 3, 22, 4, danishRed);
+            DrawRect(frame, enemy.X - 2, enemy.Y - 9, 4, 18, danishWhite);
         }
         else if (enemy.Kind == 3)
         {
@@ -2514,7 +2717,7 @@ internal sealed class StormaktGame
             DrawRect(frame, glimmingeHudX, 18, 214, 16, 0xff090e0e);
             DrawText(frame, glimmingeHudX + 8, 21, "GLIMMINGE JÄRN", 0xffd8d2c5);
             DrawRect(frame, glimmingeHudX + 111, 23, 94, 5, 0xff24292b);
-            DrawRect(frame, glimmingeHudX + 111, 23, Math.Clamp(glimminge.Health, 0, 360) * 94 / 360, 5,
+            DrawRect(frame, glimmingeHudX + 111, 23, Math.Clamp(glimminge.Health, 0, GlimmingeMaxHealth) * 94 / GlimmingeMaxHealth, 5,
                 glimminge.Phase == 1 ? 0xff8f2635 : 0xffa66b3f);
             return;
         }
@@ -2616,10 +2819,17 @@ internal sealed class StormaktGame
     private void DrawGlimmingeResultWreck(uint[] frame, int x, int y)
     {
         int settle = Math.Min(18, _stageClearAge / 5);
-        DrawRect(frame, x - 34, y - 8 + settle, 28, 15, 0xff292d2f);
-        DrawRect(frame, x - 2, y - 3 + settle, 24, 13, 0xff3a3030);
-        DrawRect(frame, x + 25, y + 2 + settle, 17, 11, 0xff202527);
-        DrawLine(frame, x - 29, y - 7 + settle, x - 8, y + 5 + settle, 0xff8f2635);
+        if (_sprites?.TryGet("glimminge_wreck", out Sprite wreck) == true)
+        {
+            DrawSprite(frame, wreck, x - wreck.Width / 2, y - wreck.Height / 2 + settle);
+        }
+        else
+        {
+            DrawRect(frame, x - 34, y - 8 + settle, 28, 15, 0xff292d2f);
+            DrawRect(frame, x - 2, y - 3 + settle, 24, 13, 0xff3a3030);
+            DrawRect(frame, x + 25, y + 2 + settle, 17, 11, 0xff202527);
+            DrawLine(frame, x - 29, y - 7 + settle, x - 8, y + 5 + settle, 0xff8f2635);
+        }
         if (_stageClearAge is >= 70 and < 105 && (_stageClearAge / 5 & 1) == 0)
         {
             FillCircle(frame, x + 7, y - 8 + settle, 2, 0xff65c58a);
@@ -2874,6 +3084,62 @@ internal sealed class StormaktGame
                 uint g = (((src >> 8) & 0xff) * alpha + ((dst >> 8) & 0xff) * inv) / 255;
                 uint b = ((src & 0xff) * alpha + (dst & 0xff) * inv) / 255;
                 frame[index] = 0xff000000u | (r << 16) | (g << 8) | b;
+            }
+        }
+    }
+
+    private void DrawSpriteAlpha(uint[] frame, Sprite sprite, int x, int y, uint opacity)
+    {
+        opacity = Math.Min(255u, opacity);
+        for (int sy = 0; sy < sprite.Height; sy++)
+        {
+            int py = y + sy;
+            if ((uint)py >= _height)
+            {
+                continue;
+            }
+            for (int sx = 0; sx < sprite.Width; sx++)
+            {
+                int px = x + sx;
+                if ((uint)px >= _width)
+                {
+                    continue;
+                }
+                uint src = sprite.Pixels[(sy * sprite.Width) + sx];
+                uint alpha = (src >> 24) * opacity / 255;
+                if (alpha == 0)
+                {
+                    continue;
+                }
+                BlendPixel(frame, px, py, src, alpha);
+            }
+        }
+    }
+
+    private void DrawSpriteFlippedXAlpha(uint[] frame, Sprite sprite, int x, int y, uint opacity)
+    {
+        opacity = Math.Min(255u, opacity);
+        for (int sy = 0; sy < sprite.Height; sy++)
+        {
+            int py = y + sy;
+            if ((uint)py >= _height)
+            {
+                continue;
+            }
+            for (int sx = 0; sx < sprite.Width; sx++)
+            {
+                int px = x + sx;
+                if ((uint)px >= _width)
+                {
+                    continue;
+                }
+                uint src = sprite.Pixels[(sy * sprite.Width) + (sprite.Width - 1 - sx)];
+                uint alpha = (src >> 24) * opacity / 255;
+                if (alpha == 0)
+                {
+                    continue;
+                }
+                BlendPixel(frame, px, py, src, alpha);
             }
         }
     }
@@ -3167,6 +3433,8 @@ internal sealed class StormaktGame
         public int Age { get; set; }
         public int Phase { get; set; }
         public int PhaseAge { get; set; }
+        public int BurningTransitionAge { get; set; }
+        public double PhaseTransitionX { get; set; }
     }
 
     private sealed class BossState

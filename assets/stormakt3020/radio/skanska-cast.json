@@ -35,6 +35,14 @@
       "voice_instruction": "A powerful barrel-chested adult Danish male war king, huge booming rough bass-baritone, loud military projection, gravel and iron in the chest, barking furious orders across cannon fire. Angry Danish naval commander who dominates a battlefield without sounding old, weak, refined, feminine, soft, breathy or comedic. Strong consonants, broad resonance, controlled rage, unmistakably masculine physical power.",
       "reference_text": "Alle fregatter frem! Hold Dannebrog højt og luk deres flugtvej! Jeg vil høre kanonerne svare fra hver eneste bro. De svenske blåfrakker har hånet min krone for sidste gang. Bryd deres linje, knus deres skjolde, og driv Karl tohundrede femoghalvtreds levende frem for mig!",
       "reference_seed": 873021
+    },
+    {
+      "id": "birgitte-bille",
+      "speaker": "KOMMANDØR BIRGITTE BILLE",
+      "language": "da",
+      "voice_instruction": "An imposing older Danish female fleet commander, broad powerful contralto, stern matronly authority, huge chest resonance, crisp natural Danish military diction, controlled anger that rises into a formidable battlefield roar, never young, soft, breathy, seductive, shrill, weak or comedic.",
+      "reference_text": "Hør mig, danske søfolk. Jeg er Kommandør Birgitte Bille, og Glimminge Jern bøjer sig hverken for storm, ild eller svenske kroner. Hold skjoldmuren samlet, spænd boret fast og lad hver kanon tale med én stemme. Den, der forlader sin post, skal svare til mig personligt.",
+      "reference_seed": 302024
     }
   ],
   "lines": [
@@ -125,6 +133,48 @@
       "dots_num_steps": 8,
       "dots_guidance_scale": 1.7,
       "dots_speaker_scale": 1.45
+    },
+    {
+      "id": "birgitte-glimminge-intro",
+      "role": "birgitte-bille",
+      "level": 2,
+      "frame": 3600,
+      "cue": "glimminge_intro",
+      "text": "Svenske skib! Jeg er Kommandør Birgitte Bille. Glimminge Jern bøjer sig ikke for en drengekonge!",
+      "subtitle_lines": ["JEG ER BIRGITTE", "JERNET BØJER IKKE"],
+      "seed": 302171,
+      "model_backend": "voxcpm2",
+      "dots_num_steps": 10,
+      "dots_guidance_scale": 1.8,
+      "dots_speaker_scale": 1.55
+    },
+    {
+      "id": "birgitte-glimminge-bor",
+      "role": "birgitte-bille",
+      "level": 2,
+      "frame": -1,
+      "cue": "glimminge_phase_2",
+      "text": "Fold borene ud! Riv krystallerne løs, og mal hans blå skrog til støv!",
+      "subtitle_lines": ["FOLD BORENE UD!", "MAL HAM TIL STØV!"],
+      "seed": 302172,
+      "model_backend": "voxcpm2",
+      "dots_num_steps": 10,
+      "dots_guidance_scale": 1.85,
+      "dots_speaker_scale": 1.65
+    },
+    {
+      "id": "birgitte-glimminge-falder",
+      "role": "birgitte-bille",
+      "level": 2,
+      "frame": -1,
+      "cue": "glimminge_death",
+      "text": "Glimminge falder ikke! Danmark rejser sig i asken!",
+      "subtitle_lines": ["GLIMMINGE FALDER IKKE!", "DANMARK REJSER SIG!"],
+      "seed": 302173,
+      "model_backend": "voxcpm2",
+      "dots_num_steps": 10,
+      "dots_guidance_scale": 1.9,
+      "dots_speaker_scale": 1.7
     },
     {
       "id": "rasmus-boss-panik",

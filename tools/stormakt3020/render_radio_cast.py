@@ -101,11 +101,12 @@ def main() -> None:
             payload = {
                 "text": line["text"],
                 "language": role["language"],
-                "model_backend": cast["dialogue_backend"],
+                "model_backend": line.get("model_backend", cast["dialogue_backend"]),
                 "output_format": "wav",
                 "normalize": False,
                 "reference_wav_base64": wav_base64(reference),
                 "prompt_text": role["reference_text"],
+                "voice_instruction": role["voice_instruction"],
                 "seed": line["seed"],
                 "dots_num_steps": line.get("dots_num_steps", 4),
                 "dots_guidance_scale": line.get("dots_guidance_scale", 1.2),

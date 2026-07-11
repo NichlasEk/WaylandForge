@@ -1,8 +1,8 @@
 # Stormakt 3020 - videokomradio, dialog och TTS
 
-Status: both active levels now use the campaign casting pipeline. Four synthetic VoxCPM2 role references (Ebba, Sören, Rasmus and Christian) drive eight Dots MF listening pilots: five Swedish lines and three Danish lines. Final Swedish and Danish casting still requires listening approval.
+Status: both active levels now use the campaign casting pipeline. Five synthetic VoxCPM2 role references cover Ebba, Sören, Rasmus, Christian and Glimminge Järn's new commander Birgitte Bille. Birgitte's three Danish boss lines use explicit VoxCPM2 reference-cloning overrides after the Dots MF worker stalled; all outputs remain fully local, seeded and versioned. Final Swedish and Danish casting still requires listening approval.
 
-The reproducible two-stage campaign casting pipeline uses `tools/stormakt3020/render_radio_cast.py`: it first asks local VoxCPM2 for a fully synthetic role reference, then supplies that WAV plus its exact transcript to Dots MF for every versioned dialogue line. Role instructions, scripts and fixed seeds currently live in the historically named `assets/stormakt3020/radio/skanska-cast.json`; generated job IDs and hashes live in `skanska-generation-manifest.json`. No real-person voice reference is permitted.
+The reproducible campaign casting pipeline uses `tools/stormakt3020/render_radio_cast.py`: it first asks local VoxCPM2 for a fully synthetic role reference, then supplies that WAV plus its exact transcript to the line backend. Dots MF remains the default; individual lines may carry an explicit local backend override, as Birgitte's VoxCPM2 fallback does. Role instructions, scripts and fixed seeds live in the historically named `assets/stormakt3020/radio/skanska-cast.json`; generated job IDs and hashes live in `skanska-generation-manifest.json`. No real-person voice reference is permitted.
 
 Written ship designation `KARL CCLV` is retained in the HUD, while Swedish speech scripts expand the Roman numeral to `Karl tvåhundrafemtiofem`. Targeted repairs use `render_radio_cast.py lines --line ID --force`; this avoids voice drift in unaffected dialogue.
 

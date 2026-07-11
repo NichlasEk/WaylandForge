@@ -1,0 +1,5 @@
+# Skånska enemies v1
+
+Built-in image generation, 2026-07-11, using the in-game placeholder screenshot as style and scale reference only. Chroma-key source: `skanska-enemies-v1-source.png`; locally keyed production alpha: `skanska-enemies-v1.png`.
+
+Create exactly three separate enemy sprites in one horizontal row for a 400x280 retro vertical shooter: a small low black-iron snapphane mist drone with oxidized copper ribs and one restrained green signal aperture; a broader Danish fogde cargo barge with near-black iron hull, unmistakable muted red/aged-white Danish-cross cargo locks and two gun ports; and the same barge damaged with torn lock armor, bent plates and contained ember cracks. Slightly top-down straight-on gameplay view, crisp hand-painted detail readable at 30-40 pixels. Fully separated, consistent scale, on perfectly flat `#ff00ff` chroma key. No shadow, trails, projectiles, text, UI, characters, watermark, border, extra ships or background. Do not reproduce the triangular placeholders. Do not use `#ff00ff` in the subjects.

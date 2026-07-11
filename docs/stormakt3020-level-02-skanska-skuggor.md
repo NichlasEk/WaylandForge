@@ -10,13 +10,15 @@ Sören's generated three-state corsair crosses the background without collision 
 
 Current audio slice: `skanska-skuggor-loop-v1.wav` is the dedicated runtime score, selected through the level id and isolated from Stora Bält combat music.
 
-Current world slice: complete. Three deterministic copper/green signal beacons enter during the 60-second skeleton. They are destructible physical targets with readable code-drawn fallback art. Dark mist drones reveal their silhouette around a green aimed shot, while Danish red/white cargo barges establish the fogde convoy with a slower aimed volley. Transparent generated crystal-pine, kiln-moon and mining-hoist props cross the foreground edges without obscuring the play lane.
+Current world slice: complete. Three deterministic copper/green signal beacons enter during the opening skeleton with generated intact/damaged physical sprites and code fallback. Dark mist drones remain fully hidden when generated assets are present, reveal their real sprite around a green aimed shot and leave no placeholder fragments. Generated intact/damaged Danish red/white cargo barges establish the fogde convoy with a slower aimed volley. Transparent crystal-pine, kiln-moon and mining-hoist props cross the foreground edges without obscuring the play lane.
 
 Current dialogue slice: four Swedish pilot lines for Ebba and Sören are generated through synthetic VoxCPM2 casting references and Dots MF line rendering, then passed through the deterministic runtime radio filter. Sören transmissions use their own copper/green frame rather than Danish red/white.
 
 Current rival slice: complete for the 60-second skeleton. Sören enters at frame 2700 with lateral boost dashes and aimed copper fire, shifts to two non-physical green radar decoys and paired salvos, then disengages at 35 percent health or the deterministic fogde interruption at frame 3420. Interruption never awards a kill and clears the rival volley before his damaged escape.
 
-Current boss slice: Glimminge Järn enters after Sören at frame 3600 with its own state and generated intact/damaged castle-galleon sprites. Phase one drives iron-wall volleys with moving safe gaps. At 210 health it unfolds twin drill turrets, adds aimed heavy fire and telegraphed crystal spears. Death drops castle blocks for 300 frames, awards the boss score, then shows the level-specific wreck/result card with one green snapphane blink.
+Current boss slice: Glimminge Järn enters after Sören at frame 3600 under **Kommandør Birgitte Bille**, Ebba Grip's broad-built, iron-voiced Danish counterpart. Her matched neutral/shouting portrait and three locally rendered Danish lines drive intro, drill deployment and defeat. The 720-health fight visibly braces coherent red/white shield wings that block frontal damage and drives iron-wall volleys with moving safe gaps. Animated Glimminge iron-raven escorts launch throughout the fight, bank into aimed fire and retreat in a damaged state. At 420 health the boss unfolds twin drill turrets, adds aimed heavy fire and telegraphed crystal spears. Below 210 health the ship switches to a generated burning state with denser escorts, faster drills, spear cadence and radial ember bursts. Death uses a connected generated castle wreck for 300 frames instead of floating block placeholders, awards the boss score, then shows the level-specific result card with one green snapphane blink.
+
+Boss presentation continuity: content-aware sprite crops preserve both Glimminge side sections and complete Danish shield wings. Shield deployment, phase-two damage/drill deployment, the burning threshold and wreck collapse crossfade in the same locked boss center. Phase-two lateral movement eases from the exact phase-one X position instead of jumping to a new sine curve.
 
 ## Dramatiskt löfte
 
@@ -116,5 +118,6 @@ Palett: nästan svart järn, oxiderad koppar, dämpat skogsgrönt och signalgrö
 - Samma bana, seed och input ger samma fiender, dialog och slutbild.
 - Svart/koppar/grönt går att skilja från både svensk blå/guld och dansk röd/vit i 400x280.
 - Signalstörning döljer aldrig spelarens hitbox, farliga projektiler eller pauskort.
+- Generated level-2 actors, hazards and projectiles leave no loose pixels or code-placeholder fragments; only safety telegraphs and HUD markers remain primitive-drawn.
 - Sören lämnar minibossduellen reproducerbart utan att räknas som dödad.
 - Varje ny grafik- och ljudgeneration har versionerad källa/prompt och runtimefallback.

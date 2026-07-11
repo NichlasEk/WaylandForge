@@ -14,6 +14,20 @@
 
 `glimminge-jarn-v1.png` supplies the intact/damaged Glimminge Järn boss and its detached drill turret. The retained `-source.png` is the flat green generation source used for deterministic local alpha removal.
 
+`skanska-enemies-v1.png` replaces level 2's code placeholders with a transparent mist drone and intact/damaged Danish fogde cargo barges. The retained `-source.png` is the flat magenta generation source used for deterministic local alpha removal.
+
+`glimminge-animations-v1.png` supplies coherent shield-braced, burning and collapsed-wreck states so the boss never falls back to floating debug blocks.
+
+`birgitte-bille-radio-v1.png` introduces Glimminge Järn's commander, Kommandør Birgitte Bille, with matched neutral/speaking radio portraits.
+
+`skanska-signal-beacon-v1.png` replaces the last physical triangle placeholder with intact/damaged mining-beacon sprites.
+
+`glimminge-iron-raven-v1.png` supplies neutral, banking-attack and damaged states for Birgitte's boss escort fighters.
+
+`skanska-projectiles-v1.png` replaces the remaining green cross/loose-pixel, fogde-barge and iron-raven projectile primitives.
+
+`skanska-combat-details-v1.png` supplies Sören's radar decoy/copper shot and Glimminge's crystal spear, leaving only safety telegraphs and HUD markers code-drawn.
+
 `stormakt-bridge-cannons-projectiles-v1.png` adds three bridge-collapse pieces, intact/destroyed Danish bridge cannon states, a detachable boss broadside cannon and red/white/gold enemy projectile families. Runtime uses the wreck pieces during the existing 45-frame collapse and mirrors the broadside module for the boss's right side.
 
 Prompt summary:

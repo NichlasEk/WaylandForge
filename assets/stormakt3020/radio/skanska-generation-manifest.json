@@ -213,6 +213,52 @@
       "sha256": "118665b7722e8296ffa711998af651f7770200732f3ff7aaa9bcfa3e5e145195",
       "request": "assets/stormakt3020/radio/raw/rasmus-boss-efterspel-da-request.json",
       "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
+    },
+    {
+      "kind": "reference",
+      "role": "birgitte-bille",
+      "job_id": "957d2d5cd530476bb9be256f8d3ccab6",
+      "file": "assets/stormakt3020/radio/references/birgitte-bille-reference.wav",
+      "sha256": "a3c0408d6c2ff93f63413b00db272cff028a5ec10127599c0b02acb7dd16053f",
+      "request": {
+        "text": "Hør mig, danske søfolk. Jeg er Kommandør Birgitte Bille, og Glimminge Jern bøjer sig hverken for storm, ild eller svenske kroner. Hold skjoldmuren samlet, spænd boret fast og lad hver kanon tale med én stemme. Den, der forlader sin post, skal svare til mig personligt.",
+        "language": "da",
+        "voice_instruction": "An imposing older Danish female fleet commander, broad powerful contralto, stern matronly authority, huge chest resonance, crisp natural Danish military diction, controlled anger that rises into a formidable battlefield roar, never young, soft, breathy, seductive, shrill, weak or comedic.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302024
+      }
+    },
+    {
+      "kind": "line",
+      "line": "birgitte-glimminge-intro",
+      "role": "birgitte-bille",
+      "job_id": "f73b6aa8508341fa9ac22b1426033376",
+      "file": "assets/stormakt3020/radio/raw/birgitte-glimminge-intro-da-raw.wav",
+      "sha256": "c599faf38f884ebd4d467081e71d9f5d2d7c1a6fe95c417958a8c9efe3ec5a15",
+      "request": "assets/stormakt3020/radio/raw/birgitte-glimminge-intro-da-request.json",
+      "reference_sha256": "a3c0408d6c2ff93f63413b00db272cff028a5ec10127599c0b02acb7dd16053f"
+    },
+    {
+      "kind": "line",
+      "line": "birgitte-glimminge-bor",
+      "role": "birgitte-bille",
+      "job_id": "695eb436653846acbd7bd59523f9a06d",
+      "file": "assets/stormakt3020/radio/raw/birgitte-glimminge-bor-da-raw.wav",
+      "sha256": "93dd29ea99204f4169014ac044ae0c74f7455542d51de68c242288de548fbfae",
+      "request": "assets/stormakt3020/radio/raw/birgitte-glimminge-bor-da-request.json",
+      "reference_sha256": "a3c0408d6c2ff93f63413b00db272cff028a5ec10127599c0b02acb7dd16053f"
+    },
+    {
+      "kind": "line",
+      "line": "birgitte-glimminge-falder",
+      "role": "birgitte-bille",
+      "job_id": "b0e0f9cecdba48879480e8052b3dd4a0",
+      "file": "assets/stormakt3020/radio/raw/birgitte-glimminge-falder-da-raw.wav",
+      "sha256": "66896ea9f386df68faa229dbac2dae4a7eb0dfabeff9c505012302f000bb3911",
+      "request": "assets/stormakt3020/radio/raw/birgitte-glimminge-falder-da-request.json",
+      "reference_sha256": "a3c0408d6c2ff93f63413b00db272cff028a5ec10127599c0b02acb7dd16053f"
     }
   ],
   "service": "http://127.0.0.1:8765",

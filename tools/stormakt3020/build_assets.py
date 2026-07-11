@@ -152,11 +152,103 @@ def append_skanska_props(entries: list[tuple[str, Image.Image]], source: Image.I
 
 
 def append_glimminge(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    first_boundary = 706
+    second_boundary = 1400
+    definitions = [
+        ("glimminge_jarn", (0, 0, first_boundary, source.height), (124, 82)),
+        ("glimminge_jarn_damaged", (first_boundary, 0, second_boundary, source.height), (124, 82)),
+        ("glimminge_drill_turret", (second_boundary, 0, source.width, source.height), (34, 48)),
+    ]
+    for name, crop, size in definitions:
+        sprite = trim_alpha(source.crop(crop).convert("RGBA"))
+        sprite.thumbnail(size, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
+def append_skanska_enemies(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    first_boundary = 402
+    second_boundary = 947
+    definitions = [
+        ("snapphane_mist_drone", (0, 0, first_boundary, source.height), (34, 40)),
+        ("fogde_convoy_barge", (first_boundary, 0, second_boundary, source.height), (40, 48)),
+        ("fogde_convoy_barge_damaged", (second_boundary, 0, source.width, source.height), (40, 48)),
+    ]
+    for name, crop, size in definitions:
+        sprite = trim_alpha(source.crop(crop).convert("RGBA"))
+        sprite.thumbnail(size, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
+def append_glimminge_animations(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    first_boundary = 738
+    second_boundary = 1280
+    definitions = [
+        ("glimminge_shield_braced", (0, 0, first_boundary, source.height), (142, 82)),
+        ("glimminge_burning", (first_boundary, 0, second_boundary, source.height), (124, 82)),
+        ("glimminge_wreck", (second_boundary, 0, source.width, source.height), (124, 72)),
+    ]
+    for name, crop, size in definitions:
+        sprite = trim_alpha(source.crop(crop).convert("RGBA"))
+        sprite.thumbnail(size, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
+def append_birgitte_portrait(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    half = source.width // 2
+    for name, crop in [
+        ("portrait_birgitte_neutral", (0, 0, half, source.height)),
+        ("portrait_birgitte_speak", (half, 0, source.width, source.height)),
+    ]:
+        sprite = trim_alpha(source.crop(crop).convert("RGBA"))
+        sprite.thumbnail((38, 38), Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
+def append_skanska_signal_beacon(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    half = source.width // 2
+    for name, crop in [
+        ("skanska_signal_beacon", (0, 0, half, source.height)),
+        ("skanska_signal_beacon_damaged", (half, 0, source.width, source.height)),
+    ]:
+        sprite = trim_alpha(source.crop(crop).convert("RGBA"))
+        sprite.thumbnail((34, 40), Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
+def append_glimminge_iron_raven(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    first_boundary = 544
+    second_boundary = 1262
+    definitions = [
+        ("glimminge_iron_raven", (0, 0, first_boundary, source.height), (38, 40)),
+        ("glimminge_iron_raven_attack", (first_boundary, 0, second_boundary, source.height), (42, 40)),
+        ("glimminge_iron_raven_damaged", (second_boundary, 0, source.width, source.height), (38, 40)),
+    ]
+    for name, crop, size in definitions:
+        sprite = trim_alpha(source.crop(crop).convert("RGBA"))
+        sprite.thumbnail(size, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
+def append_skanska_projectiles(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
     third = source.width // 3
     definitions = [
-        ("glimminge_jarn", (0, 0, third, source.height), (124, 82)),
-        ("glimminge_jarn_damaged", (third, 0, third * 2, source.height), (124, 82)),
-        ("glimminge_drill_turret", (third * 2, 0, source.width, source.height), (34, 48)),
+        ("skanska_shot_signal", (0, 0, third, source.height), (8, 14)),
+        ("fogde_convoy_shot", (third, 0, third * 2, source.height), (8, 14)),
+        ("glimminge_shot_iron", (third * 2, 0, source.width, source.height), (8, 14)),
+    ]
+    for name, crop, size in definitions:
+        sprite = trim_alpha(source.crop(crop).convert("RGBA"))
+        sprite.thumbnail(size, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
+def append_skanska_combat_details(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    first_boundary = 725
+    second_boundary = 1098
+    definitions = [
+        ("soren_radar_decoy", (0, 0, first_boundary, source.height), (30, 30)),
+        ("soren_copper_shot", (first_boundary, 0, second_boundary, source.height), (8, 14)),
+        ("glimminge_crystal_spear", (second_boundary, 0, source.width, source.height), (18, 44)),
     ]
     for name, crop, size in definitions:
         sprite = trim_alpha(source.crop(crop).convert("RGBA"))
@@ -186,6 +278,13 @@ def build(
     skanska_background_input_path: Path,
     skanska_props_input_path: Path,
     glimminge_input_path: Path,
+    skanska_enemies_input_path: Path,
+    glimminge_animations_input_path: Path,
+    birgitte_portrait_input_path: Path,
+    skanska_signal_beacon_input_path: Path,
+    glimminge_iron_raven_input_path: Path,
+    skanska_projectiles_input_path: Path,
+    skanska_combat_details_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
 ) -> None:
@@ -201,6 +300,13 @@ def build(
     skanska_background_source = Image.open(skanska_background_input_path).convert("RGBA")
     skanska_props_source = Image.open(skanska_props_input_path).convert("RGBA")
     glimminge_source = Image.open(glimminge_input_path).convert("RGBA")
+    skanska_enemies_source = Image.open(skanska_enemies_input_path).convert("RGBA")
+    glimminge_animations_source = Image.open(glimminge_animations_input_path).convert("RGBA")
+    birgitte_portrait_source = Image.open(birgitte_portrait_input_path).convert("RGBA")
+    skanska_signal_beacon_source = Image.open(skanska_signal_beacon_input_path).convert("RGBA")
+    glimminge_iron_raven_source = Image.open(glimminge_iron_raven_input_path).convert("RGBA")
+    skanska_projectiles_source = Image.open(skanska_projectiles_input_path).convert("RGBA")
+    skanska_combat_details_source = Image.open(skanska_combat_details_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
@@ -210,6 +316,13 @@ def build(
     append_three_frame_corsair(entries, soren_corsair_source)
     append_skanska_props(entries, skanska_props_source)
     append_glimminge(entries, glimminge_source)
+    append_skanska_enemies(entries, skanska_enemies_source)
+    append_glimminge_animations(entries, glimminge_animations_source)
+    append_birgitte_portrait(entries, birgitte_portrait_source)
+    append_skanska_signal_beacon(entries, skanska_signal_beacon_source)
+    append_glimminge_iron_raven(entries, glimminge_iron_raven_source)
+    append_skanska_projectiles(entries, skanska_projectiles_source)
+    append_skanska_combat_details(entries, skanska_combat_details_source)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
@@ -292,6 +405,41 @@ def main() -> None:
         default=Path("assets/stormakt3020/glimminge-jarn-v1.png"),
     )
     parser.add_argument(
+        "--skanska-enemies-input",
+        type=Path,
+        default=Path("assets/stormakt3020/skanska-enemies-v1.png"),
+    )
+    parser.add_argument(
+        "--glimminge-animations-input",
+        type=Path,
+        default=Path("assets/stormakt3020/glimminge-animations-v1.png"),
+    )
+    parser.add_argument(
+        "--birgitte-portrait-input",
+        type=Path,
+        default=Path("assets/stormakt3020/birgitte-bille-radio-v1.png"),
+    )
+    parser.add_argument(
+        "--skanska-signal-beacon-input",
+        type=Path,
+        default=Path("assets/stormakt3020/skanska-signal-beacon-v1.png"),
+    )
+    parser.add_argument(
+        "--glimminge-iron-raven-input",
+        type=Path,
+        default=Path("assets/stormakt3020/glimminge-iron-raven-v1.png"),
+    )
+    parser.add_argument(
+        "--skanska-projectiles-input",
+        type=Path,
+        default=Path("assets/stormakt3020/skanska-projectiles-v1.png"),
+    )
+    parser.add_argument(
+        "--skanska-combat-details-input",
+        type=Path,
+        default=Path("assets/stormakt3020/skanska-combat-details-v1.png"),
+    )
+    parser.add_argument(
         "--combat-detail-input",
         type=Path,
         default=Path("assets/stormakt3020/stormakt-bridge-cannons-projectiles-v1.png"),
@@ -316,6 +464,13 @@ def main() -> None:
         args.skanska_background_input,
         args.skanska_props_input,
         args.glimminge_input,
+        args.skanska_enemies_input,
+        args.glimminge_animations_input,
+        args.birgitte_portrait_input,
+        args.skanska_signal_beacon_input,
+        args.glimminge_iron_raven_input,
+        args.skanska_projectiles_input,
+        args.skanska_combat_details_input,
         args.logo_input,
         args.output,
     )

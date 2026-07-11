@@ -89,15 +89,15 @@ First asset batch:
 
 - `StormaktMusicLoop` already preloads and crossfades menu/combat/boss tracks.
 - Level 2 selects `StormaktMusicTrack.Skanska`: a 21-bar 92 BPM loop derived from the generated source at an exact bar boundary, using the shared runtime crossfade.
-- The repo-local casting spine is `radio/skanska-cast.json` -> VoxCPM2 synthetic role reference -> Dots MF line render -> `build_radio_voices.py` deterministic runtime filter. Four line IDs per active level are wired through `StormaktVoice`, `LoadVoices` and level-specific radio tables.
+- The repo-local casting spine is `radio/skanska-cast.json` -> synthetic role reference -> local line render -> `build_radio_voices.py` deterministic runtime filter. Existing lines use Dots MF; Birgitte's versioned line overrides use VoxCPM2 reference cloning because the Dots worker stalled during this slice. Voice IDs are wired through `StormaktVoice`, `LoadVoices` and level/event-specific radio cards.
 - New SFX should enter the existing bounded mixer queue. Do not open a second audio stream.
 
 ## Skånska build checkpoints
 
 1. **Hook spine (landed 2026-07-11):** `_levelId`, start/reset/dispatch seams, level 2 enters a deterministic 60-second skeleton with its own seed, title, palette, scenery fallback, wave table and result. Level 1 remains on its existing dispatch path.
 2. **Snapphane identity (landed 2026-07-11):** generated Sören portrait, first radio, three-state corsair and silent background pass are wired with code fallbacks.
-3. **World (landed 2026-07-11):** the generated starless Skåne background and transparent crystal-pine, kiln-moon and mining-hoist props are packed and frame-verified; three deterministic destructible signal beacons, silhouette-firing mist drones and a red/white fogde convoy are wired with code fallbacks.
+3. **World (polished 2026-07-11):** the generated starless Skåne background, transparent props, intact/damaged signal beacons, reveal-only mist drones and intact/damaged red/white fogde barges are packed and frame-verified with code fallbacks.
 4. **Rival duel (landed 2026-07-11):** Sören owns separate non-boss state with boost dashes, aimed copper salvos, two non-physical radar decoys, health/time interruption and a damaged escape that never awards a kill.
-5. **Glimminge Järn (landed 2026-07-11):** separate boss state and generated intact/damaged sprites; iron-wall phase, drill-turret/crystal-spear phase, heavy block death and a level-specific wreck/result card.
+5. **Glimminge Järn (polished 2026-07-11):** 720-health separate boss state with damage-blocking shield-braced, damaged, burning and connected-wreck sprites; complete content-aware crops; center-locked sprite crossfades and eased movement transitions; Birgitte Bille event radio; animated iron-raven escorts; iron-wall phase, drill-turret/crystal-spear phase, low-health escort/ember escalation and a level-specific result card.
 
 For every checkpoint: build, `git diff --check`, capture at least one direct WFEX frame, verify deterministic selection, commit and push narrowly.
