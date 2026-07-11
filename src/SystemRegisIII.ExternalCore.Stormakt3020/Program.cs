@@ -121,6 +121,9 @@ internal sealed class StormaktGame
     private uint _previousButtons;
     private bool _gameOver;
     private bool _paused;
+    private bool _inLevelSelect;
+    private int _levelSelection;
+    private int _lockedLevelNoticeFrames;
 
     public StormaktGame(int width, int height, SpritePack? sprites, StormaktMusicLoop? audio)
     {
@@ -130,10 +133,16 @@ internal sealed class StormaktGame
         _sprites = sprites;
         _audio = audio;
         Reset();
+        _inLevelSelect = true;
     }
 
     public void Step(uint buttons)
     {
+        if (_inLevelSelect)
+        {
+            StepLevelSelect(buttons);
+            return;
+        }
         if (_gameOver)
         {
             if (Pressed(buttons, Start))
@@ -223,6 +232,11 @@ internal sealed class StormaktGame
         DrawSky(frame);
         DrawNebula(frame);
         DrawStars(frame);
+        if (_inLevelSelect)
+        {
+            DrawLevelSelect(frame);
+            return;
+        }
         DrawBeltRuins(frame);
         DrawGroundTargets(frame);
         DrawBoss(frame);
@@ -281,6 +295,30 @@ internal sealed class StormaktGame
     }
 
     private bool Pressed(uint buttons, uint button) => (buttons & button) != 0 && (_previousButtons & button) == 0;
+
+    private void StepLevelSelect(uint buttons)
+    {
+        if (Pressed(buttons, Up) || Pressed(buttons, Down))
+        {
+            _levelSelection = 1 - _levelSelection;
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        if (Pressed(buttons, Start))
+        {
+            if (_levelSelection == 0)
+            {
+                Reset();
+                _inLevelSelect = false;
+                _audio?.Trigger(StormaktSound.Deploy);
+            }
+            else
+            {
+                _lockedLevelNoticeFrames = 90;
+            }
+        }
+        _lockedLevelNoticeFrames = Math.Max(0, _lockedLevelNoticeFrames - 1);
+        _previousButtons = buttons;
+    }
 
     private void StepRadio()
     {
@@ -1887,6 +1925,38 @@ internal sealed class StormaktGame
         DrawLine(frame, panelX, y + 38, panelX + 271, y + 38, 0xff2f74c9);
         DrawText(frame, panelX + 95, y + 8, "ÅTERTÅGET ÖVER", 0xffffd66b);
         DrawText(frame, panelX + 73, y + 22, "STORA BÄLT NEBULOSAN", 0xff9bd4dc);
+    }
+
+    private void DrawLevelSelect(uint[] frame)
+    {
+        int panelWidth = Math.Min(340, _width - 24);
+        int panelX = (_width - panelWidth) / 2;
+        int panelBottom = _height - 20;
+        DrawRect(frame, panelX, 38, panelWidth, panelBottom - 37, 0xff080d12);
+        DrawLine(frame, panelX, 38, panelX + panelWidth - 1, 38, 0xffffd66b);
+        DrawLine(frame, panelX, panelBottom, panelX + panelWidth - 1, panelBottom, 0xff2f74c9);
+        DrawText(frame, (_width - 78) / 2, 50, "STORMAKT 3020", 0xffffd66b);
+        DrawText(frame, (_width - 78) / 2, 66, "VÄLJ FÄLTTÅG", 0xff9bd4dc);
+
+        DrawLevelOption(frame, panelX + 12, 88, panelWidth - 24, 0, "1  STORA BÄLT NEBULOSAN", "BÄLTET MÅSTE ÖPPNAS");
+        DrawLevelOption(frame, panelX + 12, 132, panelWidth - 24, 1, "2  SKÅNSKA SKUGGOR", "UNDER BYGGNAD");
+
+        string footer = _lockedLevelNoticeFrames > 0 ? "SNAPPHANAR MÖNSTRAR" : "UPP NER VÄLJ  START";
+        DrawText(frame, (_width - footer.Length * 6) / 2, panelBottom - 17, footer,
+            _lockedLevelNoticeFrames > 0 ? 0xff65c58a : 0xffb7c7d6);
+    }
+
+    private void DrawLevelOption(uint[] frame, int x, int y, int width, int index, string title, string status)
+    {
+        bool selected = _levelSelection == index;
+        uint border = selected ? 0xffffd66b : 0xff344d5c;
+        uint fill = selected ? 0xff172536 : 0xff0d151d;
+        DrawRect(frame, x, y, width, 36, fill);
+        DrawLine(frame, x, y, x + width - 1, y, border);
+        DrawLine(frame, x, y + 35, x + width - 1, y + 35, border);
+        DrawRect(frame, x + 5, y + 6, 3, 24, selected ? 0xffffd66b : 0xff293d4b);
+        DrawText(frame, x + 14, y + 7, title, selected ? 0xffffffff : 0xff91a7b5);
+        DrawText(frame, x + 14, y + 21, status, index == 1 ? 0xff65c58a : 0xff7fc7ff);
     }
 
     private void DrawPause(uint[] frame)
