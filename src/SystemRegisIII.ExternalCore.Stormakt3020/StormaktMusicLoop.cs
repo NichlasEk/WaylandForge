@@ -14,6 +14,7 @@ internal sealed class StormaktMusicLoop : IDisposable
     private const string DefaultSocketPath = "/tmp/waylandforge-audio.sock";
 
     private float[] _samples;
+    private readonly float[]? _menuSamples;
     private readonly float[] _combatSamples;
     private readonly float[]? _bossSamples;
     private readonly Dictionary<StormaktSound, LoadedEffect> _effects;
@@ -39,12 +40,14 @@ internal sealed class StormaktMusicLoop : IDisposable
 
     private StormaktMusicLoop(
         float[] samples,
+        float[]? menuSamples,
         float[]? bossSamples,
         Dictionary<StormaktSound, LoadedEffect> effects,
         Dictionary<StormaktVoice, LoadedEffect> voices,
         string socketPath)
     {
         _samples = samples;
+        _menuSamples = menuSamples;
         _combatSamples = samples;
         _bossSamples = bossSamples;
         _effects = effects;
@@ -90,6 +93,8 @@ internal sealed class StormaktMusicLoop : IDisposable
             {
                 float[] samples = LoadPcm16StereoWav(path);
                 string musicDirectory = Path.Combine(Path.GetDirectoryName(path)!, "music");
+                string menuPath = Path.Combine(musicDirectory, "marsch-mot-kopenhamn-v1.wav");
+                float[]? menuSamples = File.Exists(menuPath) ? LoadPcm16StereoWav(menuPath) : null;
                 string loopedBossPath = Path.Combine(musicDirectory, "kronans-sista-salva-loop-v2.wav");
                 string originalBossPath = Path.Combine(musicDirectory, "kronans-sista-salva-v1.wav");
                 string bossPath = File.Exists(loopedBossPath) ? loopedBossPath : originalBossPath;
@@ -97,10 +102,11 @@ internal sealed class StormaktMusicLoop : IDisposable
                 Dictionary<StormaktSound, LoadedEffect> effects = LoadEffects(path);
                 Dictionary<StormaktVoice, LoadedEffect> voices = LoadVoices(path);
                 string socketPath = Environment.GetEnvironmentVariable("WAYLANDFORGE_AUDIO_SOCKET") ?? DefaultSocketPath;
+                string menuDescription = menuSamples is null ? "missing" : $"ready ({menuSamples.Length / Channels / SampleRate}s)";
                 string bossDescription = bossSamples is null ? "missing" : $"ready ({bossSamples.Length / Channels / SampleRate}s)";
                 Console.Error.WriteLine($"Stormakt audio: loaded {Path.GetFileName(path)} ({samples.Length / Channels / SampleRate}s), " +
-                    $"boss score={bossDescription}, {effects.Count} effects and {voices.Count} radio voices.");
-                return new StormaktMusicLoop(samples, bossSamples, effects, voices, socketPath);
+                    $"menu march={menuDescription}, boss score={bossDescription}, {effects.Count} effects and {voices.Count} radio voices.");
+                return new StormaktMusicLoop(samples, menuSamples, bossSamples, effects, voices, socketPath);
             }
             catch (Exception exception)
             {
@@ -237,6 +243,7 @@ internal sealed class StormaktMusicLoop : IDisposable
         {
             float[]? requestedSamples = track switch
             {
+                StormaktMusicTrack.Menu => _menuSamples,
                 StormaktMusicTrack.Combat => _combatSamples,
                 StormaktMusicTrack.Boss => _bossSamples,
                 _ => null,
@@ -633,6 +640,7 @@ internal enum StormaktVoice
 
 internal enum StormaktMusicTrack
 {
+    Menu,
     Combat,
     Boss,
 }

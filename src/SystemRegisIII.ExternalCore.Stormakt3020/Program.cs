@@ -62,6 +62,15 @@ static bool ReadExact(Stream stream, Span<byte> buffer)
 
 internal sealed class StormaktGame
 {
+    private static readonly string[] CampaignNames =
+    [
+        "STORA BÄLT",
+        "SKÅNSKA SKUGGOR",
+        "ÖRESUNDS JÄRNKRONA",
+        "TIONDE VÄRLDEN",
+        "SNAPPHANENS ED",
+        "KÖPENHAMNS RING",
+    ];
     private const int FlythroughFrames = 60 * 60;
     private const int BossArrivalFrame = 3_300;
     private const int BossPhaseOneHealth = 450;
@@ -82,6 +91,8 @@ internal sealed class StormaktGame
     private readonly int _height;
     private readonly bool _invincibleTestMode = string.Equals(
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_INVINCIBLE"), "1", StringComparison.Ordinal);
+    private readonly bool _developerMode = string.Equals(
+        Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DEVELOPER_MODE"), "1", StringComparison.Ordinal);
     private readonly SpritePack? _sprites;
     private readonly StormaktMusicLoop? _audio;
     private Random _random = new(3020);
@@ -122,6 +133,8 @@ internal sealed class StormaktGame
     private bool _gameOver;
     private bool _paused;
     private bool _inLevelSelect;
+    private bool _inLevelPreview;
+    private int _previewLevel;
     private int _levelSelection;
     private int _lockedLevelNoticeFrames;
 
@@ -134,10 +147,16 @@ internal sealed class StormaktGame
         _audio = audio;
         Reset();
         _inLevelSelect = true;
+        _audio?.SwitchMusic(StormaktMusicTrack.Menu);
     }
 
     public void Step(uint buttons)
     {
+        if (_inLevelPreview)
+        {
+            StepLevelPreview(buttons);
+            return;
+        }
         if (_inLevelSelect)
         {
             StepLevelSelect(buttons);
@@ -237,6 +256,11 @@ internal sealed class StormaktGame
             DrawLevelSelect(frame);
             return;
         }
+        if (_inLevelPreview)
+        {
+            DrawLevelPreview(frame);
+            return;
+        }
         DrawBeltRuins(frame);
         DrawGroundTargets(frame);
         DrawBoss(frame);
@@ -298,9 +322,14 @@ internal sealed class StormaktGame
 
     private void StepLevelSelect(uint buttons)
     {
-        if (Pressed(buttons, Up) || Pressed(buttons, Down))
+        if (Pressed(buttons, Up))
         {
-            _levelSelection = 1 - _levelSelection;
+            _levelSelection = (_levelSelection + CampaignNames.Length - 1) % CampaignNames.Length;
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        if (Pressed(buttons, Down))
+        {
+            _levelSelection = (_levelSelection + 1) % CampaignNames.Length;
             _audio?.Trigger(StormaktSound.Deploy);
         }
         if (Pressed(buttons, Start))
@@ -313,10 +342,32 @@ internal sealed class StormaktGame
             }
             else
             {
-                _lockedLevelNoticeFrames = 90;
+                if (_developerMode)
+                {
+                    _previewLevel = _levelSelection;
+                    _inLevelSelect = false;
+                    _inLevelPreview = true;
+                    _audio?.Trigger(StormaktSound.Deploy);
+                }
+                else
+                {
+                    _lockedLevelNoticeFrames = 90;
+                }
             }
         }
         _lockedLevelNoticeFrames = Math.Max(0, _lockedLevelNoticeFrames - 1);
+        _previousButtons = buttons;
+    }
+
+    private void StepLevelPreview(uint buttons)
+    {
+        if (Pressed(buttons, Start) || Pressed(buttons, Fire))
+        {
+            _inLevelPreview = false;
+            _inLevelSelect = true;
+            _audio?.SwitchMusic(StormaktMusicTrack.Menu);
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
         _previousButtons = buttons;
     }
 
@@ -1931,32 +1982,62 @@ internal sealed class StormaktGame
     {
         int panelWidth = Math.Min(340, _width - 24);
         int panelX = (_width - panelWidth) / 2;
-        int panelBottom = _height - 20;
-        DrawRect(frame, panelX, 38, panelWidth, panelBottom - 37, 0xff080d12);
-        DrawLine(frame, panelX, 38, panelX + panelWidth - 1, 38, 0xffffd66b);
+        int panelTop = _height <= 224 ? 24 : 28;
+        int panelBottom = _height - 12;
+        int listY = _height <= 224 ? 70 : 82;
+        int rowHeight = _height <= 224 ? 19 : 23;
+        DrawRect(frame, panelX, panelTop, panelWidth, panelBottom - panelTop + 1, 0xff080d12);
+        DrawLine(frame, panelX, panelTop, panelX + panelWidth - 1, panelTop, 0xffffd66b);
         DrawLine(frame, panelX, panelBottom, panelX + panelWidth - 1, panelBottom, 0xff2f74c9);
-        DrawText(frame, (_width - 78) / 2, 50, "STORMAKT 3020", 0xffffd66b);
-        DrawText(frame, (_width - 78) / 2, 66, "VÄLJ FÄLTTÅG", 0xff9bd4dc);
+        DrawRect(frame, panelX + 8, panelTop + 6, panelWidth - 16, 32, 0xff101b25);
+        DrawLine(frame, panelX + 16, panelTop + 10, panelX + 70, panelTop + 10, 0xff8a6b38);
+        DrawLine(frame, panelX + panelWidth - 71, panelTop + 10, panelX + panelWidth - 17, panelTop + 10, 0xff8a6b38);
+        DrawText(frame, (_width - 78) / 2, panelTop + 8, "STORMAKT 3020", 0xffffd66b);
+        DrawText(frame, (_width - 72) / 2, panelTop + 23, "VÄLJ FÄLTTÅG", 0xff9bd4dc);
 
-        DrawLevelOption(frame, panelX + 12, 88, panelWidth - 24, 0, "1  STORA BÄLT NEBULOSAN", "BÄLTET MÅSTE ÖPPNAS");
-        DrawLevelOption(frame, panelX + 12, 132, panelWidth - 24, 1, "2  SKÅNSKA SKUGGOR", "UNDER BYGGNAD");
+        for (int index = 0; index < CampaignNames.Length; index++)
+        {
+            string status = index == 0 ? "STRID" : _developerMode ? "DEV" : "LÅST";
+            DrawLevelOption(frame, panelX + 12, listY + index * rowHeight, panelWidth - 24,
+                rowHeight - 2, index, $"{index + 1}  {CampaignNames[index]}", status);
+        }
 
-        string footer = _lockedLevelNoticeFrames > 0 ? "SNAPPHANAR MÖNSTRAR" : "UPP NER VÄLJ  START";
-        DrawText(frame, (_width - footer.Length * 6) / 2, panelBottom - 17, footer,
+        string footer = _lockedLevelNoticeFrames > 0 ? "FÄLTTÅGET ÄR LÅST" :
+            _developerMode ? "UTVECKLARLÄGE  ALLT UPPLÅST" : "UPP NER VÄLJ  START";
+        DrawText(frame, (_width - footer.Length * 6) / 2, panelBottom - 9, footer,
             _lockedLevelNoticeFrames > 0 ? 0xff65c58a : 0xffb7c7d6);
     }
 
-    private void DrawLevelOption(uint[] frame, int x, int y, int width, int index, string title, string status)
+    private void DrawLevelOption(uint[] frame, int x, int y, int width, int height, int index, string title, string status)
     {
         bool selected = _levelSelection == index;
         uint border = selected ? 0xffffd66b : 0xff344d5c;
         uint fill = selected ? 0xff172536 : 0xff0d151d;
-        DrawRect(frame, x, y, width, 36, fill);
+        DrawRect(frame, x, y, width, height, fill);
         DrawLine(frame, x, y, x + width - 1, y, border);
-        DrawLine(frame, x, y + 35, x + width - 1, y + 35, border);
-        DrawRect(frame, x + 5, y + 6, 3, 24, selected ? 0xffffd66b : 0xff293d4b);
-        DrawText(frame, x + 14, y + 7, title, selected ? 0xffffffff : 0xff91a7b5);
-        DrawText(frame, x + 14, y + 21, status, index == 1 ? 0xff65c58a : 0xff7fc7ff);
+        DrawLine(frame, x, y + height - 1, x + width - 1, y + height - 1, border);
+        DrawRect(frame, x + 5, y + 4, 3, Math.Max(3, height - 8), selected ? 0xffffd66b : 0xff293d4b);
+        int textY = y + (height - 7) / 2;
+        DrawText(frame, x + 14, textY, title, selected ? 0xffffffff : 0xff91a7b5);
+        uint statusColor = status == "LÅST" ? 0xff697680 : status == "DEV" ? 0xff65c58a : 0xff7fc7ff;
+        DrawText(frame, x + width - status.Length * 6 - 8, textY, status, statusColor);
+    }
+
+    private void DrawLevelPreview(uint[] frame)
+    {
+        int panelWidth = Math.Min(330, _width - 28);
+        const int panelHeight = 126;
+        int x = (_width - panelWidth) / 2;
+        int y = (_height - panelHeight) / 2;
+        DrawRect(frame, x, y, panelWidth, panelHeight, 0xee080d12);
+        DrawLine(frame, x, y, x + panelWidth - 1, y, 0xffffd66b);
+        DrawLine(frame, x, y + panelHeight - 1, x + panelWidth - 1, y + panelHeight - 1, 0xff2f74c9);
+        DrawText(frame, x + 14, y + 13, $"FÄLTTÅG {_previewLevel + 1}", 0xff9bd4dc);
+        DrawText(frame, x + 14, y + 32, CampaignNames[_previewLevel], 0xffffd66b);
+        DrawLine(frame, x + 14, y + 48, x + panelWidth - 15, y + 48, 0xff344d5c);
+        DrawText(frame, x + 14, y + 61, "UTVECKLARPREVIEW", 0xff65c58a);
+        DrawText(frame, x + 14, y + 78, "TIDSLINJE OCH BOSS EJ BYGGDA", 0xffb7c7d6);
+        DrawText(frame, x + 14, y + 103, "START ELLER ELD  ÅTER", 0xffffffff);
     }
 
     private void DrawPause(uint[] frame)
