@@ -1,6 +1,6 @@
 # Bana 2 - Skånska skuggor
 
-Status: implementation underway. The shared technical spine is maintained in `docs/stormakt3020-level-hook-map.md`; keep that map synchronized as level hooks land.
+Status: implementation underway. A deterministic 60-second gameplay skeleton is selectable in developer mode. The shared technical spine is maintained in `docs/stormakt3020-level-hook-map.md`; keep that map synchronized as level hooks land.
 
 ## Dramatiskt löfte
 

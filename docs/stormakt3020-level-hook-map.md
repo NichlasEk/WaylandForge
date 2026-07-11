@@ -92,7 +92,7 @@ First asset batch:
 
 ## Skånska build checkpoints
 
-1. **Hook spine:** `_levelId`, start/reset/dispatch seams, level 2 can enter a deterministic 60-second skeleton. Level 1 frame behavior remains intact.
+1. **Hook spine (landed 2026-07-11):** `_levelId`, start/reset/dispatch seams, level 2 enters a deterministic 60-second skeleton with its own seed, title, palette, scenery fallback, wave table and result. Level 1 remains on its existing dispatch path.
 2. **Snapphane identity:** generated Sören ship and portrait, first radio, silent background pass.
 3. **World:** generated Skåne background/props, fog drones, convoy and signal beacon.
 4. **Rival duel:** Sören dash, copper salvo, decoys and deterministic interruption.

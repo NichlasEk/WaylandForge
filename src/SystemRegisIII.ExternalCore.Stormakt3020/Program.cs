@@ -109,6 +109,10 @@ internal sealed class StormaktGame
         new(1_380, 300, true, "KING CHRISTIAN", "BROKE THE SEAL", "CROWN FLEET", StormaktVoice.KungChristian, "portrait_christian"),
         new(BossArrivalFrame, 300, true, "FOGDE RASMUS", "CROWNS TENTH", "TAKES EVERYTHING", StormaktVoice.RasmusGyldentold, "portrait_rasmus"),
     ];
+    private static readonly RadioCard[] SkanskaRadioCards =
+    [
+        new(90, 330, false, "EBBA GRIP", "OKÄND SIGNAL", "HÅLL KURSEN", StormaktVoice.EbbaGrip, "portrait_ebba"),
+    ];
     private static readonly EnemyWave[] EnemyWaves =
     [
         new(240, 720, 180, 0, 2),
@@ -116,6 +120,12 @@ internal sealed class StormaktGame
         new(1_500, 2_280, 120, 0, 3),
         new(2_280, 3_060, 150, 2, 2),
         new(3_060, 3_240, 105, 1, 3),
+    ];
+    private static readonly EnemyWave[] SkanskaEnemyWaves =
+    [
+        new(240, 1_080, 150, 4, 2),
+        new(1_080, 2_220, 120, 4, 3),
+        new(2_220, 3_420, 105, 5, 3),
     ];
     private int _shipX;
     private int _shipY;
@@ -135,6 +145,7 @@ internal sealed class StormaktGame
     private bool _inLevelSelect;
     private bool _inLevelPreview;
     private int _previewLevel;
+    private int _levelId;
     private int _levelSelection;
     private int _lockedLevelNoticeFrames;
 
@@ -241,6 +252,7 @@ internal sealed class StormaktGame
         SpawnEnemies();
         SpawnGroundEncounters();
         SpawnBoss();
+        StepLevelTimeline();
         StepStars();
         _previousButtons = buttons;
     }
@@ -294,7 +306,7 @@ internal sealed class StormaktGame
         _enemyShots.Clear();
         _groundTargets.Clear();
         _anchorHazards.Clear();
-        _random = new Random(3020);
+        _random = new Random(_levelId == 1 ? 3202 : 3020);
         for (int i = 0; i < _stars.Length; i++)
         {
             _stars[i] = new Star(_random.Next(_width), _random.Next(_height), 1 + _random.Next(3), _random.Next(50, 180));
@@ -318,6 +330,15 @@ internal sealed class StormaktGame
         _audio?.SwitchMusic(StormaktMusicTrack.Combat);
     }
 
+    private void StartLevel(int levelId)
+    {
+        _levelId = levelId;
+        Reset();
+        _inLevelSelect = false;
+        _inLevelPreview = false;
+        _audio?.Trigger(StormaktSound.Deploy);
+    }
+
     private bool Pressed(uint buttons, uint button) => (buttons & button) != 0 && (_previousButtons & button) == 0;
 
     private void StepLevelSelect(uint buttons)
@@ -334,11 +355,9 @@ internal sealed class StormaktGame
         }
         if (Pressed(buttons, Start))
         {
-            if (_levelSelection == 0)
+            if (_levelSelection == 0 || (_levelSelection == 1 && _developerMode))
             {
-                Reset();
-                _inLevelSelect = false;
-                _audio?.Trigger(StormaktSound.Deploy);
+                StartLevel(_levelSelection);
             }
             else
             {
@@ -373,7 +392,8 @@ internal sealed class StormaktGame
 
     private void StepRadio()
     {
-        foreach (RadioCard card in RadioCards)
+        ReadOnlySpan<RadioCard> cards = _levelId == 1 ? SkanskaRadioCards : RadioCards;
+        foreach (RadioCard card in cards)
         {
             if (_missionFrame == card.StartFrame)
             {
@@ -381,6 +401,19 @@ internal sealed class StormaktGame
             }
         }
         _missionFrame++;
+    }
+
+    private void StepLevelTimeline()
+    {
+        if (_levelId == 1 && _missionFrame >= 3_600 && !_stageClear)
+        {
+            _stageClear = true;
+            _stageClearAge = 0;
+            _enemies.Clear();
+            _enemyShots.Clear();
+            _shots.Clear();
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
     }
 
     private void StepShots()
@@ -555,6 +588,10 @@ internal sealed class StormaktGame
 
     private void SpawnBoss()
     {
+        if (_levelId != 0)
+        {
+            return;
+        }
         if (_missionFrame == BossArrivalFrame && _boss is null)
         {
             _boss = new BossState
@@ -1039,12 +1076,14 @@ internal sealed class StormaktGame
 
     private void SpawnEnemies()
     {
-        if (_missionFrame >= BossArrivalFrame)
+        int endFrame = _levelId == 1 ? 3_600 : BossArrivalFrame;
+        if (_missionFrame >= endFrame)
         {
             return;
         }
         int timelineFrame = _missionFrame;
-        foreach (EnemyWave wave in EnemyWaves)
+        ReadOnlySpan<EnemyWave> waves = _levelId == 1 ? SkanskaEnemyWaves : EnemyWaves;
+        foreach (EnemyWave wave in waves)
         {
             if (timelineFrame < wave.StartFrame || timelineFrame >= wave.EndFrame ||
                 (timelineFrame - wave.StartFrame) % wave.IntervalFrames != 0)
@@ -1061,13 +1100,15 @@ internal sealed class StormaktGame
     {
         int centerSpan = Math.Max(1, _width - 124);
         int center = 62 + ((volley * 71 + wave.Kind * 43) % centerSpan);
-        int radius = wave.Kind == 2 ? 12 : wave.Kind == 1 ? 10 : 8;
-        int speed = wave.Kind == 2 ? 1 : 2;
-        int health = wave.Kind == 2 ? 8 : wave.Kind == 1 ? 6 : 4;
+        int radius = wave.Kind == 2 ? 12 : wave.Kind is 1 or 5 ? 10 : 8;
+        int speed = wave.Kind is 2 or 5 ? 1 : 2;
+        int health = wave.Kind == 2 ? 8 : wave.Kind is 1 or 5 ? 6 : 4;
         uint color = wave.Kind switch
         {
             0 => 0xffa71930,
             1 => 0xffc51f35,
+            4 => 0xff2e4939,
+            5 => 0xff6f4a32,
             _ => 0xff7f1727,
         };
         for (int index = 0; index < wave.Count; index++)
@@ -1083,6 +1124,10 @@ internal sealed class StormaktGame
 
     private void SpawnGroundEncounters()
     {
+        if (_levelId != 0)
+        {
+            return;
+        }
         if (_missionFrame >= BossArrivalFrame)
         {
             return;
@@ -1127,7 +1172,9 @@ internal sealed class StormaktGame
 
     private void DrawSky(uint[] frame)
     {
-        string backgroundName = _width <= 320 ? "stora_balt_background" : "stora_balt_background_wide";
+        string backgroundName = _levelId == 1
+            ? (_width <= 320 ? "skanska_background" : "skanska_background_wide")
+            : (_width <= 320 ? "stora_balt_background" : "stora_balt_background_wide");
         if (_sprites?.TryGet(backgroundName, out Sprite background) == true)
         {
             int scroll = (_missionFrame / 3) % background.Height;
@@ -1138,9 +1185,9 @@ internal sealed class StormaktGame
         for (int y = 0; y < _height; y++)
         {
             int row = y * _width;
-            uint r = (uint)(4 + y / 18);
-            uint g = (uint)(13 + y / 8);
-            uint b = (uint)(24 + y / 3);
+            uint r = (uint)((_levelId == 1 ? 8 : 4) + y / 18);
+            uint g = (uint)((_levelId == 1 ? 11 : 13) + y / (_levelId == 1 ? 12 : 8));
+            uint b = (uint)((_levelId == 1 ? 16 : 24) + y / (_levelId == 1 ? 5 : 3));
             for (int x = 0; x < _width; x++)
             {
                 uint fog = (uint)((Math.Sin(x * 0.025 + _missionFrame * 0.004 + y * 0.04) + 1.0) * 6.0);
@@ -1156,7 +1203,9 @@ internal sealed class StormaktGame
 
     private void DrawNebula(uint[] frame)
     {
-        string backgroundName = _width <= 320 ? "stora_balt_background" : "stora_balt_background_wide";
+        string backgroundName = _levelId == 1
+            ? (_width <= 320 ? "skanska_background" : "skanska_background_wide")
+            : (_width <= 320 ? "stora_balt_background" : "stora_balt_background_wide");
         if (_sprites?.TryGet(backgroundName, out _) == true)
         {
             return;
@@ -1170,7 +1219,9 @@ internal sealed class StormaktGame
                     Math.Sin((x + y) * 0.011 + scroll * 0.35);
                 if (gas > 1.25)
                 {
-                    uint color = ((x + y + _missionFrame / 8) % 17) < 3 ? 0xff6a3b3b : 0xff28545d;
+                    uint color = _levelId == 1
+                        ? (((x + y + _missionFrame / 8) % 17) < 3 ? 0xff6b3034 : 0xff24483a)
+                        : (((x + y + _missionFrame / 8) % 17) < 3 ? 0xff6a3b3b : 0xff28545d);
                     BlendPixel(frame, x, y, color, 38);
                     BlendPixel(frame, x + 1, y, color, 24);
                     BlendPixel(frame, x, y + 1, color, 24);
@@ -1181,6 +1232,11 @@ internal sealed class StormaktGame
 
     private void DrawBeltRuins(uint[] frame)
     {
+        if (_levelId == 1)
+        {
+            DrawSkanskaScenery(frame);
+            return;
+        }
         if (_sprites?.TryGet("belt_asteroids_generated", out Sprite asteroids) == true &&
             _sprites.TryGet("swedish_wreck_generated", out Sprite wreck) &&
             _sprites.TryGet("bridge_arch_left_generated", out Sprite leftArch) &&
@@ -1214,6 +1270,25 @@ internal sealed class StormaktGame
 
         int bridgeY = ((_missionFrame * 3 / 4 + 510) % 980) - 180;
         DrawBrokenBridge(frame, bridgeY);
+    }
+
+    private void DrawSkanskaScenery(uint[] frame)
+    {
+        for (int index = 0; index < 8; index++)
+        {
+            int y = ((index * 71 + _missionFrame / 3) % (_height + 100)) - 50;
+            int x = 18 + ((index * 109) % Math.Max(1, _width - 36));
+            uint crystal = (index & 1) == 0 ? 0xff24463b : 0xff342f35;
+            FillTriangle(frame, x, y - 20, x - 9, y + 15, x + 9, y + 15, crystal);
+            FillTriangle(frame, x, y - 10, x - 15, y + 21, x + 15, y + 21, 0xff192f2a);
+            DrawLine(frame, x, y - 17, x, y + 18, 0xff4b7a5d);
+        }
+        int kilnY = ((_missionFrame / 2 + 190) % 620) - 90;
+        int kilnX = _width - 52;
+        FillCircle(frame, kilnX, kilnY, 22, 0xff24282a);
+        FillCircle(frame, kilnX, kilnY, 14, 0xff15191a);
+        FillCircle(frame, kilnX - 4, kilnY + 3, 4, 0xff9a4f2d);
+        BlendPixel(frame, kilnX - 4, kilnY + 3, 0xffff8a4a, 110);
     }
 
     private void DrawDistantWreck(uint[] frame, int x, int y)
@@ -1796,7 +1871,7 @@ internal sealed class StormaktGame
                 return;
             }
         }
-        if (_sprites is not null && enemy.Kind != 3)
+        if (_sprites is not null && enemy.Kind != 3 && enemy.Kind < 4)
         {
             string spriteName = enemy.Kind switch
             {
@@ -1811,7 +1886,22 @@ internal sealed class StormaktGame
             }
         }
 
-        if (enemy.Kind == 3)
+        if (enemy.Kind is 4 or 5)
+        {
+            uint hull = enemy.Kind == 4 ? 0xff17231e : 0xff271d1a;
+            uint copper = enemy.Kind == 4 ? 0xff79523a : 0xffa66b3f;
+            uint signal = 0xff65c58a;
+            FillTriangle(frame, enemy.X, enemy.Y - enemy.Radius, enemy.X - enemy.Radius, enemy.Y + enemy.Radius,
+                enemy.X + enemy.Radius, enemy.Y + enemy.Radius, hull);
+            DrawLine(frame, enemy.X - enemy.Radius + 2, enemy.Y + 4, enemy.X + enemy.Radius - 2, enemy.Y + 4, copper);
+            DrawRect(frame, enemy.X - 3, enemy.Y - 4, 6, 7, 0xff0d1211);
+            PutPixel(frame, enemy.X, enemy.Y - 2, signal);
+            if (((_missionFrame / 6) & 1) == 0)
+            {
+                BlendPixel(frame, enemy.X, enemy.Y - 2, signal, 140);
+            }
+        }
+        else if (enemy.Kind == 3)
         {
             DrawFogdeSloop(frame, enemy, brass, danishRed, danishWhite, dark);
         }
@@ -1943,8 +2033,16 @@ internal sealed class StormaktGame
         {
             DrawLine(frame, panelX, 86, panelX + 195, 86, 0xffd6b25e);
             DrawLine(frame, panelX, 130, panelX + 195, 130, 0xff2f74c9);
-            DrawText(frame, panelX + 51, 99, "BÄLTET ÄR ÖPPET", 0xffffd66b);
-            DrawText(frame, panelX + 39, 116, "KRONARKIV SÄKRAT", 0xff9bd4dc);
+            if (_levelId == 1)
+            {
+                DrawText(frame, panelX + 39, 99, "SKUGGORNA SVARAR", 0xffffd66b);
+                DrawText(frame, panelX + 42, 116, "SIGNALEN FUNNEN", 0xff65c58a);
+            }
+            else
+            {
+                DrawText(frame, panelX + 51, 99, "BÄLTET ÄR ÖPPET", 0xffffd66b);
+                DrawText(frame, panelX + 39, 116, "KRONARKIV SÄKRAT", 0xff9bd4dc);
+            }
         }
     }
 
@@ -1974,8 +2072,16 @@ internal sealed class StormaktGame
         DrawRect(frame, panelX, y, 272, 39, 0xff080f18);
         DrawLine(frame, panelX, y, panelX + 271, y, 0xff8a6b38);
         DrawLine(frame, panelX, y + 38, panelX + 271, y + 38, 0xff2f74c9);
-        DrawText(frame, panelX + 95, y + 8, "ÅTERTÅGET ÖVER", 0xffffd66b);
-        DrawText(frame, panelX + 73, y + 22, "STORA BÄLT NEBULOSAN", 0xff9bd4dc);
+        if (_levelId == 1)
+        {
+            DrawText(frame, panelX + 92, y + 8, "DEN SVARTA SKOGEN", 0xffffd66b);
+            DrawText(frame, panelX + 88, y + 22, "SKÅNSKA SKUGGOR", 0xff65c58a);
+        }
+        else
+        {
+            DrawText(frame, panelX + 95, y + 8, "ÅTERTÅGET ÖVER", 0xffffd66b);
+            DrawText(frame, panelX + 73, y + 22, "STORA BÄLT NEBULOSAN", 0xff9bd4dc);
+        }
     }
 
     private void DrawLevelSelect(uint[] frame)
