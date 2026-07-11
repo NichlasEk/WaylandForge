@@ -1192,8 +1192,8 @@ internal sealed class StormaktGame
         int length = 3 + pulse;
         uint outer = _heat > 80 ? 0xff8bdfff : 0xff2fbfff;
         uint core = _heat > 80 ? 0xffffffff : 0xffd7f7ff;
-        DrawPlayerEngineThrust(frame, _shipX - 6, length, outer, core);
-        DrawPlayerEngineThrust(frame, _shipX + 6, length, outer, core);
+        DrawPlayerEngineThrust(frame, _shipX - 7, length, outer, core);
+        DrawPlayerEngineThrust(frame, _shipX + 5, length, outer, core);
     }
 
     private void DrawPlayerEngineThrust(uint[] frame, int engineX, int length, uint outer, uint core)
