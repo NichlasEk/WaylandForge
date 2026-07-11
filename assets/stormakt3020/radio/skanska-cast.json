@@ -114,6 +114,45 @@
       "seed": 302114
     },
     {
+      "id": "rasmus-boss-fornaekter",
+      "role": "rasmus-gyldentold",
+      "level": 1,
+      "frame": -1,
+      "cue": "boss_phase_2",
+      "text": "Hvad laver I? Kronens Tiende kan ikke synke! Hold straks op med at skyde!",
+      "subtitle_lines": ["HVAD LAVER I?", "STOP SKYDNINGEN!"],
+      "seed": 302151,
+      "dots_num_steps": 8,
+      "dots_guidance_scale": 1.7,
+      "dots_speaker_scale": 1.45
+    },
+    {
+      "id": "rasmus-boss-panik",
+      "role": "rasmus-gyldentold",
+      "level": 1,
+      "frame": -1,
+      "cue": "boss_phase_3",
+      "text": "Mine kanoner! Mine dokker! Hold linjen, for fanden! Tienden må ikke briste!",
+      "subtitle_lines": ["MINE KANONER!", "HOLD LINJEN!"],
+      "seed": 302152,
+      "dots_num_steps": 8,
+      "dots_guidance_scale": 1.75,
+      "dots_speaker_scale": 1.55
+    },
+    {
+      "id": "rasmus-boss-undergang",
+      "role": "rasmus-gyldentold",
+      "level": 1,
+      "frame": -1,
+      "cue": "boss_death",
+      "text": "De svenske slyngler! Jeres frækhed kender ingen grænser! Neeeeej! Denne gang, Karl! Denne gang... men næste gang! Hver gang!",
+      "subtitle_lines": ["NEEEEEJ!", "NÆSTE GANG!"],
+      "seed": 302153,
+      "dots_num_steps": 10,
+      "dots_guidance_scale": 1.9,
+      "dots_speaker_scale": 1.7
+    },
+    {
       "id": "ebba-skanska-signal",
       "role": "ebba-grip",
       "level": 2,

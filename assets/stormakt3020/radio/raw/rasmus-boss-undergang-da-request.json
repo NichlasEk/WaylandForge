@@ -1,0 +1,12 @@
+{
+  "text": "De svenske slyngler! Jeres frækhed kender ingen grænser! Neeeeej! Denne gang, Karl! Denne gang... men næste gang! Hver gang!",
+  "language": "da",
+  "model_backend": "dots.tts-mf",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Svenske fartøj, lyt nøje. Jeg er foged Rasmus Gyldentold, og Kronens tiende forfalder i dag. Mine kanoner vogter broerne, mine segl lukker farvandet, og intet skib passerer uden at betale. Læg bi med værdighed, før regnskabet bliver skrevet med jern og ild.",
+  "seed": 302153,
+  "dots_num_steps": 10,
+  "dots_guidance_scale": 1.9,
+  "dots_speaker_scale": 1.7
+}

@@ -119,6 +119,12 @@ internal sealed class StormaktGame
         new(1_500, 330, false, "EBBA GRIP", "SÖREN SVARTKRUT", "KAPARE OCH VÄG", StormaktVoice.EbbaIdentifierarSoren, "portrait_ebba"),
         new(2_280, 300, true, "SÖREN SVARTKRUT", "FOGDEKONVOJ", "FÖRÖVER", StormaktVoice.SorenFogdekonvoj, "portrait_soren", true),
     ];
+    private static readonly RadioCard RasmusPhaseTwoRadio =
+        new(0, 330, true, "FOGDE RASMUS", "HVAD LAVER I?", "STOP SKYDNINGEN!", StormaktVoice.RasmusBossFornaekter, "portrait_rasmus");
+    private static readonly RadioCard RasmusPhaseThreeRadio =
+        new(0, 330, true, "FOGDE RASMUS", "MINE KANONER!", "HOLD LINJEN!", StormaktVoice.RasmusBossPanik, "portrait_rasmus");
+    private static readonly RadioCard RasmusDeathRadio =
+        new(0, 360, true, "FOGDE RASMUS", "NEEEEEJ!", "NÆSTE GANG!", StormaktVoice.RasmusBossUndergang, "portrait_rasmus");
     private static readonly EnemyWave[] EnemyWaves =
     [
         new(240, 720, 180, 0, 2),
@@ -154,6 +160,8 @@ internal sealed class StormaktGame
     private int _levelId;
     private int _levelSelection;
     private int _lockedLevelNoticeFrames;
+    private RadioCard? _bossRadioCard;
+    private int _bossRadioAge;
 
     public StormaktGame(int width, int height, SpritePack? sprites, StormaktMusicLoop? audio)
     {
@@ -336,6 +344,8 @@ internal sealed class StormaktGame
         _previousButtons = 0;
         _gameOver = false;
         _paused = false;
+        _bossRadioCard = null;
+        _bossRadioAge = 0;
         _audio?.SetPaused(false);
         _audio?.SwitchMusic(StormaktMusicTrack.Combat);
     }
@@ -406,6 +416,15 @@ internal sealed class StormaktGame
 
     private void StepRadio()
     {
+        if (_bossRadioCard is RadioCard bossCard)
+        {
+            _bossRadioAge++;
+            if (_bossRadioAge >= bossCard.DurationFrames)
+            {
+                _bossRadioCard = null;
+                _bossRadioAge = 0;
+            }
+        }
         ReadOnlySpan<RadioCard> cards = _levelId == 1 ? SkanskaRadioCards : RadioCards;
         foreach (RadioCard card in cards)
         {
@@ -418,6 +437,16 @@ internal sealed class StormaktGame
             }
         }
         _missionFrame++;
+    }
+
+    private void ActivateBossRadio(RadioCard card)
+    {
+        _bossRadioCard = card;
+        _bossRadioAge = 0;
+        if (card.Voice is StormaktVoice voice)
+        {
+            _audio?.TriggerVoice(voice);
+        }
     }
 
     private void StepLevelTimeline()
@@ -692,6 +721,7 @@ internal sealed class StormaktGame
                     boss.RightDockHealth = 50;
                     _enemyShots.Clear();
                     _anchorHazards.Clear();
+                    ActivateBossRadio(RasmusPhaseTwoRadio);
                     _audio?.Trigger(StormaktSound.Broadside);
                 }
             }
@@ -733,6 +763,7 @@ internal sealed class StormaktGame
                         boss.RushX = boss.X;
                         _enemyShots.Clear();
                         _anchorHazards.Clear();
+                        ActivateBossRadio(RasmusPhaseThreeRadio);
                         _audio?.Trigger(StormaktSound.Broadside);
                     }
                 }
@@ -751,6 +782,7 @@ internal sealed class StormaktGame
                     _shots.Clear();
                     _enemyShots.Clear();
                     _anchorHazards.Clear();
+                    ActivateBossRadio(RasmusDeathRadio);
                     _audio?.Trigger(StormaktSound.Broadside);
                     break;
                 }
@@ -966,15 +998,16 @@ internal sealed class StormaktGame
 
     private void StepBossDeath(BossState boss)
     {
-        if (boss.PhaseAge is 1 or 30 or 60 or 90 or 120 or 155)
+        if (boss.PhaseAge is 1 or 30 or 60 or 90 or 120 or 155 or 210 or 270 or 330 or 390)
         {
-            _audio?.Trigger(boss.PhaseAge == 155 ? StormaktSound.Broadside : StormaktSound.EnemyExplosion);
-            if (boss.PhaseAge == 155)
+            bool heavy = boss.PhaseAge is 155 or 330 or 390;
+            _audio?.Trigger(heavy ? StormaktSound.Broadside : StormaktSound.EnemyExplosion);
+            if (boss.PhaseAge == 390)
             {
                 _audio?.DuckMusic(2_600);
             }
         }
-        if (boss.PhaseAge < 210)
+        if (boss.PhaseAge < 480)
         {
             return;
         }
@@ -1547,6 +1580,11 @@ internal sealed class StormaktGame
             (-18, -18, 60),
             (21, 18, 90),
             (0, 4, 120),
+            (-51, -11, 190),
+            (48, 12, 245),
+            (-27, 20, 300),
+            (29, -16, 355),
+            (0, 7, 405),
         ];
         foreach ((int offsetX, int offsetY, int start) in blasts)
         {
@@ -1560,9 +1598,10 @@ internal sealed class StormaktGame
             FillCircle(frame, x + offsetX, y + offsetY, Math.Max(1, radius - 4), 0xffff8a34);
             PutPixel(frame, x + offsetX, y + offsetY, 0xffffec9a);
         }
-        if (boss.PhaseAge >= 150)
+        if (boss.PhaseAge is >= 150 and < 210)
         {
-            int radius = Math.Min(52, 8 + (boss.PhaseAge - 150) * 2);
+            int pulseAge = boss.PhaseAge - 150;
+            int radius = pulseAge < 30 ? 8 + pulseAge : 38 - (pulseAge - 30) / 2;
             FillCircle(frame, x, y + 5, radius, 0xffe05a2a);
             FillCircle(frame, x, y + 5, Math.Max(3, radius - 12), 0xffffd66b);
             FillCircle(frame, x, y + 5, Math.Max(2, radius - 23), 0xffffffff);
@@ -2212,6 +2251,11 @@ internal sealed class StormaktGame
 
     private void DrawRadio(uint[] frame)
     {
+        if (_bossRadioCard is RadioCard bossCard && _bossRadioAge < bossCard.DurationFrames)
+        {
+            DrawRadioCard(frame, bossCard, _bossRadioAge);
+            return;
+        }
         ReadOnlySpan<RadioCard> cards = _levelId == 1 ? SkanskaRadioCards : RadioCards;
         foreach (RadioCard card in cards)
         {
@@ -2220,47 +2264,49 @@ internal sealed class StormaktGame
             {
                 continue;
             }
-
-            const int width = 138;
-            const int height = 48;
-            int slide = Math.Min(8, Math.Min(elapsed + 1, card.DurationFrames - elapsed));
-            int x = card.Enemy
-                ? _width - (width * slide / 8) - 2
-                : -width + (width * slide / 8) + 2;
-            int y = 18;
-            uint frameColor = card.Snapphane ? 0xff87583a : card.Enemy ? 0xffc92f42 : 0xff2f74c9;
-            uint lampColor = card.Snapphane ? 0xff65c58a : card.Enemy ? 0xfff4f1e8 : 0xffffd66b;
-            uint uniformColor = card.Snapphane ? 0xff27332b : card.Enemy ? 0xff8f1f31 : 0xff245ca5;
-
-            DrawRect(frame, x, y, width, height, 0xff081019);
-            DrawLine(frame, x, y, x + width - 1, y, frameColor);
-            DrawLine(frame, x, y + height - 1, x + width - 1, y + height - 1, frameColor);
-            DrawLine(frame, x, y, x, y + height - 1, frameColor);
-            DrawLine(frame, x + width - 1, y, x + width - 1, y + height - 1, frameColor);
-            DrawRect(frame, x + 2, y + 2, 38, 38, 0xff162331);
-            bool speaking = elapsed >= 8 && elapsed < card.DurationFrames - 20 && ((elapsed / 8) & 1) != 0;
-            string portraitName = card.PortraitBase + (speaking ? "_speak" : "_neutral");
-            if (_sprites?.TryGet(portraitName, out Sprite portrait) == true)
-            {
-                DrawSprite(frame, portrait, x + 2 + (38 - portrait.Width) / 2, y + 2 + (38 - portrait.Height) / 2);
-            }
-            else
-            {
-                DrawRadioPortrait(frame, x + 21, y + 21, uniformColor, lampColor, card.Enemy);
-            }
-            DrawRect(frame, x + 42, y + 3, 93, 9, frameColor);
-            DrawRect(frame, x + 44, y + 5, 3, 3, lampColor);
-            DrawText(frame, x + 50, y + 4, card.Speaker, 0xffffffff);
-            DrawText(frame, x + 43, y + 18, card.Line1, 0xffdce8f2);
-            DrawText(frame, x + 43, y + 30, card.Line2, 0xffdce8f2);
-            for (int scanY = y + 2; scanY < y + height - 1; scanY += 4)
-            {
-                for (int scanX = x + 2; scanX <= x + 39; scanX++)
-                {
-                    BlendPixel(frame, scanX, scanY, 0xff081019, 54);
-                }
-            }
+            DrawRadioCard(frame, card, elapsed);
             return;
+        }
+    }
+
+    private void DrawRadioCard(uint[] frame, RadioCard card, int elapsed)
+    {
+        const int width = 138;
+        const int height = 48;
+        int slide = Math.Min(8, Math.Min(elapsed + 1, card.DurationFrames - elapsed));
+        int x = card.Enemy ? _width - (width * slide / 8) - 2 : -width + (width * slide / 8) + 2;
+        const int y = 18;
+        uint frameColor = card.Snapphane ? 0xff87583a : card.Enemy ? 0xffc92f42 : 0xff2f74c9;
+        uint lampColor = card.Snapphane ? 0xff65c58a : card.Enemy ? 0xfff4f1e8 : 0xffffd66b;
+        uint uniformColor = card.Snapphane ? 0xff27332b : card.Enemy ? 0xff8f1f31 : 0xff245ca5;
+
+        DrawRect(frame, x, y, width, height, 0xff081019);
+        DrawLine(frame, x, y, x + width - 1, y, frameColor);
+        DrawLine(frame, x, y + height - 1, x + width - 1, y + height - 1, frameColor);
+        DrawLine(frame, x, y, x, y + height - 1, frameColor);
+        DrawLine(frame, x + width - 1, y, x + width - 1, y + height - 1, frameColor);
+        DrawRect(frame, x + 2, y + 2, 38, 38, 0xff162331);
+        bool speaking = elapsed >= 8 && elapsed < card.DurationFrames - 20 && ((elapsed / 8) & 1) != 0;
+        string portraitName = card.PortraitBase + (speaking ? "_speak" : "_neutral");
+        if (_sprites?.TryGet(portraitName, out Sprite portrait) == true)
+        {
+            DrawSprite(frame, portrait, x + 2 + (38 - portrait.Width) / 2, y + 2 + (38 - portrait.Height) / 2);
+        }
+        else
+        {
+            DrawRadioPortrait(frame, x + 21, y + 21, uniformColor, lampColor, card.Enemy);
+        }
+        DrawRect(frame, x + 42, y + 3, 93, 9, frameColor);
+        DrawRect(frame, x + 44, y + 5, 3, 3, lampColor);
+        DrawText(frame, x + 50, y + 4, card.Speaker, 0xffffffff);
+        DrawText(frame, x + 43, y + 18, card.Line1, 0xffdce8f2);
+        DrawText(frame, x + 43, y + 30, card.Line2, 0xffdce8f2);
+        for (int scanY = y + 2; scanY < y + height - 1; scanY += 4)
+        {
+            for (int scanX = x + 2; scanX <= x + 39; scanX++)
+            {
+                BlendPixel(frame, scanX, scanY, 0xff081019, 54);
+            }
         }
     }
 

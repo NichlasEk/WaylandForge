@@ -67,6 +67,8 @@ Invariant: selecting Skånska skuggor may never run Stora Bält with a changed t
 | Actors | `DrawEnemies`, `DrawShip` | Black/copper/green must remain distinct from Danish red/white and Swedish blue/gold. |
 | Presentation | HUD/title/radio/result/pause | Interference goes before radio/result/pause and may not obscure pause or dangerous shots. |
 
+Boss dialogue is event-driven rather than timeline-driven: `ActivateBossRadio` is called by phase transitions and owns a priority card/age independent of `_missionFrame`. Dynamic boss radio overrides scheduled cards while active and is cleared by level reset.
+
 ## Asset pipeline hooks
 
 1. Generated chroma-key sources live beside transparent production PNGs under `assets/stormakt3020/`.

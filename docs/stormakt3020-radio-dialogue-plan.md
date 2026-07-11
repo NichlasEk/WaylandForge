@@ -12,6 +12,8 @@ Christian's fourth pilot is a full recast, not a parameter tweak: a new VoxCPM2 
 
 The first-level seal exchange is now a four-card radio duel: Christian announces the fleet, Ebba answers, Christian threatens Karl 255, and a separate high-intensity final clip ends with `FOR SATAN!`. Splitting the exchange keeps every subtitle readable and gives the final shout its own voice timing; all three new cards were verified in the direct WFEX timeline.
 
+Fogde Rasmus now reacts to actual boss events rather than fixed frames. Phase 2 triggers offended denial, phase 3 triggers desperate orders, and phase 4 triggers a final Danish collapse over Swedish audacity ending in `NEEEEEJ`, `denne gang`, `næste gang` and `hver gang`. The death sequence lasts 480 simulation frames with distributed explosions so the 4.96-second final line completes before the result card.
+
 ## Målbild
 
 Stormakt ska använda korta videokominslag i stilen från äldre japanska shmups: ett porträtt glider in i ett hörn, namnskylten tänds, en eller två korta textrader skrivs fram och en förgenererad röst hörs genom radiofilter. Spelet fortsätter hela tiden.

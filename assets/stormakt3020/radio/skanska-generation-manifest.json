@@ -173,6 +173,36 @@
       "sha256": "2b95639edbee083739d601febcf373a045becb7481a2adc467c0428b49f4ca0e",
       "request": "assets/stormakt3020/radio/raw/christian-for-satan-da-request.json",
       "reference_sha256": "391fd7d3d32e09408e2fa6cb3e1fc64b8d57600861322173df6e27cffcd70bf9"
+    },
+    {
+      "kind": "line",
+      "line": "rasmus-boss-fornaekter",
+      "role": "rasmus-gyldentold",
+      "job_id": "23ef3fe6ecef44069bc0f049f86c90b5",
+      "file": "assets/stormakt3020/radio/raw/rasmus-boss-fornaekter-da-raw.wav",
+      "sha256": "afbd6db1054ddec92d0ab8d721353fb922f609b649b05cd7ff238d44afb1f09a",
+      "request": "assets/stormakt3020/radio/raw/rasmus-boss-fornaekter-da-request.json",
+      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
+    },
+    {
+      "kind": "line",
+      "line": "rasmus-boss-panik",
+      "role": "rasmus-gyldentold",
+      "job_id": "32ef8e1ef64e417895cc9b3cf1d4c18c",
+      "file": "assets/stormakt3020/radio/raw/rasmus-boss-panik-da-raw.wav",
+      "sha256": "9fdf3556bd53c4acf1e4edda704a4f8244232e00252ae0db59a2f6a68d477cf1",
+      "request": "assets/stormakt3020/radio/raw/rasmus-boss-panik-da-request.json",
+      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
+    },
+    {
+      "kind": "line",
+      "line": "rasmus-boss-undergang",
+      "role": "rasmus-gyldentold",
+      "job_id": "242a78104cd64b79b1976f3bf8ebe759",
+      "file": "assets/stormakt3020/radio/raw/rasmus-boss-undergang-da-raw.wav",
+      "sha256": "3a45fae0381bd885e765c2fad35a14e5c71412a513aaf0b317d14f025803a49b",
+      "request": "assets/stormakt3020/radio/raw/rasmus-boss-undergang-da-request.json",
+      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
     }
   ],
   "service": "http://127.0.0.1:8765",

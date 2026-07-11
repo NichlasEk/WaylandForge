@@ -1,0 +1,12 @@
+{
+  "text": "Mine kanoner! Mine dokker! Hold linjen, for fanden! Tienden må ikke briste!",
+  "language": "da",
+  "model_backend": "dots.tts-mf",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Svenske fartøj, lyt nøje. Jeg er foged Rasmus Gyldentold, og Kronens tiende forfalder i dag. Mine kanoner vogter broerne, mine segl lukker farvandet, og intet skib passerer uden at betale. Læg bi med værdighed, før regnskabet bliver skrevet med jern og ild.",
+  "seed": 302152,
+  "dots_num_steps": 8,
+  "dots_guidance_scale": 1.75,
+  "dots_speaker_scale": 1.55
+}
