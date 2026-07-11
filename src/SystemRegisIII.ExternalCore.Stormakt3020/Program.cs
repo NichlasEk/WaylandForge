@@ -1189,17 +1189,17 @@ internal sealed class StormaktGame
     private void DrawPlayerThrust(uint[] frame)
     {
         int pulse = (_missionFrame / 3) % 3;
-        int length = 4 + pulse * 2;
+        int length = 3 + pulse;
         uint outer = _heat > 80 ? 0xff8bdfff : 0xff2fbfff;
         uint core = _heat > 80 ? 0xffffffff : 0xffd7f7ff;
-        DrawPlayerEngineThrust(frame, _shipX - 7, length, outer, core);
-        DrawPlayerEngineThrust(frame, _shipX + 7, length, outer, core);
+        DrawPlayerEngineThrust(frame, _shipX - 6, length, outer, core);
+        DrawPlayerEngineThrust(frame, _shipX + 6, length, outer, core);
     }
 
     private void DrawPlayerEngineThrust(uint[] frame, int engineX, int length, uint outer, uint core)
     {
         int nozzleY = _shipY + 16;
-        FillTriangle(frame, engineX - 2, nozzleY, engineX + 2, nozzleY, engineX, nozzleY + length, outer);
+        FillTriangle(frame, engineX - 1, nozzleY, engineX + 1, nozzleY, engineX, nozzleY + length, outer);
         DrawLine(frame, engineX, nozzleY, engineX, nozzleY + Math.Max(2, length - 2), core);
     }
 
