@@ -16,6 +16,7 @@ internal sealed class StormaktMusicLoop : IDisposable
     private float[] _samples;
     private readonly float[]? _menuSamples;
     private readonly float[] _combatSamples;
+    private readonly float[]? _skanskaSamples;
     private readonly float[]? _bossSamples;
     private readonly Dictionary<StormaktSound, LoadedEffect> _effects;
     private readonly Dictionary<StormaktVoice, LoadedEffect> _voices;
@@ -41,6 +42,7 @@ internal sealed class StormaktMusicLoop : IDisposable
     private StormaktMusicLoop(
         float[] samples,
         float[]? menuSamples,
+        float[]? skanskaSamples,
         float[]? bossSamples,
         Dictionary<StormaktSound, LoadedEffect> effects,
         Dictionary<StormaktVoice, LoadedEffect> voices,
@@ -49,6 +51,7 @@ internal sealed class StormaktMusicLoop : IDisposable
         _samples = samples;
         _menuSamples = menuSamples;
         _combatSamples = samples;
+        _skanskaSamples = skanskaSamples;
         _bossSamples = bossSamples;
         _effects = effects;
         _voices = voices;
@@ -97,6 +100,8 @@ internal sealed class StormaktMusicLoop : IDisposable
                 string originalMenuPath = Path.Combine(musicDirectory, "marsch-mot-kopenhamn-v1.wav");
                 string menuPath = File.Exists(ironMarchPath) ? ironMarchPath : originalMenuPath;
                 float[]? menuSamples = File.Exists(menuPath) ? LoadPcm16StereoWav(menuPath) : null;
+                string skanskaPath = Path.Combine(musicDirectory, "skanska-skuggor-loop-v1.wav");
+                float[]? skanskaSamples = File.Exists(skanskaPath) ? LoadPcm16StereoWav(skanskaPath) : null;
                 string loopedBossPath = Path.Combine(musicDirectory, "kronans-sista-salva-loop-v2.wav");
                 string originalBossPath = Path.Combine(musicDirectory, "kronans-sista-salva-v1.wav");
                 string bossPath = File.Exists(loopedBossPath) ? loopedBossPath : originalBossPath;
@@ -105,10 +110,12 @@ internal sealed class StormaktMusicLoop : IDisposable
                 Dictionary<StormaktVoice, LoadedEffect> voices = LoadVoices(path);
                 string socketPath = Environment.GetEnvironmentVariable("WAYLANDFORGE_AUDIO_SOCKET") ?? DefaultSocketPath;
                 string menuDescription = menuSamples is null ? "missing" : $"ready ({menuSamples.Length / Channels / SampleRate}s)";
+                string skanskaDescription = skanskaSamples is null ? "missing" : $"ready ({skanskaSamples.Length / Channels / SampleRate}s)";
                 string bossDescription = bossSamples is null ? "missing" : $"ready ({bossSamples.Length / Channels / SampleRate}s)";
                 Console.Error.WriteLine($"Stormakt audio: loaded {Path.GetFileName(path)} ({samples.Length / Channels / SampleRate}s), " +
-                    $"menu march={menuDescription}, boss score={bossDescription}, {effects.Count} effects and {voices.Count} radio voices.");
-                return new StormaktMusicLoop(samples, menuSamples, bossSamples, effects, voices, socketPath);
+                    $"menu march={menuDescription}, Skanska score={skanskaDescription}, boss score={bossDescription}, " +
+                    $"{effects.Count} effects and {voices.Count} radio voices.");
+                return new StormaktMusicLoop(samples, menuSamples, skanskaSamples, bossSamples, effects, voices, socketPath);
             }
             catch (Exception exception)
             {
@@ -247,6 +254,7 @@ internal sealed class StormaktMusicLoop : IDisposable
             {
                 StormaktMusicTrack.Menu => _menuSamples,
                 StormaktMusicTrack.Combat => _combatSamples,
+                StormaktMusicTrack.Skanska => _skanskaSamples,
                 StormaktMusicTrack.Boss => _bossSamples,
                 _ => null,
             };
@@ -644,5 +652,6 @@ internal enum StormaktMusicTrack
 {
     Menu,
     Combat,
+    Skanska,
     Boss,
 }

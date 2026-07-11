@@ -34,6 +34,15 @@
       "thinking": false
     },
     {
+      "role": "level_02_skanska_skuggor",
+      "file": "skanska-skuggor-v1.wav",
+      "request": "prompts/skanska-skuggor.json",
+      "task_id": "66a0c132-c6b9-418b-b996-2d82401e8b74",
+      "seed": "4108954787",
+      "duration_seconds": 60,
+      "thinking": false
+    },
+    {
       "role": "combat_fast",
       "file": "oresund-i-brand-v1.wav",
       "request": "prompts/oresund-i-brand.json",
@@ -53,6 +62,17 @@
     }
   ],
   "derived": [
+    {
+      "role": "level_02_skanska_runtime_loop",
+      "file": "skanska-skuggor-loop-v1.wav",
+      "source": "skanska-skuggor-v1.wav",
+      "tool": "../../../tools/stormakt3020/build_music_loops.py",
+      "bpm": 92,
+      "bars": 21,
+      "duration_seconds": 54.783,
+      "runtime_crossfade_seconds": 0.5,
+      "sha256": "fb1f6670d24c5d29035849e19c44f4cc2a8d4304b5b6fae13a18a764f0a5419c"
+    },
     {
       "role": "menu_grand_campaign_runtime_loop",
       "file": "tre-kronors-jarnmarsch-loop-v1.wav",

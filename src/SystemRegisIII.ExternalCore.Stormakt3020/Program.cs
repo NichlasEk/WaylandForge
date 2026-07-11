@@ -340,6 +340,10 @@ internal sealed class StormaktGame
         Reset();
         _inLevelSelect = false;
         _inLevelPreview = false;
+        if (_levelId == 1)
+        {
+            _audio?.SwitchMusic(StormaktMusicTrack.Skanska);
+        }
         _audio?.Trigger(StormaktSound.Deploy);
     }
 

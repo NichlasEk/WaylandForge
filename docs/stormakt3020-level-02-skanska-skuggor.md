@@ -4,6 +4,8 @@ Status: implementation underway. A deterministic 60-second gameplay skeleton is 
 
 Current identity slice: Sören Svartkrut has matched generated neutral/speaking radio portraits and his first transmission at frame 900. Level 2 suppresses the ordinary star layer; HUD bars render above the player and hazards.
 
+Current audio slice: `skanska-skuggor-loop-v1.wav` is the dedicated runtime score, selected through the level id and isolated from Stora Bält combat music.
+
 ## Dramatiskt löfte
 
 Efter reträtten över Stora Bält söker Karl CCLV reservdelar i ett mörkt asteroidbälte av kristallgranar, gruvmånar och glödande kolmilor. Danska fogdekonvojer plundrar samma område, men en tredje svart/kopparfärgad styrka slår mot båda sidor. Spelaren möter framtidens snapphane **Sören Svartkrut**: först störsändare och kapare, sedan miniboss och till sist en motvillig möjlig allierad.

@@ -86,7 +86,7 @@ First asset batch:
 ## Audio hooks
 
 - `StormaktMusicLoop` already preloads and crossfades menu/combat/boss tracks.
-- Add level-specific combat selection without replacing the `StormaktMusicTrack` transition mechanism.
+- Level 2 selects `StormaktMusicTrack.Skanska`: a 21-bar 92 BPM loop derived from the generated source at an exact bar boundary, using the shared runtime crossfade.
 - `StormaktVoice` and `LoadVoices` need a Sören entry; placeholder English voice is acceptable.
 - New SFX should enter the existing bounded mixer queue. Do not open a second audio stream.
 

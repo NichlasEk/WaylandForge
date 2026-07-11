@@ -72,6 +72,8 @@ Additional scored roles live under `music/`:
 - `marsch-mot-kopenhamn-v1.wav`: somber menu and launch procession.
 - `music/tre-kronors-jarnmarsch-v1.wav`: a faster, brass-led grand campaign menu march.
 - `music/tre-kronors-jarnmarsch-loop-v1.wav`: the active 16-bar, 88 BPM menu loop derived from the new march.
+- `music/skanska-skuggor-v1.wav`: dark nyckelharpa-led level theme for Skånska skuggor.
+- `music/skanska-skuggor-loop-v1.wav`: the active 21-bar, 92 BPM level loop with the generated silent tail removed.
 - `oresund-i-brand-v1.wav`: faster normal-combat loop.
 - `kronans-sista-salva-v1.wav`: monumental boss loop.
 

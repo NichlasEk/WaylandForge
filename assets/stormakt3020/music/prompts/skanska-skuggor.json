@@ -1,0 +1,21 @@
+{
+  "prompt": "Instrumental stage theme for a dark futuristic Scanian forest-asteroid level in a Swedish 17th-century space-navy shoot-em-up. Sorrowful stealth march in D minor at 92 BPM, dark bowed nyckelharpa carrying a memorable outlaw motif, low violas and cellos, restrained bass brass, dry oxidized-copper percussion, uneven hand-drum pulse, distant field snare, low mining-machine drone and brief eerie green signal tones. Mysterious forest tension, cold red aurora, black iron and copper, dangerous snapphane ambush energy, forward-moving arcade rhythm without becoming triumphant. Begin musically at once, maintain playable momentum, circular sixteen-bar structure suitable for an endless stage loop, no quiet ambient intro and no large final cadence. No vocals, no sung choir, no lyrics, no EDM, no modern pop drums, no comedy, no cheerful major key.",
+  "lyrics": "[Instrumental]",
+  "vocal_language": "unknown",
+  "audio_duration": 60,
+  "audio_format": "wav",
+  "task_type": "text2music",
+  "batch_size": 1,
+  "thinking": false,
+  "use_format": false,
+  "bpm": 92,
+  "key_scale": "D minor",
+  "time_signature": "4/4",
+  "inference_steps": 8,
+  "guidance_scale": 7.0,
+  "use_random_seed": true,
+  "constrained_decoding": true,
+  "use_cot_caption": true,
+  "use_cot_language": true,
+  "lm_negative_prompt": "vocals, singing, lyrics, EDM, pop, comedy, cheerful major key, silence, ambient intro, abrupt final cadence"
+}
