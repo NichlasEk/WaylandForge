@@ -8,7 +8,6 @@ using SaturnInput = SaturnEmulator::SystemRegisIII.Core.Host.Input;
 using SaturnMemory = SaturnEmulator::SystemRegisIII.Core.Core.Memory;
 using SaturnScu = SaturnEmulator::SystemRegisIII.Core.Core.Scu;
 using SaturnSmpc = SaturnEmulator::SystemRegisIII.Core.Core.Smpc;
-using SaturnTrace = SaturnEmulator::SystemRegisIII.Core.Tools.TraceViewer;
 using SaturnSystem = SaturnEmulator::SystemRegisIII.Core.Core;
 using SaturnVdp1 = SaturnEmulator::SystemRegisIII.Core.Core.Vdp1;
 using SaturnVdp2 = SaturnEmulator::SystemRegisIII.Core.Core.Vdp2;
@@ -119,7 +118,6 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
         {
             byte[] biosBytes = File.ReadAllBytes(_biosPath);
             var bios = new SaturnMemory.BiosImage(Path.GetFileName(_biosPath), biosBytes);
-            var trace = new SaturnTrace.RingTraceEventSink(2048);
             discImage = OpenDiscImage(_discPath);
             var systemMap = SaturnSystem.SaturnSystemMap.CreateBringup(
                 bios,
@@ -132,8 +130,8 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
                 });
             var masterInternalBus = new SaturnCpu.Sh2InternalRegisterBus(systemMap.Bus, SaturnCpu.Sh2CpuRole.Master);
             var slaveInternalBus = new SaturnCpu.Sh2InternalRegisterBus(systemMap.Bus, SaturnCpu.Sh2CpuRole.Slave);
-            var master = new SaturnCpu.Sh2Cpu("Master SH-2", masterInternalBus, resetVectorAddress: 0x0000_0000, trace);
-            var slave = new SaturnCpu.Sh2Cpu("Slave SH-2", slaveInternalBus, resetVectorAddress: 0x0000_0008, trace);
+            var master = new SaturnCpu.Sh2Cpu("Master SH-2", masterInternalBus, resetVectorAddress: 0x0000_0000);
+            var slave = new SaturnCpu.Sh2Cpu("Slave SH-2", slaveInternalBus, resetVectorAddress: 0x0000_0008);
             master.Reset();
             slave.Reset();
 
@@ -144,7 +142,6 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
                 slave,
                 systemMap.Stubs.OfType<SaturnSmpc.SmpcRegisterBusDevice>().Single(),
                 systemMap.Stubs.OfType<SaturnScu.ScuRegisterBusDevice>().Single(),
-                trace,
                 discImage);
             discImage = null;
         }
@@ -618,7 +615,6 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
         SaturnCpu.Sh2Cpu Slave,
         SaturnSmpc.SmpcRegisterBusDevice Smpc,
         SaturnScu.ScuRegisterBusDevice Scu,
-        SaturnTrace.RingTraceEventSink Trace,
         SaturnCd.IDiscImage? DiscImage)
     {
         public bool SlaveWasEnabled { get; set; }
