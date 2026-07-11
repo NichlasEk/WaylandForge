@@ -216,11 +216,12 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
             runtime.SystemMap.Vdp2Registers.Snapshot.Span,
             FrameWidth,
             FrameHeight);
-        bool hasCompleteSprites = commands.Any(static command => command.End) &&
+        bool hasCompletePrimitives = commands.Any(static command => command.End) &&
             commands.Any(static command =>
-                !command.Skip && command.CommandCode == 0 &&
-                command.CharacterWidth > 0 && command.CharacterHeight > 0);
-        if (hasCompleteSprites)
+                !command.Skip && command.CommandCode <= 0x7 &&
+                (command.CommandCode >= 0x4 ||
+                 (command.CharacterWidth > 0 && command.CharacterHeight > 0)));
+        if (hasCompletePrimitives)
         {
             SaturnVdp1.Vdp1RenderResult rendered = SaturnVdp1.Vdp1SoftwareRenderer.Render(
                 runtime.SystemMap.Vdp1Area.Snapshot.Span,
