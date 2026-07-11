@@ -61,9 +61,12 @@
       "role": "kung-christian",
       "level": 1,
       "frame": 1380,
-      "text": "I har brudt fogdens segl. Nu møder I Kronens flåde.",
+      "text": "I har brudt fogdens segl. Nu møder I min flåde.",
       "subtitle_lines": ["BRUDT SEGL", "KRONENS FLÅDE"],
-      "seed": 302113
+      "seed": 302143,
+      "dots_num_steps": 8,
+      "dots_guidance_scale": 1.8,
+      "dots_speaker_scale": 1.15
     },
     {
       "id": "rasmus-kronens-tiende",

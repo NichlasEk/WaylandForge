@@ -138,9 +138,9 @@
       "kind": "line",
       "line": "christian-brutet-segl",
       "role": "kung-christian",
-      "job_id": "61b57ee9b4834ced84e0a238aabbc328",
+      "job_id": "c558667349b04832a7787714744f7073",
       "file": "assets/stormakt3020/radio/raw/christian-brutet-segl-da-raw.wav",
-      "sha256": "76a6902ac1b41dd025b269173d890a9eb32475d283a55bed38c1b4323a5fdea6",
+      "sha256": "b5a966736a1efaf9212c24e8c09a59b529702c2361d58b6011a715274fbb790a",
       "request": "assets/stormakt3020/radio/raw/christian-brutet-segl-da-request.json",
       "reference_sha256": "d6eda56e8651eff4ba889f2af0ccb91ebfa3fcfd2120d103d7e4afa939468195"
     }

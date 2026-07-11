@@ -107,9 +107,9 @@ def main() -> None:
                 "reference_wav_base64": wav_base64(reference),
                 "prompt_text": role["reference_text"],
                 "seed": line["seed"],
-                "dots_num_steps": 4,
-                "dots_guidance_scale": 1.2,
-                "dots_speaker_scale": 1.5,
+                "dots_num_steps": line.get("dots_num_steps", 4),
+                "dots_guidance_scale": line.get("dots_guidance_scale", 1.2),
+                "dots_speaker_scale": line.get("dots_speaker_scale", 1.5),
             }
             request_path = RADIO_ROOT / "raw" / f"{line['id']}-{language}-request.json"
             request_path.write_text(json.dumps({key: value for key, value in payload.items() if key != "reference_wav_base64"}, ensure_ascii=False, indent=2) + "\n")

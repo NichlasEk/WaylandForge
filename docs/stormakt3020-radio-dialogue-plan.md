@@ -8,6 +8,8 @@ Written ship designation `KARL CCLV` is retained in the HUD, while Swedish speec
 
 Casting references can likewise be repaired without moving the rest of the cast using `render_radio_cast.py references --role ROLE_ID --force`. Christian's second pilot uses an explicitly deep adult male bass-baritone role brief after the first reference presented too high and feminine.
 
+Christian's third line pilot simplifies the Danish sentence for harder articulation, uses eight Dots steps with stronger text guidance and lower speaker exaggeration, and has a role-local runtime gain of 0.94. Other voices retain their existing mix gains.
+
 ## Målbild
 
 Stormakt ska använda korta videokominslag i stilen från äldre japanska shmups: ett porträtt glider in i ett hörn, namnskylten tänds, en eller två korta textrader skrivs fram och en förgenererad röst hörs genom radiofilter. Spelet fortsätter hela tiden.

@@ -553,7 +553,7 @@ internal sealed class StormaktMusicLoop : IDisposable
             (StormaktVoice.SorenFogdekonvoj, "soren-fogdekonvoj-sv-radio.wav", 0.74f),
             (StormaktVoice.EbbaStoraBalt, "ebba-stora-balt-sv-radio.wav", 0.72f),
             (StormaktVoice.RasmusLaggBi, "rasmus-lagg-bi-da-radio.wav", 0.74f),
-            (StormaktVoice.ChristianBrutetSegl, "christian-brutet-segl-da-radio.wav", 0.76f),
+            (StormaktVoice.ChristianBrutetSegl, "christian-brutet-segl-da-radio.wav", 0.94f),
             (StormaktVoice.RasmusKronensTiende, "rasmus-kronens-tiende-da-radio.wav", 0.74f),
         ];
         Dictionary<StormaktVoice, LoadedEffect> voices = [];
