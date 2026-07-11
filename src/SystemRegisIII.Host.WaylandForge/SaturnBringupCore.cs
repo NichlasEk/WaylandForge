@@ -125,7 +125,6 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
                 {
                     SimulateScspCommandAck = true,
                     DiscImage = discImage,
-                    MountedDiscInitialStatus = discImage is null ? null : SaturnCd.CdBlockDriveStatus.Standby,
                     DigitalPadState = MapInput(_lastButtons),
                 });
             var masterInternalBus = new SaturnCpu.Sh2InternalRegisterBus(systemMap.Bus, SaturnCpu.Sh2CpuRole.Master);
