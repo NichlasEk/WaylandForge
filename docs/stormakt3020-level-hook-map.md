@@ -105,3 +105,5 @@ For every checkpoint: build, `git diff --check`, capture at least one direct WFE
 ## RTS dispatch - Silverkroppen
 
 Campaign row 4 owns level id `3` and branches before the shmup simulation/render spine. `StepRts` and `DrawRts` operate on a separate `RtsState`; no ship shots, enemy waves, scrolling sky or shmup boss state are stepped while it is active. Reset uses seed `3404` and reconstructs cursor, camera and landing state deterministically. Developer selection, touchdown, survey placement and camera follow are direct-WFEX verified in both supported resolutions.
+
+The economy slice remains inside `RtsState`: stable grid placement, explicit build stage, typed building list, power totals and fixed silver pulses. Steam placement validates Karl's build radius; the crusher validates against `SilverVeinWorldX`, shared by simulation and rendering so the visible vein cannot disagree with placement logic.

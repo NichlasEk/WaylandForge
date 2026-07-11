@@ -1,6 +1,6 @@
 # Bana 4 - Silverkroppen i skogen
 
-Status: implementation underway. The deterministic RTS skeleton is startable as campaign row 4 in developer mode with a separate level id/state, top-down map, silver vein, fogde road, Karl CCLV landing, gamepad cursor, survey marker and horizontal camera follow. This is a deliberate compact RTS intermission between `Öresunds järnkrona` and the renumbered `Fogdens tionde värld`.
+Status: implementation underway. The deterministic RTS skeleton is startable as campaign row 4 in developer mode with a separate level id/state, top-down map, silver vein, fogde road, Karl CCLV landing, gamepad cursor and horizontal camera follow. The first economy slice adds grid-snapped valid/invalid building ghosts, a 200-silver steam plant inside Karl's build radius, a tutorial-free silver crusher constrained to the vein, 100/40 power accounting and deterministic 25-silver pulses. This is a deliberate compact RTS intermission between `Öresunds järnkrona` and the renumbered `Fogdens tionde värld`.
 
 ## Dramatiskt löfte
 
@@ -163,7 +163,7 @@ Första implementationen använder gruppval per typ inom en liten radie, inte dr
 
 1. **Plan och kampanjplats:** renumbering, nivå-id och level-select-kort. **Landed 2026-07-11.**
 2. **RTS-skelett:** egen top-down-state, markör, kamera, grid, landad Karl och deterministisk tom karta. **Landed 2026-07-11.**
-3. **Kraft och ekonomi:** ångkraftverk, silverkross, skattkammare, byggplacering och HUD. Commit och push.
+3. **Kraft och ekonomi:** ångkraftverk, silverkross, skattkammare, byggplacering och HUD. **Landed 2026-07-11.**
 4. **Svensk produktion:** barack, fotkaroliner, djurhall och älgkaroliner. Commit och push.
 5. **Danska vågor:** fem fiendetyper, stabil målsökning och försvarstorn. Commit och push.
 6. **Toldhuset:** markboss, markbredsida, seger/resultat och balanspass. Commit och push.
