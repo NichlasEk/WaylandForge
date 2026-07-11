@@ -8,22 +8,33 @@ int Width = legacyResolution ? 320 : 400;
 int Height = legacyResolution ? 224 : 280;
 const uint FrameMagic = 0x58454657; // WFEX
 const byte StepCommand = (byte)'S';
+const byte PointerStepCommand = (byte)'P';
 
 var input = Console.OpenStandardInput();
 var output = Console.OpenStandardOutput();
 using var audio = StormaktMusicLoop.TryStartDefault();
 var game = new StormaktGame(Width, Height, SpritePack.LoadDefault(), audio);
 audio?.Trigger(StormaktSound.Deploy);
-bool pointerProtocol = string.Equals(
-    Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_POINTER"), "1", StringComparison.Ordinal);
-var command = new byte[pointerProtocol ? 21 : 5];
+var command = new byte[21];
 var header = new byte[32];
 var frame = new uint[Width * Height];
 ulong frameIndex = 0;
 
-while (ReadExact(input, command))
+while (true)
 {
-    if (command[0] != StepCommand)
+    int marker = input.ReadByte();
+    if (marker < 0)
+    {
+        break;
+    }
+    command[0] = (byte)marker;
+    bool pointerProtocol = command[0] == PointerStepCommand;
+    if (command[0] != StepCommand && !pointerProtocol)
+    {
+        break;
+    }
+    int commandLength = pointerProtocol ? 21 : 5;
+    if (!ReadExact(input, command.AsSpan(1, commandLength - 1)))
     {
         break;
     }
