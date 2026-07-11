@@ -1,6 +1,6 @@
 # Stormakt 3020 - videokomradio, dialog och TTS
 
-Status: första runtimeprototypen, tre engelska platshållarröster och genererade produktionsporträtt för Ebba Grip och Fogde Rasmus är implementerade. Kung Christians två porträttrutor är färdigpackade för hans kommande radiokort. Svenska och danska slutröster återstår.
+Status: fyra runtimekort, tre engelska platshållarröster och genererade produktionsporträtt för Ebba Grip, Fogde Rasmus och Kung Christian är implementerade. Svenska och danska slutröster återstår.
 
 ## Målbild
 
@@ -101,13 +101,13 @@ De danska raderna ska granskas av en dansk talare eller åtminstone genom ett se
 - Ebba Grip: svensk amiral, blå uniform, gul mässing, kallt lugn.
 - Rasmus Gyldentold: fogde, rödvit rock, överdimensionerat mekaniskt tullsigill, självsäker men inte komisk.
 - Sören Svartkrut: sotad kopparmask, svart rock och grön signalglöd; hans bild bryter ibland upp i två positioner.
-- Kung Christian har nu ett fullständigt neutral/talande porträtt i assetpaketet. Det visas först när hans eget radiokort kopplas till Kung Christians Superarmada.
+- Kung Christian har ett fullständigt neutral/talande porträtt och ett första radiokort i bana 1. Kortet förebådar kronflottan; den fulla Superarmadan sparas fortfarande till kampanjfinalen.
 
 ## Checkpoints
 
-1. **Radioprototyp:** klar med tre engelska platshållarkort, riktiga neutral/talande porträtt för Ebba och Rasmus, kodritad fallback och headless capture.
+1. **Radioprototyp:** klar med fyra engelska platshållarkort, riktiga neutral/talande porträtt för Ebba, Rasmus och Christian, kodritad fallback och headless capture.
 2. **Voice pipeline:** engelsk Matcha-placeholder, radiofilter och manifest är klara. Två godkända SV/DA-referensröster, Dots-pilot och lyssningsbeslut återstår.
-3. **Bana 1-dialog:** tre tidsatta radiokort, riktiga porträtt, musikduckning och voice-mix är klara. Två ytterligare kort och full ban-capture återstår.
+3. **Bana 1-dialog:** fyra tidsatta radiokort, riktiga porträtt, musikduckning och voice-mix är klara. Ett ytterligare kort och full ban-capture återstår.
 
 ## Acceptanskriterier
 

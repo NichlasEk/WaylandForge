@@ -5,7 +5,7 @@ import argparse
 import struct
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 
 PRIMARY_SPRITES = [
@@ -34,6 +34,17 @@ RADIO_PORTRAITS = [
     ("portrait_rasmus_speak", (512, 512, 1024, 1024), (38, 38)),
     ("portrait_christian_neutral", (0, 1024, 512, 1536), (38, 38)),
     ("portrait_christian_speak", (512, 1024, 1024, 1536), (38, 38)),
+]
+
+ENVIRONMENT_SPRITES = [
+    ("bridge_span_generated", (0, 0, 530, 371), (64, 72)),
+    ("bridge_span_damaged_generated", (530, 0, 1060, 371), (64, 72)),
+    ("bridge_turret_generated", (0, 371, 530, 742), (34, 36)),
+    ("bridge_node_generated", (530, 371, 1060, 742), (28, 28)),
+    ("bridge_arch_left_generated", (0, 742, 530, 1113), (100, 62)),
+    ("bridge_arch_right_generated", (530, 742, 1060, 1113), (100, 62)),
+    ("swedish_wreck_generated", (0, 1113, 530, 1484), (92, 58)),
+    ("belt_asteroids_generated", (530, 1113, 1060, 1484), (88, 62)),
 ]
 
 
@@ -81,14 +92,29 @@ def append_sprites(
         entries.append((name, sprite))
 
 
-def build(input_path: Path, danish_input_path: Path, portrait_input_path: Path, output_path: Path) -> None:
+def build(
+    input_path: Path,
+    danish_input_path: Path,
+    portrait_input_path: Path,
+    environment_input_path: Path,
+    background_input_path: Path,
+    output_path: Path,
+) -> None:
     source = Image.open(input_path)
     danish_source = Image.open(danish_input_path)
     portrait_source = Image.open(portrait_input_path)
+    environment_source = Image.open(environment_input_path)
+    background_source = Image.open(background_input_path).convert("RGBA")
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
     append_sprites(entries, danish_source, DANISH_SPRITES)
     append_sprites(entries, portrait_source, RADIO_PORTRAITS)
+    append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
+    background_source.thumbnail((320, 700), Image.Resampling.LANCZOS)
+    seamless_background = Image.new("RGBA", (background_source.width, background_source.height * 2))
+    seamless_background.paste(background_source, (0, 0))
+    seamless_background.paste(ImageOps.flip(background_source), (0, background_source.height))
+    entries.append(("stora_balt_background", seamless_background))
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("wb") as handle:
@@ -117,9 +143,26 @@ def main() -> None:
         type=Path,
         default=Path("assets/stormakt3020/stormakt-radio-portraits-v1.png"),
     )
+    parser.add_argument(
+        "--environment-input",
+        type=Path,
+        default=Path("assets/stormakt3020/stormakt-stora-balt-environment-v1.png"),
+    )
+    parser.add_argument(
+        "--background-input",
+        type=Path,
+        default=Path("assets/stormakt3020/stormakt-stora-balt-background-v1.png"),
+    )
     parser.add_argument("--output", type=Path, default=Path("assets/stormakt3020/stormakt3020.wfsa"))
     args = parser.parse_args()
-    build(args.input, args.danish_input, args.portrait_input, args.output)
+    build(
+        args.input,
+        args.danish_input,
+        args.portrait_input,
+        args.environment_input,
+        args.background_input,
+        args.output,
+    )
 
 
 if __name__ == "__main__":

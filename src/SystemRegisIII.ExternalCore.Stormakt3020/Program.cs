@@ -94,6 +94,7 @@ internal sealed class StormaktGame
     [
         new(180, 360, false, "EBBA GRIP", "HOLD YOUR COURSE", "BELT IS NOT LOST", StormaktVoice.EbbaGrip, "portrait_ebba"),
         new(900, 300, true, "RASMUS", "SWEDISH VESSEL", "HEAVE TO NOW", StormaktVoice.RasmusGyldentold, "portrait_rasmus"),
+        new(1_380, 300, true, "KING CHRISTIAN", "BROKE THE SEAL", "CROWN FLEET", StormaktVoice.KungChristian, "portrait_christian"),
         new(BossArrivalFrame, 300, true, "FOGDE RASMUS", "CROWNS TENTH", "TAKES EVERYTHING", StormaktVoice.RasmusGyldentold, "portrait_rasmus"),
     ];
     private static readonly EnemyWave[] EnemyWaves =
@@ -1004,6 +1005,13 @@ internal sealed class StormaktGame
 
     private void DrawSky(uint[] frame)
     {
+        if (_sprites?.TryGet("stora_balt_background", out Sprite background) == true)
+        {
+            int scroll = (_missionFrame / 3) % background.Height;
+            DrawSprite(frame, background, 0, scroll - background.Height);
+            DrawSprite(frame, background, 0, scroll);
+            return;
+        }
         for (int y = 0; y < _height; y++)
         {
             int row = y * _width;
@@ -1025,6 +1033,10 @@ internal sealed class StormaktGame
 
     private void DrawNebula(uint[] frame)
     {
+        if (_sprites?.TryGet("stora_balt_background", out _) == true)
+        {
+            return;
+        }
         double scroll = _missionFrame * 0.0028;
         for (int y = 22; y < _height - 20; y += 2)
         {
@@ -1045,6 +1057,23 @@ internal sealed class StormaktGame
 
     private void DrawBeltRuins(uint[] frame)
     {
+        if (_sprites?.TryGet("belt_asteroids_generated", out Sprite asteroids) == true &&
+            _sprites.TryGet("swedish_wreck_generated", out Sprite wreck) &&
+            _sprites.TryGet("bridge_arch_left_generated", out Sprite leftArch) &&
+            _sprites.TryGet("bridge_arch_right_generated", out Sprite rightArch))
+        {
+            int asteroidY = ((_missionFrame / 3 + 90) % 430) - 80;
+            int asteroidX = ((_missionFrame / 430) & 1) == 0 ? 18 : _width - asteroids.Width - 18;
+            DrawSprite(frame, asteroids, asteroidX, asteroidY);
+
+            int generatedWreckY = ((_missionFrame * 3 / 4 + 170) % 760) - 120;
+            DrawSprite(frame, wreck, 210, generatedWreckY - wreck.Height / 2);
+
+            int generatedBridgeY = ((_missionFrame * 3 / 4 + 510) % 980) - 180;
+            DrawSprite(frame, leftArch, -18, generatedBridgeY - leftArch.Height / 2);
+            DrawSprite(frame, rightArch, _width - rightArch.Width + 18, generatedBridgeY + 8 - rightArch.Height / 2);
+            return;
+        }
         for (int index = 0; index < 7; index++)
         {
             int y = ((index * 83 + _missionFrame / 3) % 310) - 50;
@@ -1369,6 +1398,16 @@ internal sealed class StormaktGame
             }
             if (target.Type == GroundTargetType.BridgeSpan)
             {
+                string bridgeName = target.Health < 17 ? "bridge_span_damaged_generated" : "bridge_span_generated";
+                if (_sprites?.TryGet(bridgeName, out Sprite bridge) == true)
+                {
+                    DrawSprite(frame, bridge, target.X - bridge.Width / 2, target.Y - bridge.Height / 2);
+                    if (target.Health < 9)
+                    {
+                        DrawLine(frame, target.X - 20, target.Y - 20, target.X + 13, target.Y + 22, 0xffff6b4a);
+                    }
+                    continue;
+                }
                 uint hull = target.Health < 9 ? 0xff57403c : target.Health < 17 ? 0xff45434a : 0xff343e47;
                 DrawRect(frame, target.X - 43, target.Y - 9, 86, 18, hull);
                 DrawLine(frame, target.X - 42, target.Y - 8, target.X + 41, target.Y - 8, 0xff785c3b);
@@ -1392,6 +1431,12 @@ internal sealed class StormaktGame
             if (target.Type == GroundTargetType.EnergyNode)
             {
                 uint pulse = ((_missionFrame / 6) & 1) == 0 ? 0xffff6b62 : 0xffc51f35;
+                if (_sprites?.TryGet("bridge_node_generated", out Sprite node) == true)
+                {
+                    DrawSprite(frame, node, target.X - node.Width / 2, target.Y - node.Height / 2);
+                    FillCircle(frame, target.X, target.Y, 2, pulse);
+                    continue;
+                }
                 FillCircle(frame, target.X, target.Y, 7, 0xff272f36);
                 FillCircle(frame, target.X, target.Y, 3, pulse);
                 DrawLine(frame, target.X - 12, target.Y, target.X + 12, target.Y, 0xff8f2635);
@@ -1399,6 +1444,22 @@ internal sealed class StormaktGame
             }
 
             uint turret = target.Enabled ? 0xff8f2635 : 0xff3b4145;
+            if (_sprites?.TryGet("bridge_turret_generated", out Sprite generatedTurret) == true)
+            {
+                DrawSprite(frame, generatedTurret, target.X - generatedTurret.Width / 2, target.Y - generatedTurret.Height / 2);
+                if (!target.Enabled)
+                {
+                    DrawLine(frame, target.X - 8, target.Y - 7, target.X + 8, target.Y + 8, 0xff30363a);
+                }
+                int generatedCycle = target.Age % 180;
+                if (target.Enabled && generatedCycle is >= 40 and < 88 && target.Y is > 24 and < 174)
+                {
+                    uint lockColor = (generatedCycle & 7) < 4 ? 0xffc51f35 : 0xff6f2631;
+                    DrawLine(frame, target.X, target.Y + 12, _shipX, _shipY, lockColor);
+                    DrawRect(frame, target.X - 2, target.Y - 15, 5, 3, 0xffff6b62);
+                }
+                continue;
+            }
             FillCircle(frame, target.X, target.Y, 10, 0xff252d34);
             DrawRect(frame, target.X - 7, target.Y - 6, 14, 12, turret);
             DrawLine(frame, target.X, target.Y, target.X, target.Y + 16, target.Enabled ? 0xfff2eee4 : 0xff62696c);

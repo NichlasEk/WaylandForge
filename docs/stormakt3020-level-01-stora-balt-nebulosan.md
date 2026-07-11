@@ -1,6 +1,13 @@
 # Bana 1 - Återtåget över Stora Bält-nebulosan
 
-Status: checkpoint 1, 2A-2C och bosscheckpoint 3A-3C är klara. Bana 1 har nu spelbar genomflygning, tre bossfaser och resultatsekvens; separat polish- och balanspass återstår.
+Status: checkpoint 1, 2A-2C, bosscheckpoint 3A-3C och den första grafikpolishen är klara. Bana 1 har nu spelbar genomflygning, tre bossfaser, resultatsekvens, genererad bakgrund och fysiska miljöassets; separat balans- och ljudpolish återstår.
+
+## Implementerad grafikpolish - 2026-07-11
+
+- Den kodritade himlen/nebulosan har ersatts av en genererad, hög vertikal Stora Bält-plåt som rullar långsamt bakom stjärnlagret. Mittkorridoren är avsiktligt mörk och lågkontrast.
+- Brospann, skadat brospann, dansk brokanon och energinod är nu riktiga frilagda assets. Deras deterministiska kollisionsytor, hälsa och skottvarningar är oförändrade.
+- Två matchande sönderslitna brovalv, ett svenskt blågult linjekryssarvrak och ett asteroid-/skrotfält ersätter de kodritade parallaxobjekten.
+- Alla tidigare kodritade miljölager ligger kvar som fallback om WFSA-paketet eller ett enskilt namn saknas.
 
 ## Implementerad checkpoint 1 - 2026-07-10
 
@@ -8,7 +15,7 @@ Status: checkpoint 1, 2A-2C och bosscheckpoint 3A-3C är klara. Bana 1 har nu sp
 - Titelplaketten visar `ÅTERTÅGET ÖVER` / `STORA BÄLT NEBULOSAN` före första fiendevågen.
 - Fjärrymd/norrsken, turkos-roströd nebulosa, stjärnor och Bältruiner rör sig i separata hastigheter.
 - Ruinlagret innehåller drivande sten, ett avlägset svenskt linjekryssarvrak och en sönderskjuten gravitationsbro märkt `3020`.
-- Radiofönstren är flyttade till lugna platser i bantidslinjen: Ebba vid 3 sekunder, Rasmus vid 15 och Christian vid 25.
+- Radiofönstren ligger i lugna fickor i bantidslinjen: Ebba vid 3 sekunder, Rasmus vid 15, Christian vid 23 och boss-Rasmus vid 55. Christians redan genererade engelska röst och neutral/talande kungaporträtt är nu kopplade till hans första förebådande av kronflottan.
 - Reset återställer även slumpgenerator och stjärnfält. Två fristående 3 600-rutorskörningar med samma svepande eldinput gav samma slutbild: SHA-256 `71fe1ad83b88632b480bef546ff58d9ce086b384def2cf2e875e04e5787233b5`.
 
 ## Implementerad checkpoint 2A - första brohotet
