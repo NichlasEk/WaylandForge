@@ -927,6 +927,7 @@ internal sealed class StormaktGame
         for (int index = rts.Enemies.Count - 1; index >= 0; index--)
         {
             RtsEnemy enemy = rts.Enemies[index];
+            enemy.Moving = false;
             if (enemy.Health <= 0)
             {
                 rts.Enemies.RemoveAt(index);
@@ -1019,6 +1020,7 @@ internal sealed class StormaktGame
                 speed *= 0.91 + (enemy.AnimationPhase % 7) * 0.025;
                 enemy.X += dx / distance * speed;
                 enemy.Y += dy / distance * speed;
+                enemy.Moving = true;
             }
         }
         rts.Units.RemoveAll(unit => unit.Health <= 0);
@@ -2478,7 +2480,11 @@ internal sealed class StormaktGame
             int drawY = y - generated.Height / 2 - step;
             if (moving && unit.TargetX < unit.X)
             {
-                DrawSpriteFlippedX(frame, generated, drawX, drawY);
+                DrawRtsWalkingSprite(frame, generated, drawX, drawY, true, rts.Age + unit.AnimationPhase);
+            }
+            else if (moving)
+            {
+                DrawRtsWalkingSprite(frame, generated, drawX, drawY, false, rts.Age + unit.AnimationPhase);
             }
             else
             {
@@ -2531,12 +2537,18 @@ internal sealed class StormaktGame
         if (_sprites?.TryGet(generatedName, out Sprite generated) == true)
         {
             bool attacking = enemy.Cooldown > 0 || enemy.FuseAge > 0;
-            int step = !attacking ? ((rts.Age + enemy.AnimationPhase) / 5 & 1) : 0;
-            int sway = !attacking ? ((rts.Age + enemy.AnimationPhase) / 10 % 3) - 1 : 0;
+            bool walking = enemy.Moving && !attacking;
+            int step = walking ? ((rts.Age + enemy.AnimationPhase) / 5 & 1) : 0;
+            int sway = walking ? ((rts.Age + enemy.AnimationPhase) / 10 % 3) - 1 : 0;
             int drawX = x - generated.Width / 2 + sway;
             int drawY = y - generated.Height / 2 - step;
             bool sourceAlreadyFacesLeft = enemy.Type is RtsEnemyType.TollStormer or RtsEnemyType.PowderBoar;
-            if (sourceAlreadyFacesLeft)
+            if (walking)
+            {
+                DrawRtsWalkingSprite(frame, generated, drawX, drawY,
+                    !sourceAlreadyFacesLeft, rts.Age + enemy.AnimationPhase);
+            }
+            else if (sourceAlreadyFacesLeft)
             {
                 DrawSprite(frame, generated, drawX, drawY);
             }
@@ -4252,6 +4264,30 @@ internal sealed class StormaktGame
         }
     }
 
+    private void DrawRtsWalkingSprite(uint[] frame, Sprite sprite, int x, int y, bool flipped, int phase)
+    {
+        int stride = (phase / 5 & 1) == 0 ? -1 : 1;
+        int legTop = sprite.Height * 2 / 3;
+        for (int sy = 0; sy < sprite.Height; sy++)
+        {
+            int py = y + sy;
+            if ((uint)py >= _height) continue;
+            for (int sx = 0; sx < sprite.Width; sx++)
+            {
+                int sourceX = flipped ? sprite.Width - 1 - sx : sx;
+                uint src = sprite.Pixels[sy * sprite.Width + sourceX];
+                uint alpha = src >> 24;
+                if (alpha == 0) continue;
+                int footShift = sy >= legTop
+                    ? (sx < sprite.Width / 2 ? stride : -stride)
+                    : 0;
+                int px = x + sx + footShift;
+                if ((uint)px >= _width) continue;
+                BlendPixel(frame, px, py, src, alpha);
+            }
+        }
+    }
+
     private void Clear(uint[] frame, uint color) => Array.Fill(frame, color);
 
     private void DrawText(uint[] frame, int x, int y, string text, uint color)
@@ -4600,6 +4636,7 @@ internal sealed class StormaktGame
         public int Cooldown { get; set; }
         public int FuseAge { get; set; }
         public int AnimationPhase { get; }
+        public bool Moving { get; set; } = true;
     }
 
     private sealed class RtsUnit
