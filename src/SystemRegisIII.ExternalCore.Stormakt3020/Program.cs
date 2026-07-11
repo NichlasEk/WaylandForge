@@ -278,6 +278,7 @@ internal sealed class StormaktGame
             return;
         }
         DrawBeltRuins(frame);
+        DrawSorenBackgroundPass(frame);
         DrawGroundTargets(frame);
         DrawBoss(frame);
         DrawShots(frame);
@@ -1300,6 +1301,28 @@ internal sealed class StormaktGame
         FillCircle(frame, kilnX, kilnY, 14, 0xff15191a);
         FillCircle(frame, kilnX - 4, kilnY + 3, 4, 0xff9a4f2d);
         BlendPixel(frame, kilnX - 4, kilnY + 3, 0xffff8a4a, 110);
+    }
+
+    private void DrawSorenBackgroundPass(uint[] frame)
+    {
+        if (_levelId != 1 || _missionFrame < 540 || _missionFrame >= 780)
+        {
+            return;
+        }
+        int age = _missionFrame - 540;
+        double t = age / 239.0;
+        double eased = t * t * (3.0 - 2.0 * t);
+        int x = (int)Math.Round(-42 + (_width + 84) * eased);
+        int y = 72 + (int)Math.Round(Math.Sin(t * Math.PI) * 24.0);
+        string spriteName = age is >= 72 and < 180 ? "soren_corsair_boost" : "soren_corsair";
+        if (_sprites?.TryGet(spriteName, out Sprite corsair) == true)
+        {
+            DrawSprite(frame, corsair, x - corsair.Width / 2, y - corsair.Height / 2);
+            return;
+        }
+        FillTriangle(frame, x, y - 17, x - 18, y + 16, x + 18, y + 16, 0xff171b19);
+        DrawLine(frame, x - 14, y + 8, x + 14, y + 8, 0xff87583a);
+        PutPixel(frame, x, y - 3, 0xff65c58a);
     }
 
     private void DrawDistantWreck(uint[] frame, int x, int y)

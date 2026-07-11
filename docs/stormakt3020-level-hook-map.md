@@ -93,7 +93,7 @@ First asset batch:
 ## Skånska build checkpoints
 
 1. **Hook spine (landed 2026-07-11):** `_levelId`, start/reset/dispatch seams, level 2 enters a deterministic 60-second skeleton with its own seed, title, palette, scenery fallback, wave table and result. Level 1 remains on its existing dispatch path.
-2. **Snapphane identity (in progress):** generated Sören portrait and first radio landed; ship and silent background pass remain.
+2. **Snapphane identity (landed 2026-07-11):** generated Sören portrait, first radio, three-state corsair and silent background pass are wired with code fallbacks.
 3. **World:** generated Skåne background/props, fog drones, convoy and signal beacon.
 4. **Rival duel:** Sören dash, copper salvo, decoys and deterministic interruption.
 5. **Glimminge Järn:** separate boss state, two phases, heavy death and level-specific result.

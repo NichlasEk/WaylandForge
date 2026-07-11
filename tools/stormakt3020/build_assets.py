@@ -125,6 +125,19 @@ def append_two_frame_portrait(entries: list[tuple[str, Image.Image]], source: Im
         entries.append((name, sprite))
 
 
+def append_three_frame_corsair(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    third = source.width // 3
+    definitions = [
+        ("soren_corsair", (0, 0, third, source.height)),
+        ("soren_corsair_boost", (third, 0, third * 2, source.height)),
+        ("soren_corsair_damaged", (third * 2, 0, source.width, source.height)),
+    ]
+    for name, crop in definitions:
+        sprite = trim_alpha(source.crop(crop).convert("RGBA"))
+        sprite.thumbnail((58, 58), Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def mirrored_background(source: Image.Image, width: int, height: int) -> Image.Image:
     plate = source.copy()
     plate.thumbnail((width, height), Image.Resampling.LANCZOS)
@@ -139,6 +152,7 @@ def build(
     danish_input_path: Path,
     portrait_input_path: Path,
     snapphane_portrait_input_path: Path,
+    soren_corsair_input_path: Path,
     player_input_path: Path,
     environment_input_path: Path,
     combat_detail_input_path: Path,
@@ -150,6 +164,7 @@ def build(
     danish_source = Image.open(danish_input_path)
     portrait_source = Image.open(portrait_input_path)
     snapphane_portrait_source = Image.open(snapphane_portrait_input_path)
+    soren_corsair_source = Image.open(soren_corsair_input_path)
     player_source = Image.open(player_input_path)
     environment_source = Image.open(environment_input_path)
     combat_detail_source = Image.open(combat_detail_input_path)
@@ -160,6 +175,7 @@ def build(
     append_sprites(entries, danish_source, DANISH_SPRITES)
     append_sprites(entries, portrait_source, RADIO_PORTRAITS)
     append_two_frame_portrait(entries, snapphane_portrait_source)
+    append_three_frame_corsair(entries, soren_corsair_source)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
@@ -205,6 +221,11 @@ def main() -> None:
         default=Path("assets/stormakt3020/soren-svartkrut-radio-v1.png"),
     )
     parser.add_argument(
+        "--soren-corsair-input",
+        type=Path,
+        default=Path("assets/stormakt3020/soren-corsair-v1.png"),
+    )
+    parser.add_argument(
         "--environment-input",
         type=Path,
         default=Path("assets/stormakt3020/stormakt-stora-balt-environment-v1.png"),
@@ -236,6 +257,7 @@ def main() -> None:
         args.danish_input,
         args.portrait_input,
         args.snapphane_portrait_input,
+        args.soren_corsair_input,
         args.player_input,
         args.environment_input,
         args.combat_detail_input,

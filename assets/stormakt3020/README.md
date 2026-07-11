@@ -6,6 +6,8 @@
 
 `soren-svartkrut-radio-v1.png` supplies matched neutral and speaking portraits for the Skånska skuggor rival transmission. Its magenta-key source and generation brief are preserved beside it.
 
+`soren-corsair-v1.png` supplies neutral, boost and damaged top-down states for Sören's black-iron, copper and forest-green rival ship.
+
 `stormakt-bridge-cannons-projectiles-v1.png` adds three bridge-collapse pieces, intact/destroyed Danish bridge cannon states, a detachable boss broadside cannon and red/white/gold enemy projectile families. Runtime uses the wreck pieces during the existing 45-frame collapse and mirrors the broadside module for the boss's right side.
 
 Prompt summary:

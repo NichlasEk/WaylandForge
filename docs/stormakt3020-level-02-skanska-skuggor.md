@@ -4,6 +4,8 @@ Status: implementation underway. A deterministic 60-second gameplay skeleton is 
 
 Current identity slice: Sören Svartkrut has matched generated neutral/speaking radio portraits and his first transmission at frame 900. Level 2 suppresses the ordinary star layer; HUD bars render above the player and hazards.
 
+Sören's generated three-state corsair crosses the background without collision between frames 540 and 780, foreshadowing the radio contact.
+
 Current audio slice: `skanska-skuggor-loop-v1.wav` is the dedicated runtime score, selected through the level id and isolated from Stora Bält combat music.
 
 ## Dramatiskt löfte
