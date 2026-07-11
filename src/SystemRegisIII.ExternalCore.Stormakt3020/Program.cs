@@ -124,7 +124,9 @@ internal sealed class StormaktGame
     private static readonly RadioCard RasmusPhaseThreeRadio =
         new(0, 330, true, "FOGDE RASMUS", "MINE KANONER!", "HOLD LINJEN!", StormaktVoice.RasmusBossPanik, "portrait_rasmus");
     private static readonly RadioCard RasmusDeathRadio =
-        new(0, 360, true, "FOGDE RASMUS", "NEEEEEJ!", "NÆSTE GANG!", StormaktVoice.RasmusBossUndergang, "portrait_rasmus");
+        new(0, 300, true, "FOGDE RASMUS", "SVENSK FRÆKHED!", "NEEEEEJ!", StormaktVoice.RasmusBossUndergang, "portrait_rasmus");
+    private static readonly RadioCard RasmusDeathOathRadio =
+        new(0, 300, true, "FOGDE RASMUS", "DENNE GANG KARL", "HVER GANG!", StormaktVoice.RasmusBossEfterspel, "portrait_rasmus");
     private static readonly EnemyWave[] EnemyWaves =
     [
         new(240, 720, 180, 0, 2),
@@ -998,16 +1000,20 @@ internal sealed class StormaktGame
 
     private void StepBossDeath(BossState boss)
     {
-        if (boss.PhaseAge is 1 or 30 or 60 or 90 or 120 or 155 or 210 or 270 or 330 or 390)
+        if (boss.PhaseAge == 300)
         {
-            bool heavy = boss.PhaseAge is 155 or 330 or 390;
+            ActivateBossRadio(RasmusDeathOathRadio);
+        }
+        if (boss.PhaseAge is 1 or 30 or 60 or 90 or 120 or 155 or 210 or 270 or 330 or 390 or 480 or 540 or 600)
+        {
+            bool heavy = boss.PhaseAge is 155 or 330 or 390 or 600;
             _audio?.Trigger(heavy ? StormaktSound.Broadside : StormaktSound.EnemyExplosion);
-            if (boss.PhaseAge == 390)
+            if (boss.PhaseAge == 600)
             {
                 _audio?.DuckMusic(2_600);
             }
         }
-        if (boss.PhaseAge < 480)
+        if (boss.PhaseAge < 660)
         {
             return;
         }
@@ -1585,6 +1591,9 @@ internal sealed class StormaktGame
             (-27, 20, 300),
             (29, -16, 355),
             (0, 7, 405),
+            (-44, 16, 470),
+            (43, -13, 535),
+            (0, 3, 600),
         ];
         foreach ((int offsetX, int offsetY, int start) in blasts)
         {

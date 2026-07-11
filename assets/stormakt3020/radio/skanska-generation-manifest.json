@@ -198,10 +198,20 @@
       "kind": "line",
       "line": "rasmus-boss-undergang",
       "role": "rasmus-gyldentold",
-      "job_id": "242a78104cd64b79b1976f3bf8ebe759",
+      "job_id": "5daaf166d4c64d8f828386949def18c0",
       "file": "assets/stormakt3020/radio/raw/rasmus-boss-undergang-da-raw.wav",
-      "sha256": "3a45fae0381bd885e765c2fad35a14e5c71412a513aaf0b317d14f025803a49b",
+      "sha256": "4f6b06e82fbccf57f0173df4d730df1077d1ff2e365acf94e49f3e7cd10c419a",
       "request": "assets/stormakt3020/radio/raw/rasmus-boss-undergang-da-request.json",
+      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
+    },
+    {
+      "kind": "line",
+      "line": "rasmus-boss-efterspel",
+      "role": "rasmus-gyldentold",
+      "job_id": "77917b3d68cd44d79186fe72839cc33c",
+      "file": "assets/stormakt3020/radio/raw/rasmus-boss-efterspel-da-raw.wav",
+      "sha256": "118665b7722e8296ffa711998af651f7770200732f3ff7aaa9bcfa3e5e145195",
+      "request": "assets/stormakt3020/radio/raw/rasmus-boss-efterspel-da-request.json",
       "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
     }
   ],

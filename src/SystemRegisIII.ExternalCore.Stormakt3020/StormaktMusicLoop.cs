@@ -561,6 +561,7 @@ internal sealed class StormaktMusicLoop : IDisposable
             (StormaktVoice.RasmusBossFornaekter, "rasmus-boss-fornaekter-da-radio.wav", 0.82f),
             (StormaktVoice.RasmusBossPanik, "rasmus-boss-panik-da-radio.wav", 0.88f),
             (StormaktVoice.RasmusBossUndergang, "rasmus-boss-undergang-da-radio.wav", 0.96f),
+            (StormaktVoice.RasmusBossEfterspel, "rasmus-boss-efterspel-da-radio.wav", 0.96f),
         ];
         Dictionary<StormaktVoice, LoadedEffect> voices = [];
         foreach ((StormaktVoice voice, string file, float gain) in entries)
@@ -668,6 +669,7 @@ internal enum StormaktVoice
     RasmusBossFornaekter,
     RasmusBossPanik,
     RasmusBossUndergang,
+    RasmusBossEfterspel,
 }
 
 internal enum StormaktMusicTrack
