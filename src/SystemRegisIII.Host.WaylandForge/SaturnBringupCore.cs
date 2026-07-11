@@ -210,9 +210,11 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
     private void TryRenderVdp1Frame(SaturnRuntime runtime)
     {
         IReadOnlyList<SaturnVdp1.Vdp1Command> commands = ReadVdp1CommandChain(runtime.SystemMap.Vdp1Area.Snapshot.Span);
-        uint[] backgroundRows = SaturnVdp2.Vdp2BackScreenRenderer.CreateRows(
+        uint[] vdp2Frame = SaturnVdp2.Vdp2TilemapRenderer.Render(
             runtime.SystemMap.Vdp2Vram.Snapshot.Span,
+            runtime.SystemMap.Vdp2Cram.Snapshot.Span,
             runtime.SystemMap.Vdp2Registers.Snapshot.Span,
+            FrameWidth,
             FrameHeight);
         bool hasCompleteSprites = commands.Any(static command => command.End) &&
             commands.Any(static command =>
@@ -234,10 +236,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
             }
         }
 
-        for (int y = 0; y < FrameHeight; y++)
-        {
-            _frame.AsSpan(y * FrameWidth, FrameWidth).Fill(backgroundRows[y]);
-        }
+        vdp2Frame.AsSpan().CopyTo(_frame);
 
         if (_hasVdp1Frame)
         {
