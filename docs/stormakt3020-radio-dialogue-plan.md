@@ -4,6 +4,8 @@ Status: bana 1 har tre engelska platshållarröster. Skånska skuggor har fyra s
 
 Skånska skuggor introduces a reproducible two-stage casting pipeline: `tools/stormakt3020/render_radio_cast.py` first asks local VoxCPM2 for a fully synthetic role reference, then supplies that WAV plus its exact transcript to Dots MF for every versioned dialogue line. Role instructions, scripts and fixed seeds live in `assets/stormakt3020/radio/skanska-cast.json`; generated job IDs and hashes live in `skanska-generation-manifest.json`. No real-person voice reference is permitted.
 
+Written ship designation `KARL CCLV` is retained in the HUD, while Swedish speech scripts expand the Roman numeral to `Karl tvåhundrafemtiofem`. Targeted repairs use `render_radio_cast.py lines --line ID --force`; this avoids voice drift in unaffected dialogue.
+
 ## Målbild
 
 Stormakt ska använda korta videokominslag i stilen från äldre japanska shmups: ett porträtt glider in i ett hörn, namnskylten tänds, en eller två korta textrader skrivs fram och en förgenererad röst hörs genom radiofilter. Spelet fortsätter hela tiden.

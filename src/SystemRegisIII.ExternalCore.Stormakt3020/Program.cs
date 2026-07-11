@@ -114,7 +114,7 @@ internal sealed class StormaktGame
         new(90, 330, false, "EBBA GRIP", "OKÄND SIGNAL", "HÅLL KURSEN", StormaktVoice.EbbaSkanskaSignal, "portrait_ebba"),
         new(900, 360, true, "SÖREN SVARTKRUT", "NI FÄRDAS I", "VÅR SVARTA SKOG", StormaktVoice.SorenSvartaSkogen, "portrait_soren", true),
         new(1_500, 330, false, "EBBA GRIP", "SÖREN SVARTKRUT", "KAPARE OCH VÄG", StormaktVoice.EbbaIdentifierarSoren, "portrait_ebba"),
-        new(2_280, 270, true, "SÖREN SVARTKRUT", "FOGDEKONVOJ", "SKJUT PRYDLIGT", StormaktVoice.SorenFogdekonvoj, "portrait_soren", true),
+        new(2_280, 300, true, "SÖREN SVARTKRUT", "FOGDEKONVOJ", "FÖRÖVER", StormaktVoice.SorenFogdekonvoj, "portrait_soren", true),
     ];
     private static readonly EnemyWave[] EnemyWaves =
     [

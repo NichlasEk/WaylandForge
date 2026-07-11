@@ -27,9 +27,9 @@
       "role": "ebba-grip",
       "level": 2,
       "frame": 90,
-      "text": "Karl CCLV. Okänd signal i skogen. Håll kursen.",
+      "text": "Karl tvåhundrafemtiofem. Okänd signal i skogen. Håll kursen.",
       "subtitle_lines": ["OKÄND SIGNAL", "HÅLL KURSEN"],
-      "seed": 302121
+      "seed": 302131
     },
     {
       "id": "soren-svarta-skogen",
@@ -54,9 +54,9 @@
       "role": "soren-svartkrut",
       "level": 2,
       "frame": 2280,
-      "text": "Fogdekonvoj föröver. Skjut prydligt för en gångs skull.",
-      "subtitle_lines": ["FOGDEKONVOJ", "SKJUT PRYDLIGT"],
-      "seed": 302124
+      "text": "En fogdekonvoj ligger föröver. Håll elden redo.",
+      "subtitle_lines": ["FOGDEKONVOJ", "FÖRÖVER"],
+      "seed": 302134
     }
   ]
 }

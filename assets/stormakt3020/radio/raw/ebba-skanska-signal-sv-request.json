@@ -1,11 +1,11 @@
 {
-  "text": "Karl CCLV. Okänd signal i skogen. Håll kursen.",
+  "text": "Karl tvåhundrafemtiofem. Okänd signal i skogen. Håll kursen.",
   "language": "sv",
   "model_backend": "dots.tts-mf",
   "output_format": "wav",
   "normalize": false,
   "prompt_text": "Karl CCLV, lyssna noga. Flottan håller kursen genom mörkret och ingen lämnas bakom oss. Instrumenten visar främmande signaler mellan gruvmånarna. Jag vill ha lugn eld, öppna ögon och full kontroll över skeppet tills vi vet vem som följer oss.",
-  "seed": 302121,
+  "seed": 302131,
   "dots_num_steps": 4,
   "dots_guidance_scale": 1.2,
   "dots_speaker_scale": 1.5

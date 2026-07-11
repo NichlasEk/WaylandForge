@@ -113,4 +113,6 @@ python tools/stormakt3020/render_radio_cast.py lines
 python tools/stormakt3020/build_radio_voices.py
 ```
 
+Use repeated `--line LINE_ID --force` arguments to re-render selected dialogue without touching the rest of the cast.
+
 The game keeps voice playback separate from ordinary effects and ducks music by about 6 dB while a radio line is active. Missing voice assets never suppress the deterministic subtitle card.
