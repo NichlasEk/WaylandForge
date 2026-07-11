@@ -27,6 +27,13 @@ class LoopEdit:
 
 EDITS = [
     LoopEdit(
+        source=Path("assets/stormakt3020/music/tre-kronors-jarnmarsch-v1.wav"),
+        output=Path("assets/stormakt3020/music/tre-kronors-jarnmarsch-loop-v1.wav"),
+        bpm=88,
+        beats_per_bar=4,
+        bars=16,
+    ),
+    LoopEdit(
         source=Path("assets/stormakt3020/music/kronans-sista-salva-v1.wav"),
         output=Path("assets/stormakt3020/music/kronans-sista-salva-loop-v2.wav"),
         bpm=84,

@@ -25,6 +25,15 @@
       "thinking": false
     },
     {
+      "role": "menu_grand_campaign",
+      "file": "tre-kronors-jarnmarsch-v1.wav",
+      "request": "prompts/tre-kronors-jarnmarsch.json",
+      "task_id": "79e77056-4da2-4d39-ac7b-401977911f1e",
+      "seed": "2018539767",
+      "duration_seconds": 48,
+      "thinking": false
+    },
+    {
       "role": "combat_fast",
       "file": "oresund-i-brand-v1.wav",
       "request": "prompts/oresund-i-brand.json",
@@ -44,6 +53,17 @@
     }
   ],
   "derived": [
+    {
+      "role": "menu_grand_campaign_runtime_loop",
+      "file": "tre-kronors-jarnmarsch-loop-v1.wav",
+      "source": "tre-kronors-jarnmarsch-v1.wav",
+      "tool": "../../../tools/stormakt3020/build_music_loops.py",
+      "bpm": 88,
+      "bars": 16,
+      "duration_seconds": 43.636,
+      "runtime_crossfade_seconds": 0.5,
+      "sha256": "a5e8a735fb2e37deae7cc910a4cf3870fff76a13fea41f377c0dca5d3f6d26a0"
+    },
     {
       "role": "boss_runtime_loop",
       "file": "kronans-sista-salva-loop-v2.wav",

@@ -93,7 +93,9 @@ internal sealed class StormaktMusicLoop : IDisposable
             {
                 float[] samples = LoadPcm16StereoWav(path);
                 string musicDirectory = Path.Combine(Path.GetDirectoryName(path)!, "music");
-                string menuPath = Path.Combine(musicDirectory, "marsch-mot-kopenhamn-v1.wav");
+                string ironMarchPath = Path.Combine(musicDirectory, "tre-kronors-jarnmarsch-loop-v1.wav");
+                string originalMenuPath = Path.Combine(musicDirectory, "marsch-mot-kopenhamn-v1.wav");
+                string menuPath = File.Exists(ironMarchPath) ? ironMarchPath : originalMenuPath;
                 float[]? menuSamples = File.Exists(menuPath) ? LoadPcm16StereoWav(menuPath) : null;
                 string loopedBossPath = Path.Combine(musicDirectory, "kronans-sista-salva-loop-v2.wav");
                 string originalBossPath = Path.Combine(musicDirectory, "kronans-sista-salva-v1.wav");

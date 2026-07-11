@@ -1,0 +1,21 @@
+{
+  "prompt": "Instrumental grand campaign menu march for a dark futuristic Swedish 17th-century space-navy shoot-em-up. Pompous martial baroque procession in D minor at 88 BPM, an unforgettable three-crown brass fanfare answered by massed low strings, crisp field snare tattoo, deep war drums and timpani, pipe organ pedal, bass sackbuts, restrained harpsichord ostinato, cold iron and royal blue atmosphere, heroic and slightly mad imperial scale, strong forward motion while remaining dignified, circular eight-bar structure suitable for an endless game-menu loop, no quiet intro and no final cadence. No vocals, no sung choir, no lyrics, no EDM, no modern pop drums, no comedy, no cheerful major key.",
+  "lyrics": "[Instrumental]",
+  "vocal_language": "unknown",
+  "audio_duration": 48,
+  "audio_format": "wav",
+  "task_type": "text2music",
+  "batch_size": 1,
+  "thinking": false,
+  "use_format": false,
+  "bpm": 88,
+  "key_scale": "D minor",
+  "time_signature": "4/4",
+  "inference_steps": 8,
+  "guidance_scale": 7.0,
+  "use_random_seed": true,
+  "constrained_decoding": true,
+  "use_cot_caption": true,
+  "use_cot_language": true,
+  "lm_negative_prompt": "vocals, singing, lyrics, EDM, pop, comedy, cheerful major key, silence, ambient intro, abrupt final cadence"
+}
