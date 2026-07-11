@@ -59,7 +59,7 @@ Invariant: selecting Skånska skuggor may never run Stora Bält with a changed t
 | Layer | Current hook | Level 2 plan |
 |---|---|---|
 | Far plate | `DrawSky` | `skanska_background[_wide]`, vertically mirrored/looped in WFSA. |
-| Atmospheric fallback | `DrawNebula` | Red aurora and green-black fog fallback when the asset pack is missing. |
+| Atmospheric fallback | `DrawNebula` | Red aurora and green-black fog fallback when the asset pack is missing. Ordinary stars are suppressed on level 2. |
 | Parallax props | `DrawBeltRuins` | Dispatch to `DrawSkanskaScenery`: crystal pines, kiln moons and mining wrecks. |
 | Physical props | `DrawGroundTargets` | Signal beacons and mining turrets stay below projectiles/player. |
 | Rival/background pass | new | Sören's wordless first pass is non-colliding and drawn behind projectiles. |
@@ -93,7 +93,7 @@ First asset batch:
 ## Skånska build checkpoints
 
 1. **Hook spine (landed 2026-07-11):** `_levelId`, start/reset/dispatch seams, level 2 enters a deterministic 60-second skeleton with its own seed, title, palette, scenery fallback, wave table and result. Level 1 remains on its existing dispatch path.
-2. **Snapphane identity:** generated Sören ship and portrait, first radio, silent background pass.
+2. **Snapphane identity (in progress):** generated Sören portrait and first radio landed; ship and silent background pass remain.
 3. **World:** generated Skåne background/props, fog drones, convoy and signal beacon.
 4. **Rival duel:** Sören dash, copper salvo, decoys and deterministic interruption.
 5. **Glimminge Järn:** separate boss state, two phases, heavy death and level-specific result.

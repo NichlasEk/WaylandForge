@@ -114,6 +114,17 @@ def append_sprites(
         entries.append((name, sprite))
 
 
+def append_two_frame_portrait(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    half = source.width // 2
+    for name, crop in [
+        ("portrait_soren_neutral", (0, 0, half, source.height)),
+        ("portrait_soren_speak", (half, 0, source.width, source.height)),
+    ]:
+        sprite = trim_alpha(source.crop(crop).convert("RGBA"))
+        sprite.thumbnail((38, 38), Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def mirrored_background(source: Image.Image, width: int, height: int) -> Image.Image:
     plate = source.copy()
     plate.thumbnail((width, height), Image.Resampling.LANCZOS)
@@ -127,6 +138,7 @@ def build(
     input_path: Path,
     danish_input_path: Path,
     portrait_input_path: Path,
+    snapphane_portrait_input_path: Path,
     player_input_path: Path,
     environment_input_path: Path,
     combat_detail_input_path: Path,
@@ -137,6 +149,7 @@ def build(
     source = Image.open(input_path)
     danish_source = Image.open(danish_input_path)
     portrait_source = Image.open(portrait_input_path)
+    snapphane_portrait_source = Image.open(snapphane_portrait_input_path)
     player_source = Image.open(player_input_path)
     environment_source = Image.open(environment_input_path)
     combat_detail_source = Image.open(combat_detail_input_path)
@@ -146,6 +159,7 @@ def build(
     append_sprites(entries, source, PRIMARY_SPRITES)
     append_sprites(entries, danish_source, DANISH_SPRITES)
     append_sprites(entries, portrait_source, RADIO_PORTRAITS)
+    append_two_frame_portrait(entries, snapphane_portrait_source)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
@@ -186,6 +200,11 @@ def main() -> None:
         default=Path("assets/stormakt3020/stormakt-radio-portraits-v1.png"),
     )
     parser.add_argument(
+        "--snapphane-portrait-input",
+        type=Path,
+        default=Path("assets/stormakt3020/soren-svartkrut-radio-v1.png"),
+    )
+    parser.add_argument(
         "--environment-input",
         type=Path,
         default=Path("assets/stormakt3020/stormakt-stora-balt-environment-v1.png"),
@@ -216,6 +235,7 @@ def main() -> None:
         args.input,
         args.danish_input,
         args.portrait_input,
+        args.snapphane_portrait_input,
         args.player_input,
         args.environment_input,
         args.combat_detail_input,

@@ -112,6 +112,7 @@ internal sealed class StormaktGame
     private static readonly RadioCard[] SkanskaRadioCards =
     [
         new(90, 330, false, "EBBA GRIP", "OKÄND SIGNAL", "HÅLL KURSEN", StormaktVoice.EbbaGrip, "portrait_ebba"),
+        new(900, 360, true, "SÖREN SVARTKRUT", "NI FÄRDAS I", "VÅR SVARTA SKOG", null, "portrait_soren"),
     ];
     private static readonly EnemyWave[] EnemyWaves =
     [
@@ -262,7 +263,10 @@ internal sealed class StormaktGame
         Clear(frame, 0xff061018);
         DrawSky(frame);
         DrawNebula(frame);
-        DrawStars(frame);
+        if (_levelId != 1)
+        {
+            DrawStars(frame);
+        }
         if (_inLevelSelect)
         {
             DrawLevelSelect(frame);
@@ -276,12 +280,12 @@ internal sealed class StormaktGame
         DrawBeltRuins(frame);
         DrawGroundTargets(frame);
         DrawBoss(frame);
-        DrawBorder(frame);
         DrawShots(frame);
         DrawEnemyShots(frame);
         DrawAnchorHazards(frame);
         DrawEnemies(frame);
         DrawShip(frame);
+        DrawBorder(frame);
         DrawHud(frame);
         DrawBossHud(frame);
         DrawBossIntroduction(frame);
@@ -397,7 +401,10 @@ internal sealed class StormaktGame
         {
             if (_missionFrame == card.StartFrame)
             {
-                _audio?.TriggerVoice(card.Voice);
+                if (card.Voice is StormaktVoice voice)
+                {
+                    _audio?.TriggerVoice(voice);
+                }
             }
         }
         _missionFrame++;
@@ -2173,7 +2180,8 @@ internal sealed class StormaktGame
 
     private void DrawRadio(uint[] frame)
     {
-        foreach (RadioCard card in RadioCards)
+        ReadOnlySpan<RadioCard> cards = _levelId == 1 ? SkanskaRadioCards : RadioCards;
+        foreach (RadioCard card in cards)
         {
             int elapsed = _missionFrame - card.StartFrame;
             if (elapsed < 0 || elapsed >= card.DurationFrames)
@@ -2542,7 +2550,7 @@ internal sealed class StormaktGame
         string Speaker,
         string Line1,
         string Line2,
-        StormaktVoice Voice,
+        StormaktVoice? Voice,
         string PortraitBase);
     private readonly record struct EnemyWave(
         int StartFrame,

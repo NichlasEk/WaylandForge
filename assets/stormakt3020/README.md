@@ -4,6 +4,8 @@
 
 `stormakt3020-logo-v1.png` is the transparent dark-blue, iron and gold three-crowns title emblem used by the level-select screen. Its chroma-key source and exact prompt are preserved alongside it.
 
+`soren-svartkrut-radio-v1.png` supplies matched neutral and speaking portraits for the Skånska skuggor rival transmission. Its magenta-key source and generation brief are preserved beside it.
+
 `stormakt-bridge-cannons-projectiles-v1.png` adds three bridge-collapse pieces, intact/destroyed Danish bridge cannon states, a detachable boss broadside cannon and red/white/gold enemy projectile families. Runtime uses the wreck pieces during the existing 45-frame collapse and mirrors the broadside module for the boss's right side.
 
 Prompt summary:
