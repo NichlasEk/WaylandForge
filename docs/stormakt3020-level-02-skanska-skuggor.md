@@ -2,6 +2,8 @@
 
 Status: implementation underway. A deterministic 60-second gameplay skeleton is selectable in developer mode. The shared technical spine is maintained in `docs/stormakt3020-level-hook-map.md`; keep that map synchronized as level hooks land.
 
+The generated starless black-forest mining plate is active in both 400x280 and 320x224 paths. Code-drawn crystal-tree scenery now appears only as a missing-WFSA fallback.
+
 Current identity slice: Sören Svartkrut has matched generated neutral/speaking radio portraits and his first transmission at frame 900. Level 2 suppresses the ordinary star layer; HUD bars render above the player and hazards.
 
 Sören's generated three-state corsair crosses the background without collision between frames 540 and 780, foreshadowing the radio contact.

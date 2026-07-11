@@ -8,6 +8,8 @@
 
 `soren-corsair-v1.png` supplies neutral, boost and damaged top-down states for Sören's black-iron, copper and forest-green rival ship.
 
+`stormakt-skanska-background-v1.png` is the starless black-forest mining plate for level 2: crystal spruce formations, ironworks, fog and deep red aurora rather than open space.
+
 `stormakt-bridge-cannons-projectiles-v1.png` adds three bridge-collapse pieces, intact/destroyed Danish bridge cannon states, a detachable boss broadside cannon and red/white/gold enemy projectile families. Runtime uses the wreck pieces during the existing 45-frame collapse and mirrors the broadside module for the boss's right side.
 
 Prompt summary:

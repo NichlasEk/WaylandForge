@@ -157,6 +157,7 @@ def build(
     environment_input_path: Path,
     combat_detail_input_path: Path,
     background_input_path: Path,
+    skanska_background_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
 ) -> None:
@@ -169,6 +170,7 @@ def build(
     environment_source = Image.open(environment_input_path)
     combat_detail_source = Image.open(combat_detail_input_path)
     background_source = Image.open(background_input_path).convert("RGBA")
+    skanska_background_source = Image.open(skanska_background_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
@@ -181,6 +183,8 @@ def build(
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
     entries.append(("stora_balt_background", mirrored_background(background_source, 320, 700)))
     entries.append(("stora_balt_background_wide", mirrored_background(background_source, 400, 875)))
+    entries.append(("skanska_background", mirrored_background(skanska_background_source, 320, 700)))
+    entries.append(("skanska_background_wide", mirrored_background(skanska_background_source, 400, 875)))
     logo_wide = logo_source.copy()
     logo_wide.thumbnail((210, 105), Image.Resampling.LANCZOS)
     entries.append(("stormakt_logo_wide", logo_wide))
@@ -241,6 +245,11 @@ def main() -> None:
         default=Path("assets/stormakt3020/stormakt-stora-balt-background-v1.png"),
     )
     parser.add_argument(
+        "--skanska-background-input",
+        type=Path,
+        default=Path("assets/stormakt3020/stormakt-skanska-background-v1.png"),
+    )
+    parser.add_argument(
         "--combat-detail-input",
         type=Path,
         default=Path("assets/stormakt3020/stormakt-bridge-cannons-projectiles-v1.png"),
@@ -262,6 +271,7 @@ def main() -> None:
         args.environment_input,
         args.combat_detail_input,
         args.background_input,
+        args.skanska_background_input,
         args.logo_input,
         args.output,
     )

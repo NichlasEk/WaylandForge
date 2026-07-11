@@ -1330,6 +1330,11 @@ internal sealed class StormaktGame
 
     private void DrawSkanskaScenery(uint[] frame)
     {
+        string backgroundName = _width <= 320 ? "skanska_background" : "skanska_background_wide";
+        if (_sprites?.TryGet(backgroundName, out _) == true)
+        {
+            return;
+        }
         for (int index = 0; index < 8; index++)
         {
             int y = ((index * 71 + _missionFrame / 3) % (_height + 100)) - 50;
