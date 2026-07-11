@@ -98,6 +98,6 @@ First asset batch:
 2. **Snapphane identity (landed 2026-07-11):** generated Sören portrait, first radio, three-state corsair and silent background pass are wired with code fallbacks.
 3. **World (landed 2026-07-11):** the generated starless Skåne background and transparent crystal-pine, kiln-moon and mining-hoist props are packed and frame-verified; three deterministic destructible signal beacons, silhouette-firing mist drones and a red/white fogde convoy are wired with code fallbacks.
 4. **Rival duel (landed 2026-07-11):** Sören owns separate non-boss state with boost dashes, aimed copper salvos, two non-physical radar decoys, health/time interruption and a damaged escape that never awards a kill.
-5. **Glimminge Järn:** separate boss state, two phases, heavy death and level-specific result.
+5. **Glimminge Järn (landed 2026-07-11):** separate boss state and generated intact/damaged sprites; iron-wall phase, drill-turret/crystal-spear phase, heavy block death and a level-specific wreck/result card.
 
 For every checkpoint: build, `git diff --check`, capture at least one direct WFEX frame, verify deterministic selection, commit and push narrowly.

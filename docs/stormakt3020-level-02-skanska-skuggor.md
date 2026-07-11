@@ -1,6 +1,6 @@
 # Bana 2 - Skånska skuggor
 
-Status: implementation underway. A deterministic 60-second gameplay skeleton is selectable in developer mode. The shared technical spine is maintained in `docs/stormakt3020-level-hook-map.md`; keep that map synchronized as level hooks land.
+Status: first complete deterministic gameplay pass is selectable in developer mode. The shared technical spine is maintained in `docs/stormakt3020-level-hook-map.md`; keep that map synchronized as level hooks land.
 
 The generated starless black-forest mining plate is active in both 400x280 and 320x224 paths. Code-drawn crystal-tree scenery now appears only as a missing-WFSA fallback.
 
@@ -15,6 +15,8 @@ Current world slice: complete. Three deterministic copper/green signal beacons e
 Current dialogue slice: four Swedish pilot lines for Ebba and Sören are generated through synthetic VoxCPM2 casting references and Dots MF line rendering, then passed through the deterministic runtime radio filter. Sören transmissions use their own copper/green frame rather than Danish red/white.
 
 Current rival slice: complete for the 60-second skeleton. Sören enters at frame 2700 with lateral boost dashes and aimed copper fire, shifts to two non-physical green radar decoys and paired salvos, then disengages at 35 percent health or the deterministic fogde interruption at frame 3420. Interruption never awards a kill and clears the rival volley before his damaged escape.
+
+Current boss slice: Glimminge Järn enters after Sören at frame 3600 with its own state and generated intact/damaged castle-galleon sprites. Phase one drives iron-wall volleys with moving safe gaps. At 210 health it unfolds twin drill turrets, adds aimed heavy fire and telegraphed crystal spears. Death drops castle blocks for 300 frames, awards the boss score, then shows the level-specific wreck/result card with one green snapphane blink.
 
 ## Dramatiskt löfte
 
@@ -106,7 +108,7 @@ Palett: nästan svart järn, oxiderad koppar, dämpat skogsgrönt och signalgrö
 2. **Snapphaneidentitet:** Sörens kapare/porträtt, första radio och ordlös bakgrundspassage. Commit och push.
 3. **Banskelett:** egen bakgrund, 60-sekunderstidslinje, konvoj och signalfyrar. **Landed 2026-07-11.**
 4. **Miniboss:** två läsbara faser och avbruten duell. **Landed 2026-07-11.**
-5. **Glimminge Järn:** presentation, två faser, död och resultat. Commit och push.
+5. **Glimminge Järn:** presentation, två faser, död och resultat. **Landed 2026-07-11.**
 
 ## Acceptanskriterier
 

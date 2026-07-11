@@ -151,6 +151,19 @@ def append_skanska_props(entries: list[tuple[str, Image.Image]], source: Image.I
         entries.append((name, sprite))
 
 
+def append_glimminge(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    third = source.width // 3
+    definitions = [
+        ("glimminge_jarn", (0, 0, third, source.height), (124, 82)),
+        ("glimminge_jarn_damaged", (third, 0, third * 2, source.height), (124, 82)),
+        ("glimminge_drill_turret", (third * 2, 0, source.width, source.height), (34, 48)),
+    ]
+    for name, crop, size in definitions:
+        sprite = trim_alpha(source.crop(crop).convert("RGBA"))
+        sprite.thumbnail(size, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def mirrored_background(source: Image.Image, width: int, height: int) -> Image.Image:
     plate = source.copy()
     plate.thumbnail((width, height), Image.Resampling.LANCZOS)
@@ -172,6 +185,7 @@ def build(
     background_input_path: Path,
     skanska_background_input_path: Path,
     skanska_props_input_path: Path,
+    glimminge_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
 ) -> None:
@@ -186,6 +200,7 @@ def build(
     background_source = Image.open(background_input_path).convert("RGBA")
     skanska_background_source = Image.open(skanska_background_input_path).convert("RGBA")
     skanska_props_source = Image.open(skanska_props_input_path).convert("RGBA")
+    glimminge_source = Image.open(glimminge_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
@@ -194,6 +209,7 @@ def build(
     append_two_frame_portrait(entries, snapphane_portrait_source)
     append_three_frame_corsair(entries, soren_corsair_source)
     append_skanska_props(entries, skanska_props_source)
+    append_glimminge(entries, glimminge_source)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
@@ -271,6 +287,11 @@ def main() -> None:
         default=Path("assets/stormakt3020/stormakt-skanska-props-v1.png"),
     )
     parser.add_argument(
+        "--glimminge-input",
+        type=Path,
+        default=Path("assets/stormakt3020/glimminge-jarn-v1.png"),
+    )
+    parser.add_argument(
         "--combat-detail-input",
         type=Path,
         default=Path("assets/stormakt3020/stormakt-bridge-cannons-projectiles-v1.png"),
@@ -294,6 +315,7 @@ def main() -> None:
         args.background_input,
         args.skanska_background_input,
         args.skanska_props_input,
+        args.glimminge_input,
         args.logo_input,
         args.output,
     )
