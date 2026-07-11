@@ -1079,6 +1079,16 @@ internal sealed class StormaktGame
                 enemy.X += wobble;
             }
 
+            if (enemy.Kind is 4 or 5 && enemy.Y > 24 && enemy.Y < _height - 64)
+            {
+                int attackCycle = (_missionFrame + enemy.BridgeGroup) % (enemy.Kind == 4 ? 150 : 210);
+                if (attackCycle == (enemy.Kind == 4 ? 96 : 132))
+                {
+                    FireEnemyShot(enemy.X, enemy.Y + enemy.Radius, enemy.Kind == 4 ? 5 : 0,
+                        enemy.Kind == 4 ? 2.35 : 1.85);
+                }
+            }
+
             bool removed = false;
             for (int s = _shots.Count - 1; s >= 0; s--)
             {
@@ -1176,8 +1186,17 @@ internal sealed class StormaktGame
             double phase = ((volley * 17 + index * 29 + wave.Kind * 11) % 100) * Math.PI / 50.0;
             _enemies.Add(new Enemy(
                 Math.Clamp(center + offset, 20, _width - 20), y, speed, radius, health, color, wave.Kind, phase,
-                0, 0, false));
+                wave.Kind is 4 or 5 ? volley * 31 + index * 47 : 0, 0, false));
         }
+    }
+
+    private void FireEnemyShot(int x, int y, int kind, double speed)
+    {
+        double dx = _shipX - x;
+        double dy = _shipY - y;
+        double length = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
+        _enemyShots.Add(new EnemyShot(x, y, dx / length * speed, dy / length * speed, kind));
+        _audio?.Trigger(StormaktSound.TwinCannon);
     }
 
     private void SpawnGroundEncounters()
@@ -1949,6 +1968,7 @@ internal sealed class StormaktGame
                 2 => 0xfff2eee4,
                 3 => 0xff554039,
                 4 => 0xffb34c38,
+                5 => 0xff2f7650,
                 _ => 0xffc51f35,
             };
             uint core = shot.Kind switch
@@ -1957,6 +1977,7 @@ internal sealed class StormaktGame
                 2 => 0xffff6b62,
                 3 => 0xffff8a4a,
                 4 => 0xffffc46b,
+                5 => 0xff9affbd,
                 _ => 0xffffd6b0,
             };
             int radius = shot.Kind is 1 or 4 ? 2 : 3;
@@ -2005,20 +2026,32 @@ internal sealed class StormaktGame
             }
         }
 
-        if (enemy.Kind is 4 or 5)
+        if (enemy.Kind == 4)
         {
-            uint hull = enemy.Kind == 4 ? 0xff17231e : 0xff271d1a;
-            uint copper = enemy.Kind == 4 ? 0xff79523a : 0xffa66b3f;
+            int attackCycle = (_missionFrame + enemy.BridgeGroup) % 150;
+            bool revealed = attackCycle is >= 78 and <= 108;
+            uint hull = revealed ? 0xff253b32 : 0xff111916;
+            uint copper = revealed ? 0xffa66b3f : 0xff3b3028;
             uint signal = 0xff65c58a;
             FillTriangle(frame, enemy.X, enemy.Y - enemy.Radius, enemy.X - enemy.Radius, enemy.Y + enemy.Radius,
                 enemy.X + enemy.Radius, enemy.Y + enemy.Radius, hull);
             DrawLine(frame, enemy.X - enemy.Radius + 2, enemy.Y + 4, enemy.X + enemy.Radius - 2, enemy.Y + 4, copper);
             DrawRect(frame, enemy.X - 3, enemy.Y - 4, 6, 7, 0xff0d1211);
-            PutPixel(frame, enemy.X, enemy.Y - 2, signal);
-            if (((_missionFrame / 6) & 1) == 0)
+            if (revealed)
             {
+                PutPixel(frame, enemy.X, enemy.Y - 2, signal);
                 BlendPixel(frame, enemy.X, enemy.Y - 2, signal, 140);
             }
+        }
+        else if (enemy.Kind == 5)
+        {
+            DrawRect(frame, enemy.X - enemy.Radius, enemy.Y - 7, enemy.Radius * 2 + 1, 15, 0xff2b3033);
+            FillTriangle(frame, enemy.X, enemy.Y + enemy.Radius, enemy.X - enemy.Radius, enemy.Y + 5,
+                enemy.X + enemy.Radius, enemy.Y + 5, 0xff171c20);
+            DrawRect(frame, enemy.X - enemy.Radius + 2, enemy.Y - 5, enemy.Radius * 2 - 3, 5, danishRed);
+            DrawRect(frame, enemy.X - 2, enemy.Y - 7, 4, 15, danishWhite);
+            DrawRect(frame, enemy.X - 7, enemy.Y + 1, 5, 4, 0xffb88745);
+            DrawRect(frame, enemy.X + 3, enemy.Y + 1, 5, 4, 0xffb88745);
         }
         else if (enemy.Kind == 3)
         {

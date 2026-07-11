@@ -10,7 +10,7 @@ Sören's generated three-state corsair crosses the background without collision 
 
 Current audio slice: `skanska-skuggor-loop-v1.wav` is the dedicated runtime score, selected through the level id and isolated from Stora Bält combat music.
 
-Current world slice: three deterministic copper/green signal beacons enter during the 60-second skeleton. They are destructible physical targets with readable code-drawn fallback art.
+Current world slice: three deterministic copper/green signal beacons enter during the 60-second skeleton. They are destructible physical targets with readable code-drawn fallback art. Dark mist drones reveal their silhouette around a green aimed shot, while Danish red/white cargo barges establish the fogde convoy with a slower aimed volley.
 
 Current dialogue slice: four Swedish pilot lines for Ebba and Sören are generated through synthetic VoxCPM2 casting references and Dots MF line rendering, then passed through the deterministic runtime radio filter. Sören transmissions use their own copper/green frame rather than Danish red/white.
 
