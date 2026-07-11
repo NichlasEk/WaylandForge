@@ -30,7 +30,7 @@ frame, speaker_id, side, subtitle_lines, voice_asset, portrait_id, priority, ski
 - En kö med högst tre väntande kort; bossvarning har högre prioritet än vanlig kommentar.
 - Samma simuleringsruta ger samma dialogordning i headless och interaktiv körning.
 - Texten visas alltid även om röster är avstängda eller WAV-filen saknas.
-- Start tryckt under ett skippbart kort avslutar endast kortet, inte spelet.
+- START pausar även under ett radiokort; kortets röst/tidslinje fortsätter först när spelet återupptas.
 - `StormaktMusicLoop` utökas till att mixa en separat voice-kanal. Musik duckas cirka 6 dB under tal, SFX fortsätter men tunga explosioner begränsas under repliken.
 - Röster förgenereras till PCM16, mono eller stereo, 48 kHz. Ingen TTS-modell eller GPU krävs när spelet körs.
 - Ett lätt radiofilter läggs vid assetbygget: högpass runt 180 Hz, lågpass runt 4.5 kHz, mild kompression och mycket svagt deterministiskt brus.
@@ -53,7 +53,7 @@ EutherLink exponerar både GrapheneOS Matcha English och den tyngre VoxCPM2-mode
 
 Tre syntetiska engelska röster ligger under `assets/stormakt3020/radio/`. Råfiler, exakta requestfiler, jobb-id, hash och godkännandestatus finns i `voice-manifest.json`. Inga privata eller kända röstreferenser har använts. `tools/stormakt3020/build_radio_voices.py` samplar om till 48 kHz stereo och lägger på reproducerbart radiofilter.
 
-Runtime visar korten vid fasta simuleringsrutor, spelar separat voice-kanal och duckar musiken cirka 6 dB medan repliken hörs. Start hoppar över ett aktivt kort; saknad röstfil påverkar inte text eller simulering.
+Runtime visar korten vid fasta simuleringsrutor, spelar separat voice-kanal och duckar musiken cirka 6 dB medan repliken hörs. START pausar spelet; saknad röstfil påverkar inte text eller simulering.
 
 Rekommenderad pilot:
 

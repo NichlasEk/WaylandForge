@@ -91,7 +91,6 @@ internal sealed class StormaktGame
     private readonly List<GroundTarget> _groundTargets = [];
     private readonly List<AnchorHazard> _anchorHazards = [];
     private readonly Star[] _stars;
-    private readonly HashSet<int> _skippedRadioCards = [];
     private static readonly RadioCard[] RadioCards =
     [
         new(180, 360, false, "EBBA GRIP", "HOLD YOUR COURSE", "BELT IS NOT LOST", StormaktVoice.EbbaGrip, "portrait_ebba"),
@@ -121,6 +120,7 @@ internal sealed class StormaktGame
     private int _stageClearAge;
     private uint _previousButtons;
     private bool _gameOver;
+    private bool _paused;
 
     public StormaktGame(int width, int height, SpritePack? sprites, StormaktMusicLoop? audio)
     {
@@ -160,7 +160,20 @@ internal sealed class StormaktGame
             return;
         }
 
-        StepRadio(buttons);
+        if (Pressed(buttons, Start))
+        {
+            _paused = !_paused;
+            _audio?.SetPaused(_paused);
+            _previousButtons = buttons;
+            return;
+        }
+        if (_paused)
+        {
+            _previousButtons = buttons;
+            return;
+        }
+
+        StepRadio();
 
         int speed = (buttons & Slow) != 0 ? (_width <= 320 ? 2 : 3) : (_width <= 320 ? 4 : 5);
         if ((buttons & Left) != 0) _shipX -= speed;
@@ -225,6 +238,7 @@ internal sealed class StormaktGame
         DrawMissionTitle(frame);
         DrawRadio(frame);
         DrawStageClear(frame);
+        DrawPause(frame);
         if (_gameOver)
         {
             int panelX = (_width - 168) / 2;
@@ -259,27 +273,22 @@ internal sealed class StormaktGame
         _boss = null;
         _stageClear = false;
         _stageClearAge = 0;
-        _skippedRadioCards.Clear();
         _previousButtons = 0;
         _gameOver = false;
+        _paused = false;
+        _audio?.SetPaused(false);
         _audio?.SwitchMusic(StormaktMusicTrack.Combat);
     }
 
     private bool Pressed(uint buttons, uint button) => (buttons & button) != 0 && (_previousButtons & button) == 0;
 
-    private void StepRadio(uint buttons)
+    private void StepRadio()
     {
         foreach (RadioCard card in RadioCards)
         {
             if (_missionFrame == card.StartFrame)
             {
                 _audio?.TriggerVoice(card.Voice);
-            }
-            if (_missionFrame >= card.StartFrame &&
-                _missionFrame < card.StartFrame + card.DurationFrames &&
-                Pressed(buttons, Start))
-            {
-                _skippedRadioCards.Add(card.StartFrame);
             }
         }
         _missionFrame++;
@@ -1075,8 +1084,10 @@ internal sealed class StormaktGame
             _sprites.TryGet("bridge_arch_left_generated", out Sprite leftArch) &&
             _sprites.TryGet("bridge_arch_right_generated", out Sprite rightArch))
         {
-            int asteroidY = ((_missionFrame / 3 + 90) % 430) - 80;
-            int asteroidX = ((_missionFrame / 430) & 1) == 0 ? 18 : _width - asteroids.Width - 18;
+            int asteroidTravel = (_missionFrame / 3) + 90;
+            int asteroidCycle = Math.DivRem(asteroidTravel, 430, out int asteroidPosition);
+            int asteroidY = asteroidPosition - 80;
+            int asteroidX = (asteroidCycle & 1) == 0 ? 18 : _width - asteroids.Width - 18;
             DrawSprite(frame, asteroids, asteroidX, asteroidY);
 
             int generatedWreckY = ((_missionFrame * 3 / 4 + 170) % 760) - 120;
@@ -1289,10 +1300,6 @@ internal sealed class StormaktGame
         if (boss.Phase < 3)
         {
             return;
-        }
-        for (int scanY = y - 26; scanY <= y + 30; scanY += 7)
-        {
-            DrawLine(frame, x - 49, scanY, x + 49, scanY, 0xff5d1a24);
         }
         DrawCircleOutline(frame, x, y + 15, 11 + ((_missionFrame / 5) & 1), 0xffff6b4a);
 
@@ -1869,12 +1876,29 @@ internal sealed class StormaktGame
         DrawText(frame, panelX + 73, y + 22, "STORA BÄLT NEBULOSAN", 0xff9bd4dc);
     }
 
+    private void DrawPause(uint[] frame)
+    {
+        if (!_paused)
+        {
+            return;
+        }
+        const int width = 176;
+        const int height = 42;
+        int x = (_width - width) / 2;
+        int y = (_height - height) / 2;
+        DrawRect(frame, x, y, width, height, 0xee080d12);
+        DrawLine(frame, x, y, x + width - 1, y, 0xffffd66b);
+        DrawLine(frame, x, y + height - 1, x + width - 1, y + height - 1, 0xff2f74c9);
+        DrawText(frame, x + 73, y + 9, "PAUS", 0xffffd66b);
+        DrawText(frame, x + 34, y + 25, "START FORTSÄTTER", 0xffdce8f2);
+    }
+
     private void DrawRadio(uint[] frame)
     {
         foreach (RadioCard card in RadioCards)
         {
             int elapsed = _missionFrame - card.StartFrame;
-            if (elapsed < 0 || elapsed >= card.DurationFrames || _skippedRadioCards.Contains(card.StartFrame))
+            if (elapsed < 0 || elapsed >= card.DurationFrames)
             {
                 continue;
             }

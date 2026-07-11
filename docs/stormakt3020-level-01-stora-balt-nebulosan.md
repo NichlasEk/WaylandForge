@@ -16,6 +16,9 @@ Status: checkpoint 1, 2A-2C, bosscheckpoint 3A-3C och den första grafikpolishen
 - Riktade röda skott, vita kungliga salvor och guldsigillets ring/spiral använder egna små genererade projektilsprites. Kollisionsradier och banor är oförändrade.
 - Kodritade vrak, kanoner och projektiler ligger kvar som fallback om ett assetnamn saknas.
 - Bossens fas-2-docktorn använder mindre härledda kanonassets. Utslagna sidokanoner täcks av roterade/speglade rödvita vrakmoduler över en sotig skademask; de tidigare grå debugboxarna/kryssen visas endast utan assetpaket.
+- Fas 3 använder det genererade skadade bossarket utan den gamla horisontella scanline-overlayn; endast kärnglöd, nödljus och attackvarningar ritas ovanpå.
+- START/Enter pausar och återupptar aktivt spel. Under paus står simulering, projektiler, fiender, parallax, musikposition, SFX och radio voice stilla; ljudströmmen skickar tystnad och ett centrerat `PAUS`-kort visas. START behåller omstartsfunktionen på game-over/resultat.
+- Asteroidklustrets vänster/högerval är bundet till dess vertikala wrapcykel. Det kan därför inte längre teleportera mellan sidor mitt i bild.
 
 ## Implementerad grafikpolish - 2026-07-11
 

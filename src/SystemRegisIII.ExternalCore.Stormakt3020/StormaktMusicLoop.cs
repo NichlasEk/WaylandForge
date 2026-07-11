@@ -35,6 +35,7 @@ internal sealed class StormaktMusicLoop : IDisposable
     private readonly CancellationTokenSource _stop = new();
     private readonly Thread _thread;
     private volatile bool _connectedOnce;
+    private volatile bool _paused;
 
     private StormaktMusicLoop(
         float[] samples,
@@ -120,6 +121,8 @@ internal sealed class StormaktMusicLoop : IDisposable
 
     public void DuckMusic(int milliseconds) => _pendingMusicDucks.Enqueue(Math.Max(0, milliseconds) * SampleRate / 1_000);
 
+    public void SetPaused(bool paused) => _paused = paused;
+
     public void Dispose()
     {
         _stop.Cancel();
@@ -167,8 +170,11 @@ internal sealed class StormaktMusicLoop : IDisposable
             int accepted = TrySendPacket(packet, PacketFrames);
             if (accepted >= 0)
             {
-                frameIndex = AdvanceFrameIndex(frameIndex, accepted);
-                AdvanceTrackTransition(ref frameIndex, accepted);
+                if (!_paused)
+                {
+                    frameIndex = AdvanceFrameIndex(frameIndex, accepted);
+                    AdvanceTrackTransition(ref frameIndex, accepted);
+                }
                 acceptedFrames += accepted;
                 if (!announcedConnection)
                 {
@@ -204,6 +210,11 @@ internal sealed class StormaktMusicLoop : IDisposable
         BinaryPrimitives.WriteUInt32LittleEndian(header[20..], (uint)(frames * Channels * sizeof(float)));
 
         Span<byte> payload = packet.AsSpan(HeaderBytes);
+        if (_paused)
+        {
+            payload[..(frames * Channels * sizeof(float))].Clear();
+            return;
+        }
         while (_pendingEffects.TryDequeue(out StormaktSound sound))
         {
             if (_effects.TryGetValue(sound, out LoadedEffect? effect) && effect is not null)
