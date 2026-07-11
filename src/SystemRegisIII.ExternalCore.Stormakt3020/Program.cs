@@ -67,6 +67,7 @@ internal sealed class StormaktGame
         "STORA BÄLT",
         "SKÅNSKA SKUGGOR",
         "ÖRESUNDS JÄRNKRONA",
+        "SILVERKROPPEN",
         "TIONDE VÄRLDEN",
         "SNAPPHANENS ED",
         "KÖPENHAMNS RING",
@@ -162,6 +163,7 @@ internal sealed class StormaktGame
     private BossState? _boss;
     private SorenRivalState? _sorenRival;
     private GlimmingeState? _glimminge;
+    private RtsState? _rts;
     private bool _stageClear;
     private int _stageClearAge;
     private uint _previousButtons;
@@ -239,6 +241,13 @@ internal sealed class StormaktGame
             return;
         }
 
+        if (_levelId == 3)
+        {
+            StepRts(buttons);
+            _previousButtons = buttons;
+            return;
+        }
+
         StepRadio();
 
         int speed = (buttons & Slow) != 0 ? (_width <= 320 ? 2 : 3) : (_width <= 320 ? 4 : 5);
@@ -290,6 +299,12 @@ internal sealed class StormaktGame
     public void Render(uint[] frame, ulong frameIndex)
     {
         Clear(frame, 0xff061018);
+        if (_levelId == 3 && !_inLevelSelect && !_inLevelPreview)
+        {
+            DrawRts(frame);
+            DrawPause(frame);
+            return;
+        }
         DrawSky(frame);
         DrawNebula(frame);
         if (_levelId != 1)
@@ -344,7 +359,7 @@ internal sealed class StormaktGame
         _groundTargets.Clear();
         _anchorHazards.Clear();
         _crystalSpears.Clear();
-        _random = new Random(_levelId == 1 ? 3202 : 3020);
+        _random = new Random(_levelId switch { 1 => 3202, 3 => 3404, _ => 3020 });
         for (int i = 0; i < _stars.Length; i++)
         {
             _stars[i] = new Star(_random.Next(_width), _random.Next(_height), 1 + _random.Next(3), _random.Next(50, 180));
@@ -361,6 +376,17 @@ internal sealed class StormaktGame
         _boss = null;
         _sorenRival = null;
         _glimminge = null;
+        _rts = _levelId == 3
+            ? new RtsState
+            {
+                MapWidth = _width + (_width <= 320 ? 120 : 160),
+                MapHeight = _height - 28,
+                CursorX = 74,
+                CursorY = _height - 82,
+                LandingX = 74,
+                LandingY = _height - 82,
+            }
+            : null;
         _stageClear = false;
         _stageClearAge = 0;
         _previousButtons = 0;
@@ -397,7 +423,7 @@ internal sealed class StormaktGame
         }
         if (Pressed(buttons, Start))
         {
-            if (_levelSelection == 0 || (_levelSelection == 1 && _developerMode))
+            if (_levelSelection == 0 || (_developerMode && _levelSelection is 1 or 3))
             {
                 StartLevel(_levelSelection);
             }
@@ -430,6 +456,57 @@ internal sealed class StormaktGame
             _audio?.Trigger(StormaktSound.Deploy);
         }
         _previousButtons = buttons;
+    }
+
+    private void StepRts(uint buttons)
+    {
+        if (_rts is not RtsState rts)
+        {
+            return;
+        }
+        rts.Age++;
+        rts.LandingAge = Math.Min(180, rts.LandingAge + 1);
+        rts.PlacementPulse = Math.Max(0, rts.PlacementPulse - 1);
+        _missionFrame++;
+
+        if (rts.LandingAge < 120)
+        {
+            return;
+        }
+
+        int cursorSpeed = (buttons & Slow) != 0 ? 1 : 3;
+        if ((buttons & Left) != 0) rts.CursorX -= cursorSpeed;
+        if ((buttons & Right) != 0) rts.CursorX += cursorSpeed;
+        if ((buttons & Up) != 0) rts.CursorY -= cursorSpeed;
+        if ((buttons & Down) != 0) rts.CursorY += cursorSpeed;
+        rts.CursorX = Math.Clamp(rts.CursorX, 10, rts.MapWidth - 11);
+        rts.CursorY = Math.Clamp(rts.CursorY, 28, rts.MapHeight - 12);
+
+        int cursorScreenX = rts.CursorX - rts.CameraX;
+        if (cursorScreenX < 54)
+        {
+            rts.CameraX = Math.Max(0, rts.CursorX - 54);
+        }
+        else if (cursorScreenX > _width - 54)
+        {
+            rts.CameraX = Math.Min(rts.MapWidth - _width, rts.CursorX - (_width - 54));
+        }
+
+        if (Pressed(buttons, Fire))
+        {
+            rts.SurveyX = (rts.CursorX / 12) * 12;
+            rts.SurveyY = (rts.CursorY / 12) * 12;
+            rts.HasSurveyMarker = true;
+            rts.PlacementPulse = 30;
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        if (Pressed(buttons, AltFire))
+        {
+            rts.CursorX = rts.LandingX;
+            rts.CursorY = rts.LandingY;
+            rts.CameraX = 0;
+            rts.HasSurveyMarker = false;
+        }
     }
 
     private void StepRadio()
@@ -1564,6 +1641,112 @@ internal sealed class StormaktGame
                 star = star with { X = _random.Next(_width), Y = 0, Speed = 1 + _random.Next(3), Brightness = _random.Next(50, 180) };
             }
             _stars[i] = star;
+        }
+    }
+
+    private void DrawRts(uint[] frame)
+    {
+        if (_rts is not RtsState rts)
+        {
+            return;
+        }
+        DrawRect(frame, 0, 0, _width, _height, 0xff08110e);
+        DrawRect(frame, 0, 18, _width, _height - 32, 0xff101b16);
+
+        for (int row = 0; row < 7; row++)
+        {
+            for (int column = 0; column < 11; column++)
+            {
+                int worldX = 22 + column * 47 + ((row * 31 + column * 17) % 23);
+                int worldY = 32 + row * 34 + ((row * 19 + column * 29) % 17);
+                int x = worldX - rts.CameraX;
+                if (x < -20 || x > _width + 20)
+                {
+                    continue;
+                }
+                uint trunk = (row + column & 1) == 0 ? 0xff28352d : 0xff31352f;
+                uint crown = (row * 3 + column & 1) == 0 ? 0xff173027 : 0xff202c27;
+                FillTriangle(frame, x, worldY - 13, x - 8, worldY + 12, x + 8, worldY + 12, crown);
+                DrawLine(frame, x, worldY - 9, x, worldY + 13, trunk);
+            }
+        }
+
+        for (int worldY = 26; worldY < rts.MapHeight; worldY += 7)
+        {
+            int worldX = 155 + worldY / 2 + (int)Math.Round(Math.Sin(worldY * 0.09) * 9.0);
+            int x = worldX - rts.CameraX;
+            if (x >= -8 && x <= _width + 8)
+            {
+                FillCircle(frame, x, worldY, 4, 0xff6f7775);
+                PutPixel(frame, x, worldY, 0xffd6ded7);
+                PutPixel(frame, x + 2, worldY - 2, 0xff9fb8ad);
+            }
+        }
+
+        int roadX = rts.MapWidth - 74 - rts.CameraX;
+        DrawRect(frame, roadX - 15, 18, 31, rts.MapHeight - 6, 0xff27251f);
+        DrawLine(frame, roadX - 13, 18, roadX - 13, rts.MapHeight, 0xff4d4433);
+        DrawLine(frame, roadX + 13, 18, roadX + 13, rts.MapHeight, 0xff4d4433);
+        for (int y = 28; y < rts.MapHeight; y += 22)
+        {
+            DrawLine(frame, roadX - 9, y, roadX + 9, y + 5, 0xff342f27);
+        }
+
+        DrawRtsLandedKarl(frame, rts);
+        if (rts.HasSurveyMarker)
+        {
+            int surveyX = rts.SurveyX - rts.CameraX;
+            uint survey = (rts.PlacementPulse / 4 & 1) == 0 ? 0xffffd66b : 0xff8a6b38;
+            DrawRect(frame, surveyX - 12, rts.SurveyY - 8, 25, 17, 0xff17211c);
+            DrawLine(frame, surveyX - 12, rts.SurveyY - 8, surveyX + 12, rts.SurveyY - 8, survey);
+            DrawLine(frame, surveyX - 12, rts.SurveyY + 8, surveyX + 12, rts.SurveyY + 8, survey);
+        }
+
+        if (rts.LandingAge >= 120)
+        {
+            int cursorX = rts.CursorX - rts.CameraX;
+            uint cursor = (rts.Age / 5 & 1) == 0 ? 0xffffd66b : 0xff7fc7ff;
+            DrawLine(frame, cursorX - 7, rts.CursorY - 7, cursorX - 2, rts.CursorY - 7, cursor);
+            DrawLine(frame, cursorX + 2, rts.CursorY - 7, cursorX + 7, rts.CursorY - 7, cursor);
+            DrawLine(frame, cursorX - 7, rts.CursorY + 7, cursorX - 2, rts.CursorY + 7, cursor);
+            DrawLine(frame, cursorX + 2, rts.CursorY + 7, cursorX + 7, rts.CursorY + 7, cursor);
+        }
+
+        DrawRect(frame, 0, 0, _width, 18, 0xff080d12);
+        DrawText(frame, 6, 5, "SILVERKROPPEN", 0xffffd66b);
+        DrawText(frame, _width - 126, 5, "KRAFT 000  SILVER 0600", 0xff9bd4dc);
+        DrawRect(frame, 0, _height - 14, _width, 14, 0xff080d12);
+        string objective = rts.LandingAge < 120 ? "KARL CCLV LANDAR" :
+            rts.HasSurveyMarker ? "ÅNGKRAFT MARKERAD" : "Z MARKERA ÅNGKRAFT  X ÅTER";
+        DrawText(frame, 7, _height - 10, objective, rts.LandingAge < 120 ? 0xff9bd4dc : 0xffffd66b);
+    }
+
+    private void DrawRtsLandedKarl(uint[] frame, RtsState rts)
+    {
+        int x = rts.LandingX - rts.CameraX;
+        double t = Math.Min(1.0, rts.LandingAge / 120.0);
+        double eased = t * t * (3.0 - 2.0 * t);
+        int y = (int)Math.Round(-62 + (rts.LandingY + 62) * eased);
+        if (rts.LandingAge >= 105)
+        {
+            int padWidth = 64;
+            DrawRect(frame, x - padWidth / 2, rts.LandingY - 26, padWidth, 52, 0xff171d1b);
+            DrawLine(frame, x - 31, rts.LandingY - 25, x + 31, rts.LandingY - 25, 0xff8a6b38);
+            DrawLine(frame, x - 31, rts.LandingY + 25, x + 31, rts.LandingY + 25, 0xff2f74c9);
+        }
+        if (_sprites?.TryGet("player", out Sprite player) == true)
+        {
+            DrawSprite(frame, player, x - player.Width / 2, y - player.Height / 2);
+        }
+        else
+        {
+            FillTriangle(frame, x, y - 25, x - 20, y + 23, x + 20, y + 23, 0xff244f91);
+            DrawLine(frame, x - 18, y + 18, x + 18, y + 18, 0xffffd66b);
+        }
+        if (rts.LandingAge is >= 90 and < 150)
+        {
+            int dust = (rts.LandingAge - 90) / 3;
+            DrawCircleOutline(frame, x, rts.LandingY + 20, 8 + dust, 0xff6f7775);
         }
     }
 
@@ -3435,6 +3618,23 @@ internal sealed class StormaktGame
         public int PhaseAge { get; set; }
         public int BurningTransitionAge { get; set; }
         public double PhaseTransitionX { get; set; }
+    }
+
+    private sealed class RtsState
+    {
+        public int Age { get; set; }
+        public int MapWidth { get; set; }
+        public int MapHeight { get; set; }
+        public int CameraX { get; set; }
+        public int CursorX { get; set; }
+        public int CursorY { get; set; }
+        public int LandingX { get; set; }
+        public int LandingY { get; set; }
+        public int LandingAge { get; set; }
+        public bool HasSurveyMarker { get; set; }
+        public int SurveyX { get; set; }
+        public int SurveyY { get; set; }
+        public int PlacementPulse { get; set; }
     }
 
     private sealed class BossState
