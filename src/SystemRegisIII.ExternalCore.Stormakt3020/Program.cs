@@ -585,6 +585,8 @@ internal sealed class StormaktGame
                         boss.Health = BossPhaseThreeThreshold;
                         boss.Phase = 3;
                         boss.PhaseAge = 0;
+                        boss.PhaseTransitionX = boss.X;
+                        boss.PhaseTransitionY = boss.Y;
                         boss.RushX = boss.X;
                         _enemyShots.Clear();
                         _anchorHazards.Clear();
@@ -736,12 +738,23 @@ internal sealed class StormaktGame
     private void StepBossPhaseThreeMovement(BossState boss)
     {
         const double homeY = 58.0;
+        const int retreatFrames = 90;
         double rushY = _height - 74.0;
         double rushDistance = rushY - homeY;
+        if (boss.PhaseAge < retreatFrames)
+        {
+            double t = boss.PhaseAge / (double)retreatFrames;
+            double eased = t * t * (3.0 - 2.0 * t);
+            boss.X = boss.PhaseTransitionX + ((_width / 2.0) - boss.PhaseTransitionX) * eased;
+            boss.Y = boss.PhaseTransitionY + (homeY - boss.PhaseTransitionY) * eased;
+            boss.RushX = boss.X;
+            return;
+        }
         if (boss.PhaseAge < 180)
         {
-            boss.X = (_width / 2.0) + Math.Sin(boss.PhaseAge * 0.018) * 28.0;
+            boss.X = _width / 2.0;
             boss.Y = homeY;
+            boss.RushX = boss.X;
             return;
         }
 
@@ -1297,7 +1310,7 @@ internal sealed class StormaktGame
 
     private void DrawBossFinalEffects(uint[] frame, BossState boss, int x, int y)
     {
-        if (boss.Phase < 3)
+        if (boss.Phase < 3 || (boss.Phase == 3 && boss.PhaseAge < 90))
         {
             return;
         }
@@ -1355,7 +1368,7 @@ internal sealed class StormaktGame
 
     private void DrawBossPhaseAttachments(uint[] frame, BossState boss, int x, int y)
     {
-        if (boss.Phase != 2)
+        if (boss.Phase != 2 && !(boss.Phase == 3 && boss.PhaseAge < 90))
         {
             return;
         }
@@ -1818,7 +1831,7 @@ internal sealed class StormaktGame
             DrawRect(frame, panelX, 88, 184, 27, 0xff160b0e);
             DrawText(frame, panelX + 20, 98, "BROFOGDENS VREDE", 0xffff6b62);
         }
-        else if (boss.Phase == 3 && boss.PhaseAge < 180)
+        else if (boss.Phase == 3 && boss.PhaseAge is >= 90 and < 180)
         {
             int panelX = (_width - 162) / 2;
             DrawRect(frame, panelX, 88, 162, 27, 0xff160b0e);
@@ -2293,6 +2306,8 @@ internal sealed class StormaktGame
         public int Phase { get; set; }
         public int PhaseAge { get; set; }
         public double RushX { get; set; }
+        public double PhaseTransitionX { get; set; }
+        public double PhaseTransitionY { get; set; }
     }
 }
 
