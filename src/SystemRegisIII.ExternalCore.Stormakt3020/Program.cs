@@ -151,6 +151,7 @@ internal sealed class StormaktGame
     private int _missionFrame;
     private int _invulnerabilityFrames;
     private BossState? _boss;
+    private SorenRivalState? _sorenRival;
     private bool _stageClear;
     private int _stageClearAge;
     private uint _previousButtons;
@@ -263,6 +264,7 @@ internal sealed class StormaktGame
         StepEnemyShots();
         StepEnemies();
         StepGroundTargets();
+        StepSorenRival();
         StepBoss();
         StepAnchorHazards();
         SpawnEnemies();
@@ -295,6 +297,7 @@ internal sealed class StormaktGame
         DrawBeltRuins(frame);
         DrawSorenBackgroundPass(frame);
         DrawGroundTargets(frame);
+        DrawSorenRival(frame);
         DrawBoss(frame);
         DrawShots(frame);
         DrawEnemyShots(frame);
@@ -341,6 +344,7 @@ internal sealed class StormaktGame
         _missionFrame = 0;
         _invulnerabilityFrames = 0;
         _boss = null;
+        _sorenRival = null;
         _stageClear = false;
         _stageClearAge = 0;
         _previousButtons = 0;
@@ -449,6 +453,17 @@ internal sealed class StormaktGame
 
     private void StepLevelTimeline()
     {
+        if (_levelId == 1 && _missionFrame == 2_700 && _sorenRival is null)
+        {
+            _sorenRival = new SorenRivalState
+            {
+                X = _width / 2.0,
+                Y = 68,
+                Health = 140,
+            };
+            _enemies.Clear();
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
         if (_levelId == 1 && _missionFrame >= 3_600 && !_stageClear)
         {
             _stageClear = true;
@@ -655,6 +670,66 @@ internal sealed class StormaktGame
             };
             _audio?.Trigger(StormaktSound.Deploy);
             _audio?.SwitchMusic(StormaktMusicTrack.Boss);
+        }
+    }
+
+    private void StepSorenRival()
+    {
+        if (_sorenRival is not SorenRivalState rival)
+        {
+            return;
+        }
+        rival.Age++;
+        if (rival.Interrupted)
+        {
+            rival.InterruptAge++;
+            rival.X += 5.5;
+            rival.Y -= 0.8;
+            if (rival.InterruptAge >= 90 || rival.X > _width + 48)
+            {
+                _sorenRival = null;
+            }
+            return;
+        }
+
+        bool decoyPhase = rival.Age >= 330 || rival.Health <= 82;
+        if (!decoyPhase)
+        {
+            int dashSide = (rival.Age / 90 & 1) == 0 ? 1 : -1;
+            double targetX = _width / 2.0 + dashSide * (_width / 3.2);
+            rival.X += Math.Clamp(targetX - rival.X, -5.2, 5.2);
+            rival.Y = 67 + Math.Sin(rival.Age * 0.055) * 9.0;
+            if (rival.Age % 72 == 48)
+            {
+                FireEnemyShot((int)rival.X, (int)rival.Y + 12, 3, 2.55);
+            }
+        }
+        else
+        {
+            rival.X = _width / 2.0 + Math.Sin(rival.Age * 0.052) * (_width / 3.4);
+            rival.Y = 70 + Math.Cos(rival.Age * 0.037) * 14.0;
+            if (rival.Age % 54 == 32)
+            {
+                FireEnemyShot((int)rival.X - 8, (int)rival.Y + 10, 3, 2.35);
+                FireEnemyShot((int)rival.X + 8, (int)rival.Y + 10, 3, 2.35);
+            }
+        }
+
+        for (int shotIndex = _shots.Count - 1; shotIndex >= 0; shotIndex--)
+        {
+            Shot shot = _shots[shotIndex];
+            if (Math.Abs(shot.X - rival.X) <= 22 && Math.Abs(shot.Y - rival.Y) <= 18)
+            {
+                rival.Health -= shot.Power;
+                _shots.RemoveAt(shotIndex);
+            }
+        }
+        if (rival.Health <= 49 || _missionFrame >= 3_420)
+        {
+            rival.Interrupted = true;
+            rival.InterruptAge = 0;
+            _enemyShots.Clear();
+            _audio?.Trigger(StormaktSound.Broadside);
         }
     }
 
@@ -1144,7 +1219,7 @@ internal sealed class StormaktGame
 
     private void SpawnEnemies()
     {
-        int endFrame = _levelId == 1 ? 3_600 : BossArrivalFrame;
+        int endFrame = _levelId == 1 ? 2_700 : BossArrivalFrame;
         if (_missionFrame >= endFrame)
         {
             return;
@@ -1532,6 +1607,57 @@ internal sealed class StormaktGame
         int nozzleY = _shipY + 16;
         FillTriangle(frame, engineX - 1, nozzleY, engineX + 1, nozzleY, engineX, nozzleY + length, outer);
         DrawLine(frame, engineX, nozzleY, engineX, nozzleY + Math.Max(2, length - 2), core);
+    }
+
+    private void DrawSorenRival(uint[] frame)
+    {
+        if (_sorenRival is not SorenRivalState rival)
+        {
+            return;
+        }
+        int x = (int)Math.Round(rival.X);
+        int y = (int)Math.Round(rival.Y);
+        bool decoyPhase = rival.Age >= 330 || rival.Health <= 82;
+        if (!rival.Interrupted && decoyPhase)
+        {
+            DrawSorenDecoy(frame, x - 68, y + 17, rival.Age);
+            DrawSorenDecoy(frame, x + 68, y - 9, rival.Age + 11);
+        }
+        if (!rival.Interrupted && !decoyPhase && rival.Age % 90 is >= 22 and <= 58)
+        {
+            DrawSorenDecoy(frame, x - 18, y + 5, rival.Age);
+            DrawSorenDecoy(frame, x - 36, y + 10, rival.Age + 7);
+        }
+
+        string spriteName = rival.Interrupted || rival.Health <= 70
+            ? "soren_corsair_damaged"
+            : rival.Age % 90 is >= 22 and <= 58 ? "soren_corsair_boost" : "soren_corsair";
+        if (_sprites?.TryGet(spriteName, out Sprite corsair) == true)
+        {
+            DrawSprite(frame, corsair, x - corsair.Width / 2, y - corsair.Height / 2);
+        }
+        else
+        {
+            FillTriangle(frame, x, y - 18, x - 20, y + 16, x + 20, y + 16, 0xff171b19);
+            DrawLine(frame, x - 15, y + 8, x + 15, y + 8, 0xffa66b3f);
+            PutPixel(frame, x, y - 3, 0xff65c58a);
+        }
+
+        if (!rival.Interrupted)
+        {
+            int barWidth = Math.Max(0, 92 * rival.Health / 140);
+            DrawRect(frame, (_width - 100) / 2, 19, 100, 7, 0xff101513);
+            DrawRect(frame, (_width - 92) / 2, 21, barWidth, 3, 0xff65c58a);
+        }
+    }
+
+    private void DrawSorenDecoy(uint[] frame, int x, int y, int phase)
+    {
+        uint signal = (phase / 5 & 1) == 0 ? 0xff2f7650 : 0xff315f47;
+        DrawLine(frame, x, y - 13, x - 14, y + 11, signal);
+        DrawLine(frame, x, y - 13, x + 14, y + 11, signal);
+        DrawLine(frame, x - 14, y + 11, x + 14, y + 11, 0xff4d4938);
+        PutPixel(frame, x, y - 2, 0xff65c58a);
     }
 
     private void DrawBoss(uint[] frame)
@@ -2733,6 +2859,16 @@ internal sealed class StormaktGame
         Turret,
         EnergyNode,
         SignalBeacon,
+    }
+
+    private sealed class SorenRivalState
+    {
+        public double X { get; set; }
+        public double Y { get; set; }
+        public int Health { get; set; }
+        public int Age { get; set; }
+        public bool Interrupted { get; set; }
+        public int InterruptAge { get; set; }
     }
 
     private sealed class BossState
