@@ -14,7 +14,9 @@ var output = Console.OpenStandardOutput();
 using var audio = StormaktMusicLoop.TryStartDefault();
 var game = new StormaktGame(Width, Height, SpritePack.LoadDefault(), audio);
 audio?.Trigger(StormaktSound.Deploy);
-var command = new byte[5];
+bool pointerProtocol = string.Equals(
+    Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_POINTER"), "1", StringComparison.Ordinal);
+var command = new byte[pointerProtocol ? 21 : 5];
 var header = new byte[32];
 var frame = new uint[Width * Height];
 ulong frameIndex = 0;
@@ -27,7 +29,14 @@ while (ReadExact(input, command))
     }
 
     uint buttons = BinaryPrimitives.ReadUInt32LittleEndian(command.AsSpan(1));
-    game.Step(buttons);
+    var pointer = pointerProtocol
+        ? new RtsPointer(
+            BinaryPrimitives.ReadInt32LittleEndian(command.AsSpan(5)),
+            BinaryPrimitives.ReadInt32LittleEndian(command.AsSpan(9)),
+            BinaryPrimitives.ReadUInt32LittleEndian(command.AsSpan(13)),
+            BinaryPrimitives.ReadUInt32LittleEndian(command.AsSpan(17)) != 0)
+        : default;
+    game.Step(buttons, pointer);
     game.Render(frame, frameIndex);
 
     BinaryPrimitives.WriteUInt32LittleEndian(header.AsSpan(0), FrameMagic);
@@ -59,6 +68,8 @@ static bool ReadExact(Stream stream, Span<byte> buffer)
 
     return true;
 }
+
+internal readonly record struct RtsPointer(int X, int Y, uint Buttons, bool Inside);
 
 internal sealed class StormaktGame
 {
@@ -202,7 +213,7 @@ internal sealed class StormaktGame
         _audio?.SwitchMusic(StormaktMusicTrack.Menu);
     }
 
-    public void Step(uint buttons)
+    public void Step(uint buttons, RtsPointer pointer = default)
     {
         if (_inLevelPreview)
         {
@@ -255,7 +266,7 @@ internal sealed class StormaktGame
 
         if (_levelId == 3)
         {
-            StepRts(buttons);
+            StepRts(buttons, pointer);
             _previousButtons = buttons;
             return;
         }
@@ -475,7 +486,7 @@ internal sealed class StormaktGame
         _previousButtons = buttons;
     }
 
-    private void StepRts(uint buttons)
+    private void StepRts(uint buttons, RtsPointer pointer)
     {
         if (_rts is not RtsState rts)
         {
@@ -515,6 +526,8 @@ internal sealed class StormaktGame
         {
             return;
         }
+
+        StepRtsMouse(rts, pointer);
 
         int cursorSpeed = (buttons & Slow) != 0 ? 1 : 3;
         if ((buttons & Left) != 0) rts.CursorX -= cursorSpeed;
@@ -604,6 +617,58 @@ internal sealed class StormaktGame
                 rts.CameraX = 0;
             }
         }
+    }
+
+    private void StepRtsMouse(RtsState rts, RtsPointer pointer)
+    {
+        const uint mouseLeft = 1u << 0;
+        const uint mouseRight = 1u << 1;
+        bool left = pointer.Inside && (pointer.Buttons & mouseLeft) != 0;
+        bool previousLeft = (rts.PreviousMouseButtons & mouseLeft) != 0;
+        bool rightPressed = pointer.Inside && (pointer.Buttons & mouseRight) != 0 &&
+            (rts.PreviousMouseButtons & mouseRight) == 0;
+
+        if (pointer.Inside)
+        {
+            rts.MouseWorldX = Math.Clamp(pointer.X + rts.CameraX, 0, rts.MapWidth - 1);
+            rts.MouseWorldY = Math.Clamp(pointer.Y, 18, rts.MapHeight - 1);
+            rts.CursorX = rts.MouseWorldX;
+            rts.CursorY = rts.MouseWorldY;
+        }
+        if (left && !previousLeft)
+        {
+            rts.MouseSelecting = true;
+            rts.MouseDragStartX = rts.MouseWorldX;
+            rts.MouseDragStartY = rts.MouseWorldY;
+        }
+        else if (!left && previousLeft && rts.MouseSelecting)
+        {
+            int leftX = Math.Min(rts.MouseDragStartX, rts.MouseWorldX);
+            int rightX = Math.Max(rts.MouseDragStartX, rts.MouseWorldX);
+            int topY = Math.Min(rts.MouseDragStartY, rts.MouseWorldY);
+            int bottomY = Math.Max(rts.MouseDragStartY, rts.MouseWorldY);
+            bool click = rightX - leftX < 6 && bottomY - topY < 6;
+            foreach (RtsUnit unit in rts.Units)
+            {
+                unit.Selected = click
+                    ? DistanceSquared(unit.X, unit.Y, rts.MouseWorldX, rts.MouseWorldY) <= 15 * 15
+                    : unit.X >= leftX && unit.X <= rightX && unit.Y >= topY && unit.Y <= bottomY;
+            }
+            rts.MouseSelecting = false;
+            _audio?.Trigger(StormaktSound.RtsUnitReady);
+        }
+        if (rightPressed)
+        {
+            int selectedIndex = 0;
+            foreach (RtsUnit unit in rts.Units.Where(candidate => candidate.Selected))
+            {
+                unit.TargetX = Math.Clamp(rts.MouseWorldX + (selectedIndex % 3 - 1) * 14, 12, rts.MapWidth - 13);
+                unit.TargetY = Math.Clamp(rts.MouseWorldY + (selectedIndex / 3) * 12, 30, rts.MapHeight - 14);
+                selectedIndex++;
+            }
+            if (selectedIndex > 0) _audio?.Trigger(StormaktSound.Deploy);
+        }
+        rts.PreviousMouseButtons = pointer.Inside ? pointer.Buttons : 0;
     }
 
     private bool IsValidRtsPlacement(RtsState rts, int x, int y)
@@ -2194,6 +2259,18 @@ internal sealed class StormaktGame
             DrawLine(frame, cursorX - 7, rts.CursorY + 7, cursorX - 2, rts.CursorY + 7, cursor);
             DrawLine(frame, cursorX + 2, rts.CursorY + 7, cursorX + 7, rts.CursorY + 7, cursor);
         }
+        if (rts.MouseSelecting)
+        {
+            int left = Math.Min(rts.MouseDragStartX, rts.MouseWorldX) - rts.CameraX;
+            int right = Math.Max(rts.MouseDragStartX, rts.MouseWorldX) - rts.CameraX;
+            int top = Math.Min(rts.MouseDragStartY, rts.MouseWorldY);
+            int bottom = Math.Max(rts.MouseDragStartY, rts.MouseWorldY);
+            uint selection = (rts.Age / 4 & 1) == 0 ? 0xffffd66b : 0xff9bd4dc;
+            DrawLine(frame, left, top, right, top, selection);
+            DrawLine(frame, left, bottom, right, bottom, selection);
+            DrawLine(frame, left, top, left, bottom, selection);
+            DrawLine(frame, right, top, right, bottom, selection);
+        }
 
         DrawRect(frame, 0, 0, _width, 18, 0xff080d12);
         DrawText(frame, 6, 5, "SILVERKROPPEN", 0xffffd66b);
@@ -2248,7 +2325,7 @@ internal sealed class StormaktGame
             // working concept changes its actual chimney geometry, so steam
             // is animated separately below instead of morphing the building.
             RtsBuildingType.SteamPlant => "rts_steam_idle",
-            RtsBuildingType.SilverCrusher => (rts.Age / 12 & 1) == 0 ? "rts_crusher_idle" : "rts_crusher_work",
+            RtsBuildingType.SilverCrusher => "rts_crusher_idle",
             RtsBuildingType.Barracks => "rts_barracks",
             RtsBuildingType.AnimalHall => "rts_animal_hall",
             RtsBuildingType.DefenseTower => building.Cooldown > 24 ? "rts_tower_fire" : "rts_tower_idle",
@@ -2267,6 +2344,25 @@ internal sealed class StormaktGame
                     int radius = 1 + phase / 16;
                     uint color = phase < 28 ? 0xffc3cec8 : 0xff7f9189;
                     FillCircle(frame, steamX, steamY, radius, color);
+                }
+            }
+            else if (building.Type == RtsBuildingType.SilverCrusher)
+            {
+                int bite = (rts.Age / 6 & 1) == 0 ? 0 : 2;
+                uint jaw = (rts.Age / 4 & 1) == 0 ? 0xffd6ded7 : 0xff8fa69c;
+                DrawLine(frame, x - 7 + bite, y + 4, x - 1, y + 8, jaw);
+                DrawLine(frame, x + 7 - bite, y + 4, x + 1, y + 8, jaw);
+                if (rts.Age % 18 < 5)
+                {
+                    PutPixel(frame, x, y + 7, 0xffffffff);
+                    PutPixel(frame, x - 2, y + 9, 0xffb9d6cc);
+                    PutPixel(frame, x + 2, y + 9, 0xff65c58a);
+                }
+                for (int puff = 0; puff < 2; puff++)
+                {
+                    int phase = (rts.Age + puff * 11) % 32;
+                    FillCircle(frame, x + 8 + puff * 3, y - 17 - phase / 3,
+                        1 + phase / 16, phase < 20 ? 0xffaebdb6 : 0xff697b73);
                 }
             }
             if (building.Type == RtsBuildingType.Barracks)
@@ -4445,6 +4541,12 @@ internal sealed class StormaktGame
         public int KarlHealth { get; set; } = 500;
         public bool TowerPlacementMode { get; set; }
         public bool CombatStarted { get; set; }
+        public int MouseWorldX { get; set; }
+        public int MouseWorldY { get; set; }
+        public int MouseDragStartX { get; set; }
+        public int MouseDragStartY { get; set; }
+        public bool MouseSelecting { get; set; }
+        public uint PreviousMouseButtons { get; set; }
     }
 
     private sealed class RtsBuilding

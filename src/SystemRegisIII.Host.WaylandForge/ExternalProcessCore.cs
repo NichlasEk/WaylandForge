@@ -37,7 +37,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     private uint[] _frame = [];
     private uint[] _pendingFrame = [];
     private readonly byte[] _header = new byte[32];
-    private readonly byte[] _stepCommandBuffer = new byte[5];
+    private readonly byte[] _stepCommandBuffer = new byte[21];
     private readonly byte[] _inputHeader = new byte[48];
     private int _pointerX;
     private int _pointerY;
@@ -182,7 +182,21 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
 
         Stream stdin = _process!.StandardInput.BaseStream;
         Stream stdout = _process.StandardOutput.BaseStream;
-        stdin.Write(_stepCommandBuffer);
+        if (_pointerDriver == "stormakt_rts")
+        {
+            lock (_inputLock)
+            {
+                BinaryPrimitives.WriteInt32LittleEndian(_stepCommandBuffer.AsSpan(5), _pointerX);
+                BinaryPrimitives.WriteInt32LittleEndian(_stepCommandBuffer.AsSpan(9), _pointerY);
+                BinaryPrimitives.WriteUInt32LittleEndian(_stepCommandBuffer.AsSpan(13), _pointerButtons);
+                BinaryPrimitives.WriteUInt32LittleEndian(_stepCommandBuffer.AsSpan(17), _pointerInside ? 1u : 0u);
+            }
+            stdin.Write(_stepCommandBuffer);
+        }
+        else
+        {
+            stdin.Write(_stepCommandBuffer.AsSpan(0, 5));
+        }
         stdin.Flush();
 
         ReadWfexFrame(stdout, frameSink);

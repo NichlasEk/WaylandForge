@@ -134,10 +134,12 @@ De ska vara absurda i koncept men spelas med samma allvar som resten av världen
 - `Z / Fire`: välj enhet eller byggnad, bekräfta order och placera bygge.
 - `X / AltFire`: avmarkera, avbryt placering eller beordra markerad stridsgrupp att hålla position.
 - `Start`: paus med separat bygg-/kontrollhjälp.
+- Vänster musknapp: klicka en grupp eller dra en markeringsruta runt valfri blandning av svenska trupper.
+- Höger musknapp: ge hela det markerade urvalet en gemensam formationsorder vid pekaren.
 - Axel-/extra knappar växlar byggkategori när de finns; tangentbordsfallback får egna tydliga tangenter.
 - Klickfri gamepad-first-design: inga små ikoner eller krav på musprecision.
 
-Första implementationen använder gruppval per typ inom en liten radie, inte dragrektangel eller individuellt formationsmikro.
+Gamepad använder gruppval per typ inom en liten radie. Musläget skickas genom Stormakt-slottens utökade, bakåtkompatibla stdio-paket och ger fri dragrektangel; andra externa kärnors äldre fembytespaket ändras inte.
 
 ## Determinism och simulation
 
