@@ -349,7 +349,7 @@ internal sealed class StormaktGame
         _bossRadioCard = null;
         _bossRadioAge = 0;
         _audio?.SetPaused(false);
-        _audio?.SwitchMusic(StormaktMusicTrack.Combat);
+        _audio?.SwitchMusic(_levelId == 1 ? StormaktMusicTrack.Skanska : StormaktMusicTrack.Combat);
     }
 
     private void StartLevel(int levelId)
@@ -358,10 +358,6 @@ internal sealed class StormaktGame
         Reset();
         _inLevelSelect = false;
         _inLevelPreview = false;
-        if (_levelId == 1)
-        {
-            _audio?.SwitchMusic(StormaktMusicTrack.Skanska);
-        }
         _audio?.Trigger(StormaktSound.Deploy);
     }
 
@@ -556,7 +552,13 @@ internal sealed class StormaktGame
 
             if (destroyed)
             {
-                _score += target.Type == GroundTargetType.Turret ? 450 : target.Type == GroundTargetType.EnergyNode ? 250 : 180;
+                _score += target.Type switch
+                {
+                    GroundTargetType.Turret => 450,
+                    GroundTargetType.EnergyNode => 250,
+                    GroundTargetType.SignalBeacon => 300,
+                    _ => 180,
+                };
                 if (target.Type == GroundTargetType.BridgeSpan)
                 {
                     CollapseBridgeGroup(target.Group);
@@ -1180,6 +1182,17 @@ internal sealed class StormaktGame
 
     private void SpawnGroundEncounters()
     {
+        if (_levelId == 1)
+        {
+            if (_missionFrame is 900 or 2_100 or 3_000)
+            {
+                int margin = Math.Min(64, Math.Max(28, _width / 5));
+                int x = _missionFrame == 2_100 ? _width - margin : margin;
+                _groundTargets.Add(new GroundTarget(
+                    x, -24, GroundTargetType.SignalBeacon, 10, _missionFrame, 0, true, 0));
+            }
+            return;
+        }
         if (_levelId != 0)
         {
             return;
@@ -1794,6 +1807,20 @@ internal sealed class StormaktGame
                 FillCircle(frame, target.X, target.Y, 7, 0xff272f36);
                 FillCircle(frame, target.X, target.Y, 3, pulse);
                 DrawLine(frame, target.X - 12, target.Y, target.X + 12, target.Y, 0xff8f2635);
+                continue;
+            }
+
+            if (target.Type == GroundTargetType.SignalBeacon)
+            {
+                uint signal = ((target.Age / 6) & 1) == 0 ? 0xff65c58a : 0xff2f7650;
+                uint copper = target.Health <= 5 ? 0xff6b4230 : 0xffa66b3f;
+                DrawRect(frame, target.X - 8, target.Y + 2, 17, 7, 0xff171d1b);
+                DrawLine(frame, target.X - 6, target.Y + 8, target.X, target.Y - 12, copper);
+                DrawLine(frame, target.X + 6, target.Y + 8, target.X, target.Y - 12, copper);
+                FillCircle(frame, target.X, target.Y - 12, 4, 0xff102019);
+                FillCircle(frame, target.X, target.Y - 12, 2, signal);
+                DrawLine(frame, target.X - 13, target.Y - 12, target.X - 7, target.Y - 12, signal);
+                DrawLine(frame, target.X + 7, target.Y - 12, target.X + 13, target.Y - 12, signal);
                 continue;
             }
 
@@ -2657,6 +2684,7 @@ internal sealed class StormaktGame
         BridgeSpan,
         Turret,
         EnergyNode,
+        SignalBeacon,
     }
 
     private sealed class BossState
