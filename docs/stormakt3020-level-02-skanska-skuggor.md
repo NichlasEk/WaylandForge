@@ -1,6 +1,6 @@
 # Bana 2 - Skånska skuggor
 
-Status: plancheckpoint. Level-selectposten finns från början som `UNDER BYGGNAD`; spelbar tidslinje, grafik, ljud och boss återstår.
+Status: implementation underway. The shared technical spine is maintained in `docs/stormakt3020-level-hook-map.md`; keep that map synchronized as level hooks land.
 
 ## Dramatiskt löfte
 
