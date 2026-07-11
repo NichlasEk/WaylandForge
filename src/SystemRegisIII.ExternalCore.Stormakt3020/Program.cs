@@ -1143,7 +1143,9 @@ internal sealed class StormaktGame
 
     private void DrawShip(uint[] frame)
     {
-        if (_sprites?.TryGet("player", out Sprite player) == true)
+        string playerSpriteName = _heat > 80 ? "player_hot" : "player";
+        if (_sprites?.TryGet(playerSpriteName, out Sprite player) == true ||
+            _sprites?.TryGet("player", out player) == true)
         {
             DrawSprite(frame, player, _shipX - (player.Width / 2), _shipY - (player.Height / 2));
             return;

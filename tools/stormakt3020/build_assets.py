@@ -9,7 +9,6 @@ from PIL import Image, ImageOps
 
 
 PRIMARY_SPRITES = [
-    ("player", (330, 25, 620, 410), (44, 58)),
     ("enemy_crown", (85, 525, 380, 855), (34, 38)),
     ("enemy_caroline", (465, 525, 760, 840), (34, 34)),
     ("enemy_guard", (900, 520, 1215, 855), (42, 42)),
@@ -17,6 +16,11 @@ PRIMARY_SPRITES = [
     ("shot_broadside", (475, 930, 650, 1010), (20, 10)),
     ("shot_cannon", (655, 895, 875, 1015), (18, 9)),
     ("burst", (955, 870, 1210, 1065), (32, 28)),
+]
+
+PLAYER_SPRITES = [
+    ("player", (0, 0, 749, 1049), (52, 64)),
+    ("player_hot", (749, 0, 1499, 1049), (52, 64)),
 ]
 
 DANISH_SPRITES = [
@@ -96,6 +100,7 @@ def build(
     input_path: Path,
     danish_input_path: Path,
     portrait_input_path: Path,
+    player_input_path: Path,
     environment_input_path: Path,
     background_input_path: Path,
     output_path: Path,
@@ -103,12 +108,14 @@ def build(
     source = Image.open(input_path)
     danish_source = Image.open(danish_input_path)
     portrait_source = Image.open(portrait_input_path)
+    player_source = Image.open(player_input_path)
     environment_source = Image.open(environment_input_path)
     background_source = Image.open(background_input_path).convert("RGBA")
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
     append_sprites(entries, danish_source, DANISH_SPRITES)
     append_sprites(entries, portrait_source, RADIO_PORTRAITS)
+    append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     background_source.thumbnail((320, 700), Image.Resampling.LANCZOS)
     seamless_background = Image.new("RGBA", (background_source.width, background_source.height * 2))
@@ -149,6 +156,11 @@ def main() -> None:
         default=Path("assets/stormakt3020/stormakt-stora-balt-environment-v1.png"),
     )
     parser.add_argument(
+        "--player-input",
+        type=Path,
+        default=Path("assets/stormakt3020/karl-cclv-dark-frigate-v1.png"),
+    )
+    parser.add_argument(
         "--background-input",
         type=Path,
         default=Path("assets/stormakt3020/stormakt-stora-balt-background-v1.png"),
@@ -159,6 +171,7 @@ def main() -> None:
         args.input,
         args.danish_input,
         args.portrait_input,
+        args.player_input,
         args.environment_input,
         args.background_input,
         args.output,
