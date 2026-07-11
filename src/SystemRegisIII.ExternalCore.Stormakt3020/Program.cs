@@ -106,7 +106,7 @@ internal sealed class StormaktGame
     [
         new(180, 360, false, "EBBA GRIP", "HÅLL KURSEN", "BÄLTET STÅR", StormaktVoice.EbbaStoraBalt, "portrait_ebba"),
         new(900, 300, true, "RASMUS", "SVENSKE FARTØJ", "LÆG BI NU", StormaktVoice.RasmusLaggBi, "portrait_rasmus"),
-        new(1_380, 420, true, "KING CHRISTIAN", "BRUDT SEGL", "KRONENS FLÅDE", StormaktVoice.ChristianBrutetSegl, "portrait_christian"),
+        new(1_380, 420, true, "KUNG CHRISTIAN", "BRUDT SEGL", "KRONENS FLÅDE", StormaktVoice.ChristianBrutetSegl, "portrait_christian"),
         new(BossArrivalFrame, 300, true, "FOGDE RASMUS", "KRONENS TIENDE", "TAGER ALT", StormaktVoice.RasmusKronensTiende, "portrait_rasmus"),
     ];
     private static readonly RadioCard[] SkanskaRadioCards =

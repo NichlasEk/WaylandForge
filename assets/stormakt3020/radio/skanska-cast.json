@@ -32,9 +32,9 @@
       "id": "kung-christian",
       "speaker": "KUNG CHRISTIAN",
       "language": "da",
-      "voice_instruction": "An adult Danish space king and fleet commander, mature commanding bass voice, cold royal composure, measured ceremonial Danish diction, immense confidence and restrained anger, never comic or bombastic shouting.",
+      "voice_instruction": "A clearly male adult Danish king and battle-fleet commander, very deep rugged masculine bass-baritone with heavy chest resonance, stern older war leader, harsh controlled anger, slow forceful ceremonial Danish diction. Unmistakably a large intimidating man. No feminine pitch, no softness, no youthful voice, no comedy, no uncontrolled shouting.",
       "reference_text": "Jeg taler til Kronens samlede flåde. Dannebrog holder linjen mellem stjernerne, og hvert skib svarer på mit signal. Fjenden har brudt fogdens segl, men rigets vilje står fast. Lad maskinerne vågne, lad fregatterne vende, og før dem levende frem for tronen.",
-      "reference_seed": 302024
+      "reference_seed": 302044
     }
   ],
   "lines": [

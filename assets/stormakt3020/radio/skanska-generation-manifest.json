@@ -89,22 +89,6 @@
       }
     },
     {
-      "kind": "reference",
-      "role": "kung-christian",
-      "job_id": "a860b570bc7748fd8a55d35c81c4d993",
-      "file": "assets/stormakt3020/radio/references/kung-christian-reference.wav",
-      "sha256": "3fff14463d5ff91c3704d2af05376d6d8a70a0f20e4a3f00fe1d68661f83430f",
-      "request": {
-        "text": "Jeg taler til Kronens samlede flåde. Dannebrog holder linjen mellem stjernerne, og hvert skib svarer på mit signal. Fjenden har brudt fogdens segl, men rigets vilje står fast. Lad maskinerne vågne, lad fregatterne vende, og før dem levende frem for tronen.",
-        "language": "da",
-        "voice_instruction": "An adult Danish space king and fleet commander, mature commanding bass voice, cold royal composure, measured ceremonial Danish diction, immense confidence and restrained anger, never comic or bombastic shouting.",
-        "model_backend": "voxcpm2",
-        "output_format": "wav",
-        "normalize": false,
-        "seed": 302024
-      }
-    },
-    {
       "kind": "line",
       "line": "ebba-stora-balt",
       "role": "ebba-grip",
@@ -126,16 +110,6 @@
     },
     {
       "kind": "line",
-      "line": "christian-brutet-segl",
-      "role": "kung-christian",
-      "job_id": "6f6231c5bc7b44dd894de37f23c88529",
-      "file": "assets/stormakt3020/radio/raw/christian-brutet-segl-da-raw.wav",
-      "sha256": "986f2dba432c19740841c89a66122f067c131988e82f9703705076a4ae85ce7a",
-      "request": "assets/stormakt3020/radio/raw/christian-brutet-segl-da-request.json",
-      "reference_sha256": "3fff14463d5ff91c3704d2af05376d6d8a70a0f20e4a3f00fe1d68661f83430f"
-    },
-    {
-      "kind": "line",
       "line": "rasmus-kronens-tiende",
       "role": "rasmus-gyldentold",
       "job_id": "5f67801e65a54d2d9c6ceb4e4a31339d",
@@ -143,6 +117,32 @@
       "sha256": "3f6d149802b31c18f0f3dd59e1882d7edf8ac0173e2e23d7c8720a696edd9129",
       "request": "assets/stormakt3020/radio/raw/rasmus-kronens-tiende-da-request.json",
       "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
+    },
+    {
+      "kind": "reference",
+      "role": "kung-christian",
+      "job_id": "8657082e36074c65b74668c269b8d4cf",
+      "file": "assets/stormakt3020/radio/references/kung-christian-reference.wav",
+      "sha256": "d6eda56e8651eff4ba889f2af0ccb91ebfa3fcfd2120d103d7e4afa939468195",
+      "request": {
+        "text": "Jeg taler til Kronens samlede flåde. Dannebrog holder linjen mellem stjernerne, og hvert skib svarer på mit signal. Fjenden har brudt fogdens segl, men rigets vilje står fast. Lad maskinerne vågne, lad fregatterne vende, og før dem levende frem for tronen.",
+        "language": "da",
+        "voice_instruction": "A clearly male adult Danish king and battle-fleet commander, very deep rugged masculine bass-baritone with heavy chest resonance, stern older war leader, harsh controlled anger, slow forceful ceremonial Danish diction. Unmistakably a large intimidating man. No feminine pitch, no softness, no youthful voice, no comedy, no uncontrolled shouting.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302044
+      }
+    },
+    {
+      "kind": "line",
+      "line": "christian-brutet-segl",
+      "role": "kung-christian",
+      "job_id": "61b57ee9b4834ced84e0a238aabbc328",
+      "file": "assets/stormakt3020/radio/raw/christian-brutet-segl-da-raw.wav",
+      "sha256": "76a6902ac1b41dd025b269173d890a9eb32475d283a55bed38c1b4323a5fdea6",
+      "request": "assets/stormakt3020/radio/raw/christian-brutet-segl-da-request.json",
+      "reference_sha256": "d6eda56e8651eff4ba889f2af0ccb91ebfa3fcfd2120d103d7e4afa939468195"
     }
   ],
   "service": "http://127.0.0.1:8765",

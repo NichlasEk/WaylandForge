@@ -6,6 +6,8 @@ The reproducible two-stage campaign casting pipeline uses `tools/stormakt3020/re
 
 Written ship designation `KARL CCLV` is retained in the HUD, while Swedish speech scripts expand the Roman numeral to `Karl tvåhundrafemtiofem`. Targeted repairs use `render_radio_cast.py lines --line ID --force`; this avoids voice drift in unaffected dialogue.
 
+Casting references can likewise be repaired without moving the rest of the cast using `render_radio_cast.py references --role ROLE_ID --force`. Christian's second pilot uses an explicitly deep adult male bass-baritone role brief after the first reference presented too high and feminine.
+
 ## Målbild
 
 Stormakt ska använda korta videokominslag i stilen från äldre japanska shmups: ett porträtt glider in i ett hörn, namnskylten tänds, en eller två korta textrader skrivs fram och en förgenererad röst hörs genom radiofilter. Spelet fortsätter hela tiden.

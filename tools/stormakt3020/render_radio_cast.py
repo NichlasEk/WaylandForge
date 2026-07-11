@@ -55,6 +55,7 @@ def main() -> None:
     parser.add_argument("phase", choices=["references", "lines", "all"])
     parser.add_argument("--cast", type=Path, default=DEFAULT_CAST)
     parser.add_argument("--force", action="store_true")
+    parser.add_argument("--role", action="append", default=[], help="Render only this casting role id (repeatable).")
     parser.add_argument("--line", action="append", default=[], help="Render only this dialogue line id (repeatable).")
     args = parser.parse_args()
 
@@ -65,6 +66,8 @@ def main() -> None:
 
     if args.phase in {"references", "all"}:
         for role in cast["roles"]:
+            if args.role and role["id"] not in args.role:
+                continue
             output = RADIO_ROOT / "references" / f"{role['id']}-reference.wav"
             if output.exists() and not args.force:
                 print(f"Keeping {output}")
