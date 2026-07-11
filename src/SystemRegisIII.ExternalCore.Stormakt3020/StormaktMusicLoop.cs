@@ -514,6 +514,15 @@ internal sealed class StormaktMusicLoop : IDisposable
             (StormaktSound.EnemyExplosion, "enemy-explosion.wav", 0.48f),
             (StormaktSound.HullHit, "hull-hit.wav", 0.58f),
             (StormaktSound.Deploy, "deploy-chime.wav", 0.42f),
+            (StormaktSound.RtsBuild, "rts-build-place.wav", 0.52f),
+            (StormaktSound.RtsCaroleanVolley, "rts-carolean-volley.wav", 0.46f),
+            (StormaktSound.RtsMooseCharge, "rts-moose-charge.wav", 0.52f),
+            (StormaktSound.RtsTowerFire, "rts-tower-fire.wav", 0.48f),
+            (StormaktSound.RtsRaidHorn, "rts-raid-horn.wav", 0.48f),
+            (StormaktSound.RtsPowderFuse, "rts-powder-fuse.wav", 0.40f),
+            (StormaktSound.RtsPowderExplosion, "rts-powder-explosion.wav", 0.62f),
+            (StormaktSound.RtsOrganVolley, "rts-organ-volley.wav", 0.58f),
+            (StormaktSound.RtsUnitReady, "rts-unit-ready.wav", 0.42f),
         ];
 
         Dictionary<StormaktSound, LoadedEffect> effects = [];
@@ -565,6 +574,12 @@ internal sealed class StormaktMusicLoop : IDisposable
             (StormaktVoice.BirgitteGlimmingeIntro, "birgitte-glimminge-intro-da-radio.wav", 0.92f),
             (StormaktVoice.BirgitteGlimmingeBor, "birgitte-glimminge-bor-da-radio.wav", 0.98f),
             (StormaktVoice.BirgitteGlimmingeFalder, "birgitte-glimminge-falder-da-radio.wav", 1.0f),
+            (StormaktVoice.EbbaSilverBody, "ebba-silver-body-sv-radio.wav", 0.78f),
+            (StormaktVoice.EbbaSteamOnline, "ebba-steam-online-sv-radio.wav", 0.78f),
+            (StormaktVoice.RasmusSilverClaim, "rasmus-silver-claim-da-radio.wav", 0.86f),
+            (StormaktVoice.EbbaPowderWarning, "ebba-powder-warning-sv-radio.wav", 0.84f),
+            (StormaktVoice.RasmusOrganOrder, "rasmus-organ-order-da-radio.wav", 0.90f),
+            (StormaktVoice.EbbaMooseReady, "ebba-moose-ready-sv-radio.wav", 0.82f),
         ];
         Dictionary<StormaktVoice, LoadedEffect> voices = [];
         foreach ((StormaktVoice voice, string file, float gain) in entries)
@@ -654,6 +669,15 @@ internal enum StormaktSound
     EnemyExplosion,
     HullHit,
     Deploy,
+    RtsBuild,
+    RtsCaroleanVolley,
+    RtsMooseCharge,
+    RtsTowerFire,
+    RtsRaidHorn,
+    RtsPowderFuse,
+    RtsPowderExplosion,
+    RtsOrganVolley,
+    RtsUnitReady,
 }
 
 internal enum StormaktVoice
@@ -676,6 +700,12 @@ internal enum StormaktVoice
     BirgitteGlimmingeIntro,
     BirgitteGlimmingeBor,
     BirgitteGlimmingeFalder,
+    EbbaSilverBody,
+    EbbaSteamOnline,
+    RasmusSilverClaim,
+    EbbaPowderWarning,
+    RasmusOrganOrder,
+    EbbaMooseReady,
 }
 
 internal enum StormaktMusicTrack

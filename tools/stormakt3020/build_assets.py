@@ -256,6 +256,45 @@ def append_skanska_combat_details(entries: list[tuple[str, Image.Image]], source
         entries.append((name, sprite))
 
 
+def append_rts_sheet(
+    entries: list[tuple[str, Image.Image]],
+    source: Image.Image,
+    columns: int,
+    definitions: list[tuple[str, int, int, tuple[int, int]]],
+) -> None:
+    cell_width = source.width // columns
+    cell_height = source.height // 2
+    reference_scales: dict[str, float] = {}
+    groups = {
+        "rts_steam_work": "rts_steam_idle", "rts_crusher_work": "rts_crusher_idle",
+        "rts_tower_fire": "rts_tower_idle", "rts_carolean_fire": "rts_carolean_ready",
+        "rts_carolean_reload": "rts_carolean_ready", "rts_carolean_hit": "rts_carolean_ready",
+        "rts_moose_charge": "rts_moose_ready", "rts_moose_fire": "rts_moose_ready",
+        "rts_moose_hit": "rts_moose_ready", "rts_toll_attack": "rts_toll_ready",
+        "rts_pike_attack": "rts_pike_ready", "rts_mastiff_attack": "rts_mastiff_ready",
+        "rts_boar_fuse": "rts_boar_ready", "rts_organ_fire": "rts_organ_ready",
+    }
+    for name, column, row, size in definitions:
+        right = source.width if column == columns - 1 else (column + 1) * cell_width
+        bottom = source.height if row == 1 else (row + 1) * cell_height
+        crop = (column * cell_width, row * cell_height, right, bottom)
+        sprite = trim_alpha(source.crop(crop).convert("RGBA"))
+        group = groups.get(name, name)
+        if group not in reference_scales:
+            reference_scales[group] = min(size[0] / sprite.width, size[1] / sprite.height)
+        scale = reference_scales[group]
+        sprite = sprite.resize(
+            (max(1, round(sprite.width * scale)), max(1, round(sprite.height * scale))),
+            Image.Resampling.LANCZOS,
+        )
+        # Every frame in an animation family must keep an identical runtime
+        # canvas. Otherwise smoke/muzzle flashes enlarge the alpha bounds and
+        # make the physical building or unit visibly pulse in scale.
+        canvas = Image.new("RGBA", size, (0, 0, 0, 0))
+        canvas.alpha_composite(sprite, ((size[0] - sprite.width) // 2, size[1] - sprite.height))
+        entries.append((name, canvas))
+
+
 def mirrored_background(source: Image.Image, width: int, height: int) -> Image.Image:
     plate = source.copy()
     plate.thumbnail((width, height), Image.Resampling.LANCZOS)
@@ -285,6 +324,9 @@ def build(
     glimminge_iron_raven_input_path: Path,
     skanska_projectiles_input_path: Path,
     skanska_combat_details_input_path: Path,
+    rts_buildings_input_path: Path,
+    rts_units_input_path: Path,
+    rts_danish_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
 ) -> None:
@@ -307,6 +349,9 @@ def build(
     glimminge_iron_raven_source = Image.open(glimminge_iron_raven_input_path).convert("RGBA")
     skanska_projectiles_source = Image.open(skanska_projectiles_input_path).convert("RGBA")
     skanska_combat_details_source = Image.open(skanska_combat_details_input_path).convert("RGBA")
+    rts_buildings_source = Image.open(rts_buildings_input_path).convert("RGBA")
+    rts_units_source = Image.open(rts_units_input_path).convert("RGBA")
+    rts_danish_source = Image.open(rts_danish_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
@@ -323,6 +368,38 @@ def build(
     append_glimminge_iron_raven(entries, glimminge_iron_raven_source)
     append_skanska_projectiles(entries, skanska_projectiles_source)
     append_skanska_combat_details(entries, skanska_combat_details_source)
+    append_rts_sheet(entries, rts_buildings_source, 4, [
+        ("rts_steam_idle", 0, 0, (46, 46)),
+        ("rts_steam_work", 1, 0, (46, 46)),
+        ("rts_crusher_idle", 2, 0, (48, 40)),
+        ("rts_crusher_work", 3, 0, (48, 40)),
+        ("rts_barracks", 0, 1, (48, 42)),
+        ("rts_animal_hall", 1, 1, (54, 44)),
+        ("rts_tower_idle", 2, 1, (44, 42)),
+        ("rts_tower_fire", 3, 1, (44, 42)),
+    ])
+    append_rts_sheet(entries, rts_units_source, 4, [
+        ("rts_carolean_ready", 0, 0, (42, 30)),
+        ("rts_carolean_fire", 1, 0, (42, 30)),
+        ("rts_moose_ready", 2, 0, (48, 34)),
+        ("rts_moose_charge", 3, 0, (48, 34)),
+        ("rts_carolean_reload", 0, 1, (42, 30)),
+        ("rts_carolean_hit", 1, 1, (42, 30)),
+        ("rts_moose_fire", 2, 1, (48, 34)),
+        ("rts_moose_hit", 3, 1, (48, 34)),
+    ])
+    append_rts_sheet(entries, rts_danish_source, 5, [
+        ("rts_toll_ready", 0, 0, (32, 28)),
+        ("rts_toll_attack", 0, 1, (32, 28)),
+        ("rts_pike_ready", 1, 0, (38, 30)),
+        ("rts_pike_attack", 1, 1, (38, 30)),
+        ("rts_mastiff_ready", 2, 0, (32, 24)),
+        ("rts_mastiff_attack", 2, 1, (32, 24)),
+        ("rts_boar_ready", 3, 0, (38, 26)),
+        ("rts_boar_fuse", 3, 1, (38, 26)),
+        ("rts_organ_ready", 4, 0, (52, 34)),
+        ("rts_organ_fire", 4, 1, (52, 34)),
+    ])
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
@@ -444,6 +521,9 @@ def main() -> None:
         type=Path,
         default=Path("assets/stormakt3020/stormakt-bridge-cannons-projectiles-v1.png"),
     )
+    parser.add_argument("--rts-buildings-input", type=Path, default=Path("assets/stormakt3020/rts-swedish-buildings-v1.png"))
+    parser.add_argument("--rts-units-input", type=Path, default=Path("assets/stormakt3020/rts-swedish-units-v1.png"))
+    parser.add_argument("--rts-danish-input", type=Path, default=Path("assets/stormakt3020/rts-danish-army-v1.png"))
     parser.add_argument(
         "--logo-input",
         type=Path,
@@ -471,6 +551,9 @@ def main() -> None:
         args.glimminge_iron_raven_input,
         args.skanska_projectiles_input,
         args.skanska_combat_details_input,
+        args.rts_buildings_input,
+        args.rts_units_input,
+        args.rts_danish_input,
         args.logo_input,
         args.output,
     )

@@ -1,6 +1,6 @@
 # Bana 4 - Silverkroppen i skogen
 
-Status: implementation underway. The deterministic RTS skeleton is startable as campaign row 4 in developer mode with a separate level id/state, top-down map, silver vein, fogde road, Karl CCLV landing, gamepad cursor and horizontal camera follow. Economy and production provide steam power, silver pulses, barracks/animal-hall timers, foot squads, moose caroleans and group orders. The first combat pass adds powered `Slow+Fire` defense towers, mutable unit/building/Karl health, stable target priority and all five planned Danish wave roles. Toldstormere, pikemen and mastiffs establish the line; powder boars telegraph for 45 frames before area damage; organ wagons stop outside ordinary unit range and bombard power. Balance values remain explicitly provisional.
+Status: implementation underway. The deterministic RTS skeleton is startable as campaign row 4 in developer mode with a separate level id/state, top-down map, silver vein, fogde road, Karl CCLV landing, gamepad cursor and horizontal camera follow. Economy and production provide steam power, silver pulses, barracks/animal-hall timers, foot squads, moose caroleans and group orders. The first combat pass adds powered `Slow+Fire` defense towers, mutable unit/building/Karl health, stable target priority and all five planned Danish wave roles. Every building and troop family now has a packed production sprite; working, firing, reloading, charging, fuse and volley states are selected from simulation state. Animation families use fixed canvases and reference scaling, preventing machinery from pulsing in size when smoke or muzzle flashes appear. Moving troops face their travel direction and receive staggered step/sway phases; Danish movement speeds are reduced and individually varied within deterministic bounds to create reaction time without sacrificing replayability. Nine deterministic RTS effects and six event-driven local Swedish/Danish radio lines cover landing, construction, production and the dangerous Danish wave reveals. Broader economy/damage balance remains provisional.
 
 ## Dramatiskt löfte
 
@@ -167,7 +167,7 @@ Första implementationen använder gruppval per typ inom en liten radie, inte dr
 4. **Svensk produktion:** barack, fotkaroliner, djurhall och älgkaroliner. **Landed 2026-07-11.**
 5. **Danska vågor:** fem fiendetyper, stabil målsökning och försvarstorn. **Landed 2026-07-11.**
 6. **Toldhuset:** markboss, markbredsida, seger/resultat och balanspass. Commit och push.
-7. **Presentation:** genererade assets, ånga, landningsanimation, musik, lokal radio och båda upplösningarna. Commit och push.
+7. **Presentation:** genererade byggnads- och truppassets, arbets-/anfallsanimationer, nio lokala stridsljud samt sex svenska/danska händelseradior. 400x280 och 320x224 headless-verifieras; eget fältmusikspår återstår. **Major presentation pass landed 2026-07-11.**
 
 ## Icke-mål för första spelbara versionen
 

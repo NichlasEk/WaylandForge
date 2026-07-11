@@ -28,6 +28,8 @@
 
 `skanska-combat-details-v1.png` supplies Sören's radar decoy/copper shot and Glimminge's crystal spear, leaving only safety telegraphs and HUD markers code-drawn.
 
+`rts-swedish-buildings-v1.png`, `rts-swedish-units-v1.png` and `rts-danish-army-v1.png` supply Silverkroppen's complete first production-art pass. Their packed states cover working steam/crusher machinery, tower fire, Carolean volley/reload, moose charge/carbine, and ready/attack pairs for all five Danish troop families. Equal atlas cells are cropped independently before alpha trimming, so animation effects and neighboring units cannot leak into another sprite.
+
 `stormakt-bridge-cannons-projectiles-v1.png` adds three bridge-collapse pieces, intact/destroyed Danish bridge cannon states, a detachable boss broadside cannon and red/white/gold enemy projectile families. Runtime uses the wreck pieces during the existing 45-frame collapse and mirrors the broadside module for the boss's right side.
 
 Prompt summary:
@@ -107,17 +109,18 @@ The loop edit is preloaded with the combat score. Kronens Tiende requests a 0.5-
 
 ## Sound effects
 
-Five deterministic 48 kHz stereo effects live under `sfx/`: twin cannon, broadside, enemy explosion, hull hit, and deploy chime. Rebuild them with:
+The original five deterministic 48 kHz stereo effects are joined by nine Silverkroppen effects: construction, Carolean volley, moose charge, tower fire, raid horn, powder fuse/explosion, organ volley and unit-ready chime. Rebuild them with:
 
 ```sh
 python tools/stormakt3020/build_sfx.py
+python tools/stormakt3020/build_rts_sfx.py
 ```
 
 The external core triggers them from actual gameplay events and mixes up to 32 voices into the music stream with headroom before sending 2048-frame `WFAU` packets.
 
 ## Radio voices
 
-The campaign radio uses a two-stage local casting pipeline: VoxCPM2 creates fully synthetic reference performances for Ebba, Sören, Rasmus and Christian, then Dots MF renders versioned Swedish or Danish dialogue from each reference WAV and exact transcript. Eight pilot lines are active across the first two levels. The three older Matcha English files remain archived but are no longer loaded by runtime. Requests, raw output, job IDs, hashes and approval state are preserved under `radio/`; no known or third-party voice is cloned and none of these voices are final casting until listened to and approved.
+The campaign radio uses a two-stage local casting pipeline: VoxCPM2 creates fully synthetic reference performances for Ebba, Sören, Rasmus and Christian, then the selected local backend renders versioned Swedish or Danish dialogue from each reference WAV and exact transcript. Silverkroppen adds six event-driven Swedish/Danish calls for the silver landing, steam power, first royal claim, powder warning, organ wagon and moose readiness. The three older Matcha English files remain archived but are no longer loaded by runtime. Requests, raw output, job IDs, hashes and approval state are preserved under `radio/`; no known or third-party voice is cloned and none of these voices are final casting until listened to and approved.
 
 Rebuild the 48 kHz stereo radio-filtered runtime files from the raw WAV files with:
 

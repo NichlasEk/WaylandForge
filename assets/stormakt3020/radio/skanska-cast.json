@@ -250,6 +250,72 @@
       "text": "En fogdekonvoj ligger föröver. Håll elden redo.",
       "subtitle_lines": ["FOGDEKONVOJ", "FÖRÖVER"],
       "seed": 302134
+    },
+    {
+      "id": "ebba-silver-body",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": 20,
+      "cue": "rts_landing",
+      "text": "Instrumenten visar en massiv kropp av silver under skogen. Landa, Karl. Vi säkrar krigskassan innan dansken hinner före.",
+      "subtitle_lines": ["MASSIVT SILVER", "LANDA KARL"],
+      "seed": 302181,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-steam-online",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": -1,
+      "cue": "rts_steam_online",
+      "text": "Ångkraften håller. Res krossen vid huvudådern och fyll krigskassan.",
+      "subtitle_lines": ["ÅNGAN HÅLLER", "RES KROSSEN"],
+      "seed": 302182,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "rasmus-silver-claim",
+      "role": "rasmus-gyldentold",
+      "level": 3,
+      "frame": -1,
+      "cue": "rts_first_raid",
+      "text": "Stands! Alt sølv under denne skov tilhører Kronen, også det I endnu ikke har gravet op!",
+      "subtitle_lines": ["KRONENS SØLV!", "STANDS!"],
+      "seed": 302183,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-powder-warning",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": -1,
+      "cue": "rts_powder_boars",
+      "text": "Kruttsvin i fronten! Skjut tunnorna innan stubinen når tornlinjen!",
+      "subtitle_lines": ["KRUTSVIN!", "SKJUT STUBINEN"],
+      "seed": 302184,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "rasmus-organ-order",
+      "role": "rasmus-gyldentold",
+      "level": 3,
+      "frame": -1,
+      "cue": "rts_organ_wagon",
+      "text": "Frem med orgelvognen! Spil den svenske lejr i grus!",
+      "subtitle_lines": ["ORGELVOGN FREM!", "SPIL DEM I GRUS"],
+      "seed": 302185,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-moose-ready",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": -1,
+      "cue": "rts_moose_ready",
+      "text": "Djurhallen är stridsklar. Älgarna stampar, ge dem bara riktningen!",
+      "subtitle_lines": ["ÄLGARNA STAMPAR", "GE DEM RIKTNING"],
+      "seed": 302186,
+      "model_backend": "voxcpm2"
     }
   ]
 }

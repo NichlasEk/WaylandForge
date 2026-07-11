@@ -1,0 +1,13 @@
+{
+  "text": "Kruttsvin i fronten! Skjut tunnorna innan stubinen når tornlinjen!",
+  "language": "sv",
+  "model_backend": "voxcpm2",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Karl CCLV, lyssna noga. Flottan håller kursen genom mörkret och ingen lämnas bakom oss. Instrumenten visar främmande signaler mellan gruvmånarna. Jag vill ha lugn eld, öppna ögon och full kontroll över skeppet tills vi vet vem som följer oss.",
+  "voice_instruction": "An adult Swedish female general-admiral, composed and authoritative, low warm register, crisp military diction, restrained urgency, natural Swedish pronunciation, never theatrical or breathy.",
+  "seed": 302184,
+  "dots_num_steps": 4,
+  "dots_guidance_scale": 1.2,
+  "dots_speaker_scale": 1.5
+}
