@@ -182,6 +182,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
                     _smpcInterruptCount++;
                 }
                 runtime.Master.StepInstruction();
+                runtime.SystemMap.CdBlock.AdvanceMasterInstructions(1);
 
                 if (runtime.Smpc.SlaveSh2Enabled)
                 {
