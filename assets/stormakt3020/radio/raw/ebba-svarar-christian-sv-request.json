@@ -1,0 +1,12 @@
+{
+  "text": "Ert sigill är brutet, Christian. Er flotta står näst på tur.",
+  "language": "sv",
+  "model_backend": "dots.tts-mf",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Karl CCLV, lyssna noga. Flottan håller kursen genom mörkret och ingen lämnas bakom oss. Instrumenten visar främmande signaler mellan gruvmånarna. Jag vill ha lugn eld, öppna ögon och full kontroll över skeppet tills vi vet vem som följer oss.",
+  "seed": 873114,
+  "dots_num_steps": 6,
+  "dots_guidance_scale": 1.5,
+  "dots_speaker_scale": 1.35
+}

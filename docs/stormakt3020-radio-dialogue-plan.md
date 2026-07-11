@@ -10,6 +10,8 @@ Casting references can likewise be repaired without moving the rest of the cast 
 
 Christian's fourth pilot is a full recast, not a parameter tweak: a new VoxCPM2 seed and angry battlefield casting text produce a new 12.96-second synthetic reference, which Dots follows for a short forceful Danish command. The filtered line averages -13.5 dB versus the prior pilot's -19.3 dB, and Christian alone uses runtime gain 0.98. Other voices retain their existing references and mix gains.
 
+The first-level seal exchange is now a four-card radio duel: Christian announces the fleet, Ebba answers, Christian threatens Karl 255, and a separate high-intensity final clip ends with `FOR SATAN!`. Splitting the exchange keeps every subtitle readable and gives the final shout its own voice timing; all three new cards were verified in the direct WFEX timeline.
+
 ## Målbild
 
 Stormakt ska använda korta videokominslag i stilen från äldre japanska shmups: ett porträtt glider in i ett hörn, namnskylten tänds, en eller två korta textrader skrivs fram och en förgenererad röst hörs genom radiofilter. Spelet fortsätter hela tiden.

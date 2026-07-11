@@ -1,0 +1,12 @@
+{
+  "text": "Du vover at true mig, blåfrakke? Jeg flår kronarkivet ud af dit skrog!",
+  "language": "da",
+  "model_backend": "dots.tts-mf",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Alle fregatter frem! Hold Dannebrog højt og luk deres flugtvej! Jeg vil høre kanonerne svare fra hver eneste bro. De svenske blåfrakker har hånet min krone for sidste gang. Bryd deres linje, knus deres skjolde, og driv Karl tohundrede femoghalvtreds levende frem for mig!",
+  "seed": 873115,
+  "dots_num_steps": 10,
+  "dots_guidance_scale": 1.7,
+  "dots_speaker_scale": 1.4
+}

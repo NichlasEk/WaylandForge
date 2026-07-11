@@ -69,6 +69,42 @@
       "dots_speaker_scale": 1.35
     },
     {
+      "id": "ebba-svarar-christian",
+      "role": "ebba-grip",
+      "level": 1,
+      "frame": 1800,
+      "text": "Ert sigill är brutet, Christian. Er flotta står näst på tur.",
+      "subtitle_lines": ["SIGILLET BRUTET", "FLOTTAN NÄST"],
+      "seed": 873114,
+      "dots_num_steps": 6,
+      "dots_guidance_scale": 1.5,
+      "dots_speaker_scale": 1.35
+    },
+    {
+      "id": "christian-hot-mot-karl",
+      "role": "kung-christian",
+      "level": 1,
+      "frame": 2220,
+      "text": "Du vover at true mig, blåfrakke? Jeg flår kronarkivet ud af dit skrog!",
+      "subtitle_lines": ["DU TRUER MIG", "BLÅFRAKKE?"],
+      "seed": 873115,
+      "dots_num_steps": 10,
+      "dots_guidance_scale": 1.7,
+      "dots_speaker_scale": 1.4
+    },
+    {
+      "id": "christian-for-satan",
+      "role": "kung-christian",
+      "level": 1,
+      "frame": 2700,
+      "text": "Kom så, Karl to hundrede femoghalvtreds! Kæmp som en konge... FOR SATAN!",
+      "subtitle_lines": ["KÆMP SOM KONGE", "FOR SATAN!"],
+      "seed": 873116,
+      "dots_num_steps": 10,
+      "dots_guidance_scale": 1.85,
+      "dots_speaker_scale": 1.6
+    },
+    {
       "id": "rasmus-kronens-tiende",
       "role": "rasmus-gyldentold",
       "level": 1,

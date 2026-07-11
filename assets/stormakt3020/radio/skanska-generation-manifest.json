@@ -143,6 +143,36 @@
       "sha256": "4a81ee9f71fd05505bd2196ede2881f746e363d58aadd225bb456cff587d2ac3",
       "request": "assets/stormakt3020/radio/raw/christian-brutet-segl-da-request.json",
       "reference_sha256": "391fd7d3d32e09408e2fa6cb3e1fc64b8d57600861322173df6e27cffcd70bf9"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-svarar-christian",
+      "role": "ebba-grip",
+      "job_id": "fc9bc5e2630243f0aa9762be55c508c0",
+      "file": "assets/stormakt3020/radio/raw/ebba-svarar-christian-sv-raw.wav",
+      "sha256": "7acad52845a31aed821a0f796bf44012829b41a25c28e0e66a85368f26ca9f9e",
+      "request": "assets/stormakt3020/radio/raw/ebba-svarar-christian-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "christian-hot-mot-karl",
+      "role": "kung-christian",
+      "job_id": "0389a193240c415e9373a1c4380eb3e4",
+      "file": "assets/stormakt3020/radio/raw/christian-hot-mot-karl-da-raw.wav",
+      "sha256": "d659735bd46563ca3e65147ea9c346e3c4a374694fd9387fe695f793d04ed2f6",
+      "request": "assets/stormakt3020/radio/raw/christian-hot-mot-karl-da-request.json",
+      "reference_sha256": "391fd7d3d32e09408e2fa6cb3e1fc64b8d57600861322173df6e27cffcd70bf9"
+    },
+    {
+      "kind": "line",
+      "line": "christian-for-satan",
+      "role": "kung-christian",
+      "job_id": "bb73dff6180f49b18173ef96636b141c",
+      "file": "assets/stormakt3020/radio/raw/christian-for-satan-da-raw.wav",
+      "sha256": "2b95639edbee083739d601febcf373a045becb7481a2adc467c0428b49f4ca0e",
+      "request": "assets/stormakt3020/radio/raw/christian-for-satan-da-request.json",
+      "reference_sha256": "391fd7d3d32e09408e2fa6cb3e1fc64b8d57600861322173df6e27cffcd70bf9"
     }
   ],
   "service": "http://127.0.0.1:8765",
