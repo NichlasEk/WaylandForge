@@ -90,7 +90,8 @@ def main() -> None:
             reference = RADIO_ROOT / "references" / f"{role['id']}-reference.wav"
             if not reference.exists():
                 raise FileNotFoundError(f"Missing casting reference: {reference}; run phase 'references' first")
-            output = RADIO_ROOT / "raw" / f"{line['id']}-sv-raw.wav"
+            language = role["language"].lower()
+            output = RADIO_ROOT / "raw" / f"{line['id']}-{language}-raw.wav"
             if output.exists() and not args.force:
                 print(f"Keeping {output}")
                 continue
@@ -107,7 +108,7 @@ def main() -> None:
                 "dots_guidance_scale": 1.2,
                 "dots_speaker_scale": 1.5,
             }
-            request_path = RADIO_ROOT / "raw" / f"{line['id']}-sv-request.json"
+            request_path = RADIO_ROOT / "raw" / f"{line['id']}-{language}-request.json"
             request_path.write_text(json.dumps({key: value for key, value in payload.items() if key != "reference_wav_base64"}, ensure_ascii=False, indent=2) + "\n")
             job_id, _ = submit_and_download(service, payload, output)
             records.append({"kind": "line", "line": line["id"], "role": role["id"], "job_id": job_id, "file": str(output), "sha256": sha256(output), "request": str(request_path), "reference_sha256": sha256(reference)})

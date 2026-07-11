@@ -104,10 +104,10 @@ internal sealed class StormaktGame
     private readonly Star[] _stars;
     private static readonly RadioCard[] RadioCards =
     [
-        new(180, 360, false, "EBBA GRIP", "HOLD YOUR COURSE", "BELT IS NOT LOST", StormaktVoice.EbbaGrip, "portrait_ebba"),
-        new(900, 300, true, "RASMUS", "SWEDISH VESSEL", "HEAVE TO NOW", StormaktVoice.RasmusGyldentold, "portrait_rasmus"),
-        new(1_380, 300, true, "KING CHRISTIAN", "BROKE THE SEAL", "CROWN FLEET", StormaktVoice.KungChristian, "portrait_christian"),
-        new(BossArrivalFrame, 300, true, "FOGDE RASMUS", "CROWNS TENTH", "TAKES EVERYTHING", StormaktVoice.RasmusGyldentold, "portrait_rasmus"),
+        new(180, 360, false, "EBBA GRIP", "HÅLL KURSEN", "BÄLTET STÅR", StormaktVoice.EbbaStoraBalt, "portrait_ebba"),
+        new(900, 300, true, "RASMUS", "SVENSKE FARTØJ", "LÆG BI NU", StormaktVoice.RasmusLaggBi, "portrait_rasmus"),
+        new(1_380, 420, true, "KING CHRISTIAN", "BRUDT SEGL", "KRONENS FLÅDE", StormaktVoice.ChristianBrutetSegl, "portrait_christian"),
+        new(BossArrivalFrame, 300, true, "FOGDE RASMUS", "KRONENS TIENDE", "TAGER ALT", StormaktVoice.RasmusKronensTiende, "portrait_rasmus"),
     ];
     private static readonly RadioCard[] SkanskaRadioCards =
     [

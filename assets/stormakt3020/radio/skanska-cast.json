@@ -19,9 +19,61 @@
       "voice_instruction": "An adult Scanian male outlaw captain, rugged baritone, dry wit and controlled menace, clear Swedish with a subtle southern Scanian color, intelligent and charismatic, never comic or exaggerated.",
       "reference_text": "Ni blårockar färdas långt från era kartor. Här bär varje sten ett namn och varje mörk signal har ett minne. Jag heter Sören Svartkrut. Håll fingret från avtryckaren, så kanske skogen låter er passera med både skepp och stolthet i behåll.",
       "reference_seed": 302022
+    },
+    {
+      "id": "rasmus-gyldentold",
+      "speaker": "FOGDE RASMUS GYLDENTOLD",
+      "language": "da",
+      "voice_instruction": "An adult Danish royal bailiff and warship commander, broad resonant baritone, immaculate formal diction, proud controlled menace, theatrical authority without comedy, natural Danish pronunciation.",
+      "reference_text": "Svenske fartøj, lyt nøje. Jeg er foged Rasmus Gyldentold, og Kronens tiende forfalder i dag. Mine kanoner vogter broerne, mine segl lukker farvandet, og intet skib passerer uden at betale. Læg bi med værdighed, før regnskabet bliver skrevet med jern og ild.",
+      "reference_seed": 302023
+    },
+    {
+      "id": "kung-christian",
+      "speaker": "KUNG CHRISTIAN",
+      "language": "da",
+      "voice_instruction": "An adult Danish space king and fleet commander, mature commanding bass voice, cold royal composure, measured ceremonial Danish diction, immense confidence and restrained anger, never comic or bombastic shouting.",
+      "reference_text": "Jeg taler til Kronens samlede flåde. Dannebrog holder linjen mellem stjernerne, og hvert skib svarer på mit signal. Fjenden har brudt fogdens segl, men rigets vilje står fast. Lad maskinerne vågne, lad fregatterne vende, og før dem levende frem for tronen.",
+      "reference_seed": 302024
     }
   ],
   "lines": [
+    {
+      "id": "ebba-stora-balt",
+      "role": "ebba-grip",
+      "level": 1,
+      "frame": 180,
+      "text": "Karl tvåhundrafemtiofem. Håll kursen. Stora Bält är inte förlorat än.",
+      "subtitle_lines": ["HÅLL KURSEN", "BÄLTET STÅR"],
+      "seed": 302111
+    },
+    {
+      "id": "rasmus-lagg-bi",
+      "role": "rasmus-gyldentold",
+      "level": 1,
+      "frame": 900,
+      "text": "Svenske fartøj. Læg bi. Kronens tiende forfalder nu.",
+      "subtitle_lines": ["SVENSKE FARTØJ", "LÆG BI NU"],
+      "seed": 302112
+    },
+    {
+      "id": "christian-brutet-segl",
+      "role": "kung-christian",
+      "level": 1,
+      "frame": 1380,
+      "text": "I har brudt fogdens segl. Nu møder I Kronens flåde.",
+      "subtitle_lines": ["BRUDT SEGL", "KRONENS FLÅDE"],
+      "seed": 302113
+    },
+    {
+      "id": "rasmus-kronens-tiende",
+      "role": "rasmus-gyldentold",
+      "level": 1,
+      "frame": 3300,
+      "text": "Kronens tiende tager alt. Også svenske helte.",
+      "subtitle_lines": ["KRONENS TIENDE", "TAGER ALT"],
+      "seed": 302114
+    },
     {
       "id": "ebba-skanska-signal",
       "role": "ebba-grip",

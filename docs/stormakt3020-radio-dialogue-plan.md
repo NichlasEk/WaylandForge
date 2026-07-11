@@ -1,8 +1,8 @@
 # Stormakt 3020 - videokomradio, dialog och TTS
 
-Status: bana 1 har tre engelska platshållarröster. Skånska skuggor har fyra svenska lyssningspiloter för Ebba och Sören, byggda från två helt syntetiska VoxCPM2-rollreferenser genom Dots MF. Svenska och danska slutröster återstår att lyssningsgodkänna.
+Status: both active levels now use the campaign casting pipeline. Four synthetic VoxCPM2 role references (Ebba, Sören, Rasmus and Christian) drive eight Dots MF listening pilots: five Swedish lines and three Danish lines. Final Swedish and Danish casting still requires listening approval.
 
-Skånska skuggor introduces a reproducible two-stage casting pipeline: `tools/stormakt3020/render_radio_cast.py` first asks local VoxCPM2 for a fully synthetic role reference, then supplies that WAV plus its exact transcript to Dots MF for every versioned dialogue line. Role instructions, scripts and fixed seeds live in `assets/stormakt3020/radio/skanska-cast.json`; generated job IDs and hashes live in `skanska-generation-manifest.json`. No real-person voice reference is permitted.
+The reproducible two-stage campaign casting pipeline uses `tools/stormakt3020/render_radio_cast.py`: it first asks local VoxCPM2 for a fully synthetic role reference, then supplies that WAV plus its exact transcript to Dots MF for every versioned dialogue line. Role instructions, scripts and fixed seeds currently live in the historically named `assets/stormakt3020/radio/skanska-cast.json`; generated job IDs and hashes live in `skanska-generation-manifest.json`. No real-person voice reference is permitted.
 
 Written ship designation `KARL CCLV` is retained in the HUD, while Swedish speech scripts expand the Roman numeral to `Karl tvåhundrafemtiofem`. Targeted repairs use `render_radio_cast.py lines --line ID --force`; this avoids voice drift in unaffected dialogue.
 
@@ -109,9 +109,9 @@ De danska raderna ska granskas av en dansk talare eller åtminstone genom ett se
 
 ## Checkpoints
 
-1. **Radioprototyp:** klar med fyra engelska platshållarkort, riktiga neutral/talande porträtt för Ebba, Rasmus och Christian, kodritad fallback och headless capture.
-2. **Voice pipeline:** engelsk Matcha-placeholder, radiofilter och manifest är klara. Två godkända SV/DA-referensröster, Dots-pilot och lyssningsbeslut återstår.
-3. **Bana 1-dialog:** fyra tidsatta radiokort, riktiga porträtt, musikduckning och voice-mix är klara. Ett ytterligare kort och full ban-capture återstår.
+1. **Radioprototyp:** four level-1 cards and four level-2 cards, generated neutral/speaking portraits, code fallback and headless captures are complete.
+2. **Voice pipeline:** four fully synthetic VoxCPM2 role references, eight Dots pilots, deterministic filter and generation manifest are complete. Listening decisions remain.
+3. **Bana 1-dialog:** four timed Swedish/Danish cards, portraits, music ducking and voice mixing are wired. Rasmus' Danish glyph card has been verified in a direct WFEX capture.
 
 ## Acceptanskriterier
 

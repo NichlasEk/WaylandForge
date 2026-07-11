@@ -547,13 +547,14 @@ internal sealed class StormaktMusicLoop : IDisposable
 
         (StormaktVoice Voice, string File, float Gain)[] entries =
         [
-            (StormaktVoice.EbbaGrip, "ebba-grip-en-radio.wav", 0.72f),
-            (StormaktVoice.RasmusGyldentold, "rasmus-gyldentold-en-radio.wav", 0.72f),
-            (StormaktVoice.KungChristian, "kung-christian-en-radio.wav", 0.76f),
             (StormaktVoice.EbbaSkanskaSignal, "ebba-skanska-signal-sv-radio.wav", 0.72f),
             (StormaktVoice.SorenSvartaSkogen, "soren-svarta-skogen-sv-radio.wav", 0.74f),
             (StormaktVoice.EbbaIdentifierarSoren, "ebba-identifierar-soren-sv-radio.wav", 0.72f),
             (StormaktVoice.SorenFogdekonvoj, "soren-fogdekonvoj-sv-radio.wav", 0.74f),
+            (StormaktVoice.EbbaStoraBalt, "ebba-stora-balt-sv-radio.wav", 0.72f),
+            (StormaktVoice.RasmusLaggBi, "rasmus-lagg-bi-da-radio.wav", 0.74f),
+            (StormaktVoice.ChristianBrutetSegl, "christian-brutet-segl-da-radio.wav", 0.76f),
+            (StormaktVoice.RasmusKronensTiende, "rasmus-kronens-tiende-da-radio.wav", 0.74f),
         ];
         Dictionary<StormaktVoice, LoadedEffect> voices = [];
         foreach ((StormaktVoice voice, string file, float gain) in entries)
@@ -647,13 +648,14 @@ internal enum StormaktSound
 
 internal enum StormaktVoice
 {
-    EbbaGrip,
-    RasmusGyldentold,
-    KungChristian,
     EbbaSkanskaSignal,
     SorenSvartaSkogen,
     EbbaIdentifierarSoren,
     SorenFogdekonvoj,
+    EbbaStoraBalt,
+    RasmusLaggBi,
+    ChristianBrutetSegl,
+    RasmusKronensTiende,
 }
 
 internal enum StormaktMusicTrack

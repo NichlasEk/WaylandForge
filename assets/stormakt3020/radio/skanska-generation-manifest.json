@@ -71,6 +71,78 @@
       "sha256": "18e8694dfc222e5fd4dfee480804d35ebadd43a47624fe88e1e254ab371ad5d8",
       "request": "assets/stormakt3020/radio/raw/soren-fogdekonvoj-sv-request.json",
       "reference_sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b"
+    },
+    {
+      "kind": "reference",
+      "role": "rasmus-gyldentold",
+      "job_id": "f76d72949e1741d18eb9c894f16f1348",
+      "file": "assets/stormakt3020/radio/references/rasmus-gyldentold-reference.wav",
+      "sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51",
+      "request": {
+        "text": "Svenske fartøj, lyt nøje. Jeg er foged Rasmus Gyldentold, og Kronens tiende forfalder i dag. Mine kanoner vogter broerne, mine segl lukker farvandet, og intet skib passerer uden at betale. Læg bi med værdighed, før regnskabet bliver skrevet med jern og ild.",
+        "language": "da",
+        "voice_instruction": "An adult Danish royal bailiff and warship commander, broad resonant baritone, immaculate formal diction, proud controlled menace, theatrical authority without comedy, natural Danish pronunciation.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302023
+      }
+    },
+    {
+      "kind": "reference",
+      "role": "kung-christian",
+      "job_id": "a860b570bc7748fd8a55d35c81c4d993",
+      "file": "assets/stormakt3020/radio/references/kung-christian-reference.wav",
+      "sha256": "3fff14463d5ff91c3704d2af05376d6d8a70a0f20e4a3f00fe1d68661f83430f",
+      "request": {
+        "text": "Jeg taler til Kronens samlede flåde. Dannebrog holder linjen mellem stjernerne, og hvert skib svarer på mit signal. Fjenden har brudt fogdens segl, men rigets vilje står fast. Lad maskinerne vågne, lad fregatterne vende, og før dem levende frem for tronen.",
+        "language": "da",
+        "voice_instruction": "An adult Danish space king and fleet commander, mature commanding bass voice, cold royal composure, measured ceremonial Danish diction, immense confidence and restrained anger, never comic or bombastic shouting.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302024
+      }
+    },
+    {
+      "kind": "line",
+      "line": "ebba-stora-balt",
+      "role": "ebba-grip",
+      "job_id": "43b5010b61114eb5ae2b54a909ca4367",
+      "file": "assets/stormakt3020/radio/raw/ebba-stora-balt-sv-raw.wav",
+      "sha256": "4fc4fce05a4eaa968554e02bcbef1423f92b8506cf4d5cf1df7ae0b5aef47505",
+      "request": "assets/stormakt3020/radio/raw/ebba-stora-balt-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "rasmus-lagg-bi",
+      "role": "rasmus-gyldentold",
+      "job_id": "00120cf072854d02a89f12b403a84cfb",
+      "file": "assets/stormakt3020/radio/raw/rasmus-lagg-bi-da-raw.wav",
+      "sha256": "a1c17c1b1ac4607138274c5faef63b8cc3a85dc6deae2d6224814a14747d150e",
+      "request": "assets/stormakt3020/radio/raw/rasmus-lagg-bi-da-request.json",
+      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
+    },
+    {
+      "kind": "line",
+      "line": "christian-brutet-segl",
+      "role": "kung-christian",
+      "job_id": "6f6231c5bc7b44dd894de37f23c88529",
+      "file": "assets/stormakt3020/radio/raw/christian-brutet-segl-da-raw.wav",
+      "sha256": "986f2dba432c19740841c89a66122f067c131988e82f9703705076a4ae85ce7a",
+      "request": "assets/stormakt3020/radio/raw/christian-brutet-segl-da-request.json",
+      "reference_sha256": "3fff14463d5ff91c3704d2af05376d6d8a70a0f20e4a3f00fe1d68661f83430f"
+    },
+    {
+      "kind": "line",
+      "line": "rasmus-kronens-tiende",
+      "role": "rasmus-gyldentold",
+      "job_id": "5f67801e65a54d2d9c6ceb4e4a31339d",
+      "file": "assets/stormakt3020/radio/raw/rasmus-kronens-tiende-da-raw.wav",
+      "sha256": "3f6d149802b31c18f0f3dd59e1882d7edf8ac0173e2e23d7c8720a696edd9129",
+      "request": "assets/stormakt3020/radio/raw/rasmus-kronens-tiende-da-request.json",
+      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
     }
   ],
   "service": "http://127.0.0.1:8765",

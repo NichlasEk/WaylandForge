@@ -97,7 +97,7 @@ The external core triggers them from actual gameplay events and mixes up to 32 v
 
 ## Radio voices
 
-The first videocom prototype uses three synthetic English placeholder voices under `radio/voices/`. Skånska skuggor adds four Swedish pilot lines through a two-stage local casting pipeline: VoxCPM2 creates fully synthetic Ebba and Sören reference performances, then Dots MF renders versioned dialogue from each reference WAV and exact transcript. Requests, raw output, job IDs, hashes and approval state are preserved under `radio/`; no known or third-party voice is cloned and none of these voices are final casting until listened to and approved.
+The campaign radio uses a two-stage local casting pipeline: VoxCPM2 creates fully synthetic reference performances for Ebba, Sören, Rasmus and Christian, then Dots MF renders versioned Swedish or Danish dialogue from each reference WAV and exact transcript. Eight pilot lines are active across the first two levels. The three older Matcha English files remain archived but are no longer loaded by runtime. Requests, raw output, job IDs, hashes and approval state are preserved under `radio/`; no known or third-party voice is cloned and none of these voices are final casting until listened to and approved.
 
 Rebuild the 48 kHz stereo radio-filtered runtime files from the raw WAV files with:
 
