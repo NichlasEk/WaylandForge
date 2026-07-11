@@ -19,8 +19,9 @@ PRIMARY_SPRITES = [
 ]
 
 PLAYER_SPRITES = [
-    ("player", (0, 0, 749, 1049), (52, 64)),
-    ("player_hot", (749, 0, 1499, 1049), (52, 64)),
+    # Crop before the painted engine flames; runtime draws thrust only while moving.
+    ("player", (0, 0, 749, 875), (52, 64)),
+    ("player_hot", (749, 0, 1499, 875), (52, 64)),
 ]
 
 DANISH_SPRITES = [
