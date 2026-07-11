@@ -465,11 +465,12 @@ internal sealed class StormaktGame
             return;
         }
         rts.Age++;
+        rts.TowerPlacementMode = rts.BuildStage >= 4 && (buttons & Slow) != 0;
         rts.LandingAge = Math.Min(180, rts.LandingAge + 1);
         rts.PlacementPulse = Math.Max(0, rts.PlacementPulse - 1);
         _missionFrame++;
 
-        if (rts.BuildStage >= 2 && rts.Age % 60 == 0)
+        if (rts.BuildStage >= 2 && RtsHasPower(rts) && rts.Age % 60 == 0)
         {
             rts.Silver += 25;
             rts.SilverPulse = 30;
@@ -477,6 +478,12 @@ internal sealed class StormaktGame
         rts.SilverPulse = Math.Max(0, rts.SilverPulse - 1);
         StepRtsProduction(rts);
         StepRtsUnits(rts);
+        if (rts.CombatStarted)
+        {
+            rts.CombatAge++;
+            SpawnRtsEnemyWaves(rts);
+            StepRtsCombat(rts);
+        }
 
         if (rts.LandingAge < 120)
         {
@@ -505,7 +512,9 @@ internal sealed class StormaktGame
         {
             int buildX = (rts.CursorX / 12) * 12;
             int buildY = (rts.CursorY / 12) * 12;
-            bool valid = rts.BuildStage < 4 && IsValidRtsPlacement(rts, buildX, buildY);
+            bool towerOrder = rts.BuildStage >= 4 && (buttons & Slow) != 0;
+            bool valid = towerOrder ? IsValidRtsTowerPlacement(rts, buildX, buildY) :
+                rts.BuildStage < 4 && IsValidRtsPlacement(rts, buildX, buildY);
             rts.LastPlacementValid = valid;
             rts.PlacementPulse = 30;
             if (valid && rts.BuildStage == 0 && rts.Silver >= 200)
@@ -535,7 +544,13 @@ internal sealed class StormaktGame
                 rts.BuildStage = 4;
                 _audio?.Trigger(StormaktSound.Broadside);
             }
-            else if (rts.BuildStage >= 4 && TryHandleRtsCommand(rts))
+            else if (towerOrder && valid && rts.Silver >= 120)
+            {
+                rts.Buildings.Add(new RtsBuilding(buildX, buildY, RtsBuildingType.DefenseTower));
+                rts.Silver -= 120;
+                _audio?.Trigger(StormaktSound.Broadside);
+            }
+            else if (!towerOrder && rts.BuildStage >= 4 && TryHandleRtsCommand(rts))
             {
                 _audio?.Trigger(StormaktSound.Deploy);
             }
@@ -603,6 +618,27 @@ internal sealed class StormaktGame
     private static int SilverVeinWorldX(int worldY) =>
         155 + worldY / 2 + (int)Math.Round(Math.Sin(worldY * 0.09) * 9.0);
 
+    private bool IsValidRtsTowerPlacement(RtsState rts, int x, int y)
+    {
+        if (y < 38 || y > rts.MapHeight - 24 || x < 20 || x > rts.MapWidth - 21)
+        {
+            return false;
+        }
+        bool inBuildRadius = false;
+        foreach (RtsBuilding building in rts.Buildings)
+        {
+            double dx = x - building.X;
+            double dy = y - building.Y;
+            double distance = Math.Sqrt(dx * dx + dy * dy);
+            if (distance < 34)
+            {
+                return false;
+            }
+            inBuildRadius |= distance <= 112;
+        }
+        return inBuildRadius;
+    }
+
     private bool TryHandleRtsCommand(RtsState rts)
     {
         foreach (RtsBuilding building in rts.Buildings)
@@ -663,16 +699,22 @@ internal sealed class StormaktGame
 
     private void StepRtsProduction(RtsState rts)
     {
+        if (!RtsHasPower(rts))
+        {
+            return;
+        }
         if (rts.BarracksTimer > 0 && --rts.BarracksTimer == 0)
         {
             RtsBuilding barracks = rts.Buildings.First(building => building.Type == RtsBuildingType.Barracks);
             rts.Units.Add(new RtsUnit(barracks.X - 8, barracks.Y + 24, RtsUnitType.CaroleanSquad));
+            rts.CombatStarted = true;
             _audio?.Trigger(StormaktSound.Deploy);
         }
         if (rts.AnimalHallTimer > 0 && --rts.AnimalHallTimer == 0)
         {
             RtsBuilding hall = rts.Buildings.First(building => building.Type == RtsBuildingType.AnimalHall);
             rts.Units.Add(new RtsUnit(hall.X + 8, hall.Y + 27, RtsUnitType.MooseCarolean));
+            rts.CombatStarted = true;
             _audio?.Trigger(StormaktSound.Broadside);
         }
     }
@@ -694,6 +736,208 @@ internal sealed class StormaktGame
             unit.X += dx / distance * Math.Min(speed, distance);
             unit.Y += dy / distance * Math.Min(speed, distance);
         }
+    }
+
+    private void SpawnRtsEnemyWaves(RtsState rts)
+    {
+        if (rts.CombatAge is 120 or 720)
+        {
+            SpawnRtsWave(rts, RtsEnemyType.TollStormer, rts.CombatAge == 120 ? 4 : 6, 58);
+        }
+        else if (rts.CombatAge is 300 or 900)
+        {
+            SpawnRtsWave(rts, RtsEnemyType.CoinMastiff, rts.CombatAge == 300 ? 3 : 5, 92);
+        }
+        else if (rts.CombatAge is 480 or 1_080)
+        {
+            SpawnRtsWave(rts, RtsEnemyType.LedgerPikeman, rts.CombatAge == 480 ? 4 : 6, 126);
+        }
+        else if (rts.CombatAge is 660 or 1_260)
+        {
+            SpawnRtsWave(rts, RtsEnemyType.PowderBoar, rts.CombatAge == 660 ? 2 : 4, 76);
+        }
+        else if (rts.CombatAge is 840 or 1_440)
+        {
+            SpawnRtsWave(rts, RtsEnemyType.OrganWagon, rts.CombatAge == 840 ? 1 : 2, 118);
+        }
+    }
+
+    private void SpawnRtsWave(RtsState rts, RtsEnemyType type, int count, int yBase)
+    {
+        int roadX = rts.MapWidth - 74;
+        for (int index = 0; index < count; index++)
+        {
+            int health = type switch
+            {
+                RtsEnemyType.CoinMastiff => 34,
+                RtsEnemyType.LedgerPikeman => 58,
+                RtsEnemyType.PowderBoar => 48,
+                RtsEnemyType.OrganWagon => 130,
+                _ => 42,
+            };
+            rts.Enemies.Add(new RtsEnemy(roadX + (index % 2) * 12 - 6, yBase + index * 19, type, health));
+        }
+        _audio?.Trigger(StormaktSound.Deploy);
+    }
+
+    private void StepRtsCombat(RtsState rts)
+    {
+        foreach (RtsUnit unit in rts.Units)
+        {
+            unit.Cooldown = Math.Max(0, unit.Cooldown - 1);
+            RtsEnemy? target = rts.Enemies
+                .Where(enemy => enemy.Health > 0)
+                .OrderBy(enemy => DistanceSquared(unit.X, unit.Y, enemy.X, enemy.Y))
+                .FirstOrDefault();
+            double range = unit.Type == RtsUnitType.MooseCarolean ? 22 : 64;
+            if (target is not null && DistanceSquared(unit.X, unit.Y, target.X, target.Y) <= range * range && unit.Cooldown == 0)
+            {
+                target.Health -= unit.Type == RtsUnitType.MooseCarolean ? 18 : 7;
+                unit.Cooldown = unit.Type == RtsUnitType.MooseCarolean ? 42 : 34;
+            }
+        }
+
+        foreach (RtsBuilding tower in rts.Buildings.Where(building => building.Type == RtsBuildingType.DefenseTower))
+        {
+            tower.Cooldown = Math.Max(0, tower.Cooldown - 1);
+            if (!RtsHasPower(rts))
+            {
+                continue;
+            }
+            RtsEnemy? target = rts.Enemies
+                .Where(enemy => enemy.Health > 0 && DistanceSquared(tower.X, tower.Y, enemy.X, enemy.Y) <= 88 * 88)
+                .OrderBy(enemy => DistanceSquared(tower.X, tower.Y, enemy.X, enemy.Y))
+                .FirstOrDefault();
+            if (target is not null && tower.Cooldown == 0)
+            {
+                target.Health -= 10;
+                tower.Cooldown = 32;
+                _audio?.Trigger(StormaktSound.TwinCannon);
+            }
+        }
+
+        for (int index = rts.Enemies.Count - 1; index >= 0; index--)
+        {
+            RtsEnemy enemy = rts.Enemies[index];
+            if (enemy.Health <= 0)
+            {
+                rts.Enemies.RemoveAt(index);
+                rts.Silver += 8;
+                _score += 60;
+                continue;
+            }
+            enemy.Cooldown = Math.Max(0, enemy.Cooldown - 1);
+            RtsUnit? nearbyUnit = rts.Units
+                .Where(unit => unit.Health > 0)
+                .OrderBy(unit => DistanceSquared(enemy.X, enemy.Y, unit.X, unit.Y))
+                .FirstOrDefault();
+            RtsBuilding? powerTarget = rts.Buildings.FirstOrDefault(building => building.Type == RtsBuildingType.SteamPlant);
+            double targetX = powerTarget?.X ?? rts.LandingX;
+            double targetY = powerTarget?.Y ?? rts.LandingY;
+            if (nearbyUnit is not null && DistanceSquared(enemy.X, enemy.Y, nearbyUnit.X, nearbyUnit.Y) <= 34 * 34)
+            {
+                targetX = nearbyUnit.X;
+                targetY = nearbyUnit.Y;
+            }
+            double dx = targetX - enemy.X;
+            double dy = targetY - enemy.Y;
+            double distance = Math.Max(0.001, Math.Sqrt(dx * dx + dy * dy));
+            if (enemy.Type == RtsEnemyType.PowderBoar && distance <= 40)
+            {
+                enemy.FuseAge++;
+                if (enemy.FuseAge >= 45)
+                {
+                    if (!_invincibleTestMode && nearbyUnit is not null && DistanceSquared(enemy.X, enemy.Y, nearbyUnit.X, nearbyUnit.Y) <= 42 * 42)
+                    {
+                        nearbyUnit.Health -= 70;
+                    }
+                    if (!_invincibleTestMode && powerTarget is not null && DistanceSquared(enemy.X, enemy.Y, powerTarget.X, powerTarget.Y) <= 48 * 48)
+                    {
+                        powerTarget.Health -= 85;
+                    }
+                    enemy.Health = 0;
+                    _audio?.Trigger(StormaktSound.Broadside);
+                }
+                continue;
+            }
+            if (enemy.Type == RtsEnemyType.OrganWagon && distance <= 118)
+            {
+                if (enemy.Cooldown == 0)
+                {
+                    if (!_invincibleTestMode && powerTarget is not null)
+                    {
+                        powerTarget.Health -= 18;
+                    }
+                    else if (!_invincibleTestMode)
+                    {
+                        rts.KarlHealth -= 18;
+                    }
+                    enemy.Cooldown = 90;
+                    _audio?.Trigger(StormaktSound.Broadside);
+                }
+                continue;
+            }
+            if (distance <= 15)
+            {
+                if (enemy.Cooldown == 0)
+                {
+                    int damage = enemy.Type switch { RtsEnemyType.CoinMastiff => 9, RtsEnemyType.LedgerPikeman => 7, _ => 6 };
+                    if (!_invincibleTestMode && nearbyUnit is not null && targetX == nearbyUnit.X && targetY == nearbyUnit.Y)
+                    {
+                        nearbyUnit.Health -= damage;
+                    }
+                    else if (!_invincibleTestMode && powerTarget is not null)
+                    {
+                        powerTarget.Health -= damage;
+                    }
+                    else if (!_invincibleTestMode)
+                    {
+                        rts.KarlHealth -= damage;
+                    }
+                    enemy.Cooldown = 40;
+                }
+            }
+            else
+            {
+                double speed = enemy.Type switch
+                {
+                    RtsEnemyType.CoinMastiff => 1.25,
+                    RtsEnemyType.LedgerPikeman => 0.52,
+                    RtsEnemyType.PowderBoar => 0.88,
+                    RtsEnemyType.OrganWagon => 0.34,
+                    _ => 0.72,
+                };
+                enemy.X += dx / distance * speed;
+                enemy.Y += dy / distance * speed;
+            }
+        }
+        rts.Units.RemoveAll(unit => unit.Health <= 0);
+        rts.Buildings.RemoveAll(building => building.Health <= 0);
+        if (rts.KarlHealth <= 0)
+        {
+            _gameOver = true;
+        }
+    }
+
+    private static double DistanceSquared(double x1, double y1, double x2, double y2)
+    {
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        return dx * dx + dy * dy;
+    }
+
+    private static bool RtsHasPower(RtsState rts)
+    {
+        int total = rts.Buildings.Any(building => building.Type == RtsBuildingType.SteamPlant) ? 100 : 0;
+        int used = rts.Buildings.Sum(building => building.Type switch
+        {
+            RtsBuildingType.SilverCrusher => 40,
+            RtsBuildingType.Barracks => 20,
+            RtsBuildingType.AnimalHall => 30,
+            RtsBuildingType.DefenseTower => 10,
+            _ => 0,
+        });
+        return total >= used;
     }
 
     private void StepRadio()
@@ -1887,13 +2131,18 @@ internal sealed class StormaktGame
         {
             DrawRtsUnit(frame, rts, unit);
         }
+        foreach (RtsEnemy enemy in rts.Enemies)
+        {
+            DrawRtsEnemy(frame, rts, enemy);
+        }
         DrawRtsLandedKarl(frame, rts);
-        if (rts.LandingAge >= 120 && rts.BuildStage < 2)
+        if (rts.LandingAge >= 120 && (rts.BuildStage < 4 || rts.TowerPlacementMode))
         {
             int buildX = (rts.CursorX / 12) * 12;
             int buildY = (rts.CursorY / 12) * 12;
             int screenX = buildX - rts.CameraX;
-            bool valid = IsValidRtsPlacement(rts, buildX, buildY);
+            bool valid = rts.TowerPlacementMode ? IsValidRtsTowerPlacement(rts, buildX, buildY) :
+                IsValidRtsPlacement(rts, buildX, buildY);
             uint ghost = valid ? 0xff65c58a : 0xffff6b62;
             DrawRect(frame, screenX - 13, buildY - 9, 27, 19, 0xff17211c);
             DrawLine(frame, screenX - 13, buildY - 9, screenX + 13, buildY - 9, ghost);
@@ -1914,8 +2163,15 @@ internal sealed class StormaktGame
 
         DrawRect(frame, 0, 0, _width, 18, 0xff080d12);
         DrawText(frame, 6, 5, "SILVERKROPPEN", 0xffffd66b);
-        int powerUsed = rts.BuildStage switch { >= 4 => 90, 3 => 60, 2 => 40, _ => 0 };
-        int powerTotal = rts.BuildStage >= 1 ? 100 : 0;
+        int powerUsed = rts.Buildings.Sum(building => building.Type switch
+        {
+            RtsBuildingType.SilverCrusher => 40,
+            RtsBuildingType.Barracks => 20,
+            RtsBuildingType.AnimalHall => 30,
+            RtsBuildingType.DefenseTower => 10,
+            _ => 0,
+        });
+        int powerTotal = rts.Buildings.Any(building => building.Type == RtsBuildingType.SteamPlant) ? 100 : 0;
         string economy = $"KRAFT {powerUsed:000}/{powerTotal:000}  SILVER {rts.Silver:0000}";
         DrawText(frame, _width - economy.Length * 6 - 5, 5, economy,
             rts.SilverPulse > 0 ? 0xffffffff : 0xff9bd4dc);
@@ -1929,10 +2185,19 @@ internal sealed class StormaktGame
             3 => "Z PLACERA DJURHALL",
             >= 4 when rts.BarracksTimer > 0 => $"KAROLINER {rts.BarracksTimer:000}",
             >= 4 when rts.AnimalHallTimer > 0 => $"ÄLGKAROLIN {rts.AnimalHallTimer:000}",
-            >= 4 => "Z VÄLJ / PRODUCERA  X HÅLL",
+            >= 4 when rts.TowerPlacementMode => "SLOW+Z PLACERA FÖRSVARSTORN",
+            >= 4 => "Z VÄLJ / PRODUCERA  SLOW+Z TORN",
             _ => objective,
         };
         DrawText(frame, 7, _height - 10, objective, rts.LandingAge < 120 ? 0xff9bd4dc : 0xffffd66b);
+        if (_gameOver)
+        {
+            int panelX = (_width - 190) / 2;
+            int panelY = (_height - 42) / 2;
+            DrawRect(frame, panelX, panelY, 190, 42, 0xee120b0d);
+            DrawText(frame, panelX + 31, panelY + 9, "KRIGSKASSAN FÖLL", 0xffff6b7f);
+            DrawText(frame, panelX + 37, panelY + 26, "START ÅTERKALLAR", 0xffffd66b);
+        }
     }
 
     private void DrawRtsBuilding(uint[] frame, RtsState rts, RtsBuilding building)
@@ -1969,6 +2234,18 @@ internal sealed class StormaktGame
             DrawLine(frame, x - 11, y + 11, x - 4, y - 2, 0xffb7c7d6);
             DrawLine(frame, x + 11, y + 11, x + 4, y - 2, 0xffb7c7d6);
             DrawRtsProductionBar(frame, x, y + 15, rts.BarracksTimer, 90);
+            return;
+        }
+        if (building.Type == RtsBuildingType.DefenseTower)
+        {
+            FillCircle(frame, x, y + 4, 11, 0xff29343d);
+            DrawRect(frame, x - 7, y - 8, 15, 18, 0xff244f91);
+            DrawLine(frame, x, y - 7, x + 13, y - 15, 0xffffd66b);
+            FillCircle(frame, x + 13, y - 15, 2, 0xffb7c7d6);
+            if (building.Cooldown > 20)
+            {
+                PutPixel(frame, x + 14, y - 16, 0xffffffff);
+            }
             return;
         }
         DrawRect(frame, x - 20, y - 14, 41, 29, 0xff2b3432);
@@ -2022,6 +2299,67 @@ internal sealed class StormaktGame
         DrawLine(frame, x + 9, y - 18, x + 13, y - 15, 0xff8a6b38);
         DrawRect(frame, x - 3, y - 4, 7, 8, 0xff244f91);
         PutPixel(frame, x, y - 5, 0xffffd66b);
+    }
+
+    private void DrawRtsEnemy(uint[] frame, RtsState rts, RtsEnemy enemy)
+    {
+        int x = (int)Math.Round(enemy.X) - rts.CameraX;
+        int y = (int)Math.Round(enemy.Y);
+        if (x < -18 || x > _width + 18)
+        {
+            return;
+        }
+        if (enemy.Type == RtsEnemyType.TollStormer)
+        {
+            FillCircle(frame, x, y - 5, 3, 0xffd2a477);
+            DrawRect(frame, x - 4, y - 2, 9, 10, 0xff8f2635);
+            DrawRect(frame, x - 1, y - 2, 3, 10, 0xfff2eee4);
+            DrawLine(frame, x + 4, y, x + 10, y - 6, 0xff8a6b38);
+        }
+        else if (enemy.Type == RtsEnemyType.LedgerPikeman)
+        {
+            DrawRect(frame, x - 5, y - 5, 11, 14, 0xff7f1727);
+            DrawRect(frame, x - 1, y - 5, 3, 14, 0xfff2eee4);
+            DrawLine(frame, x + 5, y + 7, x - 7, y - 17, 0xffc5b27a);
+            FillCircle(frame, x, y - 8, 3, 0xffd2a477);
+        }
+        else if (enemy.Type == RtsEnemyType.CoinMastiff)
+        {
+            FillCircle(frame, x, y + 1, 7, 0xff4a292c);
+            DrawRect(frame, x - 7, y - 2, 15, 5, 0xff8f2635);
+            DrawRect(frame, x - 1, y - 5, 3, 11, 0xfff2eee4);
+            PutPixel(frame, x - 4, y - 2, 0xffff6b62);
+            PutPixel(frame, x + 4, y - 2, 0xffff6b62);
+        }
+        else if (enemy.Type == RtsEnemyType.PowderBoar)
+        {
+            FillCircle(frame, x, y + 2, 8, 0xff50352d);
+            DrawRect(frame, x - 7, y - 4, 15, 9, 0xff8f2635);
+            DrawRect(frame, x - 2, y - 5, 4, 11, 0xfff2eee4);
+            DrawLine(frame, x + 5, y - 5, x + 9, y - 12, 0xff8a6b38);
+            uint fuse = (enemy.FuseAge / 5 & 1) == 0 ? 0xffffd66b : 0xffff6b4a;
+            PutPixel(frame, x + 9, y - 13, fuse);
+            if (enemy.FuseAge > 0)
+            {
+                DrawCircleOutline(frame, x, y + 2, 10 + enemy.FuseAge / 6, fuse);
+            }
+        }
+        else
+        {
+            DrawRect(frame, x - 13, y - 9, 27, 19, 0xff34383a);
+            DrawRect(frame, x - 10, y - 6, 21, 13, 0xff8f2635);
+            DrawRect(frame, x - 2, y - 8, 5, 17, 0xfff2eee4);
+            for (int barrel = -1; barrel <= 1; barrel++)
+            {
+                DrawLine(frame, x + barrel * 6, y - 7, x + barrel * 6, y - 17, 0xff8a6b38);
+            }
+            FillCircle(frame, x - 9, y + 10, 4, 0xff202527);
+            FillCircle(frame, x + 9, y + 10, 4, 0xff202527);
+        }
+        if (enemy.Health < 20)
+        {
+            PutPixel(frame, x, y + 10, 0xffff8a4a);
+        }
     }
 
     private void DrawRtsLandedKarl(uint[] frame, RtsState rts)
@@ -3854,7 +4192,6 @@ internal sealed class StormaktGame
     private record struct EnemyShot(double X, double Y, double Vx, double Vy, int Kind);
     private record struct AnchorHazard(int X, int Age);
     private record struct CrystalSpear(int X, int Age);
-    private readonly record struct RtsBuilding(int X, int Y, RtsBuildingType Type);
     private record struct Enemy(
         int X,
         int Y,
@@ -3908,12 +4245,22 @@ internal sealed class StormaktGame
         SilverCrusher,
         Barracks,
         AnimalHall,
+        DefenseTower,
     }
 
     private enum RtsUnitType
     {
         CaroleanSquad,
         MooseCarolean,
+    }
+
+    private enum RtsEnemyType
+    {
+        TollStormer,
+        LedgerPikeman,
+        CoinMastiff,
+        PowderBoar,
+        OrganWagon,
     }
 
     private sealed class SorenRivalState
@@ -3954,10 +4301,50 @@ internal sealed class StormaktGame
         public int SilverPulse { get; set; }
         public List<RtsBuilding> Buildings { get; } = [];
         public List<RtsUnit> Units { get; } = [];
+        public List<RtsEnemy> Enemies { get; } = [];
         public int BarracksTimer { get; set; }
         public int AnimalHallTimer { get; set; }
         public bool LastPlacementValid { get; set; }
         public int PlacementPulse { get; set; }
+        public int CombatAge { get; set; }
+        public int KarlHealth { get; set; } = 500;
+        public bool TowerPlacementMode { get; set; }
+        public bool CombatStarted { get; set; }
+    }
+
+    private sealed class RtsBuilding
+    {
+        public RtsBuilding(int x, int y, RtsBuildingType type)
+        {
+            X = x;
+            Y = y;
+            Type = type;
+            Health = type == RtsBuildingType.DefenseTower ? 140 : 220;
+        }
+
+        public int X { get; }
+        public int Y { get; }
+        public RtsBuildingType Type { get; }
+        public int Health { get; set; }
+        public int Cooldown { get; set; }
+    }
+
+    private sealed class RtsEnemy
+    {
+        public RtsEnemy(double x, double y, RtsEnemyType type, int health)
+        {
+            X = x;
+            Y = y;
+            Type = type;
+            Health = health;
+        }
+
+        public double X { get; set; }
+        public double Y { get; set; }
+        public RtsEnemyType Type { get; }
+        public int Health { get; set; }
+        public int Cooldown { get; set; }
+        public int FuseAge { get; set; }
     }
 
     private sealed class RtsUnit
@@ -3969,6 +4356,7 @@ internal sealed class StormaktGame
             TargetX = x;
             TargetY = y;
             Type = type;
+            Health = type == RtsUnitType.MooseCarolean ? 160 : 100;
         }
 
         public double X { get; set; }
@@ -3977,6 +4365,8 @@ internal sealed class StormaktGame
         public double TargetY { get; set; }
         public RtsUnitType Type { get; }
         public bool Selected { get; set; }
+        public int Health { get; set; }
+        public int Cooldown { get; set; }
     }
 
     private sealed class BossState

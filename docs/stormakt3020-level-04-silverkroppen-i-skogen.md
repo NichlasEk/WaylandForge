@@ -1,6 +1,6 @@
 # Bana 4 - Silverkroppen i skogen
 
-Status: implementation underway. The deterministic RTS skeleton is startable as campaign row 4 in developer mode with a separate level id/state, top-down map, silver vein, fogde road, Karl CCLV landing, gamepad cursor and horizontal camera follow. The economy slice adds grid-snapped building ghosts, steam power, vein-constrained crusher, power accounting and fixed silver pulses. The production slice adds a powered carolean barracks and animal hall, timed/costed four-man foot squads and moose caroleans, type-radius group selection, formation-offset movement orders and hold/cancel. Balance values remain explicitly provisional until enemy waves land.
+Status: implementation underway. The deterministic RTS skeleton is startable as campaign row 4 in developer mode with a separate level id/state, top-down map, silver vein, fogde road, Karl CCLV landing, gamepad cursor and horizontal camera follow. Economy and production provide steam power, silver pulses, barracks/animal-hall timers, foot squads, moose caroleans and group orders. The first combat pass adds powered `Slow+Fire` defense towers, mutable unit/building/Karl health, stable target priority and all five planned Danish wave roles. Toldstormere, pikemen and mastiffs establish the line; powder boars telegraph for 45 frames before area damage; organ wagons stop outside ordinary unit range and bombard power. Balance values remain explicitly provisional.
 
 ## Dramatiskt löfte
 
@@ -165,7 +165,7 @@ Första implementationen använder gruppval per typ inom en liten radie, inte dr
 2. **RTS-skelett:** egen top-down-state, markör, kamera, grid, landad Karl och deterministisk tom karta. **Landed 2026-07-11.**
 3. **Kraft och ekonomi:** ångkraftverk, silverkross, skattkammare, byggplacering och HUD. **Landed 2026-07-11.**
 4. **Svensk produktion:** barack, fotkaroliner, djurhall och älgkaroliner. **Landed 2026-07-11.**
-5. **Danska vågor:** fem fiendetyper, stabil målsökning och försvarstorn. Commit och push.
+5. **Danska vågor:** fem fiendetyper, stabil målsökning och försvarstorn. **Landed 2026-07-11.**
 6. **Toldhuset:** markboss, markbredsida, seger/resultat och balanspass. Commit och push.
 7. **Presentation:** genererade assets, ånga, landningsanimation, musik, lokal radio och båda upplösningarna. Commit och push.
 
