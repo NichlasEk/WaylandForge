@@ -15,6 +15,7 @@ Status: checkpoint 1, 2A-2C, bosscheckpoint 3A-3C och den första grafikpolishen
 - Marktornet har separata hela och utslagna rödvita kanonassets. Kronens Tiende får en genererad bredsidekanon som speglas för styrbordssidan och fortfarande kan förstöras separat.
 - Riktade röda skott, vita kungliga salvor och guldsigillets ring/spiral använder egna små genererade projektilsprites. Kollisionsradier och banor är oförändrade.
 - Kodritade vrak, kanoner och projektiler ligger kvar som fallback om ett assetnamn saknas.
+- Bossens fas-2-docktorn använder mindre härledda kanonassets. Utslagna sidokanoner täcks av roterade/speglade rödvita vrakmoduler över en sotig skademask; de tidigare grå debugboxarna/kryssen visas endast utan assetpaket.
 
 ## Implementerad grafikpolish - 2026-07-11
 

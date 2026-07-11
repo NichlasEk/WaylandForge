@@ -59,6 +59,9 @@ COMBAT_DETAIL_SPRITES = [
     ("enemy_bridge_cannon", (0, 350, 500, 700), (38, 42)),
     ("boss_broadside_cannon", (500, 350, 1000, 700), (44, 30)),
     ("enemy_bridge_cannon_wreck", (1000, 350, 1499, 700), (38, 42)),
+    ("boss_dock_turret", (0, 350, 500, 700), (22, 24)),
+    ("boss_dock_turret_wreck", (1000, 350, 1499, 700), (22, 24)),
+    ("boss_broadside_cannon_wreck", (1000, 350, 1499, 700), (44, 34)),
     ("enemy_shot_red", (0, 700, 500, 1049), (8, 12)),
     ("enemy_shot_white", (500, 700, 1000, 1049), (8, 12)),
     ("enemy_shot_seal", (1000, 700, 1499, 1049), (10, 10)),
@@ -105,6 +108,8 @@ def append_sprites(
     for name, crop, size in definitions:
         sprite = chroma_alpha(source.crop(crop))
         sprite = trim_alpha(sprite)
+        if name == "boss_broadside_cannon_wreck":
+            sprite = sprite.transpose(Image.Transpose.ROTATE_270)
         sprite.thumbnail(size, Image.Resampling.LANCZOS)
         entries.append((name, sprite))
 

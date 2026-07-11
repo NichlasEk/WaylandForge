@@ -21,7 +21,7 @@ Rebuild the pack after editing/replacing the concept sheet:
 python tools/stormakt3020/build_assets.py
 ```
 
-The builder currently packs 39 named sprites, including normal/hot player states, environment parts, combat-detail assets and separate 320- and 400-pixel-wide scrolling backgrounds. Each background is followed by its vertical mirror, making both wrap boundaries exact instead of exposing a hard seam. Active radio cards alternate their neutral and speaking frames every eight simulation frames. All former code-drawn backgrounds, faces, player ship, bridge pieces, cannons and projectiles remain missing-asset fallbacks. The builder trims alpha and downsamples with high-quality filtering; gameplay keeps separate deterministic hitboxes.
+The builder currently packs 42 named sprites, including normal/hot player states, environment parts, combat-detail assets and separate 320- and 400-pixel-wide scrolling backgrounds. Smaller derived cannon/wreck sizes polish the boss attachments without duplicating source art. Each background is followed by its vertical mirror, making both wrap boundaries exact instead of exposing a hard seam. Active radio cards alternate their neutral and speaking frames every eight simulation frames. All former code-drawn backgrounds, faces, player ship, bridge pieces, cannons and projectiles remain missing-asset fallbacks. The builder trims alpha and downsamples with high-quality filtering; gameplay keeps separate deterministic hitboxes.
 
 To rebuild the transparent generated sheet from its chroma-key source:
 

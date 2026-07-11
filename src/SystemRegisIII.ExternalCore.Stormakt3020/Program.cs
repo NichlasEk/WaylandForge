@@ -1242,11 +1242,11 @@ internal sealed class StormaktGame
             }
             if (boss.LeftCannonHealth <= 0)
             {
-                DrawBossCannon(frame, x - BossCannonOffset, y + 7, 0, 0, 0, 0xff202932);
+                DrawGeneratedBossCannonWreck(frame, x - BossCannonOffset, y + 7, false);
             }
             if (boss.RightCannonHealth <= 0)
             {
-                DrawBossCannon(frame, x + BossCannonOffset, y + 7, 0, 0, 0, 0xff202932);
+                DrawGeneratedBossCannonWreck(frame, x + BossCannonOffset, y + 7, true);
             }
             DrawBossPhaseAttachments(frame, boss, x, y);
             DrawBossFinalEffects(frame, boss, x, y);
@@ -1366,6 +1366,16 @@ internal sealed class StormaktGame
 
     private void DrawDockTower(uint[] frame, int x, int y, int health)
     {
+        string assetName = health <= 0 ? "boss_dock_turret_wreck" : "boss_dock_turret";
+        if (_sprites?.TryGet(assetName, out Sprite dockTurret) == true)
+        {
+            DrawSprite(frame, dockTurret, x - dockTurret.Width / 2, y - dockTurret.Height / 2);
+            if (health is > 0 and < 25)
+            {
+                DrawLine(frame, x - 5, y - 5, x + 4, y + 5, 0xffff6b4a);
+            }
+            return;
+        }
         if (health <= 0)
         {
             DrawLine(frame, x - 7, y - 8, x + 7, y + 8, 0xff8d4938);
@@ -1381,6 +1391,27 @@ internal sealed class StormaktGame
         {
             DrawLine(frame, x - 5, y - 5, x + 4, y + 5, 0xffff6b4a);
         }
+    }
+
+    private void DrawGeneratedBossCannonWreck(uint[] frame, int x, int y, bool flipped)
+    {
+        if (_sprites?.TryGet("boss_broadside_cannon_wreck", out Sprite wreck) == true)
+        {
+            FillCircle(frame, x, y, 15, 0xff171c20);
+            int drawX = x - wreck.Width / 2;
+            int drawY = y - wreck.Height / 2;
+            if (flipped)
+            {
+                DrawSpriteFlippedX(frame, wreck, drawX, drawY);
+            }
+            else
+            {
+                DrawSprite(frame, wreck, drawX, drawY);
+            }
+            PutPixel(frame, x, y + 7, 0xffff8a4a);
+            return;
+        }
+        DrawBossCannon(frame, x, y, 0, 0, 0, 0xff202932);
     }
 
     private void DrawCircleOutline(uint[] frame, int centerX, int centerY, int radius, uint color)
