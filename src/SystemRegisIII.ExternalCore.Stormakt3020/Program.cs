@@ -1147,7 +1147,7 @@ internal sealed class StormaktGame
         if (_sprites?.TryGet(playerSpriteName, out Sprite player) == true ||
             _sprites?.TryGet("player", out player) == true)
         {
-            DrawSprite(frame, player, _shipX - (player.Width / 2), _shipY - (player.Height / 2) - 10);
+            DrawSprite(frame, player, _shipX - (player.Width / 2), _shipY - (player.Height / 2) - 16);
             if ((_previousButtons & (Up | Down | Left | Right)) != 0)
             {
                 DrawPlayerThrust(frame);
