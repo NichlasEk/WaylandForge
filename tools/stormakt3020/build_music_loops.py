@@ -27,6 +27,13 @@ class LoopEdit:
 
 EDITS = [
     LoopEdit(
+        source=Path("assets/stormakt3020/music/silverkroppen-faltmarsch-v1.wav"),
+        output=Path("assets/stormakt3020/music/silverkroppen-faltmarsch-loop-v1.wav"),
+        bpm=84,
+        beats_per_bar=4,
+        bars=16,
+    ),
+    LoopEdit(
         source=Path("assets/stormakt3020/music/skanska-skuggor-v1.wav"),
         output=Path("assets/stormakt3020/music/skanska-skuggor-loop-v1.wav"),
         bpm=92,

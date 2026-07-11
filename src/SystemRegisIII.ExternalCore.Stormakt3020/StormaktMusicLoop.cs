@@ -17,6 +17,7 @@ internal sealed class StormaktMusicLoop : IDisposable
     private readonly float[]? _menuSamples;
     private readonly float[] _combatSamples;
     private readonly float[]? _skanskaSamples;
+    private readonly float[]? _rtsSamples;
     private readonly float[]? _bossSamples;
     private readonly Dictionary<StormaktSound, LoadedEffect> _effects;
     private readonly Dictionary<StormaktVoice, LoadedEffect> _voices;
@@ -43,6 +44,7 @@ internal sealed class StormaktMusicLoop : IDisposable
         float[] samples,
         float[]? menuSamples,
         float[]? skanskaSamples,
+        float[]? rtsSamples,
         float[]? bossSamples,
         Dictionary<StormaktSound, LoadedEffect> effects,
         Dictionary<StormaktVoice, LoadedEffect> voices,
@@ -52,6 +54,7 @@ internal sealed class StormaktMusicLoop : IDisposable
         _menuSamples = menuSamples;
         _combatSamples = samples;
         _skanskaSamples = skanskaSamples;
+        _rtsSamples = rtsSamples;
         _bossSamples = bossSamples;
         _effects = effects;
         _voices = voices;
@@ -102,6 +105,8 @@ internal sealed class StormaktMusicLoop : IDisposable
                 float[]? menuSamples = File.Exists(menuPath) ? LoadPcm16StereoWav(menuPath) : null;
                 string skanskaPath = Path.Combine(musicDirectory, "skanska-skuggor-loop-v1.wav");
                 float[]? skanskaSamples = File.Exists(skanskaPath) ? LoadPcm16StereoWav(skanskaPath) : null;
+                string rtsPath = Path.Combine(musicDirectory, "silverkroppen-faltmarsch-loop-v1.wav");
+                float[]? rtsSamples = File.Exists(rtsPath) ? LoadPcm16StereoWav(rtsPath) : null;
                 string loopedBossPath = Path.Combine(musicDirectory, "kronans-sista-salva-loop-v2.wav");
                 string originalBossPath = Path.Combine(musicDirectory, "kronans-sista-salva-v1.wav");
                 string bossPath = File.Exists(loopedBossPath) ? loopedBossPath : originalBossPath;
@@ -111,11 +116,12 @@ internal sealed class StormaktMusicLoop : IDisposable
                 string socketPath = Environment.GetEnvironmentVariable("WAYLANDFORGE_AUDIO_SOCKET") ?? DefaultSocketPath;
                 string menuDescription = menuSamples is null ? "missing" : $"ready ({menuSamples.Length / Channels / SampleRate}s)";
                 string skanskaDescription = skanskaSamples is null ? "missing" : $"ready ({skanskaSamples.Length / Channels / SampleRate}s)";
+                string rtsDescription = rtsSamples is null ? "missing" : $"ready ({rtsSamples.Length / Channels / SampleRate}s)";
                 string bossDescription = bossSamples is null ? "missing" : $"ready ({bossSamples.Length / Channels / SampleRate}s)";
                 Console.Error.WriteLine($"Stormakt audio: loaded {Path.GetFileName(path)} ({samples.Length / Channels / SampleRate}s), " +
-                    $"menu march={menuDescription}, Skanska score={skanskaDescription}, boss score={bossDescription}, " +
+                    $"menu march={menuDescription}, Skanska score={skanskaDescription}, RTS score={rtsDescription}, boss score={bossDescription}, " +
                     $"{effects.Count} effects and {voices.Count} radio voices.");
-                return new StormaktMusicLoop(samples, menuSamples, skanskaSamples, bossSamples, effects, voices, socketPath);
+                return new StormaktMusicLoop(samples, menuSamples, skanskaSamples, rtsSamples, bossSamples, effects, voices, socketPath);
             }
             catch (Exception exception)
             {
@@ -255,6 +261,7 @@ internal sealed class StormaktMusicLoop : IDisposable
                 StormaktMusicTrack.Menu => _menuSamples,
                 StormaktMusicTrack.Combat => _combatSamples,
                 StormaktMusicTrack.Skanska => _skanskaSamples,
+                StormaktMusicTrack.Rts => _rtsSamples,
                 StormaktMusicTrack.Boss => _bossSamples,
                 _ => null,
             };
@@ -713,5 +720,6 @@ internal enum StormaktMusicTrack
     Menu,
     Combat,
     Skanska,
+    Rts,
     Boss,
 }

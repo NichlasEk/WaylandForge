@@ -43,6 +43,15 @@
       "thinking": false
     },
     {
+      "role": "level_04_silverkroppen_rts",
+      "file": "silverkroppen-faltmarsch-v1.wav",
+      "request": "prompts/silverkroppen-faltmarsch.json",
+      "task_id": "ffe9a6f8-5853-4b28-91e8-bac935d12935",
+      "seed": "339983766",
+      "duration_seconds": 60,
+      "thinking": false
+    },
+    {
       "role": "combat_fast",
       "file": "oresund-i-brand-v1.wav",
       "request": "prompts/oresund-i-brand.json",
@@ -62,6 +71,16 @@
     }
   ],
   "derived": [
+    {
+      "role": "level_04_silverkroppen_runtime_loop",
+      "file": "silverkroppen-faltmarsch-loop-v1.wav",
+      "source": "silverkroppen-faltmarsch-v1.wav",
+      "tool": "../../../tools/stormakt3020/build_music_loops.py",
+      "bpm": 84,
+      "bars": 16,
+      "duration_seconds": 45.714,
+      "runtime_crossfade_seconds": 0.5
+    },
     {
       "role": "level_02_skanska_runtime_loop",
       "file": "skanska-skuggor-loop-v1.wav",

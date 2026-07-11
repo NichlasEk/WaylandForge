@@ -98,6 +98,8 @@ Additional scored roles live under `music/`:
 - `music/tre-kronors-jarnmarsch-loop-v1.wav`: the active 16-bar, 88 BPM menu loop derived from the new march.
 - `music/skanska-skuggor-v1.wav`: dark nyckelharpa-led level theme for Skånska skuggor.
 - `music/skanska-skuggor-loop-v1.wav`: the active 21-bar, 92 BPM level loop with the generated silent tail removed.
+- `music/silverkroppen-faltmarsch-v1.wav`: the preserved 60-second local generation for the RTS mission.
+- `music/silverkroppen-faltmarsch-loop-v1.wav`: the active 16-bar, 84 BPM Silverkroppen field loop.
 - `oresund-i-brand-v1.wav`: faster normal-combat loop.
 - `kronans-sista-salva-v1.wav`: monumental boss loop.
 

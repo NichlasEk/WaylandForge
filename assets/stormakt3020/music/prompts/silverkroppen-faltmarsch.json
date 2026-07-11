@@ -1,0 +1,21 @@
+{
+  "prompt": "Instrumental field-building and battle theme for a Swedish 17th-century retro-futurist real-time strategy mission in a dark crystal forest. A stern patient Carolean field march in E minor at 84 BPM, built around a memorable low nyckelharpa ostinato, muted natural horns, bass viols, field snare, deep marching drum, wooden clacks and rhythmic steam-engine pistons. The first eight bars feel watchful and industrious while a base is deployed; then brass, heavier drums and short musket-like percussion accents add controlled battlefield urgency without changing tempo. Dark iron, wet timber, silver ore and hot brass atmosphere. Proud but never triumphant, enough space for Swedish and Danish radio dialogue, steady strategic pulse rather than frantic arcade combat. Begin musically at once, maintain a circular sixteen-bar form suitable for endless looping, and avoid a final cadence or fade. No vocals, no choir, no lyrics, no EDM, no rock guitar, no modern cinematic braams, no comedy, no cheerful major key, no silent ambient intro.",
+  "lyrics": "[Instrumental]",
+  "vocal_language": "unknown",
+  "audio_duration": 60,
+  "audio_format": "wav",
+  "task_type": "text2music",
+  "batch_size": 1,
+  "thinking": false,
+  "use_format": false,
+  "bpm": 84,
+  "key_scale": "E minor",
+  "time_signature": "4/4",
+  "inference_steps": 8,
+  "guidance_scale": 7.0,
+  "use_random_seed": true,
+  "constrained_decoding": true,
+  "use_cot_caption": true,
+  "use_cot_language": true,
+  "lm_negative_prompt": "vocals, choir, singing, lyrics, EDM, rock guitar, pop drums, comedy, cheerful major key, silence, ambient intro, triumphant fanfare, abrupt final cadence, fade out"
+}

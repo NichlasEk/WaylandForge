@@ -407,7 +407,12 @@ internal sealed class StormaktGame
         _bossRadioCard = null;
         _bossRadioAge = 0;
         _audio?.SetPaused(false);
-        _audio?.SwitchMusic(_levelId == 1 ? StormaktMusicTrack.Skanska : StormaktMusicTrack.Combat);
+        _audio?.SwitchMusic(_levelId switch
+        {
+            1 => StormaktMusicTrack.Skanska,
+            3 => StormaktMusicTrack.Rts,
+            _ => StormaktMusicTrack.Combat,
+        });
     }
 
     private void StartLevel(int levelId)
@@ -763,28 +768,28 @@ internal sealed class StormaktGame
 
     private void SpawnRtsEnemyWaves(RtsState rts)
     {
-        if (rts.CombatAge is 120 or 720)
+        if (rts.CombatAge is 600 or 1_800)
         {
-            SpawnRtsWave(rts, RtsEnemyType.TollStormer, rts.CombatAge == 120 ? 4 : 6, 58);
-            if (rts.CombatAge == 120) ActivateBossRadio(RtsClaimRadio);
+            SpawnRtsWave(rts, RtsEnemyType.TollStormer, rts.CombatAge == 600 ? 3 : 4, 58);
+            if (rts.CombatAge == 600) ActivateBossRadio(RtsClaimRadio);
         }
-        else if (rts.CombatAge is 300 or 900)
+        else if (rts.CombatAge is 960 or 2_160)
         {
-            SpawnRtsWave(rts, RtsEnemyType.CoinMastiff, rts.CombatAge == 300 ? 3 : 5, 92);
+            SpawnRtsWave(rts, RtsEnemyType.CoinMastiff, rts.CombatAge == 960 ? 2 : 3, 92);
         }
-        else if (rts.CombatAge is 480 or 1_080)
+        else if (rts.CombatAge is 1_320 or 2_520)
         {
-            SpawnRtsWave(rts, RtsEnemyType.LedgerPikeman, rts.CombatAge == 480 ? 4 : 6, 126);
+            SpawnRtsWave(rts, RtsEnemyType.LedgerPikeman, rts.CombatAge == 1_320 ? 3 : 4, 126);
         }
-        else if (rts.CombatAge is 660 or 1_260)
+        else if (rts.CombatAge is 1_680 or 2_880)
         {
-            SpawnRtsWave(rts, RtsEnemyType.PowderBoar, rts.CombatAge == 660 ? 2 : 4, 76);
-            if (rts.CombatAge == 660) ActivateBossRadio(RtsPowderRadio);
+            SpawnRtsWave(rts, RtsEnemyType.PowderBoar, rts.CombatAge == 1_680 ? 1 : 2, 76);
+            if (rts.CombatAge == 1_680) ActivateBossRadio(RtsPowderRadio);
         }
-        else if (rts.CombatAge is 840 or 1_440)
+        else if (rts.CombatAge is 2_040 or 3_240)
         {
-            SpawnRtsWave(rts, RtsEnemyType.OrganWagon, rts.CombatAge == 840 ? 1 : 2, 118);
-            if (rts.CombatAge == 840) ActivateBossRadio(RtsOrganRadio);
+            SpawnRtsWave(rts, RtsEnemyType.OrganWagon, 1, 118);
+            if (rts.CombatAge == 2_040) ActivateBossRadio(RtsOrganRadio);
         }
     }
 
@@ -818,7 +823,7 @@ internal sealed class StormaktGame
             double range = unit.Type == RtsUnitType.MooseCarolean ? 22 : 64;
             if (target is not null && DistanceSquared(unit.X, unit.Y, target.X, target.Y) <= range * range && unit.Cooldown == 0)
             {
-                target.Health -= unit.Type == RtsUnitType.MooseCarolean ? 18 : 7;
+                target.Health -= unit.Type == RtsUnitType.MooseCarolean ? 22 : 9;
                 unit.Cooldown = unit.Type == RtsUnitType.MooseCarolean ? 42 : 34;
                 _audio?.Trigger(unit.Type == RtsUnitType.MooseCarolean ? StormaktSound.RtsMooseCharge : StormaktSound.RtsCaroleanVolley);
             }
@@ -837,7 +842,7 @@ internal sealed class StormaktGame
                 .FirstOrDefault();
             if (target is not null && tower.Cooldown == 0)
             {
-                target.Health -= 10;
+                target.Health -= 14;
                 tower.Cooldown = 32;
                 _audio?.Trigger(StormaktSound.RtsTowerFire);
             }
@@ -877,11 +882,11 @@ internal sealed class StormaktGame
                 {
                     if (!_invincibleTestMode && nearbyUnit is not null && DistanceSquared(enemy.X, enemy.Y, nearbyUnit.X, nearbyUnit.Y) <= 42 * 42)
                     {
-                        nearbyUnit.Health -= 70;
+                        nearbyUnit.Health -= 48;
                     }
                     if (!_invincibleTestMode && powerTarget is not null && DistanceSquared(enemy.X, enemy.Y, powerTarget.X, powerTarget.Y) <= 48 * 48)
                     {
-                        powerTarget.Health -= 85;
+                        powerTarget.Health -= 58;
                     }
                     enemy.Health = 0;
                     _audio?.Trigger(StormaktSound.RtsPowderExplosion);
@@ -894,11 +899,11 @@ internal sealed class StormaktGame
                 {
                     if (!_invincibleTestMode && powerTarget is not null)
                     {
-                        powerTarget.Health -= 18;
+                        powerTarget.Health -= 12;
                     }
                     else if (!_invincibleTestMode)
                     {
-                        rts.KarlHealth -= 18;
+                        rts.KarlHealth -= 12;
                     }
                     enemy.Cooldown = 90;
                     _audio?.Trigger(StormaktSound.RtsOrganVolley);
@@ -909,7 +914,7 @@ internal sealed class StormaktGame
             {
                 if (enemy.Cooldown == 0)
                 {
-                    int damage = enemy.Type switch { RtsEnemyType.CoinMastiff => 9, RtsEnemyType.LedgerPikeman => 7, _ => 6 };
+                    int damage = enemy.Type switch { RtsEnemyType.CoinMastiff => 7, RtsEnemyType.LedgerPikeman => 5, _ => 4 };
                     if (!_invincibleTestMode && nearbyUnit is not null && targetX == nearbyUnit.X && targetY == nearbyUnit.Y)
                     {
                         nearbyUnit.Health -= damage;
@@ -2239,7 +2244,10 @@ internal sealed class StormaktGame
         int y = building.Y;
         string generatedName = building.Type switch
         {
-            RtsBuildingType.SteamPlant => (rts.Age / 18 & 1) == 0 ? "rts_steam_idle" : "rts_steam_work",
+            // Keep the physical plant on one stable frame. The generated
+            // working concept changes its actual chimney geometry, so steam
+            // is animated separately below instead of morphing the building.
+            RtsBuildingType.SteamPlant => "rts_steam_idle",
             RtsBuildingType.SilverCrusher => (rts.Age / 12 & 1) == 0 ? "rts_crusher_idle" : "rts_crusher_work",
             RtsBuildingType.Barracks => "rts_barracks",
             RtsBuildingType.AnimalHall => "rts_animal_hall",
@@ -2249,6 +2257,18 @@ internal sealed class StormaktGame
         if (_sprites?.TryGet(generatedName, out Sprite generated) == true)
         {
             DrawSprite(frame, generated, x - generated.Width / 2, y - generated.Height / 2);
+            if (building.Type == RtsBuildingType.SteamPlant)
+            {
+                for (int puff = 0; puff < 4; puff++)
+                {
+                    int phase = (rts.Age * 2 + puff * 13) % 48;
+                    int steamX = x + 7 + (int)Math.Round(Math.Sin((rts.Age + puff * 17) * 0.11) * 2.0);
+                    int steamY = y - 19 - phase / 2;
+                    int radius = 1 + phase / 16;
+                    uint color = phase < 28 ? 0xffc3cec8 : 0xff7f9189;
+                    FillCircle(frame, steamX, steamY, radius, color);
+                }
+            }
             if (building.Type == RtsBuildingType.Barracks)
             {
                 DrawRtsProductionBar(frame, x, y + generated.Height / 2 + 1, rts.BarracksTimer, 90);
@@ -2406,8 +2426,17 @@ internal sealed class StormaktGame
             bool attacking = enemy.Cooldown > 0 || enemy.FuseAge > 0;
             int step = !attacking ? ((rts.Age + enemy.AnimationPhase) / 5 & 1) : 0;
             int sway = !attacking ? ((rts.Age + enemy.AnimationPhase) / 10 % 3) - 1 : 0;
-            DrawSpriteFlippedX(frame, generated,
-                x - generated.Width / 2 + sway, y - generated.Height / 2 - step);
+            int drawX = x - generated.Width / 2 + sway;
+            int drawY = y - generated.Height / 2 - step;
+            bool sourceAlreadyFacesLeft = enemy.Type is RtsEnemyType.TollStormer or RtsEnemyType.PowderBoar;
+            if (sourceAlreadyFacesLeft)
+            {
+                DrawSprite(frame, generated, drawX, drawY);
+            }
+            else
+            {
+                DrawSpriteFlippedX(frame, generated, drawX, drawY);
+            }
             if (enemy.Type == RtsEnemyType.PowderBoar && enemy.FuseAge > 0)
             {
                 uint fuse = (enemy.FuseAge / 4 & 1) == 0 ? 0xffffd66b : 0xffff6b4a;
@@ -4425,7 +4454,12 @@ internal sealed class StormaktGame
             X = x;
             Y = y;
             Type = type;
-            Health = type == RtsBuildingType.DefenseTower ? 140 : 220;
+            Health = type switch
+            {
+                RtsBuildingType.SteamPlant => 380,
+                RtsBuildingType.DefenseTower => 180,
+                _ => 300,
+            };
         }
 
         public int X { get; }

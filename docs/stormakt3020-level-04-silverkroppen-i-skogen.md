@@ -167,7 +167,7 @@ Första implementationen använder gruppval per typ inom en liten radie, inte dr
 4. **Svensk produktion:** barack, fotkaroliner, djurhall och älgkaroliner. **Landed 2026-07-11.**
 5. **Danska vågor:** fem fiendetyper, stabil målsökning och försvarstorn. **Landed 2026-07-11.**
 6. **Toldhuset:** markboss, markbredsida, seger/resultat och balanspass. Commit och push.
-7. **Presentation:** genererade byggnads- och truppassets, arbets-/anfallsanimationer, nio lokala stridsljud samt sex svenska/danska händelseradior. 400x280 och 320x224 headless-verifieras; eget fältmusikspår återstår. **Major presentation pass landed 2026-07-11.**
+7. **Presentation:** genererade byggnads- och truppassets, arbets-/anfallsanimationer, nio lokala stridsljud, sex svenska/danska händelseradior samt egen 84 BPM ångdriven karolinsk RTS-fältmarsch. 400x280 och 320x224 headless-verifieras. **Landed 2026-07-11.**
 
 ## Icke-mål för första spelbara versionen
 
