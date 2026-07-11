@@ -23,6 +23,8 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
     private const int VBlankIntervalInstructions = 100_000;
 
     private readonly uint[] _frame = new uint[FrameWidth * FrameHeight];
+    private readonly uint[] _vdp1Frame = new uint[FrameWidth * FrameHeight];
+    private readonly uint[] _transparentRows = new uint[FrameHeight];
     private readonly string[] _biosCandidates =
     [
         Environment.GetEnvironmentVariable("WAYLANDFORGE_SATURN_BIOS") ?? string.Empty,
@@ -43,6 +45,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
     private HostCore.SaturnButtons _lastButtons;
     private string? _discPath;
     private bool _hasVideoFrame;
+    private bool _hasVdp1Frame;
 
     public ulong FrameIndex => _frameIndex;
     public SaturnCoreStatus Status => CreateStatus();
@@ -71,6 +74,9 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
         _smpcInterruptCount = 0;
         _lastButtons = HostCore.SaturnButtons.None;
         _hasVideoFrame = false;
+        _hasVdp1Frame = false;
+        Array.Clear(_frame);
+        Array.Clear(_vdp1Frame);
     }
 
     public void Dispose() => Reset();
@@ -212,27 +218,39 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
             commands.Any(static command =>
                 !command.Skip && command.CommandCode == 0 &&
                 command.CharacterWidth > 0 && command.CharacterHeight > 0);
-        if (!hasCompleteSprites)
+        if (hasCompleteSprites)
         {
-            for (int y = 0; y < FrameHeight; y++)
+            SaturnVdp1.Vdp1RenderResult rendered = SaturnVdp1.Vdp1SoftwareRenderer.Render(
+                runtime.SystemMap.Vdp1Area.Snapshot.Span,
+                runtime.SystemMap.Vdp2Cram.Snapshot.Span,
+                commands,
+                _transparentRows,
+                FrameWidth,
+                FrameHeight);
+            if (rendered.DrawnPixels > 0)
             {
-                _frame.AsSpan(y * FrameWidth, FrameWidth).Fill(backgroundRows[y]);
+                rendered.Frame.BgraPixels.Span.CopyTo(_vdp1Frame);
+                _hasVdp1Frame = true;
             }
-
-            _hasVideoFrame = runtime.SystemMap.Vdp2Registers.WriteCount > 0;
-            return;
         }
 
-        SaturnVdp1.Vdp1RenderResult rendered = SaturnVdp1.Vdp1SoftwareRenderer.Render(
-            runtime.SystemMap.Vdp1Area.Snapshot.Span,
-            runtime.SystemMap.Vdp2Cram.Snapshot.Span,
-            commands,
-            backgroundRows,
-            FrameWidth,
-            FrameHeight);
+        for (int y = 0; y < FrameHeight; y++)
+        {
+            _frame.AsSpan(y * FrameWidth, FrameWidth).Fill(backgroundRows[y]);
+        }
 
-        rendered.Frame.BgraPixels.Span.CopyTo(_frame);
-        _hasVideoFrame = true;
+        if (_hasVdp1Frame)
+        {
+            for (int i = 0; i < _frame.Length; i++)
+            {
+                if ((_vdp1Frame[i] & 0xFF00_0000u) != 0)
+                {
+                    _frame[i] = _vdp1Frame[i];
+                }
+            }
+        }
+
+        _hasVideoFrame = _hasVdp1Frame || runtime.SystemMap.Vdp2Registers.WriteCount > 0;
     }
 
     private static IReadOnlyList<SaturnVdp1.Vdp1Command> ReadVdp1CommandChain(ReadOnlySpan<byte> vram)
