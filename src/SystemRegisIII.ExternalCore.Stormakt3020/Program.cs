@@ -1363,25 +1363,40 @@ internal sealed class StormaktGame
     private void DrawSkanskaScenery(uint[] frame)
     {
         string backgroundName = _width <= 320 ? "skanska_background" : "skanska_background_wide";
-        if (_sprites?.TryGet(backgroundName, out _) == true)
+        bool generatedBackground = _sprites?.TryGet(backgroundName, out _) == true;
+        int pineY = ((_missionFrame / 2 + 80) % (_height + 180)) - 90;
+        int kilnY = ((_missionFrame / 2 + 250) % (_height + 220)) - 110;
+        int wreckY = ((_missionFrame / 2 + 430) % (_height + 260)) - 130;
+        if (_sprites?.TryGet("skanska_crystal_pines", out Sprite pines) == true &&
+            _sprites.TryGet("skanska_kiln_moon", out Sprite kiln) &&
+            _sprites.TryGet("skanska_mining_wreck", out Sprite wreck))
         {
+            DrawSprite(frame, pines, 4, pineY - pines.Height / 2);
+            DrawSprite(frame, kiln, _width - kiln.Width - 7, kilnY - kiln.Height / 2);
+            DrawSprite(frame, wreck, 10, wreckY - wreck.Height / 2);
             return;
         }
-        for (int index = 0; index < 8; index++)
+        if (!generatedBackground)
         {
-            int y = ((index * 71 + _missionFrame / 3) % (_height + 100)) - 50;
-            int x = 18 + ((index * 109) % Math.Max(1, _width - 36));
-            uint crystal = (index & 1) == 0 ? 0xff24463b : 0xff342f35;
-            FillTriangle(frame, x, y - 20, x - 9, y + 15, x + 9, y + 15, crystal);
-            FillTriangle(frame, x, y - 10, x - 15, y + 21, x + 15, y + 21, 0xff192f2a);
-            DrawLine(frame, x, y - 17, x, y + 18, 0xff4b7a5d);
+            for (int index = 0; index < 8; index++)
+            {
+                int y = ((index * 71 + _missionFrame / 3) % (_height + 100)) - 50;
+                int x = 18 + ((index * 109) % Math.Max(1, _width - 36));
+                uint crystal = (index & 1) == 0 ? 0xff24463b : 0xff342f35;
+                FillTriangle(frame, x, y - 20, x - 9, y + 15, x + 9, y + 15, crystal);
+                FillTriangle(frame, x, y - 10, x - 15, y + 21, x + 15, y + 21, 0xff192f2a);
+                DrawLine(frame, x, y - 17, x, y + 18, 0xff4b7a5d);
+            }
         }
-        int kilnY = ((_missionFrame / 2 + 190) % 620) - 90;
-        int kilnX = _width - 52;
+        int kilnX = _width - 38;
+        FillTriangle(frame, 24, pineY - 34, 7, pineY + 34, 41, pineY + 34, 0xff192f2a);
+        DrawLine(frame, 24, pineY - 31, 24, pineY + 31, 0xff4b7a5d);
         FillCircle(frame, kilnX, kilnY, 22, 0xff24282a);
         FillCircle(frame, kilnX, kilnY, 14, 0xff15191a);
         FillCircle(frame, kilnX - 4, kilnY + 3, 4, 0xff9a4f2d);
         BlendPixel(frame, kilnX - 4, kilnY + 3, 0xffff8a4a, 110);
+        DrawRect(frame, 8, wreckY - 15, 39, 30, 0xff171d1b);
+        DrawLine(frame, 10, wreckY + 12, 44, wreckY - 12, 0xff79523a);
     }
 
     private void DrawSorenBackgroundPass(uint[] frame)

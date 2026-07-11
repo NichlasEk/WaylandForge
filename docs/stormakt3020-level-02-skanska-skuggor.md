@@ -10,7 +10,7 @@ Sören's generated three-state corsair crosses the background without collision 
 
 Current audio slice: `skanska-skuggor-loop-v1.wav` is the dedicated runtime score, selected through the level id and isolated from Stora Bält combat music.
 
-Current world slice: three deterministic copper/green signal beacons enter during the 60-second skeleton. They are destructible physical targets with readable code-drawn fallback art. Dark mist drones reveal their silhouette around a green aimed shot, while Danish red/white cargo barges establish the fogde convoy with a slower aimed volley.
+Current world slice: complete. Three deterministic copper/green signal beacons enter during the 60-second skeleton. They are destructible physical targets with readable code-drawn fallback art. Dark mist drones reveal their silhouette around a green aimed shot, while Danish red/white cargo barges establish the fogde convoy with a slower aimed volley. Transparent generated crystal-pine, kiln-moon and mining-hoist props cross the foreground edges without obscuring the play lane.
 
 Current dialogue slice: four Swedish pilot lines for Ebba and Sören are generated through synthetic VoxCPM2 casting references and Dots MF line rendering, then passed through the deterministic runtime radio filter. Sören transmissions use their own copper/green frame rather than Danish red/white.
 
@@ -102,7 +102,7 @@ Palett: nästan svart järn, oxiderad koppar, dämpat skogsgrönt och signalgrö
 
 1. **Level select och plan:** två synliga banposter, bana 1 startbar, bana 2 märkt under byggnad. Commit och push.
 2. **Snapphaneidentitet:** Sörens kapare/porträtt, första radio och ordlös bakgrundspassage. Commit och push.
-3. **Banskelett:** egen bakgrund, 60-sekunderstidslinje, konvoj och signalfyrar. Commit och push.
+3. **Banskelett:** egen bakgrund, 60-sekunderstidslinje, konvoj och signalfyrar. **Landed 2026-07-11.**
 4. **Miniboss:** två läsbara faser och avbruten duell. Commit och push.
 5. **Glimminge Järn:** presentation, två faser, död och resultat. Commit och push.
 

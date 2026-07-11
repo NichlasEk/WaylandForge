@@ -10,6 +10,8 @@
 
 `stormakt-skanska-background-v1.png` is the starless black-forest mining plate for level 2: crystal spruce formations, ironworks, fog and deep red aurora rather than open space.
 
+`stormakt-skanska-props-v1.png` supplies transparent crystal-pine, kiln-moon and mining-hoist foreground sprites for level 2. The retained `-source.png` is the flat magenta generation source used for deterministic local alpha removal.
+
 `stormakt-bridge-cannons-projectiles-v1.png` adds three bridge-collapse pieces, intact/destroyed Danish bridge cannon states, a detachable boss broadside cannon and red/white/gold enemy projectile families. Runtime uses the wreck pieces during the existing 45-frame collapse and mirrors the broadside module for the boss's right side.
 
 Prompt summary:
