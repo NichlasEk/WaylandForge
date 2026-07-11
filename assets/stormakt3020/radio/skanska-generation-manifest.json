@@ -121,28 +121,28 @@
     {
       "kind": "reference",
       "role": "kung-christian",
-      "job_id": "8657082e36074c65b74668c269b8d4cf",
+      "job_id": "5f986fda55a449ec91f886e4daaab3a0",
       "file": "assets/stormakt3020/radio/references/kung-christian-reference.wav",
-      "sha256": "d6eda56e8651eff4ba889f2af0ccb91ebfa3fcfd2120d103d7e4afa939468195",
+      "sha256": "391fd7d3d32e09408e2fa6cb3e1fc64b8d57600861322173df6e27cffcd70bf9",
       "request": {
-        "text": "Jeg taler til Kronens samlede flåde. Dannebrog holder linjen mellem stjernerne, og hvert skib svarer på mit signal. Fjenden har brudt fogdens segl, men rigets vilje står fast. Lad maskinerne vågne, lad fregatterne vende, og før dem levende frem for tronen.",
+        "text": "Alle fregatter frem! Hold Dannebrog højt og luk deres flugtvej! Jeg vil høre kanonerne svare fra hver eneste bro. De svenske blåfrakker har hånet min krone for sidste gang. Bryd deres linje, knus deres skjolde, og driv Karl tohundrede femoghalvtreds levende frem for mig!",
         "language": "da",
-        "voice_instruction": "A clearly male adult Danish king and battle-fleet commander, very deep rugged masculine bass-baritone with heavy chest resonance, stern older war leader, harsh controlled anger, slow forceful ceremonial Danish diction. Unmistakably a large intimidating man. No feminine pitch, no softness, no youthful voice, no comedy, no uncontrolled shouting.",
+        "voice_instruction": "A powerful barrel-chested adult Danish male war king, huge booming rough bass-baritone, loud military projection, gravel and iron in the chest, barking furious orders across cannon fire. Angry Danish naval commander who dominates a battlefield without sounding old, weak, refined, feminine, soft, breathy or comedic. Strong consonants, broad resonance, controlled rage, unmistakably masculine physical power.",
         "model_backend": "voxcpm2",
         "output_format": "wav",
         "normalize": false,
-        "seed": 302044
+        "seed": 873021
       }
     },
     {
       "kind": "line",
       "line": "christian-brutet-segl",
       "role": "kung-christian",
-      "job_id": "c558667349b04832a7787714744f7073",
+      "job_id": "5d337a1a3b3142cc87419d86a4329b90",
       "file": "assets/stormakt3020/radio/raw/christian-brutet-segl-da-raw.wav",
-      "sha256": "b5a966736a1efaf9212c24e8c09a59b529702c2361d58b6011a715274fbb790a",
+      "sha256": "4a81ee9f71fd05505bd2196ede2881f746e363d58aadd225bb456cff587d2ac3",
       "request": "assets/stormakt3020/radio/raw/christian-brutet-segl-da-request.json",
-      "reference_sha256": "d6eda56e8651eff4ba889f2af0ccb91ebfa3fcfd2120d103d7e4afa939468195"
+      "reference_sha256": "391fd7d3d32e09408e2fa6cb3e1fc64b8d57600861322173df6e27cffcd70bf9"
     }
   ],
   "service": "http://127.0.0.1:8765",

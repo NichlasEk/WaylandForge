@@ -32,9 +32,9 @@
       "id": "kung-christian",
       "speaker": "KUNG CHRISTIAN",
       "language": "da",
-      "voice_instruction": "A clearly male adult Danish king and battle-fleet commander, very deep rugged masculine bass-baritone with heavy chest resonance, stern older war leader, harsh controlled anger, slow forceful ceremonial Danish diction. Unmistakably a large intimidating man. No feminine pitch, no softness, no youthful voice, no comedy, no uncontrolled shouting.",
-      "reference_text": "Jeg taler til Kronens samlede flåde. Dannebrog holder linjen mellem stjernerne, og hvert skib svarer på mit signal. Fjenden har brudt fogdens segl, men rigets vilje står fast. Lad maskinerne vågne, lad fregatterne vende, og før dem levende frem for tronen.",
-      "reference_seed": 302044
+      "voice_instruction": "A powerful barrel-chested adult Danish male war king, huge booming rough bass-baritone, loud military projection, gravel and iron in the chest, barking furious orders across cannon fire. Angry Danish naval commander who dominates a battlefield without sounding old, weak, refined, feminine, soft, breathy or comedic. Strong consonants, broad resonance, controlled rage, unmistakably masculine physical power.",
+      "reference_text": "Alle fregatter frem! Hold Dannebrog højt og luk deres flugtvej! Jeg vil høre kanonerne svare fra hver eneste bro. De svenske blåfrakker har hånet min krone for sidste gang. Bryd deres linje, knus deres skjolde, og driv Karl tohundrede femoghalvtreds levende frem for mig!",
+      "reference_seed": 873021
     }
   ],
   "lines": [
@@ -61,12 +61,12 @@
       "role": "kung-christian",
       "level": 1,
       "frame": 1380,
-      "text": "I har brudt fogdens segl. Nu møder I min flåde.",
+      "text": "I har brudt mit segl. Nu møder I min flåde!",
       "subtitle_lines": ["BRUDT SEGL", "KRONENS FLÅDE"],
-      "seed": 302143,
-      "dots_num_steps": 8,
-      "dots_guidance_scale": 1.8,
-      "dots_speaker_scale": 1.15
+      "seed": 873113,
+      "dots_num_steps": 10,
+      "dots_guidance_scale": 1.7,
+      "dots_speaker_scale": 1.35
     },
     {
       "id": "rasmus-kronens-tiende",

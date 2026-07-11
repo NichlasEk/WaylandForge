@@ -8,7 +8,7 @@ Written ship designation `KARL CCLV` is retained in the HUD, while Swedish speec
 
 Casting references can likewise be repaired without moving the rest of the cast using `render_radio_cast.py references --role ROLE_ID --force`. Christian's second pilot uses an explicitly deep adult male bass-baritone role brief after the first reference presented too high and feminine.
 
-Christian's third line pilot simplifies the Danish sentence for harder articulation, uses eight Dots steps with stronger text guidance and lower speaker exaggeration, and has a role-local runtime gain of 0.94. Other voices retain their existing mix gains.
+Christian's fourth pilot is a full recast, not a parameter tweak: a new VoxCPM2 seed and angry battlefield casting text produce a new 12.96-second synthetic reference, which Dots follows for a short forceful Danish command. The filtered line averages -13.5 dB versus the prior pilot's -19.3 dB, and Christian alone uses runtime gain 0.98. Other voices retain their existing references and mix gains.
 
 ## Målbild
 

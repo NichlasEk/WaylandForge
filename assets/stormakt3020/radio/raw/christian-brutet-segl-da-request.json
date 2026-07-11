@@ -1,12 +1,12 @@
 {
-  "text": "I har brudt fogdens segl. Nu møder I min flåde.",
+  "text": "I har brudt mit segl. Nu møder I min flåde!",
   "language": "da",
   "model_backend": "dots.tts-mf",
   "output_format": "wav",
   "normalize": false,
-  "prompt_text": "Jeg taler til Kronens samlede flåde. Dannebrog holder linjen mellem stjernerne, og hvert skib svarer på mit signal. Fjenden har brudt fogdens segl, men rigets vilje står fast. Lad maskinerne vågne, lad fregatterne vende, og før dem levende frem for tronen.",
-  "seed": 302143,
-  "dots_num_steps": 8,
-  "dots_guidance_scale": 1.8,
-  "dots_speaker_scale": 1.15
+  "prompt_text": "Alle fregatter frem! Hold Dannebrog højt og luk deres flugtvej! Jeg vil høre kanonerne svare fra hver eneste bro. De svenske blåfrakker har hånet min krone for sidste gang. Bryd deres linje, knus deres skjolde, og driv Karl tohundrede femoghalvtreds levende frem for mig!",
+  "seed": 873113,
+  "dots_num_steps": 10,
+  "dots_guidance_scale": 1.7,
+  "dots_speaker_scale": 1.35
 }
