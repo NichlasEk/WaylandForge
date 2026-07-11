@@ -8,9 +8,9 @@ Stormakt ska använda korta videokominslag i stilen från äldre japanska shmups
 
 Dialogen ska ge fienderna personlighet utan att dölja projektiler eller bli en filmsekvens. En replik bör normalt vara 1.5-4 sekunder och aldrig bära information som spelaren måste höra för att överleva.
 
-## Bildlayout vid 320x224
+## Bildlayout vid 400x280 (med 320x224-legacy)
 
-- Allierade sändare visas uppe till vänster; fiender uppe till höger.
+- Allierade sändare visas uppe till vänster; fiender uppe till höger. Kortens pixelmått behålls i wide field och tar därför mindre relativ skärmyta.
 - Ytterram: 138x48 pixlar, placerad direkt under den 16 pixlar höga HUD-raden.
 - Porträtt: 38x38 pixlar med två bildrutor för mun/radiobrus, inte full läppsynk.
 - Namn/rang: en 7 pixlar hög färgad remsa.

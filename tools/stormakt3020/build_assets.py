@@ -97,6 +97,15 @@ def append_sprites(
         entries.append((name, sprite))
 
 
+def mirrored_background(source: Image.Image, width: int, height: int) -> Image.Image:
+    plate = source.copy()
+    plate.thumbnail((width, height), Image.Resampling.LANCZOS)
+    seamless = Image.new("RGBA", (plate.width, plate.height * 2))
+    seamless.paste(plate, (0, 0))
+    seamless.paste(ImageOps.flip(plate), (0, plate.height))
+    return seamless
+
+
 def build(
     input_path: Path,
     danish_input_path: Path,
@@ -118,11 +127,8 @@ def build(
     append_sprites(entries, portrait_source, RADIO_PORTRAITS)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
-    background_source.thumbnail((320, 700), Image.Resampling.LANCZOS)
-    seamless_background = Image.new("RGBA", (background_source.width, background_source.height * 2))
-    seamless_background.paste(background_source, (0, 0))
-    seamless_background.paste(ImageOps.flip(background_source), (0, background_source.height))
-    entries.append(("stora_balt_background", seamless_background))
+    entries.append(("stora_balt_background", mirrored_background(background_source, 320, 700)))
+    entries.append(("stora_balt_background_wide", mirrored_background(background_source, 400, 875)))
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("wb") as handle:

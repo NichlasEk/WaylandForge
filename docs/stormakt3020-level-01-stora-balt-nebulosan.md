@@ -2,6 +2,13 @@
 
 Status: checkpoint 1, 2A-2C, bosscheckpoint 3A-3C och den första grafikpolishen är klara. Bana 1 har nu spelbar genomflygning, tre bossfaser, resultatsekvens, genererad bakgrund och fysiska miljöassets; separat balans- och ljudpolish återstår.
 
+## Wide field-checkpoint - 2026-07-11
+
+- Standardupplösningen är 400x280, 25 procent större än prototypens 320x224 i båda riktningarna. Skepp/assets behåller sin pixelstorlek och upplevs därför mindre med mer spelrum runt sig.
+- HUD, radio, titlar, bosskort och resultatkort är förankrade mot skärmkanter eller dynamiskt centrerade.
+- Fiendeformationer, kedjeankare, bossens sidledspass och fas-3-rusning använder hela det bredare fältet.
+- WFSA innehåller separata sömlösa 320- och 400-pixelsbakgrunder. `WAYLANDFORGE_STORMAKT_LEGACY_320=1` återställer prototypfältet för A/B-test.
+
 ## Implementerad grafikpolish - 2026-07-11
 
 - Den kodritade himlen/nebulosan har ersatts av en genererad, hög vertikal Stora Bält-plåt som rullar långsamt bakom stjärnlagret. Mittkorridoren är avsiktligt mörk och lågkontrast.
@@ -206,7 +213,7 @@ Bossradion visas färdigt före första skottmönstret och följer reglerna i `d
 
 - Samma input ger samma fiender, skott och bossmönster mellan körningar.
 - `ÅTERTÅGET`, `ÖVER`, `BÄLT`, `POÄNG` och `BÄLTET ÄR ÖPPET` renderas med riktiga ÅÄÖ-glyfer.
-- Luftfiender, markhot och bakgrund går att skilja i en 320x224-capture utan att pausa.
+- Luftfiender, markhot och bakgrund går att skilja i både 400x280-standardcapture och 320x224-legacycapture utan att pausa.
 - Inget torn skjuter utan minst 0.8 sekunders visuell förvarning första gången det introduceras.
 - Bossen når alla tre faser, ändrar mönster när sidokanoner förstörts och kan besegras utan träff med ett fast testinput.
 - Musikbyten lämnar inga gamla PCM-paket i kön och SFX mixas utan samplevärden över ±0.98.

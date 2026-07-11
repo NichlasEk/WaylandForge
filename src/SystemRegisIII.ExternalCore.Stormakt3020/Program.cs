@@ -2,8 +2,10 @@ using System.Buffers.Binary;
 using System.Text;
 using System.Runtime.InteropServices;
 
-const int Width = 320;
-const int Height = 224;
+bool legacyResolution = string.Equals(
+    Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_LEGACY_320"), "1", StringComparison.Ordinal);
+int Width = legacyResolution ? 320 : 400;
+int Height = legacyResolution ? 224 : 280;
 const uint FrameMagic = 0x58454657; // WFEX
 const byte StepCommand = (byte)'S';
 
@@ -88,7 +90,7 @@ internal sealed class StormaktGame
     private readonly List<EnemyShot> _enemyShots = [];
     private readonly List<GroundTarget> _groundTargets = [];
     private readonly List<AnchorHazard> _anchorHazards = [];
-    private readonly Star[] _stars = new Star[92];
+    private readonly Star[] _stars;
     private readonly HashSet<int> _skippedRadioCards = [];
     private static readonly RadioCard[] RadioCards =
     [
@@ -124,6 +126,7 @@ internal sealed class StormaktGame
     {
         _width = width;
         _height = height;
+        _stars = new Star[width <= 320 ? 92 : 128];
         _sprites = sprites;
         _audio = audio;
         Reset();
@@ -159,13 +162,13 @@ internal sealed class StormaktGame
 
         StepRadio(buttons);
 
-        int speed = (buttons & Slow) != 0 ? 2 : 4;
+        int speed = (buttons & Slow) != 0 ? (_width <= 320 ? 2 : 3) : (_width <= 320 ? 4 : 5);
         if ((buttons & Left) != 0) _shipX -= speed;
         if ((buttons & Right) != 0) _shipX += speed;
         if ((buttons & Up) != 0) _shipY -= speed;
         if ((buttons & Down) != 0) _shipY += speed;
-        _shipX = Math.Clamp(_shipX, 14, _width - 14);
-        _shipY = Math.Clamp(_shipY, 28, _height - 18);
+        _shipX = Math.Clamp(_shipX, 22, _width - 22);
+        _shipY = Math.Clamp(_shipY, 48, _height - 18);
 
         _cooldown = Math.Max(0, _cooldown - 1);
         _altCooldown = Math.Max(0, _altCooldown - 1);
@@ -224,9 +227,11 @@ internal sealed class StormaktGame
         DrawStageClear(frame);
         if (_gameOver)
         {
-            DrawRect(frame, 76, 92, 168, 42, 0xdd090b10);
-            DrawText(frame, 92, 102, "FLOTTAN FÖLL", 0xffff6b7f);
-            DrawText(frame, 98, 118, "START ÅTERKALLAR", 0xffffd66b);
+            int panelX = (_width - 168) / 2;
+            int panelY = (_height - 42) / 2;
+            DrawRect(frame, panelX, panelY, 168, 42, 0xdd090b10);
+            DrawText(frame, panelX + 16, panelY + 10, "FLOTTAN FÖLL", 0xffff6b7f);
+            DrawText(frame, panelX + 22, panelY + 26, "START ÅTERKALLAR", 0xffffd66b);
         }
     }
 
@@ -343,7 +348,7 @@ internal sealed class StormaktGame
                 continue;
             }
 
-            if (target.Type == GroundTargetType.Turret && target.Enabled && target.Y is > 24 and < 174)
+            if (target.Type == GroundTargetType.Turret && target.Enabled && target.Y > 24 && target.Y < _height - 50)
             {
                 int cycle = target.Age % 180;
                 if (cycle is 88 or 96 or 104)
@@ -492,7 +497,8 @@ internal sealed class StormaktGame
         }
         else
         {
-            boss.X = (_width / 2.0) + Math.Sin((boss.Age - 180) * 0.012) * 54.0;
+            double sweep = _width <= 320 ? 54.0 : 68.0;
+            boss.X = (_width / 2.0) + Math.Sin((boss.Age - 180) * 0.012) * sweep;
         }
 
         for (int shotIndex = _shots.Count - 1; shotIndex >= 0; shotIndex--)
@@ -611,7 +617,8 @@ internal sealed class StormaktGame
             if (attackFrame % 240 == 30)
             {
                 int anchorIndex = attackFrame / 240;
-                _anchorHazards.Add(new AnchorHazard(72 + ((anchorIndex * 83) % 176), 0));
+                int span = Math.Max(1, _width - 144);
+                _anchorHazards.Add(new AnchorHazard(72 + ((anchorIndex * 83) % span), 0));
             }
         }
         else if (boss.Phase == 2 && boss.PhaseAge >= 180)
@@ -719,10 +726,13 @@ internal sealed class StormaktGame
 
     private void StepBossPhaseThreeMovement(BossState boss)
     {
+        const double homeY = 58.0;
+        double rushY = _height - 74.0;
+        double rushDistance = rushY - homeY;
         if (boss.PhaseAge < 180)
         {
             boss.X = (_width / 2.0) + Math.Sin(boss.PhaseAge * 0.018) * 28.0;
-            boss.Y = 58.0;
+            boss.Y = homeY;
             return;
         }
 
@@ -734,23 +744,23 @@ internal sealed class StormaktGame
         boss.X = boss.RushX;
         if (attackFrame is >= 48 and < 82)
         {
-            boss.Y = 58.0 + (attackFrame - 48) * (92.0 / 34.0);
+            boss.Y = homeY + (attackFrame - 48) * (rushDistance / 34.0);
         }
         else if (attackFrame is >= 82 and < 120)
         {
-            boss.Y = 150.0 - (attackFrame - 82) * (92.0 / 38.0);
+            boss.Y = rushY - (attackFrame - 82) * (rushDistance / 38.0);
         }
         else if (attackFrame is >= 178 and < 212)
         {
-            boss.Y = 58.0 + (attackFrame - 178) * (92.0 / 34.0);
+            boss.Y = homeY + (attackFrame - 178) * (rushDistance / 34.0);
         }
         else if (attackFrame is >= 212 and < 250)
         {
-            boss.Y = 150.0 - (attackFrame - 212) * (92.0 / 38.0);
+            boss.Y = rushY - (attackFrame - 212) * (rushDistance / 38.0);
         }
         else
         {
-            boss.Y = 58.0;
+            boss.Y = homeY;
             if (attackFrame > 250)
             {
                 boss.X = (_width / 2.0) + Math.Sin((attackFrame - 250) * 0.018) * 34.0;
@@ -938,7 +948,8 @@ internal sealed class StormaktGame
 
     private void SpawnFormation(EnemyWave wave, int volley)
     {
-        int center = 62 + ((volley * 71 + wave.Kind * 43) % 196);
+        int centerSpan = Math.Max(1, _width - 124);
+        int center = 62 + ((volley * 71 + wave.Kind * 43) % centerSpan);
         int radius = wave.Kind == 2 ? 12 : wave.Kind == 1 ? 10 : 8;
         int speed = wave.Kind == 2 ? 1 : 2;
         int health = wave.Kind == 2 ? 8 : wave.Kind == 1 ? 6 : 4;
@@ -1005,7 +1016,8 @@ internal sealed class StormaktGame
 
     private void DrawSky(uint[] frame)
     {
-        if (_sprites?.TryGet("stora_balt_background", out Sprite background) == true)
+        string backgroundName = _width <= 320 ? "stora_balt_background" : "stora_balt_background_wide";
+        if (_sprites?.TryGet(backgroundName, out Sprite background) == true)
         {
             int scroll = (_missionFrame / 3) % background.Height;
             DrawSprite(frame, background, 0, scroll - background.Height);
@@ -1033,7 +1045,8 @@ internal sealed class StormaktGame
 
     private void DrawNebula(uint[] frame)
     {
-        if (_sprites?.TryGet("stora_balt_background", out _) == true)
+        string backgroundName = _width <= 320 ? "stora_balt_background" : "stora_balt_background_wide";
+        if (_sprites?.TryGet(backgroundName, out _) == true)
         {
             return;
         }
@@ -1067,7 +1080,7 @@ internal sealed class StormaktGame
             DrawSprite(frame, asteroids, asteroidX, asteroidY);
 
             int generatedWreckY = ((_missionFrame * 3 / 4 + 170) % 760) - 120;
-            DrawSprite(frame, wreck, 210, generatedWreckY - wreck.Height / 2);
+            DrawSprite(frame, wreck, _width - 110, generatedWreckY - wreck.Height / 2);
 
             int generatedBridgeY = ((_missionFrame * 3 / 4 + 510) % 980) - 180;
             DrawSprite(frame, leftArch, -18, generatedBridgeY - leftArch.Height / 2);
@@ -1475,7 +1488,7 @@ internal sealed class StormaktGame
                     DrawLine(frame, target.X - 8, target.Y - 7, target.X + 8, target.Y + 8, 0xff30363a);
                 }
                 int generatedCycle = target.Age % 180;
-                if (target.Enabled && generatedCycle is >= 40 and < 88 && target.Y is > 24 and < 174)
+                if (target.Enabled && generatedCycle is >= 40 and < 88 && target.Y > 24 && target.Y < _height - 50)
                 {
                     uint lockColor = (generatedCycle & 7) < 4 ? 0xffc51f35 : 0xff6f2631;
                     DrawLine(frame, target.X, target.Y + 12, _shipX, _shipY, lockColor);
@@ -1487,7 +1500,7 @@ internal sealed class StormaktGame
             DrawRect(frame, target.X - 7, target.Y - 6, 14, 12, turret);
             DrawLine(frame, target.X, target.Y, target.X, target.Y + 16, target.Enabled ? 0xfff2eee4 : 0xff62696c);
             int cycle = target.Age % 180;
-            if (target.Enabled && cycle is >= 40 and < 88 && target.Y is > 24 and < 174)
+            if (target.Enabled && cycle is >= 40 and < 88 && target.Y > 24 && target.Y < _height - 50)
             {
                 uint lockColor = (cycle & 7) < 4 ? 0xffc51f35 : 0xff6f2631;
                 DrawLine(frame, target.X, target.Y + 8, _shipX, _shipY, lockColor);
@@ -1660,12 +1673,13 @@ internal sealed class StormaktGame
     private void DrawHud(uint[] frame)
     {
         DrawText(frame, 6, 5, "KARL CCLV", 0xffffd66b);
-        DrawText(frame, 76, 5, "STORMAKT 3020", 0xff7fc7ff);
-        DrawText(frame, 204, 5, "POÄNG " + _score.ToString("000000"), 0xff7fc7ff);
+        DrawText(frame, (_width - 78) / 2, 5, "STORMAKT 3020", 0xff7fc7ff);
+        DrawText(frame, _width - 116, 5, "POÄNG " + _score.ToString("000000"), 0xff7fc7ff);
         DrawText(frame, 6, _height - 9, "LIV " + _lives, 0xffff6b7f);
-        DrawText(frame, 62, _height - 9, "Z ELD  X BREDSIDA", 0xffb7c7d6);
-        DrawRect(frame, 268, _height - 8, 44, 4, 0xff2a3440);
-        DrawRect(frame, 268, _height - 8, Math.Clamp(_heat, 0, 120) * 44 / 120, 4, _heat > 80 ? 0xffff6b4a : 0xffffd66b);
+        DrawText(frame, (_width - 114) / 2, _height - 9, "Z ELD  X BREDSIDA", 0xffb7c7d6);
+        int heatX = _width - 52;
+        DrawRect(frame, heatX, _height - 8, 44, 4, 0xff2a3440);
+        DrawRect(frame, heatX, _height - 8, Math.Clamp(_heat, 0, 120) * 44 / 120, 4, _heat > 80 ? 0xffff6b4a : 0xffffd66b);
     }
 
     private void DrawBossHud(uint[] frame)
@@ -1675,17 +1689,18 @@ internal sealed class StormaktGame
         {
             return;
         }
-        DrawRect(frame, 57, 18, 206, 16, 0xff080f18);
-        DrawText(frame, 67, 21, "KRONENS TIENDE", 0xffffd6b0);
-        DrawRect(frame, 158, 23, 96, 5, 0xff2a3036);
-        DrawRect(frame, 158, 23, Math.Clamp(boss.Health, 0, BossPhaseOneHealth) * 96 / BossPhaseOneHealth, 5, 0xffc51f35);
+        int hudX = (_width - 206) / 2;
+        DrawRect(frame, hudX, 18, 206, 16, 0xff080f18);
+        DrawText(frame, hudX + 10, 21, "KRONENS TIENDE", 0xffffd6b0);
+        DrawRect(frame, hudX + 101, 23, 96, 5, 0xff2a3036);
+        DrawRect(frame, hudX + 101, 23, Math.Clamp(boss.Health, 0, BossPhaseOneHealth) * 96 / BossPhaseOneHealth, 5, 0xffc51f35);
         if (boss.LeftCannonHealth <= 0)
         {
-            DrawText(frame, 60, 27, "V", 0xff62696c);
+            DrawText(frame, hudX + 3, 27, "V", 0xff62696c);
         }
         if (boss.RightCannonHealth <= 0)
         {
-            DrawText(frame, 248, 27, "H", 0xff62696c);
+            DrawText(frame, hudX + 191, 27, "H", 0xff62696c);
         }
     }
 
@@ -1698,21 +1713,24 @@ internal sealed class StormaktGame
         }
         if (boss.Age is >= 320 and < 500)
         {
-            DrawRect(frame, 45, 78, 230, 40, 0xff090d12);
-            DrawLine(frame, 45, 78, 274, 78, 0xffc51f35);
-            DrawLine(frame, 45, 117, 274, 117, 0xffd6b25e);
-            DrawText(frame, 91, 88, "KRONENS TIENDE", 0xffffd6b0);
-            DrawText(frame, 116, 103, "FOGDESKEPP", 0xfff2eee4);
+            int panelX = (_width - 230) / 2;
+            DrawRect(frame, panelX, 78, 230, 40, 0xff090d12);
+            DrawLine(frame, panelX, 78, panelX + 229, 78, 0xffc51f35);
+            DrawLine(frame, panelX, 117, panelX + 229, 117, 0xffd6b25e);
+            DrawText(frame, panelX + 46, 88, "KRONENS TIENDE", 0xffffd6b0);
+            DrawText(frame, panelX + 71, 103, "FOGDESKEPP", 0xfff2eee4);
         }
         else if (boss.Phase == 2 && boss.PhaseAge < 180)
         {
-            DrawRect(frame, 68, 88, 184, 27, 0xff160b0e);
-            DrawText(frame, 88, 98, "BROFOGDENS VREDE", 0xffff6b62);
+            int panelX = (_width - 184) / 2;
+            DrawRect(frame, panelX, 88, 184, 27, 0xff160b0e);
+            DrawText(frame, panelX + 20, 98, "BROFOGDENS VREDE", 0xffff6b62);
         }
         else if (boss.Phase == 3 && boss.PhaseAge < 180)
         {
-            DrawRect(frame, 79, 88, 162, 27, 0xff160b0e);
-            DrawText(frame, 110, 98, "TIONDET BRISTER", 0xffff8a4a);
+            int panelX = (_width - 162) / 2;
+            DrawRect(frame, panelX, 88, 162, 27, 0xff160b0e);
+            DrawText(frame, panelX + 31, 98, "TIONDET BRISTER", 0xffff8a4a);
         }
     }
 
@@ -1722,16 +1740,17 @@ internal sealed class StormaktGame
         {
             return;
         }
-        DrawSnapphaneSilhouette(frame, 258, 67);
+        int panelX = (_width - 196) / 2;
+        DrawSnapphaneSilhouette(frame, panelX + 196, 67);
         int reveal = Math.Min(150, _stageClearAge);
         int width = 196 * reveal / 150;
-        DrawRect(frame, 62, 86, width, 45, 0xff080d12);
+        DrawRect(frame, panelX, 86, width, 45, 0xff080d12);
         if (_stageClearAge >= 45)
         {
-            DrawLine(frame, 62, 86, 257, 86, 0xffd6b25e);
-            DrawLine(frame, 62, 130, 257, 130, 0xff2f74c9);
-            DrawText(frame, 113, 99, "BÄLTET ÄR ÖPPET", 0xffffd66b);
-            DrawText(frame, 101, 116, "KRONARKIV SÄKRAT", 0xff9bd4dc);
+            DrawLine(frame, panelX, 86, panelX + 195, 86, 0xffd6b25e);
+            DrawLine(frame, panelX, 130, panelX + 195, 130, 0xff2f74c9);
+            DrawText(frame, panelX + 51, 99, "BÄLTET ÄR ÖPPET", 0xffffd66b);
+            DrawText(frame, panelX + 39, 116, "KRONARKIV SÄKRAT", 0xff9bd4dc);
         }
     }
 
@@ -1757,11 +1776,12 @@ internal sealed class StormaktGame
 
         int edge = Math.Min(_missionFrame - 14, 165 - _missionFrame);
         int y = 73 - Math.Min(12, edge);
-        DrawRect(frame, 24, y, 272, 39, 0xff080f18);
-        DrawLine(frame, 24, y, 295, y, 0xff8a6b38);
-        DrawLine(frame, 24, y + 38, 295, y + 38, 0xff2f74c9);
-        DrawText(frame, 119, y + 8, "ÅTERTÅGET ÖVER", 0xffffd66b);
-        DrawText(frame, 97, y + 22, "STORA BÄLT NEBULOSAN", 0xff9bd4dc);
+        int panelX = (_width - 272) / 2;
+        DrawRect(frame, panelX, y, 272, 39, 0xff080f18);
+        DrawLine(frame, panelX, y, panelX + 271, y, 0xff8a6b38);
+        DrawLine(frame, panelX, y + 38, panelX + 271, y + 38, 0xff2f74c9);
+        DrawText(frame, panelX + 95, y + 8, "ÅTERTÅGET ÖVER", 0xffffd66b);
+        DrawText(frame, panelX + 73, y + 22, "STORA BÄLT NEBULOSAN", 0xff9bd4dc);
     }
 
     private void DrawRadio(uint[] frame)

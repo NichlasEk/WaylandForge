@@ -19,7 +19,7 @@ Rebuild the pack after editing/replacing the concept sheet:
 python tools/stormakt3020/build_assets.py
 ```
 
-The builder currently packs 29 named sprites, including normal/hot player states, eight environment parts and one downsampled 320-pixel-wide scrolling background. The background is followed by its vertical mirror, making both wrap boundaries exact instead of exposing a hard seam. Active radio cards alternate their neutral and speaking frames every eight simulation frames. All former code-drawn backgrounds, faces, player ship and physical bridge pieces remain missing-asset fallbacks. The builder trims alpha and downsamples with high-quality filtering; gameplay keeps separate deterministic hitboxes.
+The builder currently packs 30 named sprites, including normal/hot player states, eight environment parts and separate 320- and 400-pixel-wide scrolling backgrounds. Each background is followed by its vertical mirror, making both wrap boundaries exact instead of exposing a hard seam. Active radio cards alternate their neutral and speaking frames every eight simulation frames. All former code-drawn backgrounds, faces, player ship and physical bridge pieces remain missing-asset fallbacks. The builder trims alpha and downsamples with high-quality filtering; gameplay keeps separate deterministic hitboxes.
 
 To rebuild the transparent generated sheet from its chroma-key source:
 
@@ -42,6 +42,10 @@ python tools/stormakt3020/build_assets.py --input path/to/sheet.png
 ```
 
 `WFSA` is intentionally tiny: magic/version/count, then named ARGB8888 sprites. Runtime does not need PNG decoding.
+
+## Resolution
+
+Stormakt defaults to a 400x280 logical framebuffer. Assets retain their native gameplay pixel size, providing 25 percent more field in both directions and making ships smaller relative to the world. WaylandForge scales the WFEX frame to its viewport. Set `WAYLANDFORGE_STORMAKT_LEGACY_320=1` to A/B test the original 320x224 field; the pack contains a correctly sized background for both modes.
 
 ## Music concept
 
