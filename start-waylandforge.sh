@@ -6,7 +6,8 @@ AUDIO_DIR="$ROOT_DIR/tools/waylandforge-audiod"
 AUDIO_BIN="$AUDIO_DIR/waylandforge-audiod"
 AUDIO_SOCKET="/tmp/waylandforge-audio.sock"
 HOST_PROJECT="$ROOT_DIR/src/SystemRegisIII.Host.WaylandForge/SystemRegisIII.Host.WaylandForge.csproj"
-HOST_DLL="$ROOT_DIR/src/SystemRegisIII.Host.WaylandForge/bin/Debug/net10.0/SystemRegisIII.Host.WaylandForge.dll"
+HOST_CONFIGURATION="${WAYLANDFORGE_CONFIGURATION:-Release}"
+HOST_DLL="$ROOT_DIR/src/SystemRegisIII.Host.WaylandForge/bin/$HOST_CONFIGURATION/net10.0/SystemRegisIII.Host.WaylandForge.dll"
 LOCAL_OPENTYRIAN_BIN="$ROOT_DIR/local/opentyrian-wfcore/opentyrian"
 LOCAL_RAPTOR_BIN="$ROOT_DIR/local/raptor/build/bin/raptor"
 LOCAL_STORMAKT_DLL="$ROOT_DIR/src/SystemRegisIII.ExternalCore.Stormakt3020/bin/Debug/net8.0/SystemRegisIII.ExternalCore.Stormakt3020.dll"
@@ -135,7 +136,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 make -C "$AUDIO_DIR"
-dotnet build "$HOST_PROJECT" --nologo
+dotnet build "$HOST_PROJECT" --configuration "$HOST_CONFIGURATION" --nologo
 stop_local_external_cores
 
 stop_existing_audio

@@ -18,7 +18,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
 {
     private const int FrameWidth = 320;
     private const int FrameHeight = 224;
-    private const int InstructionsPerHostFrame = 10_000;
+    private const int InstructionsPerHostFrame = 50_000;
     private const int VBlankIntervalInstructions = 100_000;
 
     private readonly uint[] _frame = new uint[FrameWidth * FrameHeight];
