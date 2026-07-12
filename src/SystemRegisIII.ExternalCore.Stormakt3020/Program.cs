@@ -595,7 +595,7 @@ internal sealed class StormaktGame
 
     private void StepSilverkroppenSelect(uint buttons)
     {
-        const int choices = 5;
+        const int choices = 6;
         if (Pressed(buttons, Up))
         {
             _silverkroppenSelection = (_silverkroppenSelection + choices - 1) % choices;
@@ -625,6 +625,11 @@ internal sealed class StormaktGame
                 bool hasSave = TryLoadDungeonSave("autosave", out _);
                 StartLevel(3, fresh: !hasSave);
                 if (!hasSave) BeginDungeon();
+            }
+            else if (_silverkroppenSelection == 2)
+            {
+                StartLevel(3, fresh: true);
+                BeginDungeon();
             }
             else
             {
@@ -5508,9 +5513,9 @@ internal sealed class StormaktGame
     {
         int panelWidth = Math.Min(340, _width - 24);
         int panelX = (_width - panelWidth) / 2;
-        int panelTop = _height <= 224 ? 44 : 67;
-        int rowHeight = _height <= 224 ? 28 : 33;
-        int panelBottom = panelTop + 28 + rowHeight * 5;
+        int panelTop = _height <= 224 ? 28 : 50;
+        int rowHeight = _height <= 224 ? 27 : 33;
+        int panelBottom = panelTop + 28 + rowHeight * 6;
         DrawRect(frame, panelX, panelTop, panelWidth, panelBottom - panelTop, 0xf2080d12);
         DrawLine(frame, panelX, panelTop, panelX + panelWidth - 1, panelTop, 0xffffd66b);
         DrawLine(frame, panelX, panelBottom - 1, panelX + panelWidth - 1, panelBottom - 1, 0xff2f74c9);
@@ -5518,17 +5523,18 @@ internal sealed class StormaktGame
         string[] titles =
         [
             "FÄLTSLAGET  SILVERKROPPEN",
-            "GRUVA I  ÖVERGIVNA ORTEN",
+            "GRUVA I  FORTSÄTT",
+            "GRUVA I  BÖRJA OM",
             "GRUVA II  DJUPGRUVAN",
             "GRUVA III  FÖRBANNADE GRUVAN",
             "LEMMINKÄINENS TEMPEL",
         ];
         for (int index = 0; index < titles.Length; index++)
         {
-            bool available = index == 0 || index == 1;
+            bool available = index is 0 or 1 or 2;
             string status = index == 0 ? "RTS" : index == 1
                 ? File.Exists(DungeonSavePath("autosave")) ? "FORTSÄTT" : "NY"
-                : "LÅST";
+                : index == 2 ? "NYTT" : "LÅST";
             DrawLevelOption(frame, panelX + 12, panelTop + 25 + index * rowHeight, panelWidth - 24,
                 rowHeight - 3, index, titles[index], status, _silverkroppenSelection == index);
             if (!available && _silverkroppenSelection == index)
