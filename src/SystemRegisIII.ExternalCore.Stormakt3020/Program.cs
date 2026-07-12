@@ -120,6 +120,8 @@ internal sealed class StormaktGame
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_INVINCIBLE"), "1", StringComparison.Ordinal);
     private readonly bool _developerMode = string.Equals(
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DEVELOPER_MODE"), "1", StringComparison.Ordinal);
+    private readonly bool _rtsEvacuationTestMode = string.Equals(
+        Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_RTS_EVAC_TEST"), "1", StringComparison.Ordinal);
     private readonly SpritePack? _sprites;
     private readonly StormaktMusicLoop? _audio;
     private Random _random = new(3020);
@@ -172,6 +174,12 @@ internal sealed class StormaktGame
         new(0, 330, true, "FOGDE RASMUS", "ORGELVOGN FREM!", "SPIL DEM I GRUS", StormaktVoice.RasmusOrganOrder, "portrait_rasmus");
     private static readonly RadioCard RtsMooseRadio =
         new(0, 330, false, "EBBA GRIP", "ÄLGARNA STAMPAR", "GE DEM RIKTNING", StormaktVoice.EbbaMooseReady, "portrait_ebba");
+    private static readonly RadioCard RtsVictoryRadio =
+        new(0, 540, false, "EBBA GRIP", "SILVERLASTEN FULL", "TULLHUSET SLAGET", StormaktVoice.EbbaRtsVictory, "portrait_ebba");
+    private static readonly RadioCard RtsWaitMinerRadio =
+        new(0, 390, false, "EBBA GRIP", "VÄNTA KARL!", "EN FOGDE SAKNAS", StormaktVoice.EbbaRtsWaitMiner, "portrait_ebba");
+    private static readonly RadioCard RtsTempleRadio =
+        new(0, 330, false, "EBBA GRIP", "ETT TEMPEL...", "LEMMINKÄINENS?", StormaktVoice.EbbaRtsTemple, "portrait_ebba");
     private static readonly EnemyWave[] EnemyWaves =
     [
         new(240, 720, 180, 0, 2),
@@ -474,6 +482,17 @@ internal sealed class StormaktGame
         _bossRadioCard = null;
         _bossRadioAge = 0;
         _audio?.SetPaused(false);
+        if (_rtsEvacuationTestMode && _rts is RtsState evacuationTest)
+        {
+            evacuationTest.Buildings.Add(new RtsBuilding(evacuationTest.LandingX + 122, evacuationTest.LandingY - 38, RtsBuildingType.SilverCrusher));
+            evacuationTest.Units.Add(new RtsUnit(evacuationTest.LandingX + 190, evacuationTest.LandingY - 70, RtsUnitType.CaroleanSquad));
+            evacuationTest.Units.Add(new RtsUnit(evacuationTest.LandingX + 235, evacuationTest.LandingY - 20, RtsUnitType.MooseCarolean));
+            evacuationTest.Miners.Add(new RtsMiner(evacuationTest.LandingX + 155, evacuationTest.LandingY + 18, 17));
+            evacuationTest.SalvagedSilver = RtsSalvagedSilverGoal;
+            evacuationTest.SilverGoalReached = true;
+            if (evacuationTest.Fortress is not null) evacuationTest.Fortress.Health = 0;
+            BeginRtsEvacuation(evacuationTest);
+        }
         _audio?.SwitchMusic(_levelId switch
         {
             1 => StormaktMusicTrack.Skanska,
@@ -557,6 +576,11 @@ internal sealed class StormaktGame
         {
             _bossRadioCard = null;
             _bossRadioAge = 0;
+        }
+        if (rts.EvacuationAge > 0)
+        {
+            StepRtsEvacuation(rts);
+            return;
         }
         if (rts.Age == 20)
         {
@@ -1152,12 +1176,80 @@ internal sealed class StormaktGame
         if (rts.Fortress is { Health: <= 0 } defeatedFortress && rts.SilverGoalReached)
         {
             defeatedFortress.Health = 0;
-            _stageClear = true;
-            _stageClearAge = 0;
+            BeginRtsEvacuation(rts);
         }
         if (rts.KarlHealth <= 0)
         {
             _gameOver = true;
+        }
+    }
+
+    private void BeginRtsEvacuation(RtsState rts)
+    {
+        if (rts.EvacuationAge > 0) return;
+        rts.EvacuationAge = 1;
+        rts.Enemies.Clear();
+        foreach (RtsUnit unit in rts.Units) unit.Selected = false;
+        ActivateBossRadio(RtsVictoryRadio);
+    }
+
+    private void StepRtsEvacuation(RtsState rts)
+    {
+        int age = rts.EvacuationAge++;
+        if (age < 650)
+        {
+            int targetCamera = Math.Clamp(rts.LandingX - _width / 2, 0, rts.MapWidth - _width);
+            rts.CameraX += Math.Sign(targetCamera - rts.CameraX) * Math.Min(4, Math.Abs(targetCamera - rts.CameraX));
+        }
+        if (age >= 45 && age < 340)
+        {
+            foreach (RtsUnit unit in rts.Units)
+            {
+                double dx = rts.LandingX - unit.X;
+                double dy = rts.LandingY - unit.Y;
+                double distance = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
+                double baseSpeed = unit.Type == RtsUnitType.MooseCarolean ? 2.05 : 1.35;
+                double speed = Math.Max(baseSpeed, distance / Math.Max(30, 330 - age));
+                unit.TargetX = rts.LandingX;
+                unit.TargetY = rts.LandingY;
+                unit.X += dx / distance * speed;
+                unit.Y += dy / distance * speed;
+            }
+            foreach (RtsMiner miner in rts.Miners)
+            {
+                double dx = rts.LandingX - miner.X;
+                double dy = rts.LandingY - miner.Y;
+                double distance = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
+                miner.TargetX = rts.LandingX;
+                miner.TargetY = rts.LandingY;
+                double speed = Math.Max(1.15, distance / Math.Max(30, 330 - age));
+                miner.X += dx / distance * speed;
+                miner.Y += dy / distance * speed;
+            }
+            rts.Units.RemoveAll(unit => DistanceSquared(unit.X, unit.Y, rts.LandingX, rts.LandingY) < 12 * 12);
+            rts.Miners.RemoveAll(miner => DistanceSquared(miner.X, miner.Y, rts.LandingX, rts.LandingY) < 11 * 11);
+        }
+        if (age == 350)
+        {
+            rts.Units.Clear();
+            rts.Miners.Clear();
+            _audio?.Trigger(StormaktSound.RtsEngineIgnition);
+        }
+        if (age == 560) ActivateBossRadio(RtsWaitMinerRadio);
+        if (age >= 650)
+        {
+            RtsBuilding? crusher = rts.Buildings.FirstOrDefault(building => building.Type == RtsBuildingType.SilverCrusher);
+            if (crusher is not null)
+            {
+                int targetCamera = Math.Clamp(crusher.X - _width / 2, 0, rts.MapWidth - _width);
+                rts.CameraX += Math.Sign(targetCamera - rts.CameraX) * Math.Min(3, Math.Abs(targetCamera - rts.CameraX));
+            }
+        }
+        if (age == 930) ActivateBossRadio(RtsTempleRadio);
+        if (age == 1_280)
+        {
+            _stageClear = true;
+            _stageClearAge = 0;
         }
     }
 
@@ -2413,7 +2505,12 @@ internal sealed class StormaktGame
                 default: DrawRtsLandedKarl(frame, rts); break;
             }
         }
-        if (rts.LandingAge >= 120 && (rts.BuildStage < 4 || rts.TowerPlacementMode))
+        if (rts.EvacuationAge >= 690)
+        {
+            RtsBuilding? crusher = rts.Buildings.FirstOrDefault(building => building.Type == RtsBuildingType.SilverCrusher);
+            if (crusher is not null) DrawRtsTempleCrack(frame, rts, crusher.X, crusher.Y + 17);
+        }
+        if (rts.EvacuationAge == 0 && rts.LandingAge >= 120 && (rts.BuildStage < 4 || rts.TowerPlacementMode))
         {
             int buildX = (rts.CursorX / 12) * 12;
             int buildY = (rts.CursorY / 12) * 12;
@@ -2442,7 +2539,7 @@ internal sealed class StormaktGame
             DrawLine(frame, screenX + halfWidth, buildY - halfHeight, screenX + halfWidth, buildY + halfHeight, ghost);
         }
 
-        if (rts.LandingAge >= 120)
+        if (rts.EvacuationAge == 0 && rts.LandingAge >= 120)
         {
             int cursorX = rts.CursorX - rts.CameraX;
             uint cursor = (rts.Age / 5 & 1) == 0 ? 0xffffd66b : 0xff7fc7ff;
@@ -2479,10 +2576,16 @@ internal sealed class StormaktGame
         DrawText(frame, _width - economy.Length * 6 - 5, 5, economy,
             rts.SilverPulse > 0 ? 0xffffffff : 0xff9bd4dc);
         DrawRect(frame, 0, _height - 14, _width, 14, 0xff080d12);
-        string objective = rts.LandingAge < 120 ? "KARL CCLV LANDAR" :
+        string objective = rts.EvacuationAge > 0 ? rts.EvacuationAge switch
+        {
+            < 350 => "EVAKUERING TILL KARL",
+            < 560 => "MOTORER STARTAR",
+            < 850 => "EN GRUVFOGDE SAKNAS",
+            _ => "SIGNAL UNDER GRUVAN",
+        } : rts.LandingAge < 120 ? "KARL CCLV LANDAR" :
             rts.BuildStage == 0 ? "Z PLACERA ÅNGKRAFTVERK" :
             rts.BuildStage == 1 ? "Z PLACERA SILVERKROSS VID ÅDERN" : "SILVERBRYTNING AKTIV";
-        objective = rts.BuildStage switch
+        if (rts.EvacuationAge == 0) objective = rts.BuildStage switch
         {
             2 => "Z PLACERA KAROLINERBARACK",
             3 => "Z PLACERA DJURHALL",
@@ -2645,6 +2748,11 @@ internal sealed class StormaktGame
     {
         int x = (int)Math.Round(unit.X) - rts.CameraX;
         int y = (int)Math.Round(unit.Y);
+        if (rts.EvacuationAge > 0)
+        {
+            double rampDistance = Math.Sqrt(DistanceSquared(unit.X, unit.Y, rts.LandingX, rts.LandingY));
+            if (rampDistance < 42) y -= (int)Math.Round(Math.Sin((42 - rampDistance) / 42 * Math.PI) * 9);
+        }
         if (unit.Selected)
         {
             DrawCircleOutline(frame, x, y + 3, unit.Type == RtsUnitType.MooseCarolean ? 14 : 11, 0xffffd66b);
@@ -2714,6 +2822,11 @@ internal sealed class StormaktGame
         if (_sprites?.TryGet(name, out Sprite sprite) != true) return;
         int x = (int)Math.Round(miner.X) - rts.CameraX - sprite.Width / 2;
         int y = (int)Math.Round(miner.Y) - sprite.Height / 2;
+        if (rts.EvacuationAge > 0)
+        {
+            double rampDistance = Math.Sqrt(DistanceSquared(miner.X, miner.Y, rts.LandingX, rts.LandingY));
+            if (rampDistance < 38) y -= (int)Math.Round(Math.Sin((38 - rampDistance) / 38 * Math.PI) * 7);
+        }
         if (miner.TargetX < miner.X) DrawSpriteFlippedX(frame, sprite, x, y);
         else DrawSprite(frame, sprite, x, y);
     }
@@ -2840,7 +2953,10 @@ internal sealed class StormaktGame
         int x = rts.LandingX - rts.CameraX;
         double t = Math.Min(1.0, rts.LandingAge / 120.0);
         double eased = t * t * (3.0 - 2.0 * t);
-        int y = (int)Math.Round(-62 + (rts.LandingY + 62) * eased);
+        int lift = rts.EvacuationAge >= 350 ? Math.Min(24, (rts.EvacuationAge - 350) / 5) : 0;
+        if (rts.EvacuationAge >= 560) lift = 24;
+        int vibration = rts.EvacuationAge is >= 350 and < 560 ? ((rts.EvacuationAge / 3 & 1) == 0 ? -1 : 1) : 0;
+        int y = (int)Math.Round(-62 + (rts.LandingY + 62) * eased) - lift + vibration;
         if (rts.LandingAge >= 105)
         {
             if (_sprites?.TryGet("rts_karl_landing_pad", out Sprite pad) == true)
@@ -2866,6 +2982,25 @@ internal sealed class StormaktGame
             int dust = (rts.LandingAge - 90) / 3;
             DrawCircleOutline(frame, x, rts.LandingY + 20, 8 + dust, 0xff6f7775);
         }
+        if (rts.EvacuationAge is >= 350 and < 650)
+        {
+            int flame = 7 + (rts.EvacuationAge / 3 & 3);
+            FillTriangle(frame, x - 8, y + 22, x - 4, y + 22, x - 6, y + 22 + flame, 0xffffd66b);
+            FillTriangle(frame, x + 4, y + 22, x + 8, y + 22, x + 6, y + 22 + flame, 0xffff8a4a);
+            DrawCircleOutline(frame, x, rts.LandingY + 20, 18 + rts.EvacuationAge % 18, 0xff6f7775);
+        }
+    }
+
+    private void DrawRtsTempleCrack(uint[] frame, RtsState rts, int worldX, int worldY)
+    {
+        int x = worldX - rts.CameraX;
+        int growth = Math.Min(34, (rts.EvacuationAge - 690) / 4);
+        DrawLine(frame, x, worldY, x - growth / 3, worldY + growth / 3, 0xff030705);
+        DrawLine(frame, x - growth / 3, worldY + growth / 3, x + growth / 4, worldY + growth, 0xff030705);
+        DrawLine(frame, x - 2, worldY + 5, x + growth / 2, worldY + growth / 2, 0xff172823);
+        uint glint = (rts.EvacuationAge / 7 & 1) == 0 ? 0xff65c58a : 0xff9bd4dc;
+        PutPixel(frame, x + 2, worldY + growth - 2, glint);
+        PutPixel(frame, x - 3, worldY + growth - 5, glint);
     }
 
     private void DrawSky(uint[] frame)
@@ -4113,6 +4248,11 @@ internal sealed class StormaktGame
                 DrawText(frame, panelX + 39, 99, "SKUGGORNA SVARAR", 0xffffd66b);
                 DrawText(frame, panelX + 42, 116, "SIGNALEN FUNNEN", 0xff65c58a);
             }
+            else if (_levelId == 3)
+            {
+                DrawText(frame, panelX + 42, 99, "UNDER SILVERÅDERN", 0xffffd66b);
+                DrawText(frame, panelX + 34, 116, "NEDSTIGNING VÄNTAR", 0xff65c58a);
+            }
             else
             {
                 DrawText(frame, panelX + 51, 99, "BÄLTET ÄR ÖPPET", 0xffffd66b);
@@ -4839,6 +4979,7 @@ internal sealed class StormaktGame
         public bool MousePrimaryPressed { get; set; }
         public int SalvagedSilver { get; set; }
         public bool SilverGoalReached { get; set; }
+        public int EvacuationAge { get; set; }
         public RtsFortress? Fortress { get; set; }
     }
 

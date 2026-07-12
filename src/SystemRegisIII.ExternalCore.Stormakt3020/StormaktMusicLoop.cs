@@ -530,6 +530,7 @@ internal sealed class StormaktMusicLoop : IDisposable
             (StormaktSound.RtsPowderExplosion, "rts-powder-explosion.wav", 0.62f),
             (StormaktSound.RtsOrganVolley, "rts-organ-volley.wav", 0.58f),
             (StormaktSound.RtsUnitReady, "rts-unit-ready.wav", 0.42f),
+            (StormaktSound.RtsEngineIgnition, "rts-engine-ignition.wav", 0.62f),
         ];
 
         Dictionary<StormaktSound, LoadedEffect> effects = [];
@@ -587,6 +588,9 @@ internal sealed class StormaktMusicLoop : IDisposable
             (StormaktVoice.EbbaPowderWarning, "ebba-powder-warning-sv-radio.wav", 0.84f),
             (StormaktVoice.RasmusOrganOrder, "rasmus-organ-order-da-radio.wav", 0.90f),
             (StormaktVoice.EbbaMooseReady, "ebba-moose-ready-sv-radio.wav", 0.82f),
+            (StormaktVoice.EbbaRtsVictory, "ebba-rts-victory-sv-radio.wav", 0.82f),
+            (StormaktVoice.EbbaRtsWaitMiner, "ebba-rts-wait-miner-sv-radio.wav", 0.86f),
+            (StormaktVoice.EbbaRtsTemple, "ebba-rts-temple-sv-radio.wav", 0.82f),
         ];
         Dictionary<StormaktVoice, LoadedEffect> voices = [];
         foreach ((StormaktVoice voice, string file, float gain) in entries)
@@ -685,6 +689,7 @@ internal enum StormaktSound
     RtsPowderExplosion,
     RtsOrganVolley,
     RtsUnitReady,
+    RtsEngineIgnition,
 }
 
 internal enum StormaktVoice
@@ -713,6 +718,9 @@ internal enum StormaktVoice
     EbbaPowderWarning,
     RasmusOrganOrder,
     EbbaMooseReady,
+    EbbaRtsVictory,
+    EbbaRtsWaitMiner,
+    EbbaRtsTemple,
 }
 
 internal enum StormaktMusicTrack

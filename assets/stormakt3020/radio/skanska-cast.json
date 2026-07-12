@@ -316,6 +316,39 @@
       "subtitle_lines": ["ÄLGARNA STAMPAR", "GE DEM RIKTNING"],
       "seed": 302186,
       "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-rts-victory",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": -1,
+      "cue": "rts_victory",
+      "text": "Vi har mer silver än skeppet kan lyfta nu, och tullhuset ligger i ruiner. Alla ombord. Det är dags att fortsätta fälttåget.",
+      "subtitle_lines": ["SILVERLASTEN FULL", "TULLHUSET SLAGET"],
+      "seed": 302187,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-rts-wait-miner",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": -1,
+      "cue": "rts_wait_miner",
+      "text": "Vänta, Karl! En sista gruvfogde är kvar i gruvan. Han har fallit genom berget, djupt ner i ett hål.",
+      "subtitle_lines": ["VÄNTA KARL!", "EN FOGDE SAKNAS"],
+      "seed": 302188,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-rts-temple",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": -1,
+      "cue": "rts_temple_reveal",
+      "text": "Han yrar om pelare och ett tempel. Kan det vara... nej. Lemminkäinens tempel?",
+      "subtitle_lines": ["ETT TEMPEL...", "LEMMINKÄINENS?"],
+      "seed": 302189,
+      "model_backend": "voxcpm2"
     }
   ]
 }
