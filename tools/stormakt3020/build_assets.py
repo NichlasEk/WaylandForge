@@ -396,21 +396,36 @@ def append_dungeon_ui(entries: list[tuple[str, Image.Image]], source: Image.Imag
         entries.append((name, sprite))
 
 
-def append_dungeon_combat(entries: list[tuple[str, Image.Image]], karl: Image.Image, enemies: Image.Image) -> None:
+def append_dungeon_combat(entries: list[tuple[str, Image.Image]], karl: Image.Image, enemies: Image.Image,
+                          karl_north: Image.Image) -> None:
     karl_names = ["karl_slash_windup", "karl_slash_contact", "karl_slash_follow", "karl_parry",
                   "karl_slash_e_windup", "karl_slash_e_contact", "karl_hammer_impact", "karl_hit"]
     enemy_names = ["dk_stormer_idle", "dk_stormer_walk", "dk_stormer_attack", "dk_stormer_hit",
                    "dk_pikeman_idle", "dk_pikeman_walk", "dk_pikeman_attack", "dk_pikeman_hit"]
-    for source, names, target in [(karl, karl_names, (58, 58)), (enemies, enemy_names, (50, 52))]:
+    for source, names, target in [(karl, karl_names, (64, 64)), (enemies, enemy_names, (58, 58))]:
         for index, name in enumerate(names):
             column, row = index % 4, index // 4
             left, top = column * source.width // 4, row * source.height // 2
             right, bottom = (column + 1) * source.width // 4, (row + 1) * source.height // 2
-            sprite = trim_alpha(source.crop((left, top, right, bottom)).convert("RGBA"))
-            sprite.thumbnail(target, Image.Resampling.LANCZOS)
+            # Scale the fixed source cell, not its alpha bounds. Weapons and
+            # slash arcs otherwise make individual poses shrink unpredictably.
+            sprite = source.crop((left, top, right, bottom)).convert("RGBA")
+            scale = target[1] / sprite.height
+            sprite = sprite.resize((max(1, round(sprite.width * scale)), target[1]), Image.Resampling.LANCZOS)
             canvas = Image.new("RGBA", target, (0, 0, 0, 0))
             canvas.alpha_composite(sprite, ((target[0] - sprite.width) // 2, target[1] - sprite.height))
             entries.append((name, canvas))
+    north_names = ["karl_slash_n_windup", "karl_slash_n_contact", "karl_slash_n_follow", "karl_parry_n"]
+    north = karl_north.crop((0, 115, karl_north.width, 715))
+    for index, name in enumerate(north_names):
+        left = index * north.width // 4
+        right = (index + 1) * north.width // 4
+        sprite = north.crop((left, 0, right, north.height)).convert("RGBA")
+        scale = 64 / sprite.height
+        sprite = sprite.resize((max(1, round(sprite.width * scale)), 64), Image.Resampling.LANCZOS)
+        canvas = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+        canvas.alpha_composite(sprite, ((64 - sprite.width) // 2, 0))
+        entries.append((name, canvas))
 
 
 def mirrored_background(source: Image.Image, width: int, height: int) -> Image.Image:
@@ -459,6 +474,7 @@ def build(
     dungeon_ui_input_path: Path,
     dungeon_karl_combat_input_path: Path,
     dungeon_enemies_input_path: Path,
+    dungeon_karl_north_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
 ) -> None:
@@ -498,6 +514,7 @@ def build(
     dungeon_ui_source = Image.open(dungeon_ui_input_path).convert("RGBA")
     dungeon_karl_combat_source = Image.open(dungeon_karl_combat_input_path).convert("RGBA")
     dungeon_enemies_source = Image.open(dungeon_enemies_input_path).convert("RGBA")
+    dungeon_karl_north_source = Image.open(dungeon_karl_north_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
@@ -580,7 +597,7 @@ def build(
     append_dungeon_assets(entries, dungeon_karl_source, dungeon_mine_source)
     append_dungeon_loot(entries, dungeon_loot_source)
     append_dungeon_ui(entries, dungeon_ui_source)
-    append_dungeon_combat(entries, dungeon_karl_combat_source, dungeon_enemies_source)
+    append_dungeon_combat(entries, dungeon_karl_combat_source, dungeon_enemies_source, dungeon_karl_north_source)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
@@ -719,6 +736,7 @@ def main() -> None:
     parser.add_argument("--dungeon-ui-input", type=Path, default=Path("assets/stormakt3020/dungeon-ui-chrome-v1.png"))
     parser.add_argument("--dungeon-karl-combat-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-combat-v1.png"))
     parser.add_argument("--dungeon-enemies-input", type=Path, default=Path("assets/stormakt3020/dungeon-danish-enemies-v1.png"))
+    parser.add_argument("--dungeon-karl-north-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-north-combat-v1.png"))
     parser.add_argument(
         "--logo-input",
         type=Path,
@@ -763,6 +781,7 @@ def main() -> None:
         args.dungeon_ui_input,
         args.dungeon_karl_combat_input,
         args.dungeon_enemies_input,
+        args.dungeon_karl_north_input,
         args.logo_input,
         args.output,
     )

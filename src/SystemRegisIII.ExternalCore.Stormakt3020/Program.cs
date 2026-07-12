@@ -3035,10 +3035,15 @@ internal sealed class StormaktGame
         int gait = (int)(dungeon.GaitDistance / 8.5) & 3;
         bool hammer = dungeon.Items.Any(item => item.Equipped == DungeonEquipmentSlot.MainHand && item.Definition == 3);
         if (dungeon.HurtAge > 0) karlName = "karl_hit";
-        else if (dungeon.Guarding) karlName = "karl_parry";
+        else if (dungeon.Guarding) karlName = dungeon.Facing == DungeonFacing.North ? "karl_parry_n" : "karl_parry";
         else if (dungeon.AttackAge > 0 && hammer) karlName = "karl_hammer_impact";
         else if (dungeon.AttackAge > 0 && dungeon.Facing is DungeonFacing.East or DungeonFacing.West)
             karlName = dungeon.AttackAge < 9 ? "karl_slash_e_windup" : "karl_slash_e_contact";
+        else if (dungeon.AttackAge > 0 && dungeon.Facing == DungeonFacing.North)
+            karlName = dungeon.AttackAge switch
+            {
+                < 8 => "karl_slash_n_windup", < 13 => "karl_slash_n_contact", _ => "karl_slash_n_follow",
+            };
         else if (dungeon.AttackAge > 0) karlName = dungeon.AttackAge switch
         {
             < 8 => "karl_slash_windup", < 13 => "karl_slash_contact", _ => "karl_slash_follow",
