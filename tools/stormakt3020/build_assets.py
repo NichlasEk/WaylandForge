@@ -444,16 +444,42 @@ def append_dungeon_gruva2(entries: list[tuple[str, Image.Image]], loot: Image.Im
             entries.append((name, canvas))
 
 
-def append_dungeon_silver_fogde(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
-    names = ["dk_silver_fogde_idle", "dk_silver_fogde_walk", "dk_silver_fogde_attack", "dk_silver_fogde_hit"]
-    for index, name in enumerate(names):
-        left = index * source.width // 4
-        right = (index + 1) * source.width // 4
-        sprite = trim_alpha(source.crop((left, 0, right, source.height)).convert("RGBA"))
-        sprite.thumbnail((78, 72), Image.Resampling.LANCZOS)
-        canvas = Image.new("RGBA", (82, 76), (0, 0, 0, 0))
-        canvas.alpha_composite(sprite, ((82 - sprite.width) // 2, 76 - sprite.height))
+def append_anchored_combat_strip(entries: list[tuple[str, Image.Image]], source: Image.Image,
+                                 names: list[str], columns: int, rows: int, scale: float,
+                                 canvas_size: tuple[int, int], ground_line: int,
+                                 source_foot_lines: list[int]) -> None:
+    """Pack combat poses without letting weapons or effects rescale the body.
+
+    Every cell uses the same source-pixel scale. Explicit foot lines are part
+    of the asset contract because alpha bounds may include debris below boots.
+    """
+    expected = columns * rows
+    if len(names) != expected or len(source_foot_lines) != expected:
+        raise ValueError(f"combat strip needs {expected} names and foot anchors")
+    if scale <= 0 or not 0 <= ground_line < canvas_size[1]:
+        raise ValueError("combat strip has invalid scale or ground line")
+    cell_width = source.width // columns
+    cell_height = source.height // rows
+    for index, (name, foot) in enumerate(zip(names, source_foot_lines)):
+        if not 0 <= foot <= cell_height:
+            raise ValueError(f"{name} foot anchor {foot} exceeds {cell_height}px cell")
+        column, row = index % columns, index // columns
+        cell = source.crop((column * cell_width, row * cell_height,
+                            (column + 1) * cell_width, (row + 1) * cell_height)).convert("RGBA")
+        sprite = cell.resize((round(cell.width * scale), round(cell.height * scale)), Image.Resampling.LANCZOS)
+        canvas = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
+        canvas.alpha_composite(sprite, ((canvas_size[0] - sprite.width) // 2,
+                                       ground_line - round(foot * scale)))
         entries.append((name, canvas))
+
+
+def append_dungeon_silver_fogde(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    append_anchored_combat_strip(
+        entries, source,
+        ["dk_silver_fogde_idle", "dk_silver_fogde_walk", "dk_silver_fogde_attack", "dk_silver_fogde_hit"],
+        columns=4, rows=1, scale=0.15, canvas_size=(110, 100), ground_line=96,
+        source_foot_lines=[600, 632, 637, 636],
+    )
 
 
 def mirrored_background(source: Image.Image, width: int, height: int) -> Image.Image:
