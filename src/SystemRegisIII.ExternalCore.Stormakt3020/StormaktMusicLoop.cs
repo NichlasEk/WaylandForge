@@ -538,6 +538,10 @@ internal sealed class StormaktMusicLoop : IDisposable
             (StormaktSound.RtsOrganVolley, "rts-organ-volley.wav", 0.58f),
             (StormaktSound.RtsUnitReady, "rts-unit-ready.wav", 0.42f),
             (StormaktSound.RtsEngineIgnition, "rts-engine-ignition.wav", 0.62f),
+            (StormaktSound.DungeonSwordSlash, "dungeon-sword-slash.wav", 0.44f),
+            (StormaktSound.DungeonSwordHit, "dungeon-sword-hit.wav", 0.50f),
+            (StormaktSound.DungeonParry, "dungeon-parry.wav", 0.52f),
+            (StormaktSound.DungeonHammerImpact, "dungeon-hammer-impact.wav", 0.58f),
         ];
 
         Dictionary<StormaktSound, LoadedEffect> effects = [];
@@ -697,6 +701,10 @@ internal enum StormaktSound
     RtsOrganVolley,
     RtsUnitReady,
     RtsEngineIgnition,
+    DungeonSwordSlash,
+    DungeonSwordHit,
+    DungeonParry,
+    DungeonHammerImpact,
 }
 
 internal enum StormaktVoice

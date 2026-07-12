@@ -45,6 +45,10 @@ def main() -> None:
     write("rts-organ-volley.wav", 1.18, lambda t,l,r: sum(noise_burst(max(0,t-d),l-d,r,52+d*20,.8) if t>=d else 0 for d in (0,.055,.11,.17,.23))*.42)
     write("rts-unit-ready.wav", .52, lambda t,l,r: env(t,l,.01,2.2)*(.22*math.sin(2*math.pi*220*t)+.16*math.sin(2*math.pi*330*t)+.08*math.sin(2*math.pi*440*t)))
     write("rts-engine-ignition.wav", 3.80, lambda t,l,r: min(1,t/.9)*(.28*math.sin(2*math.pi*(31+9*min(1,t/2))*t)+.14*math.sin(2*math.pi*(62+18*min(1,t/2))*t)+r.uniform(-.11,.11)*(1-.65*min(1,t/2))))
+    write("dungeon-sword-slash.wav", .42, lambda t,l,r: env(t,l,.003,4.8)*(r.uniform(-.2,.2)+.28*math.sin(2*math.pi*(1450-1050*t/l)*t)))
+    write("dungeon-sword-hit.wav", .34, lambda t,l,r: noise_burst(t,l,r,92,.72)+env(t,l,.002,7)*.24*math.sin(2*math.pi*710*t))
+    write("dungeon-parry.wav", .48, lambda t,l,r: env(t,l,.002,5.5)*(.32*math.sin(2*math.pi*1280*t)+.20*math.sin(2*math.pi*1910*t)+r.uniform(-.10,.10)))
+    write("dungeon-hammer-impact.wav", .72, lambda t,l,r: noise_burst(t,l,r,46,.70)+env(t,l,.002,3.6)*.28*math.sin(2*math.pi*73*t))
 
 
 if __name__ == "__main__":

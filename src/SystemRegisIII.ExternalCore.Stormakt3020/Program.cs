@@ -1354,6 +1354,7 @@ internal sealed class StormaktGame
             MaxHealth = 100,
         };
         SeedDungeonInventory(_dungeon);
+        SeedDungeonEncounter(_dungeon);
         _audio?.SwitchMusic(StormaktMusicTrack.Dungeon);
         WriteDungeonSave(_dungeon, "autosave");
     }
@@ -1382,6 +1383,14 @@ internal sealed class StormaktGame
             StepDungeonInventory(dungeon, buttons, pointer);
             return;
         }
+        if (dungeon.HitStop > 0)
+        {
+            dungeon.HitStop--;
+            return;
+        }
+        dungeon.Guarding = (buttons & Slow) != 0 && dungeon.AttackAge == 0;
+        if (dungeon.HurtAge > 0) dungeon.HurtAge--;
+        bool interacted = false;
         if (Pressed(buttons, Fire))
         {
             DungeonItem? ground = dungeon.Items.Where(item => item.OnGround)
@@ -1391,18 +1400,25 @@ internal sealed class StormaktGame
                 ground.OnGround = false;
                 ground.InStash = false;
                 if (!TryPlaceFirstFree(dungeon, ground)) ground.OnGround = true;
+                interacted = true;
             }
             else if (DistanceSquared(470, 300, dungeon.KarlX, dungeon.KarlY) < 48 * 48)
             {
                 dungeon.InventoryOpen = true;
                 dungeon.ViewingStash = true;
                 dungeon.SelectedItemId = 0;
+                interacted = true;
             }
+            if (!interacted) StartDungeonAttack(dungeon, pointer);
         }
 
         const uint mouseLeft = 1u;
+        const uint mouseRight = 2u;
         bool mouseDown = pointer.Inside && (pointer.Buttons & mouseLeft) != 0;
         bool previousMouseDown = (dungeon.PreviousMouseButtons & mouseLeft) != 0;
+        bool rightPressed = pointer.Inside && (pointer.Buttons & mouseRight) != 0 &&
+            (dungeon.PreviousMouseButtons & mouseRight) == 0;
+        if (rightPressed) StartDungeonAttack(dungeon, pointer);
         if (mouseDown && !previousMouseDown)
         {
             dungeon.TargetX = Math.Clamp(pointer.X + dungeon.CameraX, 28, dungeon.RoomWidth - 29);
@@ -1410,6 +1426,7 @@ internal sealed class StormaktGame
         }
         dungeon.PreviousMouseButtons = pointer.Inside ? pointer.Buttons : 0;
 
+        StepDungeonCombat(dungeon);
         double moveX = 0;
         double moveY = 0;
         if ((buttons & Left) != 0) moveX--;
@@ -1434,7 +1451,7 @@ internal sealed class StormaktGame
         }
         double length = Math.Sqrt(moveX * moveX + moveY * moveY);
         dungeon.Moving = false;
-        if (length > 0)
+        if (length > 0 && dungeon.AttackAge == 0 && dungeon.HurtAge == 0)
         {
             moveX /= length;
             moveY /= length;
@@ -1453,6 +1470,152 @@ internal sealed class StormaktGame
         }
         dungeon.CameraX = Math.Clamp((int)Math.Round(dungeon.KarlX - _width / 2.0), 0, dungeon.RoomWidth - _width);
         dungeon.CameraY = Math.Clamp((int)Math.Round(dungeon.KarlY - _height / 2.0), 0, dungeon.RoomHeight - _height);
+    }
+
+    private void StartDungeonAttack(DungeonState dungeon, RtsPointer pointer)
+    {
+        if (pointer.Inside)
+        {
+            double aimX = pointer.X + dungeon.CameraX - dungeon.KarlX;
+            double aimY = pointer.Y + dungeon.CameraY - dungeon.KarlY;
+            dungeon.Facing = Math.Abs(aimX) > Math.Abs(aimY)
+                ? aimX < 0 ? DungeonFacing.West : DungeonFacing.East
+                : aimY < 0 ? DungeonFacing.North : DungeonFacing.South;
+        }
+        if (dungeon.AttackAge > 0)
+        {
+            if (dungeon.AttackAge >= 10) dungeon.AttackQueued = true;
+            return;
+        }
+        dungeon.AttackAge = 1;
+        dungeon.AttackSerial++;
+        dungeon.AttackCombo = dungeon.AttackCombo % 3 + 1;
+        dungeon.TargetX = dungeon.KarlX;
+        dungeon.TargetY = dungeon.KarlY;
+        dungeon.Guarding = false;
+        bool hammer = dungeon.Items.Any(item => item.Equipped == DungeonEquipmentSlot.MainHand && item.Definition == 3);
+        _audio?.Trigger(hammer ? StormaktSound.DungeonHammerImpact : StormaktSound.DungeonSwordSlash);
+    }
+
+    private void StepDungeonCombat(DungeonState dungeon)
+    {
+        bool hammer = dungeon.Items.Any(item => item.Equipped == DungeonEquipmentSlot.MainHand && item.Definition == 3);
+        int contactAge = hammer ? 14 : 9;
+        int endAge = hammer ? 31 : 23;
+        if (dungeon.AttackAge > 0)
+        {
+            if (dungeon.AttackAge == contactAge)
+            {
+                (double fx, double fy) = DungeonFacingVector(dungeon.Facing);
+                int weaponDamage = dungeon.Items.Where(item => item.Equipped == DungeonEquipmentSlot.MainHand)
+                    .Select(item => DungeonItemDefinitions[item.Definition].Damage + item.PowerRoll / 3).DefaultIfEmpty(8).Max();
+                foreach (DungeonEnemy enemy in dungeon.Enemies.Where(enemy => enemy.State != DungeonEnemyState.Dead))
+                {
+                    double dx = enemy.X - dungeon.KarlX;
+                    double dy = enemy.Y - dungeon.KarlY;
+                    double range = hammer ? 53 : 47;
+                    double distance = Math.Sqrt(dx * dx + dy * dy);
+                    if (distance > range || distance < 0.1 || (dx * fx + dy * fy) / distance < 0.22 || enemy.LastHitSerial == dungeon.AttackSerial) continue;
+                    enemy.LastHitSerial = dungeon.AttackSerial;
+                    enemy.Health -= weaponDamage;
+                    enemy.State = enemy.Health <= 0 ? DungeonEnemyState.Dead : DungeonEnemyState.Stagger;
+                    enemy.StateAge = 0;
+                    dungeon.Power = Math.Min(100, dungeon.Power + 5);
+                    dungeon.HitStop = hammer ? 4 : 2;
+                    _audio?.Trigger(hammer ? StormaktSound.DungeonHammerImpact : StormaktSound.DungeonSwordHit);
+                }
+            }
+            dungeon.AttackAge++;
+            if (dungeon.AttackAge > endAge)
+            {
+                dungeon.AttackAge = 0;
+                if (dungeon.AttackQueued)
+                {
+                    dungeon.AttackQueued = false;
+                    dungeon.AttackAge = 1;
+                    dungeon.AttackSerial++;
+                    dungeon.AttackCombo = dungeon.AttackCombo % 3 + 1;
+                }
+            }
+        }
+
+        foreach (DungeonEnemy enemy in dungeon.Enemies)
+        {
+            enemy.StateAge++;
+            if (enemy.State == DungeonEnemyState.Dead) continue;
+            if (enemy.State == DungeonEnemyState.Stagger)
+            {
+                if (enemy.StateAge > 18) { enemy.State = DungeonEnemyState.Approach; enemy.StateAge = 0; }
+                continue;
+            }
+            double dx = dungeon.KarlX - enemy.X;
+            double dy = dungeon.KarlY - enemy.Y;
+            double distance = Math.Sqrt(dx * dx + dy * dy);
+            enemy.FacingLeft = dx < 0;
+            double attackRange = enemy.Type == DungeonEnemyType.Pikeman ? 54 : 35;
+            if (enemy.State == DungeonEnemyState.Approach)
+            {
+                if (distance <= attackRange)
+                {
+                    enemy.State = DungeonEnemyState.Telegraph;
+                    enemy.StateAge = 0;
+                }
+                else if (distance > 0.1)
+                {
+                    double speed = enemy.Type == DungeonEnemyType.Pikeman ? 0.32 : 0.48;
+                    MoveDungeonEnemy(enemy, dx / distance * speed, dy / distance * speed);
+                }
+            }
+            else if (enemy.State == DungeonEnemyState.Telegraph && enemy.StateAge > (enemy.Type == DungeonEnemyType.Pikeman ? 30 : 22))
+            {
+                enemy.State = DungeonEnemyState.Attack;
+                enemy.StateAge = 0;
+            }
+            else if (enemy.State == DungeonEnemyState.Attack)
+            {
+                int impact = enemy.Type == DungeonEnemyType.Pikeman ? 12 : 8;
+                if (enemy.StateAge == impact && distance <= attackRange + 9)
+                {
+                    if (dungeon.Guarding)
+                    {
+                        enemy.State = DungeonEnemyState.Stagger;
+                        enemy.StateAge = 0;
+                        dungeon.Power = Math.Min(100, dungeon.Power + 10);
+                        dungeon.HitStop = 2;
+                        _audio?.Trigger(StormaktSound.DungeonParry);
+                    }
+                    else
+                    {
+                        dungeon.Health = Math.Max(0, dungeon.Health - (enemy.Type == DungeonEnemyType.Pikeman ? 11 : 7));
+                        dungeon.HurtAge = 18;
+                        dungeon.HitStop = 3;
+                    }
+                }
+                if (enemy.State == DungeonEnemyState.Attack && enemy.StateAge > impact + 8)
+                {
+                    enemy.State = DungeonEnemyState.Recover;
+                    enemy.StateAge = 0;
+                }
+            }
+            else if (enemy.State == DungeonEnemyState.Recover && enemy.StateAge > 24)
+            {
+                enemy.State = DungeonEnemyState.Approach;
+                enemy.StateAge = 0;
+            }
+        }
+        dungeon.RoomClear = dungeon.Enemies.Count > 0 && dungeon.Enemies.All(enemy => enemy.State == DungeonEnemyState.Dead);
+    }
+
+    private static (double X, double Y) DungeonFacingVector(DungeonFacing facing) => facing switch
+    {
+        DungeonFacing.North => (0, -1), DungeonFacing.East => (1, 0),
+        DungeonFacing.West => (-1, 0), _ => (0, 1),
+    };
+
+    private static void MoveDungeonEnemy(DungeonEnemy enemy, double dx, double dy)
+    {
+        if (!DungeonBlocked(enemy.X + dx, enemy.Y)) enemy.X += dx;
+        if (!DungeonBlocked(enemy.X, enemy.Y + dy)) enemy.Y += dy;
     }
 
     private static void MoveDungeonKarl(DungeonState dungeon, double dx, double dy)
@@ -1483,11 +1646,14 @@ internal sealed class StormaktGame
             string path = Path.Combine(directory, slot + ".json");
             string temporary = path + ".tmp";
             string backup = path + ".bak";
-            var snapshot = new DungeonSave(2, dungeon.Age, dungeon.RoomWidth, dungeon.RoomHeight,
+            var snapshot = new DungeonSave(3, dungeon.Age, dungeon.RoomWidth, dungeon.RoomHeight,
                 dungeon.KarlX, dungeon.KarlY, dungeon.TargetX, dungeon.TargetY, dungeon.Facing,
                 dungeon.Health, dungeon.MaxHealth, dungeon.Power, dungeon.NextItemId,
                 dungeon.Items.Select(item => new DungeonItemSave(item.Id, item.Definition, item.GridX, item.GridY,
-                    item.Equipped, item.Rarity, item.PowerRoll, item.OnGround, item.InStash, item.WorldX, item.WorldY)).ToList());
+                    item.Equipped, item.Rarity, item.PowerRoll, item.OnGround, item.InStash, item.WorldX, item.WorldY)).ToList(),
+                dungeon.NextEnemyId, dungeon.AttackSerial, dungeon.AttackCombo, dungeon.RoomClear,
+                dungeon.Enemies.Select(enemy => new DungeonEnemySave(enemy.Id, enemy.X, enemy.Y, enemy.Type,
+                    enemy.Health, enemy.MaxHealth, enemy.State, enemy.StateAge, enemy.LastHitSerial, enemy.FacingLeft)).ToList());
             File.WriteAllText(temporary, JsonSerializer.Serialize(snapshot));
             if (File.Exists(path)) File.Copy(path, backup, true);
             File.Move(temporary, path, true);
@@ -1513,6 +1679,8 @@ internal sealed class StormaktGame
             if (item.GridX >= 0 && !CanPlaceDungeonItem(dungeon, item, item.GridX, item.GridY))
                 throw new InvalidOperationException($"Dungeon item {item.Id} overlaps or exceeds its container.");
         }
+        if (dungeon.Enemies.Select(enemy => enemy.Id).Distinct().Count() != dungeon.Enemies.Count)
+            throw new InvalidOperationException("Dungeon encounter contains duplicate enemy ids.");
     }
 
     private static bool TryLoadDungeonSave(string slot, out DungeonState? dungeon)
@@ -1525,7 +1693,7 @@ internal sealed class StormaktGame
             {
                 if (!File.Exists(candidate)) continue;
                 DungeonSave save = JsonSerializer.Deserialize<DungeonSave>(File.ReadAllText(candidate));
-                if (save.Schema is not (1 or 2) || save.RoomWidth < 320 || save.RoomHeight < 220) continue;
+                if (save.Schema is < 1 or > 3 || save.RoomWidth < 320 || save.RoomHeight < 220) continue;
                 dungeon = new DungeonState
                 {
                     Age = save.Age,
@@ -1540,6 +1708,10 @@ internal sealed class StormaktGame
                     MaxHealth = save.Schema >= 2 ? save.MaxHealth : 100,
                     Power = save.Schema >= 2 ? save.Power : 35,
                     NextItemId = save.Schema >= 2 ? save.NextItemId : 1,
+                    NextEnemyId = save.Schema >= 3 ? save.NextEnemyId : 1,
+                    AttackSerial = save.Schema >= 3 ? save.AttackSerial : 0,
+                    AttackCombo = save.Schema >= 3 ? save.AttackCombo : 0,
+                    RoomClear = save.Schema >= 3 && save.RoomClear,
                 };
                 if (save.Schema >= 2 && save.Items is not null)
                 {
@@ -1555,6 +1727,19 @@ internal sealed class StormaktGame
                     }
                 }
                 else SeedDungeonInventory(dungeon);
+                if (save.Schema >= 3 && save.Enemies is not null)
+                {
+                    foreach (DungeonEnemySave enemy in save.Enemies)
+                    {
+                        var loaded = new DungeonEnemy(enemy.X, enemy.Y, enemy.Type, enemy.MaxHealth)
+                        {
+                            Id = enemy.Id, Health = enemy.Health, State = enemy.State, StateAge = enemy.StateAge,
+                            LastHitSerial = enemy.LastHitSerial, FacingLeft = enemy.FacingLeft,
+                        };
+                        dungeon.Enemies.Add(loaded);
+                    }
+                }
+                else SeedDungeonEncounter(dungeon);
                 dungeon.CameraX = Math.Clamp((int)Math.Round(dungeon.KarlX - 200), 0, Math.Max(0, dungeon.RoomWidth - 400));
                 dungeon.CameraY = Math.Clamp((int)Math.Round(dungeon.KarlY - 140), 0, Math.Max(0, dungeon.RoomHeight - 280));
                 return true;
@@ -2780,6 +2965,35 @@ internal sealed class StormaktGame
                 DrawSprite(frame, icon, itemX - icon.Width / 2, itemY - icon.Height / 2);
         }
 
+        foreach (DungeonEnemy enemy in dungeon.Enemies.OrderBy(enemy => enemy.Y))
+        {
+            int enemyX = (int)Math.Round(enemy.X) - dungeon.CameraX;
+            int enemyY = (int)Math.Round(enemy.Y) - dungeon.CameraY;
+            string prefix = enemy.Type == DungeonEnemyType.Pikeman ? "dk_pikeman" : "dk_stormer";
+            string enemyName = enemy.State switch
+            {
+                DungeonEnemyState.Attack or DungeonEnemyState.Telegraph => prefix + "_attack",
+                DungeonEnemyState.Stagger or DungeonEnemyState.Dead => prefix + "_hit",
+                DungeonEnemyState.Approach => prefix + "_walk",
+                _ => prefix + "_idle",
+            };
+            if (enemy.State == DungeonEnemyState.Telegraph)
+                DrawCircleOutline(frame, enemyX, enemyY - 4, enemy.Type == DungeonEnemyType.Pikeman ? 22 : 17,
+                    enemy.StateAge / 4 % 2 == 0 ? 0xffffc45c : 0xffb92f3f);
+            if (_sprites?.TryGet(enemyName, out Sprite enemySprite) == true)
+            {
+                int drawX = enemyX - enemySprite.Width / 2;
+                int drawY = enemyY - enemySprite.Height + 10;
+                if (enemy.FacingLeft) DrawSpriteFlippedX(frame, enemySprite, drawX, drawY);
+                else DrawSprite(frame, enemySprite, drawX, drawY);
+            }
+            if (enemy.Health > 0 && enemy.Health < enemy.MaxHealth)
+            {
+                DrawRect(frame, enemyX - 15, enemyY - 36, 30, 3, 0xff26161a);
+                DrawRect(frame, enemyX - 15, enemyY - 36, 30 * enemy.Health / enemy.MaxHealth, 2, 0xffbf3348);
+            }
+        }
+
         int karlX = (int)Math.Round(dungeon.KarlX) - dungeon.CameraX;
         int karlY = (int)Math.Round(dungeon.KarlY) - dungeon.CameraY;
         string karlName;
@@ -2787,7 +3001,17 @@ internal sealed class StormaktGame
         // not slide the feet. Roughly 34 px per full cycle matches Karl's
         // long, deliberate Carolean stride at both normal and Slow speed.
         int gait = (int)(dungeon.GaitDistance / 8.5) & 3;
-        if (dungeon.Age < 150) karlName = dungeon.Age < 95 ? "dungeon_karl_kneel" : "dungeon_karl_s_idle";
+        bool hammer = dungeon.Items.Any(item => item.Equipped == DungeonEquipmentSlot.MainHand && item.Definition == 3);
+        if (dungeon.HurtAge > 0) karlName = "karl_hit";
+        else if (dungeon.Guarding) karlName = "karl_parry";
+        else if (dungeon.AttackAge > 0 && hammer) karlName = "karl_hammer_impact";
+        else if (dungeon.AttackAge > 0 && dungeon.Facing is DungeonFacing.East or DungeonFacing.West)
+            karlName = dungeon.AttackAge < 9 ? "karl_slash_e_windup" : "karl_slash_e_contact";
+        else if (dungeon.AttackAge > 0) karlName = dungeon.AttackAge switch
+        {
+            < 8 => "karl_slash_windup", < 13 => "karl_slash_contact", _ => "karl_slash_follow",
+        };
+        else if (dungeon.Age < 150) karlName = dungeon.Age < 95 ? "dungeon_karl_kneel" : "dungeon_karl_s_idle";
         else if (dungeon.Facing == DungeonFacing.North) karlName = dungeon.Moving && gait is 1 or 3 ? "dungeon_karl_n_walk" : "dungeon_karl_n_idle";
         else if (dungeon.Facing is DungeonFacing.East or DungeonFacing.West) karlName = dungeon.Moving && gait is 1 or 3 ? "dungeon_karl_e_walk" : "dungeon_karl_e_idle";
         else karlName = !dungeon.Moving || gait is 0 or 2 ? "dungeon_karl_s_idle" :
@@ -2806,7 +3030,7 @@ internal sealed class StormaktGame
         DrawDungeonHealth(frame, dungeon);
         DrawRect(frame, 0, _height - 14, _width, 14, 0xee080d12);
         DrawText(frame, 7, _height - 10,
-            dungeon.Age < 150 ? "KARL SÄNKS NER" : "UTFORSKA GRUVGÅNGEN", 0xffdce8f2);
+            dungeon.Age < 150 ? "KARL SÄNKS NER" : dungeon.RoomClear ? "RUMMET ÄR SÄKRAT" : "HÖGERKLICK HUGG  SLOW PARERA", 0xffdce8f2);
         if (_bossRadioCard is RadioCard radio && _bossRadioAge < radio.DurationFrames)
         {
             DrawRadioCard(frame, radio, _bossRadioAge);
@@ -2848,6 +3072,20 @@ internal sealed class StormaktGame
         stashAxe.InStash = true;
         DungeonItem stashPistol = AddDungeonItem(dungeon, 5, 2, 0, DungeonEquipmentSlot.None, DungeonItemRarity.Silverbound);
         stashPistol.InStash = true;
+    }
+
+    private static void SeedDungeonEncounter(DungeonState dungeon)
+    {
+        if (dungeon.Enemies.Count > 0) return;
+        AddDungeonEnemy(dungeon, 225, 240, DungeonEnemyType.Stormer, 42);
+        AddDungeonEnemy(dungeon, 475, 244, DungeonEnemyType.Pikeman, 58);
+        AddDungeonEnemy(dungeon, 548, 174, DungeonEnemyType.Stormer, 42);
+    }
+
+    private static void AddDungeonEnemy(DungeonState dungeon, double x, double y, DungeonEnemyType type, int health)
+    {
+        var enemy = new DungeonEnemy(x, y, type, health) { Id = dungeon.NextEnemyId++ };
+        dungeon.Enemies.Add(enemy);
     }
 
     private static DungeonItem AddDungeonItem(DungeonState dungeon, int definition, int gridX, int gridY,
@@ -5650,6 +5888,9 @@ internal sealed class StormaktGame
 
     private enum DungeonItemRarity { Iron, Carolean, Silverbound, Runic, Unique }
 
+    private enum DungeonEnemyType { Stormer, Pikeman }
+    private enum DungeonEnemyState { Approach, Telegraph, Attack, Recover, Stagger, Dead }
+
     private readonly record struct DungeonItemDefinition(string Key, string Name, string Sprite, int Width, int Height,
         DungeonEquipmentSlot Slot, int Damage, int Armor);
 
@@ -5666,6 +5907,29 @@ internal sealed class StormaktGame
         public bool InStash { get; set; }
         public double WorldX { get; set; }
         public double WorldY { get; set; }
+    }
+
+    private sealed class DungeonEnemy
+    {
+        public DungeonEnemy(double x, double y, DungeonEnemyType type, int health)
+        {
+            X = x;
+            Y = y;
+            Type = type;
+            Health = health;
+            MaxHealth = health;
+        }
+
+        public int Id { get; set; }
+        public double X { get; set; }
+        public double Y { get; set; }
+        public DungeonEnemyType Type { get; set; }
+        public int Health { get; set; }
+        public int MaxHealth { get; set; }
+        public DungeonEnemyState State { get; set; }
+        public int StateAge { get; set; }
+        public int LastHitSerial { get; set; }
+        public bool FacingLeft { get; set; }
     }
 
     private sealed class DungeonState
@@ -5694,14 +5958,27 @@ internal sealed class StormaktGame
         public ulong SelectedItemId { get; set; }
         public uint PreviousInventoryMouseButtons { get; set; }
         public bool ViewingStash { get; set; }
+        public List<DungeonEnemy> Enemies { get; } = [];
+        public int NextEnemyId { get; set; } = 1;
+        public int AttackAge { get; set; }
+        public int AttackSerial { get; set; }
+        public int AttackCombo { get; set; }
+        public bool AttackQueued { get; set; }
+        public bool Guarding { get; set; }
+        public int HitStop { get; set; }
+        public int HurtAge { get; set; }
+        public bool RoomClear { get; set; }
     }
 
     private readonly record struct DungeonSave(int Schema, int Age, int RoomWidth, int RoomHeight,
         double KarlX, double KarlY, double TargetX, double TargetY, DungeonFacing Facing,
-        int Health, int MaxHealth, int Power, ulong NextItemId, List<DungeonItemSave>? Items);
+        int Health, int MaxHealth, int Power, ulong NextItemId, List<DungeonItemSave>? Items,
+        int NextEnemyId, int AttackSerial, int AttackCombo, bool RoomClear, List<DungeonEnemySave>? Enemies);
     private readonly record struct DungeonItemSave(ulong Id, int Definition, int GridX, int GridY,
         DungeonEquipmentSlot Equipped, DungeonItemRarity Rarity, int PowerRoll, bool OnGround, bool InStash,
         double WorldX, double WorldY);
+    private readonly record struct DungeonEnemySave(int Id, double X, double Y, DungeonEnemyType Type,
+        int Health, int MaxHealth, DungeonEnemyState State, int StateAge, int LastHitSerial, bool FacingLeft);
 
     private sealed class SorenRivalState
     {
