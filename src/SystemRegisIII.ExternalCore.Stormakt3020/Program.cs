@@ -1817,11 +1817,17 @@ internal sealed class StormaktGame
         if (x < 30 || x > dungeon.RoomWidth - 30 || y < 52 || y > dungeon.RoomHeight - 30) return true;
         if (dungeon.Depth == 2)
         {
-            bool galleryA = x > 255 && x < 320 && y > 82 && y < 273;
-            bool galleryB = x > 510 && x < 565 && y > 402 && y < 728;
-            bool galleryC = x > 755 && x < 840 && y > 97 && y < 393;
-            bool galleryD = x > 1000 && x < 1060 && y > 482 && y < 758;
-            return galleryA || galleryB || galleryC || galleryD;
+            // Each visible timber is a separate horizontal obstacle. The old
+            // implementation joined each pair into one tall invisible wall,
+            // blocking the clearly visible passage between the sprites.
+            ReadOnlySpan<(int X, int Y)> timbers =
+            [
+                (285, 175), (285, 245), (535, 470), (535, 610),
+                (795, 165), (795, 310), (1030, 545), (1030, 675),
+            ];
+            foreach ((int timberX, int timberY) in timbers)
+                if (Math.Abs(x - timberX) < 34 && Math.Abs(y - timberY) < 12) return true;
+            return false;
         }
         bool leftPillar = x > 253 && x < 307 && y > 124 && y < 212;
         bool rightStore = x > 438 && x < 507 && y > 268 && y < 340;
