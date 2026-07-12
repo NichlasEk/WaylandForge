@@ -2701,7 +2701,10 @@ internal sealed class StormaktGame
         int karlX = (int)Math.Round(dungeon.KarlX) - dungeon.CameraX;
         int karlY = (int)Math.Round(dungeon.KarlY) - dungeon.CameraY;
         string karlName;
-        int gait = (int)(dungeon.GaitDistance / 5.0) & 3;
+        // Drive the cycle from travelled world distance so speed changes do
+        // not slide the feet. Roughly 34 px per full cycle matches Karl's
+        // long, deliberate Carolean stride at both normal and Slow speed.
+        int gait = (int)(dungeon.GaitDistance / 8.5) & 3;
         if (dungeon.Age < 150) karlName = dungeon.Age < 95 ? "dungeon_karl_kneel" : "dungeon_karl_s_idle";
         else if (dungeon.Facing == DungeonFacing.North) karlName = dungeon.Moving && gait is 1 or 3 ? "dungeon_karl_n_walk" : "dungeon_karl_n_idle";
         else if (dungeon.Facing is DungeonFacing.East or DungeonFacing.West) karlName = dungeon.Moving && gait is 1 or 3 ? "dungeon_karl_e_walk" : "dungeon_karl_e_idle";
