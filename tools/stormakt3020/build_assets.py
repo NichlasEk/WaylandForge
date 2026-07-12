@@ -335,6 +335,15 @@ def append_rts_terrain_details(
     entries.append(("rts_karl_landing_pad", pad))
 
 
+def append_rts_frontier_road(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    cell_width = source.width // 2
+    for column, name in enumerate(["rts_frontier_road_intact", "rts_frontier_road_churned"]):
+        right = source.width if column == 1 else cell_width
+        tile = trim_alpha(source.crop((column * cell_width, 0, right, source.height)).convert("RGBA"))
+        tile = tile.resize((46, 96), Image.Resampling.LANCZOS)
+        entries.append((name, tile))
+
+
 def mirrored_background(source: Image.Image, width: int, height: int) -> Image.Image:
     plate = source.copy()
     plate.thumbnail((width, height), Image.Resampling.LANCZOS)
@@ -374,6 +383,7 @@ def build(
     rts_floor_input_path: Path,
     rts_vein_input_path: Path,
     rts_landing_pad_input_path: Path,
+    rts_road_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
 ) -> None:
@@ -406,6 +416,7 @@ def build(
     rts_floor_source = Image.open(rts_floor_input_path).convert("RGBA")
     rts_vein_source = Image.open(rts_vein_input_path).convert("RGBA")
     rts_landing_pad_source = Image.open(rts_landing_pad_input_path).convert("RGBA")
+    rts_road_source = Image.open(rts_road_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
@@ -484,6 +495,7 @@ def build(
         ("rts_dk_wagon_rut", 3, 1, (42, 28)),
     ])
     append_rts_terrain_details(entries, rts_floor_source, rts_vein_source, rts_landing_pad_source)
+    append_rts_frontier_road(entries, rts_road_source)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
@@ -615,6 +627,7 @@ def main() -> None:
     parser.add_argument("--rts-floor-input", type=Path, default=Path("assets/stormakt3020/rts-forest-floor-v1.png"))
     parser.add_argument("--rts-vein-input", type=Path, default=Path("assets/stormakt3020/rts-silver-vein-v1.png"))
     parser.add_argument("--rts-landing-pad-input", type=Path, default=Path("assets/stormakt3020/rts-karl-landing-pad-v1.png"))
+    parser.add_argument("--rts-road-input", type=Path, default=Path("assets/stormakt3020/rts-danish-frontier-road-v1.png"))
     parser.add_argument(
         "--logo-input",
         type=Path,
@@ -652,6 +665,7 @@ def main() -> None:
         args.rts_floor_input,
         args.rts_vein_input,
         args.rts_landing_pad_input,
+        args.rts_road_input,
         args.logo_input,
         args.output,
     )

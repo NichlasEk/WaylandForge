@@ -425,7 +425,7 @@ internal sealed class StormaktGame
             : null;
         if (_rts is RtsState resetRts)
         {
-            resetRts.Fortress = new RtsFortress(resetRts.MapWidth - 108, resetRts.MapHeight / 2);
+            resetRts.Fortress = new RtsFortress(resetRts.MapWidth - 170, resetRts.MapHeight / 2);
             string[] forestProps = ["rts_spruce_tall", "rts_spruce_bent", "rts_pine_dead", "rts_spruce_crystal",
                 "rts_moss_boulders", "rts_silver_outcrop", "rts_forest_shrub", "rts_forest_stump"];
             string[] frontierProps = ["rts_dk_barricade", "rts_dk_lantern", "rts_dk_tripod", "rts_dk_signpost",
@@ -2364,12 +2364,26 @@ internal sealed class StormaktGame
         }
 
         int roadX = rts.MapWidth - 74 - rts.CameraX;
-        DrawRect(frame, roadX - 15, 18, 31, rts.MapHeight - 6, 0xff27251f);
-        DrawLine(frame, roadX - 13, 18, roadX - 13, rts.MapHeight, 0xff4d4433);
-        DrawLine(frame, roadX + 13, 18, roadX + 13, rts.MapHeight, 0xff4d4433);
-        for (int y = 28; y < rts.MapHeight; y += 22)
+        if (_sprites?.TryGet("rts_frontier_road_intact", out Sprite roadIntact) == true &&
+            _sprites.TryGet("rts_frontier_road_churned", out Sprite roadChurned))
         {
-            DrawLine(frame, roadX - 9, y, roadX + 9, y + 5, 0xff342f27);
+            for (int y = 18, section = 0; y < rts.MapHeight; y += roadIntact.Height, section++)
+            {
+                Sprite tile = section % 3 == 1 ? roadChurned : roadIntact;
+                DrawSprite(frame, tile, roadX - tile.Width / 2, y);
+            }
+            // Fixed roadside lamps breathe very gently. Nothing travels along
+            // the road: moving highlights read as an invisible vehicle here.
+            uint markerGlow = (rts.Age / 14 & 1) == 0 ? 0xff9c453d : 0xff6d302d;
+            for (int markerY = 48; markerY < rts.MapHeight; markerY += 64)
+            {
+                PutPixel(frame, roadX - 19, markerY, markerGlow);
+                PutPixel(frame, roadX + 19, markerY + 28, markerGlow);
+            }
+        }
+        else
+        {
+            DrawRect(frame, roadX - 15, 18, 31, rts.MapHeight - 6, 0xff27251f);
         }
 
         var drawables = new List<(double Y, int Kind, object? Entity)>(
@@ -2407,11 +2421,25 @@ internal sealed class StormaktGame
             bool valid = rts.TowerPlacementMode ? IsValidRtsTowerPlacement(rts, buildX, buildY) :
                 IsValidRtsPlacement(rts, buildX, buildY);
             uint ghost = valid ? 0xff65c58a : 0xffff6b62;
-            DrawRect(frame, screenX - 13, buildY - 9, 27, 19, 0xff17211c);
-            DrawLine(frame, screenX - 13, buildY - 9, screenX + 13, buildY - 9, ghost);
-            DrawLine(frame, screenX - 13, buildY + 9, screenX + 13, buildY + 9, ghost);
-            DrawLine(frame, screenX - 13, buildY - 9, screenX - 13, buildY + 9, ghost);
-            DrawLine(frame, screenX + 13, buildY - 9, screenX + 13, buildY + 9, ghost);
+            string previewName = rts.TowerPlacementMode ? "rts_tower_idle" : rts.BuildStage switch
+            {
+                0 => "rts_steam_idle",
+                1 => "rts_crusher_idle",
+                2 => "rts_barracks",
+                _ => "rts_animal_hall",
+            };
+            int halfWidth = 16;
+            int halfHeight = 12;
+            if (_sprites?.TryGet(previewName, out Sprite preview) == true)
+            {
+                DrawSpriteAlpha(frame, preview, screenX - preview.Width / 2, buildY - preview.Height / 2, 145);
+                halfWidth = preview.Width / 2 + 2;
+                halfHeight = preview.Height / 2 + 2;
+            }
+            DrawLine(frame, screenX - halfWidth, buildY - halfHeight, screenX + halfWidth, buildY - halfHeight, ghost);
+            DrawLine(frame, screenX - halfWidth, buildY + halfHeight, screenX + halfWidth, buildY + halfHeight, ghost);
+            DrawLine(frame, screenX - halfWidth, buildY - halfHeight, screenX - halfWidth, buildY + halfHeight, ghost);
+            DrawLine(frame, screenX + halfWidth, buildY - halfHeight, screenX + halfWidth, buildY + halfHeight, ghost);
         }
 
         if (rts.LandingAge >= 120)
@@ -4065,6 +4093,10 @@ internal sealed class StormaktGame
         {
             DrawGlimmingeResultWreck(frame, panelX + 196, 67);
         }
+        else if (_levelId == 3)
+        {
+            DrawRtsVictorySilver(frame, panelX + 196, 67);
+        }
         else
         {
             DrawSnapphaneSilhouette(frame, panelX + 196, 67);
@@ -4087,6 +4119,19 @@ internal sealed class StormaktGame
                 DrawText(frame, panelX + 39, 116, "KRONARKIV SÄKRAT", 0xff9bd4dc);
             }
         }
+    }
+
+    private void DrawRtsVictorySilver(uint[] frame, int x, int y)
+    {
+        if (_sprites?.TryGet("rts_vein_node", out Sprite silver) == true)
+        {
+            DrawSprite(frame, silver, x - silver.Width / 2, y - silver.Height / 2);
+        }
+        int pulse = (_stageClearAge / 5) & 1;
+        uint glint = pulse == 0 ? 0xffffffff : 0xff9bd4dc;
+        DrawLine(frame, x - 18, y, x - 10, y, glint);
+        DrawLine(frame, x + 10, y, x + 18, y, glint);
+        DrawLine(frame, x, y - 20, x, y - 13, glint);
     }
 
     private void DrawGlimmingeResultWreck(uint[] frame, int x, int y)
