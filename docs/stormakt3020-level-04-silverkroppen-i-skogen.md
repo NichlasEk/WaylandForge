@@ -169,7 +169,7 @@ Gamepad använder gruppval per typ inom en liten radie. Musläget skickas genom 
 3. **Kraft och ekonomi:** ångkraftverk, silverkross, skattkammare, byggplacering och HUD. **Landed 2026-07-11.**
 4. **Svensk produktion:** barack, fotkaroliner, djurhall och älgkaroliner. **Landed 2026-07-11.**
 5. **Danska vågor:** fem fiendetyper, stabil målsökning och försvarstorn. **Landed 2026-07-11.**
-6. **Toldhuset:** markboss, markbredsida, seger/resultat och balanspass. Commit och push.
+6. **Toldhuset:** kartan sträcks till drygt två skärmbredder; den mobila markbossen, två sigillmaster, öppnad port, kärnhälsa, dansk förstärkningsproduktion och det kombinerade segervillkoret är spelbara. Karl CCLV:s särskilda markbredsida och slutligt resultatkort återstår. **Major boss slice landed 2026-07-12.**
 7. **Presentation:** genererade byggnads- och truppassets, arbets-/anfallsanimationer, nio lokala stridsljud, sex svenska/danska händelseradior samt egen 84 BPM ångdriven karolinsk RTS-fältmarsch. 400x280 och 320x224 headless-verifieras. **Landed 2026-07-11.**
 
 ## Icke-mål för första spelbara versionen

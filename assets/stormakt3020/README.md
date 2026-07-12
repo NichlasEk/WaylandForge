@@ -32,6 +32,8 @@
 
 `rts-silver-miner-v1.png` supplies two empty and two silver-loaded walking phases for the visible crusher-to-Karl economy convoy. The four cells share one reference scale and fixed runtime canvas; delivered crates, rather than a hidden income timer, advance both spendable and salvaged silver.
 
+`rts-toldhus-v1.png` supplies intact, open-gate, burning and wreck states for Møntgrevens mobile Danish tax fortress plus intact/broken royal seal machinery. The boss occupies the enlarged eastern front of Silverkroppen and cannot expose its core until both seal health pools are destroyed.
+
 `stormakt-bridge-cannons-projectiles-v1.png` adds three bridge-collapse pieces, intact/destroyed Danish bridge cannon states, a detachable boss broadside cannon and red/white/gold enemy projectile families. Runtime uses the wreck pieces during the existing 45-frame collapse and mirrors the broadside module for the boss's right side.
 
 Prompt summary:

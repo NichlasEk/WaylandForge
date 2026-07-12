@@ -337,6 +337,7 @@ internal sealed class StormaktGame
         if (_levelId == 3 && !_inLevelSelect && !_inLevelPreview)
         {
             DrawRts(frame);
+            DrawStageClear(frame);
             DrawPause(frame);
             return;
         }
@@ -414,7 +415,7 @@ internal sealed class StormaktGame
         _rts = _levelId == 3
             ? new RtsState
             {
-                MapWidth = _width + (_width <= 320 ? 120 : 160),
+                MapWidth = _width + (_width <= 320 ? 400 : 500),
                 MapHeight = _height - 28,
                 CursorX = 74,
                 CursorY = _height - 82,
@@ -422,6 +423,10 @@ internal sealed class StormaktGame
                 LandingY = _height - 82,
             }
             : null;
+        if (_rts is RtsState resetRts)
+        {
+            resetRts.Fortress = new RtsFortress(resetRts.MapWidth - 108, resetRts.MapHeight / 2);
+        }
         _stageClear = false;
         _stageClearAge = 0;
         _previousButtons = 0;
@@ -921,6 +926,16 @@ internal sealed class StormaktGame
             SpawnRtsWave(rts, RtsEnemyType.OrganWagon, 1, 118);
             if (rts.CombatAge == 2_040) ActivateBossRadio(RtsOrganRadio);
         }
+        else if (rts.CombatAge >= 3_600 && rts.CombatAge % 360 == 0 && rts.Fortress is { Health: > 0 })
+        {
+            RtsEnemyType type = ((rts.CombatAge / 360) % 3) switch
+            {
+                0 => RtsEnemyType.TollStormer,
+                1 => RtsEnemyType.LedgerPikeman,
+                _ => RtsEnemyType.CoinMastiff,
+            };
+            SpawnRtsWave(rts, type, 3 + rts.CombatAge / 1_800, 72 + rts.CombatAge / 120 % 90);
+        }
     }
 
     private void SpawnRtsWave(RtsState rts, RtsEnemyType type, int count, int yBase)
@@ -954,6 +969,17 @@ internal sealed class StormaktGame
             if (target is not null && DistanceSquared(unit.X, unit.Y, target.X, target.Y) <= range * range && unit.Cooldown == 0)
             {
                 target.Health -= unit.Type == RtsUnitType.MooseCarolean ? 22 : 9;
+                unit.Cooldown = unit.Type == RtsUnitType.MooseCarolean ? 42 : 34;
+                _audio?.Trigger(unit.Type == RtsUnitType.MooseCarolean ? StormaktSound.RtsMooseCharge : StormaktSound.RtsCaroleanVolley);
+            }
+            else if (unit.Cooldown == 0 && rts.Fortress is { Health: > 0 } fortress &&
+                DistanceSquared(unit.X, unit.Y, fortress.X, fortress.Y) <= (range + 32) * (range + 32))
+            {
+                int damage = unit.Type == RtsUnitType.MooseCarolean ? 18 : 8;
+                if (fortress.LeftSealHealth > 0) fortress.LeftSealHealth -= damage;
+                else if (fortress.RightSealHealth > 0) fortress.RightSealHealth -= damage;
+                else fortress.Health -= damage;
+                fortress.GateOpen = fortress.LeftSealHealth <= 0 && fortress.RightSealHealth <= 0;
                 unit.Cooldown = unit.Type == RtsUnitType.MooseCarolean ? 42 : 34;
                 _audio?.Trigger(unit.Type == RtsUnitType.MooseCarolean ? StormaktSound.RtsMooseCharge : StormaktSound.RtsCaroleanVolley);
             }
@@ -1079,6 +1105,12 @@ internal sealed class StormaktGame
         }
         rts.Units.RemoveAll(unit => unit.Health <= 0);
         rts.Buildings.RemoveAll(building => building.Health <= 0);
+        if (rts.Fortress is { Health: <= 0 } defeatedFortress && rts.SilverGoalReached)
+        {
+            defeatedFortress.Health = 0;
+            _stageClear = true;
+            _stageClearAge = 0;
+        }
         if (rts.KarlHealth <= 0)
         {
             _gameOver = true;
@@ -2290,12 +2322,13 @@ internal sealed class StormaktGame
         }
 
         var drawables = new List<(double Y, int Kind, object? Entity)>(
-            rts.Buildings.Count + rts.Units.Count + rts.Enemies.Count + rts.Miners.Count + 1);
+            rts.Buildings.Count + rts.Units.Count + rts.Enemies.Count + rts.Miners.Count + 2);
         drawables.AddRange(rts.Buildings.Select(building => ((double)building.Y, 0, (object?)building)));
         drawables.AddRange(rts.Units.Select(unit => (unit.Y, 1, (object?)unit)));
         drawables.AddRange(rts.Enemies.Select(enemy => (enemy.Y, 2, (object?)enemy)));
         drawables.AddRange(rts.Miners.Select(miner => (miner.Y, 3, (object?)miner)));
-        drawables.Add((rts.LandingY, 4, null));
+        if (rts.Fortress is RtsFortress fortress) drawables.Add((fortress.Y, 4, fortress));
+        drawables.Add((rts.LandingY, 5, null));
         drawables.Sort(static (left, right) =>
         {
             int yOrder = left.Y.CompareTo(right.Y);
@@ -2309,6 +2342,7 @@ internal sealed class StormaktGame
                 case 1: DrawRtsUnit(frame, rts, (RtsUnit)entity!); break;
                 case 2: DrawRtsEnemy(frame, rts, (RtsEnemy)entity!); break;
                 case 3: DrawRtsMiner(frame, rts, (RtsMiner)entity!); break;
+                case 4: DrawRtsFortress(frame, rts, (RtsFortress)entity!); break;
                 default: DrawRtsLandedKarl(frame, rts); break;
             }
         }
@@ -2592,6 +2626,24 @@ internal sealed class StormaktGame
         int y = (int)Math.Round(miner.Y) - sprite.Height / 2;
         if (miner.TargetX < miner.X) DrawSpriteFlippedX(frame, sprite, x, y);
         else DrawSprite(frame, sprite, x, y);
+    }
+
+    private void DrawRtsFortress(uint[] frame, RtsState rts, RtsFortress fortress)
+    {
+        int x = fortress.X - rts.CameraX;
+        if (x < -120 || x > _width + 120) return;
+        string name = fortress.Health <= 0 ? "rts_toldhus_wreck" :
+            fortress.Health < 220 ? "rts_toldhus_damaged" :
+            fortress.GateOpen ? "rts_toldhus_open" : "rts_toldhus_intact";
+        if (_sprites?.TryGet(name, out Sprite sprite) == true)
+        {
+            DrawSprite(frame, sprite, x - sprite.Width / 2, fortress.Y - sprite.Height / 2);
+        }
+        if (fortress.Health > 0)
+        {
+            DrawRect(frame, x - 45, fortress.Y + 42, 91, 5, 0xff101318);
+            DrawRect(frame, x - 44, fortress.Y + 43, Math.Max(0, fortress.Health) * 89 / 600, 3, 0xffa92b3f);
+        }
     }
 
     private void DrawRtsEnemy(uint[] frame, RtsState rts, RtsEnemy enemy)
@@ -4675,6 +4727,7 @@ internal sealed class StormaktGame
         public bool MousePrimaryPressed { get; set; }
         public int SalvagedSilver { get; set; }
         public bool SilverGoalReached { get; set; }
+        public RtsFortress? Fortress { get; set; }
     }
 
     private sealed class RtsBuilding
@@ -4730,6 +4783,16 @@ internal sealed class StormaktGame
         public bool Moving { get; set; }
         public int LoadAge { get; set; }
         public int AnimationPhase { get; } = animationPhase;
+    }
+
+    private sealed class RtsFortress(int x, int y)
+    {
+        public int X { get; } = x;
+        public int Y { get; } = y;
+        public int Health { get; set; } = 600;
+        public int LeftSealHealth { get; set; } = 120;
+        public int RightSealHealth { get; set; } = 120;
+        public bool GateOpen { get; set; }
     }
 
     private sealed class RtsUnit

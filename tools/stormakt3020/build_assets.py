@@ -273,6 +273,8 @@ def append_rts_sheet(
         "rts_moose_hit": "rts_moose_ready", "rts_toll_attack": "rts_toll_ready",
         "rts_pike_attack": "rts_pike_ready", "rts_mastiff_attack": "rts_mastiff_ready",
         "rts_boar_fuse": "rts_boar_ready", "rts_organ_fire": "rts_organ_ready",
+        "rts_toldhus_open": "rts_toldhus_intact", "rts_toldhus_damaged": "rts_toldhus_intact",
+        "rts_seal_broken": "rts_seal_intact",
     }
     for name, column, row, size in definitions:
         right = source.width if column == columns - 1 else (column + 1) * cell_width
@@ -347,6 +349,7 @@ def build(
     rts_units_input_path: Path,
     rts_danish_input_path: Path,
     rts_miner_input_path: Path,
+    rts_toldhus_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
 ) -> None:
@@ -373,6 +376,7 @@ def build(
     rts_units_source = Image.open(rts_units_input_path).convert("RGBA")
     rts_danish_source = Image.open(rts_danish_input_path).convert("RGBA")
     rts_miner_source = Image.open(rts_miner_input_path).convert("RGBA")
+    rts_toldhus_source = Image.open(rts_toldhus_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
@@ -422,6 +426,14 @@ def build(
         ("rts_organ_fire", 4, 1, (52, 34)),
     ])
     append_rts_miner(entries, rts_miner_source)
+    append_rts_sheet(entries, rts_toldhus_source, 3, [
+        ("rts_toldhus_intact", 0, 0, (148, 104)),
+        ("rts_toldhus_open", 1, 0, (148, 104)),
+        ("rts_toldhus_damaged", 2, 0, (148, 104)),
+        ("rts_seal_intact", 0, 1, (32, 52)),
+        ("rts_seal_broken", 1, 1, (32, 52)),
+        ("rts_toldhus_wreck", 2, 1, (148, 72)),
+    ])
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
@@ -547,6 +559,7 @@ def main() -> None:
     parser.add_argument("--rts-units-input", type=Path, default=Path("assets/stormakt3020/rts-swedish-units-v1.png"))
     parser.add_argument("--rts-danish-input", type=Path, default=Path("assets/stormakt3020/rts-danish-army-v1.png"))
     parser.add_argument("--rts-miner-input", type=Path, default=Path("assets/stormakt3020/rts-silver-miner-v1.png"))
+    parser.add_argument("--rts-toldhus-input", type=Path, default=Path("assets/stormakt3020/rts-toldhus-v1.png"))
     parser.add_argument(
         "--logo-input",
         type=Path,
@@ -578,6 +591,7 @@ def main() -> None:
         args.rts_units_input,
         args.rts_danish_input,
         args.rts_miner_input,
+        args.rts_toldhus_input,
         args.logo_input,
         args.output,
     )
