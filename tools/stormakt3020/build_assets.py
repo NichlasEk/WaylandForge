@@ -504,6 +504,42 @@ def append_dungeon_gruva3_portal(entries: list[tuple[str, Image.Image]], source:
     entries.append(("dungeon_gruva3_portal", canvas))
 
 
+def append_dungeon_gruva3(entries: list[tuple[str, Image.Image]], environment: Image.Image,
+                          enemies: Image.Image, shepherd: Image.Image) -> None:
+    env_names = ["dungeon_cursed_floor", "dungeon_black_water", "dungeon_twisted_silver", "dungeon_runic_arch",
+                 "dungeon_holy_shrine", "dungeon_holy_shrine_dark", "dungeon_lore_stele", "dungeon_side_chamber"]
+    env_targets = [(96, 72), (82, 60), (82, 66), (92, 82), (72, 82), (72, 82), (62, 78), (92, 78)]
+    for index, (name, target) in enumerate(zip(env_names, env_targets)):
+        column, row = index % 4, index // 4
+        cell = environment.crop((column * environment.width // 4, row * environment.height // 2,
+                                 (column + 1) * environment.width // 4, (row + 1) * environment.height // 2))
+        sprite = trim_alpha(cell.convert("RGBA")); sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+    enemy_names = ["undead_miner_idle", "undead_miner_walk", "undead_miner_attack", "undead_miner_hit",
+                   "tuonela_guard_idle", "tuonela_guard_walk", "tuonela_guard_attack", "tuonela_guard_hit"]
+    for index, name in enumerate(enemy_names):
+        column, row = index % 4, index // 4
+        cell = enemies.crop((column * enemies.width // 4, row * enemies.height // 2,
+                             (column + 1) * enemies.width // 4, (row + 1) * enemies.height // 2)).convert("RGBA")
+        sprite = cell.resize((52, 70), Image.Resampling.LANCZOS)
+        canvas = Image.new("RGBA", (70, 72), (0, 0, 0, 0)); canvas.alpha_composite(sprite, (9, 2))
+        entries.append((name, canvas))
+    boss_names = ["blind_shepherd_idle", "blind_shepherd_attack", "blind_shepherd_hit", "blind_shepherd_death"]
+    for index, name in enumerate(boss_names):
+        cell = shepherd.crop((index * shepherd.width // 4, 0, (index + 1) * shepherd.width // 4,
+                              shepherd.height // 2)).convert("RGBA")
+        sprite = cell.resize((92, 92), Image.Resampling.LANCZOS)
+        canvas = Image.new("RGBA", (106, 96), (0, 0, 0, 0)); canvas.alpha_composite(sprite, (7, 4))
+        entries.append((name, canvas))
+    loot_names = ["loot_sun_disc", "loot_temple_key", "dungeon_cursed_chest", "dungeon_temple_stairs"]
+    loot_targets = [(30, 30), (24, 32), (66, 54), (96, 88)]
+    for index, name in enumerate(loot_names):
+        cell = shepherd.crop((index * shepherd.width // 4, shepherd.height // 2,
+                              (index + 1) * shepherd.width // 4, shepherd.height)).convert("RGBA")
+        sprite = trim_alpha(cell); sprite.thumbnail(loot_targets[index], Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def mirrored_background(source: Image.Image, width: int, height: int) -> Image.Image:
     plate = source.copy()
     plate.thumbnail((width, height), Image.Resampling.LANCZOS)
@@ -556,6 +592,9 @@ def build(
     dungeon_silver_fogde_input_path: Path,
     dungeon_fogde_finale_input_path: Path,
     dungeon_gruva3_portal_input_path: Path,
+    dungeon_gruva3_environment_input_path: Path,
+    dungeon_gruva3_enemies_input_path: Path,
+    dungeon_blind_shepherd_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
 ) -> None:
@@ -601,6 +640,9 @@ def build(
     dungeon_silver_fogde_source = Image.open(dungeon_silver_fogde_input_path).convert("RGBA")
     dungeon_fogde_finale_source = Image.open(dungeon_fogde_finale_input_path).convert("RGBA")
     dungeon_gruva3_portal_source = Image.open(dungeon_gruva3_portal_input_path).convert("RGBA")
+    dungeon_gruva3_environment_source = Image.open(dungeon_gruva3_environment_input_path).convert("RGBA")
+    dungeon_gruva3_enemies_source = Image.open(dungeon_gruva3_enemies_input_path).convert("RGBA")
+    dungeon_blind_shepherd_source = Image.open(dungeon_blind_shepherd_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
@@ -688,6 +730,8 @@ def build(
     append_dungeon_silver_fogde(entries, dungeon_silver_fogde_source)
     append_dungeon_fogde_finale(entries, dungeon_fogde_finale_source)
     append_dungeon_gruva3_portal(entries, dungeon_gruva3_portal_source)
+    append_dungeon_gruva3(entries, dungeon_gruva3_environment_source, dungeon_gruva3_enemies_source,
+                          dungeon_blind_shepherd_source)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
@@ -832,6 +876,9 @@ def main() -> None:
     parser.add_argument("--dungeon-silver-fogde-input", type=Path, default=Path("assets/stormakt3020/dungeon-silver-fogde-v1.png"))
     parser.add_argument("--dungeon-fogde-finale-input", type=Path, default=Path("assets/stormakt3020/dungeon-fogde-finale-v1.png"))
     parser.add_argument("--dungeon-gruva3-portal-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva3-portal-v1.png"))
+    parser.add_argument("--dungeon-gruva3-environment-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva3-environment-v1.png"))
+    parser.add_argument("--dungeon-gruva3-enemies-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva3-enemies-v1.png"))
+    parser.add_argument("--dungeon-blind-shepherd-input", type=Path, default=Path("assets/stormakt3020/dungeon-blind-shepherd-v1.png"))
     parser.add_argument(
         "--logo-input",
         type=Path,
@@ -882,6 +929,9 @@ def main() -> None:
         args.dungeon_silver_fogde_input,
         args.dungeon_fogde_finale_input,
         args.dungeon_gruva3_portal_input,
+        args.dungeon_gruva3_environment_input,
+        args.dungeon_gruva3_enemies_input,
+        args.dungeon_blind_shepherd_input,
         args.logo_input,
         args.output,
     )
