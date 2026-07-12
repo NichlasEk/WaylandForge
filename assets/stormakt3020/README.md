@@ -30,6 +30,8 @@
 
 `rts-swedish-buildings-v1.png`, `rts-swedish-units-v1.png` and `rts-danish-army-v1.png` supply Silverkroppen's complete first production-art pass. Their packed states cover working steam/crusher machinery, tower fire, Carolean volley/reload, moose charge/carbine, and ready/attack pairs for all five Danish troop families. Equal atlas cells are cropped independently before alpha trimming, so animation effects and neighboring units cannot leak into another sprite.
 
+`rts-silver-miner-v1.png` supplies two empty and two silver-loaded walking phases for the visible crusher-to-Karl economy convoy. The four cells share one reference scale and fixed runtime canvas; delivered crates, rather than a hidden income timer, advance both spendable and salvaged silver.
+
 `stormakt-bridge-cannons-projectiles-v1.png` adds three bridge-collapse pieces, intact/destroyed Danish bridge cannon states, a detachable boss broadside cannon and red/white/gold enemy projectile families. Runtime uses the wreck pieces during the existing 45-frame collapse and mirrors the broadside module for the boss's right side.
 
 Prompt summary:

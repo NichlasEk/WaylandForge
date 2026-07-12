@@ -35,7 +35,7 @@ landa Karl CCLV
   -> bryt fogdens belägring och slå ut tullfortet
 ```
 
-Silver bryts automatiskt när en kraftsatt silverkross står inom räckvidd för huvudådern. Spelaren ska fatta placerings-, produktions- och försvarsbeslut, inte manuellt köra skördare i den första versionen.
+Silver bryts automatiskt när en kraftsatt silverkross står inom räckvidd för huvudådern, men blir inte disponibelt eller bärgat förrän en synlig gruvmas har burit en silverlåda från krossen till Karl. Tre deterministiskt fasförskjutna arbetare går i skytteltrafik; varje lossad låda ger 40 disponibelt silver och 40 på den separata bärgningsmätaren. `1200` bärgat silver uppfyller uppdragets ekonomiska vinstvillkor. Spelaren ska fatta placerings-, produktions- och försvarsbeslut, inte manuellt detaljstyra gruvarbetarna.
 
 ## Byggnader
 
@@ -127,6 +127,7 @@ De ska vara absurda i koncept men spelas med samma allvar som resten av världen
 - Toldhuset fungerar som markboss och producerar blandade eskorter tills dess två sigillmaster förstörs.
 - Full skattkammare låser Karl CCLV:s enda markbredsida; den river fortporten men dödar inte bossen automatiskt.
 - Seger kräver förstörda sigillmaster och kärna. Överlevande svenska trupper samlas vid silverådern inför resultatkortet.
+- Segerkortet kräver både minst `1200` bärgat silver och ett förstört Toldhus; bossen kan alltså inte rusas utan säkrad krigskassa.
 
 ## RTS-styrning
 
@@ -189,6 +190,7 @@ Gamepad använder gruppval per typ inom en liten radie. Musläget skickas genom 
 - Strömbrist stoppar produktion/torn läsbart men låser aldrig uppdraget permanent.
 - Varningsljud och marktelegrafer ger minst 45 frames före krudtgrisexplosion och tung orgelvagnssalva.
 - Samma seed och input ger samma silvermängd, produktion, målval, döda enheter och resultatbild.
+- HUD skiljer disponibelt `S` från faktiskt bärgat `B`; endast lossade gruvmaslaster ökar båda värdena.
 - RTS-HUD, radio, paus och byggplacering fungerar utan överlapp i både 400x280 och 320x224.
 - Karl CCLV kan inte förstöras av en fiende som skjuter från utanför synlig karta.
 - Resultatkortet visar säkrad krigskassa, överlevande trupper och öppnar vägen till `Fogdens tionde värld`.

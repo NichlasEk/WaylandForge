@@ -104,6 +104,7 @@ internal sealed class StormaktGame
     private const int GlimmingeMaxHealth = 720;
     private const int GlimmingePhaseTwoHealth = 420;
     private const int GlimmingeBurningHealth = 210;
+    private const int RtsSalvagedSilverGoal = 1_200;
     private const uint Up = 1u << 1;
     private const uint Down = 1u << 2;
     private const uint Left = 1u << 3;
@@ -518,12 +519,8 @@ internal sealed class StormaktGame
             ActivateBossRadio(RtsSilverRadio);
         }
 
-        if (rts.BuildStage >= 2 && RtsHasPower(rts) && rts.Age % 60 == 0)
-        {
-            rts.Silver += 25;
-            rts.SilverPulse = 30;
-        }
         rts.SilverPulse = Math.Max(0, rts.SilverPulse - 1);
+        StepRtsMiners(rts);
         StepRtsProduction(rts);
         StepRtsUnits(rts);
         if (rts.CombatStarted)
@@ -578,6 +575,10 @@ internal sealed class StormaktGame
             else if (valid && rts.BuildStage == 1)
             {
                 rts.Buildings.Add(new RtsBuilding(buildX, buildY, RtsBuildingType.SilverCrusher));
+                for (int miner = 0; miner < 3; miner++)
+                {
+                    rts.Miners.Add(new RtsMiner(buildX + (miner - 1) * 7, buildY + 15 + miner * 3, miner * 17));
+                }
                 rts.BuildStage = 2;
                 _audio?.Trigger(StormaktSound.RtsBuild);
             }
@@ -664,10 +665,9 @@ internal sealed class StormaktGame
                 ? rts.Units.FirstOrDefault(unit =>
                     DistanceSquared(unit.X, unit.Y, rts.MouseWorldX, rts.MouseWorldY) <= 15 * 15)
                 : null;
-            bool hadSelection = rts.Units.Any(unit => unit.Selected);
-            if (click && clickedUnit is null && hadSelection)
+            if (click && clickedUnit is null)
             {
-                IssueRtsFormationOrder(rts, rts.MouseWorldX, rts.MouseWorldY);
+                foreach (RtsUnit unit in rts.Units) unit.Selected = false;
             }
             else
             {
@@ -694,6 +694,46 @@ internal sealed class StormaktGame
             selectedIndex++;
         }
         if (selectedIndex > 0) _audio?.Trigger(StormaktSound.Deploy);
+    }
+
+    private void StepRtsMiners(RtsState rts)
+    {
+        RtsBuilding? crusher = rts.Buildings.FirstOrDefault(building => building.Type == RtsBuildingType.SilverCrusher);
+        if (crusher is null || !RtsHasPower(rts)) return;
+        foreach (RtsMiner miner in rts.Miners)
+        {
+            double targetX = miner.Carrying ? rts.LandingX : crusher.X;
+            double targetY = miner.Carrying ? rts.LandingY + 18 : crusher.Y + 12;
+            miner.TargetX = targetX;
+            miner.TargetY = targetY;
+            double dx = targetX - miner.X;
+            double dy = targetY - miner.Y;
+            double distance = Math.Sqrt(dx * dx + dy * dy);
+            miner.Moving = distance >= 1.0;
+            if (miner.Moving)
+            {
+                const double speed = 0.82;
+                miner.X += dx / distance * Math.Min(speed, distance);
+                miner.Y += dy / distance * Math.Min(speed, distance);
+                continue;
+            }
+            if (miner.Carrying)
+            {
+                miner.Carrying = false;
+                miner.LoadAge = 0;
+                rts.Silver += 40;
+                rts.SalvagedSilver += 40;
+                rts.SilverGoalReached |= rts.SalvagedSilver >= RtsSalvagedSilverGoal;
+                rts.SilverPulse = 30;
+                _score += 40;
+                _audio?.Trigger(StormaktSound.RtsUnitReady);
+            }
+            else if (++miner.LoadAge >= 60)
+            {
+                miner.Carrying = true;
+                miner.LoadAge = 0;
+            }
+        }
     }
 
     private bool IsValidRtsPlacement(RtsState rts, int x, int y)
@@ -2250,11 +2290,12 @@ internal sealed class StormaktGame
         }
 
         var drawables = new List<(double Y, int Kind, object? Entity)>(
-            rts.Buildings.Count + rts.Units.Count + rts.Enemies.Count + 1);
+            rts.Buildings.Count + rts.Units.Count + rts.Enemies.Count + rts.Miners.Count + 1);
         drawables.AddRange(rts.Buildings.Select(building => ((double)building.Y, 0, (object?)building)));
         drawables.AddRange(rts.Units.Select(unit => (unit.Y, 1, (object?)unit)));
         drawables.AddRange(rts.Enemies.Select(enemy => (enemy.Y, 2, (object?)enemy)));
-        drawables.Add((rts.LandingY, 3, null));
+        drawables.AddRange(rts.Miners.Select(miner => (miner.Y, 3, (object?)miner)));
+        drawables.Add((rts.LandingY, 4, null));
         drawables.Sort(static (left, right) =>
         {
             int yOrder = left.Y.CompareTo(right.Y);
@@ -2267,6 +2308,7 @@ internal sealed class StormaktGame
                 case 0: DrawRtsBuilding(frame, rts, (RtsBuilding)entity!); break;
                 case 1: DrawRtsUnit(frame, rts, (RtsUnit)entity!); break;
                 case 2: DrawRtsEnemy(frame, rts, (RtsEnemy)entity!); break;
+                case 3: DrawRtsMiner(frame, rts, (RtsMiner)entity!); break;
                 default: DrawRtsLandedKarl(frame, rts); break;
             }
         }
@@ -2318,7 +2360,7 @@ internal sealed class StormaktGame
             _ => 0,
         });
         int powerTotal = rts.Buildings.Any(building => building.Type == RtsBuildingType.SteamPlant) ? 100 : 0;
-        string economy = $"KRAFT {powerUsed:000}/{powerTotal:000}  SILVER {rts.Silver:0000}";
+        string economy = $"K {powerUsed:000}/{powerTotal:000} S {rts.Silver:0000} B {rts.SalvagedSilver:0000}/{RtsSalvagedSilverGoal}";
         DrawText(frame, _width - economy.Length * 6 - 5, 5, economy,
             rts.SilverPulse > 0 ? 0xffffffff : 0xff9bd4dc);
         DrawRect(frame, 0, _height - 14, _width, 14, 0xff080d12);
@@ -2329,6 +2371,7 @@ internal sealed class StormaktGame
         {
             2 => "Z PLACERA KAROLINERBARACK",
             3 => "Z PLACERA DJURHALL",
+            >= 4 when rts.SilverGoalReached => "SILVERMÅL NÅTT - HÅLL LINJEN",
             >= 4 when rts.BarracksTimer > 0 => $"KAROLINER {rts.BarracksTimer:000}",
             >= 4 when rts.AnimalHallTimer > 0 => $"ÄLGKAROLIN {rts.AnimalHallTimer:000}",
             >= 4 when rts.TowerPlacementMode => "SLOW+Z PLACERA FÖRSVARSTORN",
@@ -2537,6 +2580,18 @@ internal sealed class StormaktGame
         DrawLine(frame, x + 9, y - 18, x + 13, y - 15, 0xff8a6b38);
         DrawRect(frame, x - 3, y - 4, 7, 8, 0xff244f91);
         PutPixel(frame, x, y - 5, 0xffffd66b);
+    }
+
+    private void DrawRtsMiner(uint[] frame, RtsState rts, RtsMiner miner)
+    {
+        string name = miner.Carrying
+            ? ((rts.Age + miner.AnimationPhase) / 8 & 1) == 0 ? "rts_miner_loaded_a" : "rts_miner_loaded_b"
+            : ((rts.Age + miner.AnimationPhase) / 8 & 1) == 0 ? "rts_miner_empty_a" : "rts_miner_empty_b";
+        if (_sprites?.TryGet(name, out Sprite sprite) != true) return;
+        int x = (int)Math.Round(miner.X) - rts.CameraX - sprite.Width / 2;
+        int y = (int)Math.Round(miner.Y) - sprite.Height / 2;
+        if (miner.TargetX < miner.X) DrawSpriteFlippedX(frame, sprite, x, y);
+        else DrawSprite(frame, sprite, x, y);
     }
 
     private void DrawRtsEnemy(uint[] frame, RtsState rts, RtsEnemy enemy)
@@ -4602,6 +4657,7 @@ internal sealed class StormaktGame
         public List<RtsBuilding> Buildings { get; } = [];
         public List<RtsUnit> Units { get; } = [];
         public List<RtsEnemy> Enemies { get; } = [];
+        public List<RtsMiner> Miners { get; } = [];
         public int BarracksTimer { get; set; }
         public int AnimalHallTimer { get; set; }
         public bool LastPlacementValid { get; set; }
@@ -4617,6 +4673,8 @@ internal sealed class StormaktGame
         public bool MouseSelecting { get; set; }
         public uint PreviousMouseButtons { get; set; }
         public bool MousePrimaryPressed { get; set; }
+        public int SalvagedSilver { get; set; }
+        public bool SilverGoalReached { get; set; }
     }
 
     private sealed class RtsBuilding
@@ -4660,6 +4718,18 @@ internal sealed class StormaktGame
         public int FuseAge { get; set; }
         public int AnimationPhase { get; }
         public bool Moving { get; set; } = true;
+    }
+
+    private sealed class RtsMiner(double x, double y, int animationPhase)
+    {
+        public double X { get; set; } = x;
+        public double Y { get; set; } = y;
+        public double TargetX { get; set; } = x;
+        public double TargetY { get; set; } = y;
+        public bool Carrying { get; set; } = true;
+        public bool Moving { get; set; }
+        public int LoadAge { get; set; }
+        public int AnimationPhase { get; } = animationPhase;
     }
 
     private sealed class RtsUnit

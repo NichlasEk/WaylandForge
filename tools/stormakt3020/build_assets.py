@@ -295,6 +295,25 @@ def append_rts_sheet(
         entries.append((name, canvas))
 
 
+def append_rts_miner(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    names = ["rts_miner_empty_a", "rts_miner_empty_b", "rts_miner_loaded_a", "rts_miner_loaded_b"]
+    cell_width = source.width // 4
+    target = (24, 30)
+    reference_scale: float | None = None
+    for column, name in enumerate(names):
+        right = source.width if column == 3 else (column + 1) * cell_width
+        sprite = trim_alpha(source.crop((column * cell_width, 0, right, source.height)).convert("RGBA"))
+        if reference_scale is None:
+            reference_scale = min(target[0] / sprite.width, target[1] / sprite.height)
+        sprite = sprite.resize(
+            (max(1, round(sprite.width * reference_scale)), max(1, round(sprite.height * reference_scale))),
+            Image.Resampling.LANCZOS,
+        )
+        canvas = Image.new("RGBA", target, (0, 0, 0, 0))
+        canvas.alpha_composite(sprite, ((target[0] - sprite.width) // 2, target[1] - sprite.height))
+        entries.append((name, canvas))
+
+
 def mirrored_background(source: Image.Image, width: int, height: int) -> Image.Image:
     plate = source.copy()
     plate.thumbnail((width, height), Image.Resampling.LANCZOS)
@@ -327,6 +346,7 @@ def build(
     rts_buildings_input_path: Path,
     rts_units_input_path: Path,
     rts_danish_input_path: Path,
+    rts_miner_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
 ) -> None:
@@ -352,6 +372,7 @@ def build(
     rts_buildings_source = Image.open(rts_buildings_input_path).convert("RGBA")
     rts_units_source = Image.open(rts_units_input_path).convert("RGBA")
     rts_danish_source = Image.open(rts_danish_input_path).convert("RGBA")
+    rts_miner_source = Image.open(rts_miner_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
@@ -400,6 +421,7 @@ def build(
         ("rts_organ_ready", 4, 0, (52, 34)),
         ("rts_organ_fire", 4, 1, (52, 34)),
     ])
+    append_rts_miner(entries, rts_miner_source)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
@@ -524,6 +546,7 @@ def main() -> None:
     parser.add_argument("--rts-buildings-input", type=Path, default=Path("assets/stormakt3020/rts-swedish-buildings-v1.png"))
     parser.add_argument("--rts-units-input", type=Path, default=Path("assets/stormakt3020/rts-swedish-units-v1.png"))
     parser.add_argument("--rts-danish-input", type=Path, default=Path("assets/stormakt3020/rts-danish-army-v1.png"))
+    parser.add_argument("--rts-miner-input", type=Path, default=Path("assets/stormakt3020/rts-silver-miner-v1.png"))
     parser.add_argument(
         "--logo-input",
         type=Path,
@@ -554,6 +577,7 @@ def main() -> None:
         args.rts_buildings_input,
         args.rts_units_input,
         args.rts_danish_input,
+        args.rts_miner_input,
         args.logo_input,
         args.output,
     )
