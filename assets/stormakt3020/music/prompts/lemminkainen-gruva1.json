@@ -1,0 +1,12 @@
+{
+  "job_id": "stormakt-lemminkainen-gruva1-v1",
+  "user": "waylandforge-stormakt3020",
+  "model": "ace-step-1.5",
+  "prompt": "Instrumental dark underground action RPG exploration theme for Stormakt 3020. A Swedish Carolean king descends alone into a wet abandoned seventeenth-century silver mine. E minor, 76 BPM, circular sixteen-bar form. Low nyckelharpa ostinato, bowed bass viol, sparse field drum heartbeat, wooden mine knocks, distant chains, muted natural horn fragments and subtle mechanical brass resonance. The melody should inherit a restrained three-note shape from a stern Swedish military march but slow it into apprehension. Historic Nordic timbres fused with grim retro-futurist metal ambience. Enough pulse for exploration and occasional combat movement, but plenty of space for Swedish radio dialogue. Begin musically at once, no silent intro, no final cadence, no fade, loop-friendly. No vocals, no choir, no lyrics, no EDM, no rock guitar, no modern trailer braams, no cheerful folk dance, no comedy.",
+  "lyrics": "[Instrumental]",
+  "instrumental": true,
+  "vocal_language": "unknown",
+  "duration_seconds": 64,
+  "format": "wav",
+  "pause_gpu_services": true
+}

@@ -344,6 +344,31 @@ def append_rts_frontier_road(entries: list[tuple[str, Image.Image]], source: Ima
         entries.append((name, tile))
 
 
+def append_dungeon_assets(entries: list[tuple[str, Image.Image]], karl: Image.Image, mine: Image.Image) -> None:
+    karl_names = ["dungeon_karl_s_idle", "dungeon_karl_s_walk_a", "dungeon_karl_s_walk_b", "dungeon_karl_kneel",
+                  "dungeon_karl_n_idle", "dungeon_karl_n_walk", "dungeon_karl_e_idle", "dungeon_karl_e_walk"]
+    for index, name in enumerate(karl_names):
+        column, row = index % 4, index // 4
+        left, top = column * karl.width // 4, row * karl.height // 2
+        right, bottom = (column + 1) * karl.width // 4, (row + 1) * karl.height // 2
+        sprite = trim_alpha(karl.crop((left, top, right, bottom)).convert("RGBA"))
+        sprite.thumbnail((42, 52), Image.Resampling.LANCZOS)
+        canvas = Image.new("RGBA", (46, 56), (0, 0, 0, 0))
+        canvas.alpha_composite(sprite, ((46 - sprite.width) // 2, 56 - sprite.height))
+        entries.append((name, canvas))
+
+    mine_names = ["dungeon_floor_wet", "dungeon_wall_timber", "dungeon_wall_corner", "dungeon_door_dark",
+                  "dungeon_rails", "dungeon_chain_lift", "dungeon_supply", "dungeon_descent_pit"]
+    targets = [(96, 72), (96, 64), (86, 70), (86, 76), (96, 72), (78, 70), (66, 64), (82, 72)]
+    for index, (name, target) in enumerate(zip(mine_names, targets)):
+        column, row = index % 4, index // 4
+        left, top = column * mine.width // 4, row * mine.height // 2
+        right, bottom = (column + 1) * mine.width // 4, (row + 1) * mine.height // 2
+        sprite = trim_alpha(mine.crop((left, top, right, bottom)).convert("RGBA"))
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def mirrored_background(source: Image.Image, width: int, height: int) -> Image.Image:
     plate = source.copy()
     plate.thumbnail((width, height), Image.Resampling.LANCZOS)
@@ -384,6 +409,8 @@ def build(
     rts_vein_input_path: Path,
     rts_landing_pad_input_path: Path,
     rts_road_input_path: Path,
+    dungeon_karl_input_path: Path,
+    dungeon_mine_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
 ) -> None:
@@ -417,6 +444,8 @@ def build(
     rts_vein_source = Image.open(rts_vein_input_path).convert("RGBA")
     rts_landing_pad_source = Image.open(rts_landing_pad_input_path).convert("RGBA")
     rts_road_source = Image.open(rts_road_input_path).convert("RGBA")
+    dungeon_karl_source = Image.open(dungeon_karl_input_path).convert("RGBA")
+    dungeon_mine_source = Image.open(dungeon_mine_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
@@ -496,6 +525,7 @@ def build(
     ])
     append_rts_terrain_details(entries, rts_floor_source, rts_vein_source, rts_landing_pad_source)
     append_rts_frontier_road(entries, rts_road_source)
+    append_dungeon_assets(entries, dungeon_karl_source, dungeon_mine_source)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
@@ -628,6 +658,8 @@ def main() -> None:
     parser.add_argument("--rts-vein-input", type=Path, default=Path("assets/stormakt3020/rts-silver-vein-v1.png"))
     parser.add_argument("--rts-landing-pad-input", type=Path, default=Path("assets/stormakt3020/rts-karl-landing-pad-v1.png"))
     parser.add_argument("--rts-road-input", type=Path, default=Path("assets/stormakt3020/rts-danish-frontier-road-v1.png"))
+    parser.add_argument("--dungeon-karl-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-v1.png"))
+    parser.add_argument("--dungeon-mine-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva1-environment-v1.png"))
     parser.add_argument(
         "--logo-input",
         type=Path,
@@ -666,6 +698,8 @@ def main() -> None:
         args.rts_vein_input,
         args.rts_landing_pad_input,
         args.rts_road_input,
+        args.dungeon_karl_input,
+        args.dungeon_mine_input,
         args.logo_input,
         args.output,
     )

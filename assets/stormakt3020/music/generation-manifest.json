@@ -52,6 +52,42 @@
       "thinking": false
     },
     {
+      "role": "level_04_gruva_1",
+      "file": "lemminkainen-gruva1-v1.wav",
+      "request": "prompts/lemminkainen-gruva1-direct.json",
+      "task_id": "d795bc1e-88a7-4319-b934-926140acdd9f",
+      "seed": "3006842016",
+      "duration_seconds": 64,
+      "thinking": false
+    },
+    {
+      "role": "level_04_djupgruva",
+      "file": "lemminkainen-djupgruva-v1.wav",
+      "request": "prompts/lemminkainen-djupgruva-direct.json",
+      "task_id": "2194d1a5-df41-4e84-98f2-7da220478f62",
+      "seed": "87118031",
+      "duration_seconds": 64,
+      "thinking": false
+    },
+    {
+      "role": "level_04_forbannad_gruva",
+      "file": "lemminkainen-forbannad-gruva-v1.wav",
+      "request": "prompts/lemminkainen-forbannad-direct.json",
+      "task_id": "a628e5cf-d598-4127-81e9-e719ff49b613",
+      "seed": "133409106",
+      "duration_seconds": 64,
+      "thinking": false
+    },
+    {
+      "role": "level_04_lemminkainen_tempel",
+      "file": "lemminkainen-tempel-v1.wav",
+      "request": "prompts/lemminkainen-tempel-direct.json",
+      "task_id": "f17a24cb-2125-4bc3-8549-e80b10327cd1",
+      "seed": "3768974191",
+      "duration_seconds": 64,
+      "thinking": false
+    },
+    {
       "role": "combat_fast",
       "file": "oresund-i-brand-v1.wav",
       "request": "prompts/oresund-i-brand.json",
@@ -116,6 +152,13 @@
     }
   ],
   "rejected": [
+    {
+      "role": "level_04_gruva_1",
+      "worker_job_id": "stormakt-lemminkainen-gruva1-v1",
+      "task_id": "9f31d1bd-5e8b-4a7e-94e5-89bad8389c6d",
+      "seed": "1807511974",
+      "reason": "LM rewrite replaced the restrained mine loop with a fast heroic 97 BPM orchestral fanfare and choir pads"
+    },
     {
       "role": "menu_launch",
       "task_id": "09c107e1-e342-49ad-9b6a-e5274c02f3fe",

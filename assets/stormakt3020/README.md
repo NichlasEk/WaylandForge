@@ -108,6 +108,10 @@ Additional scored roles live under `music/`:
 - `music/skanska-skuggor-loop-v1.wav`: the active 21-bar, 92 BPM level loop with the generated silent tail removed.
 - `music/silverkroppen-faltmarsch-v1.wav`: the preserved 60-second local generation for the RTS mission.
 - `music/silverkroppen-faltmarsch-loop-v1.wav`: the active 16-bar, 84 BPM Silverkroppen field loop.
+- `music/lemminkainen-gruva1-v1.wav`: active 64-second E-minor Gruva I exploration score; loaded when Silverkroppen mutates from RTS to dungeon play.
+- `music/lemminkainen-djupgruva-v1.wav`: reserved 64-second D-minor Djupgruvan score.
+- `music/lemminkainen-forbannad-gruva-v1.wav`: reserved 64-second F-sharp-minor cursed-mine score.
+- `music/lemminkainen-tempel-v1.wav`: reserved 64-second C-sharp-minor temple score.
 - `oresund-i-brand-v1.wav`: faster normal-combat loop.
 - `kronans-sista-salva-v1.wav`: monumental boss loop.
 
@@ -115,7 +119,7 @@ Additional scored roles live under `music/`:
 
 The loop edit is preloaded with the combat score. Kronens Tiende requests a 0.5-second in-stream crossfade at arrival, and restarting the stage requests the same crossfade back to the combat loop. Track-transition and loop positions advance only by audio frames accepted by the daemon. If loop-v2 is absent, runtime falls back to the preserved v1 generation.
 
-`music/generation-manifest.json` records accepted task IDs, seeds, models, prompt files, and a rejected menu attempt. The complete local workflow is documented in `docs/stormakt3020-audio-toolchain.md`.
+`music/generation-manifest.json` records accepted task IDs, seeds, models, prompt files, and rejected attempts. The Lemminkäinen suite deliberately bypasses ACE-Step's LM caption rewrite (`thinking=false`) after the first worker attempt transformed the restrained mine request into a heroic orchestral fanfare. The complete local workflow is documented in `docs/stormakt3020-audio-toolchain.md`.
 
 ## Sound effects
 

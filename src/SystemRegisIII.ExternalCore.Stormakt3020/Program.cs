@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Text;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 
 bool legacyResolution = string.Equals(
     Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_LEGACY_320"), "1", StringComparison.Ordinal);
@@ -122,6 +123,8 @@ internal sealed class StormaktGame
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DEVELOPER_MODE"), "1", StringComparison.Ordinal);
     private readonly bool _rtsEvacuationTestMode = string.Equals(
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_RTS_EVAC_TEST"), "1", StringComparison.Ordinal);
+    private readonly bool _dungeonTestMode = string.Equals(
+        Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_TEST"), "1", StringComparison.Ordinal);
     private readonly SpritePack? _sprites;
     private readonly StormaktMusicLoop? _audio;
     private Random _random = new(3020);
@@ -180,6 +183,8 @@ internal sealed class StormaktGame
         new(0, 390, false, "EBBA GRIP", "VÄNTA KARL!", "EN FOGDE SAKNAS", StormaktVoice.EbbaRtsWaitMiner, "portrait_ebba");
     private static readonly RadioCard RtsTempleRadio =
         new(0, 330, false, "EBBA GRIP", "ETT TEMPEL...", "LEMMINKÄINENS?", StormaktVoice.EbbaRtsTemple, "portrait_ebba");
+    private static readonly RadioCard DungeonDescentRadio =
+        new(0, 450, false, "EBBA GRIP", "GÅ NER SJÄLV", "ARBETARNA VÄGRAR", null, "portrait_ebba");
     private static readonly EnemyWave[] EnemyWaves =
     [
         new(240, 720, 180, 0, 2),
@@ -207,6 +212,7 @@ internal sealed class StormaktGame
     private SorenRivalState? _sorenRival;
     private GlimmingeState? _glimminge;
     private RtsState? _rts;
+    private DungeonState? _dungeon;
     private bool _stageClear;
     private int _stageClearAge;
     private uint _previousButtons;
@@ -214,6 +220,8 @@ internal sealed class StormaktGame
     private bool _paused;
     private bool _inLevelSelect;
     private bool _inLevelPreview;
+    private bool _inSilverkroppenSelect;
+    private int _silverkroppenSelection;
     private int _previewLevel;
     private int _levelId;
     private int _levelSelection;
@@ -235,6 +243,11 @@ internal sealed class StormaktGame
 
     public void Step(uint buttons, RtsPointer pointer = default)
     {
+        if (_inSilverkroppenSelect)
+        {
+            StepSilverkroppenSelect(buttons);
+            return;
+        }
         if (_inLevelPreview)
         {
             StepLevelPreview(buttons);
@@ -286,7 +299,8 @@ internal sealed class StormaktGame
 
         if (_levelId == 3)
         {
-            StepRts(buttons, pointer);
+            if (_dungeon is not null) StepDungeon(buttons, pointer);
+            else StepRts(buttons, pointer);
             _previousButtons = buttons;
             return;
         }
@@ -342,10 +356,21 @@ internal sealed class StormaktGame
     public void Render(uint[] frame, ulong frameIndex)
     {
         Clear(frame, 0xff061018);
+        if (_inSilverkroppenSelect)
+        {
+            DrawSky(frame);
+            DrawNebula(frame);
+            DrawSilverkroppenSelect(frame);
+            return;
+        }
         if (_levelId == 3 && !_inLevelSelect && !_inLevelPreview)
         {
-            DrawRts(frame);
-            DrawStageClear(frame);
+            if (_dungeon is not null) DrawDungeon(frame);
+            else
+            {
+                DrawRts(frame);
+                DrawStageClear(frame);
+            }
             DrawPause(frame);
             return;
         }
@@ -431,6 +456,7 @@ internal sealed class StormaktGame
                 LandingY = _height - 82,
             }
             : null;
+        _dungeon = null;
         if (_rts is RtsState resetRts)
         {
             resetRts.Fortress = new RtsFortress(resetRts.MapWidth - 170, resetRts.MapHeight / 2);
@@ -493,6 +519,7 @@ internal sealed class StormaktGame
             if (evacuationTest.Fortress is not null) evacuationTest.Fortress.Health = 0;
             BeginRtsEvacuation(evacuationTest);
         }
+        if (_dungeonTestMode && _rts is not null) BeginDungeon();
         _audio?.SwitchMusic(_levelId switch
         {
             1 => StormaktMusicTrack.Skanska,
@@ -501,12 +528,20 @@ internal sealed class StormaktGame
         });
     }
 
-    private void StartLevel(int levelId)
+    private void StartLevel(int levelId, bool fresh = false)
     {
         _levelId = levelId;
         Reset();
+        if (levelId == 3 && !fresh && TryLoadDungeonSave("autosave", out DungeonState? resumed))
+        {
+            _dungeon = resumed;
+            _bossRadioCard = null;
+            _bossRadioAge = 0;
+            _audio?.SwitchMusic(StormaktMusicTrack.Dungeon);
+        }
         _inLevelSelect = false;
         _inLevelPreview = false;
+        _inSilverkroppenSelect = false;
         _audio?.Trigger(StormaktSound.Deploy);
     }
 
@@ -526,9 +561,18 @@ internal sealed class StormaktGame
         }
         if (Pressed(buttons, Start))
         {
+            if (_levelSelection == 3 && _developerMode)
+            {
+                _inLevelSelect = false;
+                _inSilverkroppenSelect = true;
+                _silverkroppenSelection = File.Exists(DungeonSavePath("autosave")) ? 1 : 0;
+                _audio?.Trigger(StormaktSound.Deploy);
+                _previousButtons = buttons;
+                return;
+            }
             if (_levelSelection == 0 || (_developerMode && _levelSelection is 1 or 3))
             {
-                StartLevel(_levelSelection);
+                StartLevel(_levelSelection, fresh: (buttons & Slow) != 0);
             }
             else
             {
@@ -543,6 +587,49 @@ internal sealed class StormaktGame
                 {
                     _lockedLevelNoticeFrames = 90;
                 }
+            }
+        }
+        _lockedLevelNoticeFrames = Math.Max(0, _lockedLevelNoticeFrames - 1);
+        _previousButtons = buttons;
+    }
+
+    private void StepSilverkroppenSelect(uint buttons)
+    {
+        const int choices = 5;
+        if (Pressed(buttons, Up))
+        {
+            _silverkroppenSelection = (_silverkroppenSelection + choices - 1) % choices;
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        if (Pressed(buttons, Down))
+        {
+            _silverkroppenSelection = (_silverkroppenSelection + 1) % choices;
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        if (Pressed(buttons, AltFire) || Pressed(buttons, Fire))
+        {
+            _inSilverkroppenSelect = false;
+            _inLevelSelect = true;
+            _audio?.Trigger(StormaktSound.Deploy);
+            _previousButtons = buttons;
+            return;
+        }
+        if (Pressed(buttons, Start))
+        {
+            if (_silverkroppenSelection == 0)
+            {
+                StartLevel(3, fresh: true);
+            }
+            else if (_silverkroppenSelection == 1)
+            {
+                bool hasSave = TryLoadDungeonSave("autosave", out _);
+                StartLevel(3, fresh: !hasSave);
+                if (!hasSave) BeginDungeon();
+            }
+            else
+            {
+                _lockedLevelNoticeFrames = 90;
+                _audio?.Trigger(StormaktSound.HullHit);
             }
         }
         _lockedLevelNoticeFrames = Math.Max(0, _lockedLevelNoticeFrames - 1);
@@ -1246,11 +1333,177 @@ internal sealed class StormaktGame
             }
         }
         if (age == 930) ActivateBossRadio(RtsTempleRadio);
-        if (age == 1_280)
+        if (age == 1_280) BeginDungeon();
+    }
+
+    private void BeginDungeon()
+    {
+        _stageClear = false;
+        _bossRadioCard = DungeonDescentRadio;
+        _bossRadioAge = 0;
+        _dungeon = new DungeonState
         {
-            _stageClear = true;
-            _stageClearAge = 0;
+            RoomWidth = 720,
+            RoomHeight = 440,
+            KarlX = 92,
+            KarlY = 228,
+            TargetX = 92,
+            TargetY = 228,
+            Facing = DungeonFacing.South,
+        };
+        _audio?.SwitchMusic(StormaktMusicTrack.Dungeon);
+        WriteDungeonSave(_dungeon, "autosave");
+    }
+
+    private void StepDungeon(uint buttons, RtsPointer pointer)
+    {
+        DungeonState dungeon = _dungeon!;
+        dungeon.Age++;
+        if (_bossRadioCard is RadioCard active && ++_bossRadioAge >= active.DurationFrames)
+        {
+            _bossRadioCard = null;
+            _bossRadioAge = 0;
         }
+        if (dungeon.Age < 150) return;
+        if (dungeon.Age == 150) WriteDungeonSave(dungeon, "autosave");
+
+        const uint mouseLeft = 1u;
+        bool mouseDown = pointer.Inside && (pointer.Buttons & mouseLeft) != 0;
+        bool previousMouseDown = (dungeon.PreviousMouseButtons & mouseLeft) != 0;
+        if (mouseDown && !previousMouseDown)
+        {
+            dungeon.TargetX = Math.Clamp(pointer.X + dungeon.CameraX, 28, dungeon.RoomWidth - 29);
+            dungeon.TargetY = Math.Clamp(pointer.Y + dungeon.CameraY, 48, dungeon.RoomHeight - 29);
+        }
+        dungeon.PreviousMouseButtons = pointer.Inside ? pointer.Buttons : 0;
+
+        double moveX = 0;
+        double moveY = 0;
+        if ((buttons & Left) != 0) moveX--;
+        if ((buttons & Right) != 0) moveX++;
+        if ((buttons & Up) != 0) moveY--;
+        if ((buttons & Down) != 0) moveY++;
+        if (moveX != 0 || moveY != 0)
+        {
+            dungeon.TargetX = dungeon.KarlX;
+            dungeon.TargetY = dungeon.KarlY;
+        }
+        else
+        {
+            double dx = dungeon.TargetX - dungeon.KarlX;
+            double dy = dungeon.TargetY - dungeon.KarlY;
+            double distance = Math.Sqrt(dx * dx + dy * dy);
+            if (distance > 2)
+            {
+                moveX = dx / distance;
+                moveY = dy / distance;
+            }
+        }
+        double length = Math.Sqrt(moveX * moveX + moveY * moveY);
+        dungeon.Moving = false;
+        if (length > 0)
+        {
+            moveX /= length;
+            moveY /= length;
+            double speed = (buttons & Slow) != 0 ? 1.05 : 1.65;
+            double beforeX = dungeon.KarlX;
+            double beforeY = dungeon.KarlY;
+            MoveDungeonKarl(dungeon, moveX * speed, moveY * speed);
+            double travelledX = dungeon.KarlX - beforeX;
+            double travelledY = dungeon.KarlY - beforeY;
+            double travelled = Math.Sqrt(travelledX * travelledX + travelledY * travelledY);
+            dungeon.Moving = travelled > 0.05;
+            dungeon.GaitDistance += travelled;
+            dungeon.Facing = Math.Abs(moveX) > Math.Abs(moveY)
+                ? moveX < 0 ? DungeonFacing.West : DungeonFacing.East
+                : moveY < 0 ? DungeonFacing.North : DungeonFacing.South;
+        }
+        dungeon.CameraX = Math.Clamp((int)Math.Round(dungeon.KarlX - _width / 2.0), 0, dungeon.RoomWidth - _width);
+        dungeon.CameraY = Math.Clamp((int)Math.Round(dungeon.KarlY - _height / 2.0), 0, dungeon.RoomHeight - _height);
+    }
+
+    private static void MoveDungeonKarl(DungeonState dungeon, double dx, double dy)
+    {
+        double nextX = dungeon.KarlX + dx;
+        if (!DungeonBlocked(nextX, dungeon.KarlY)) dungeon.KarlX = nextX;
+        double nextY = dungeon.KarlY + dy;
+        if (!DungeonBlocked(dungeon.KarlX, nextY)) dungeon.KarlY = nextY;
+    }
+
+    private static bool DungeonBlocked(double x, double y)
+    {
+        if (x < 30 || x > 690 || y < 52 || y > 410) return true;
+        bool leftPillar = x > 245 && x < 315 && y > 116 && y < 220;
+        bool rightStore = x > 430 && x < 515 && y > 260 && y < 348;
+        return leftPillar || rightStore;
+    }
+
+    private static void WriteDungeonSave(DungeonState dungeon, string slot)
+    {
+        try
+        {
+            string stateRoot = Environment.GetEnvironmentVariable("XDG_STATE_HOME") ??
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "state");
+            string directory = Path.Combine(stateRoot, "waylandforge", "stormakt3020", "saves");
+            Directory.CreateDirectory(directory);
+            string path = Path.Combine(directory, slot + ".json");
+            string temporary = path + ".tmp";
+            string backup = path + ".bak";
+            var snapshot = new DungeonSave(1, dungeon.Age, dungeon.RoomWidth, dungeon.RoomHeight,
+                dungeon.KarlX, dungeon.KarlY, dungeon.TargetX, dungeon.TargetY, dungeon.Facing);
+            File.WriteAllText(temporary, JsonSerializer.Serialize(snapshot));
+            if (File.Exists(path)) File.Copy(path, backup, true);
+            File.Move(temporary, path, true);
+        }
+        catch (IOException exception)
+        {
+            Console.Error.WriteLine($"Stormakt save warning: {exception.Message}");
+        }
+    }
+
+    private static bool TryLoadDungeonSave(string slot, out DungeonState? dungeon)
+    {
+        dungeon = null;
+        string path = DungeonSavePath(slot);
+        foreach (string candidate in new[] { path, path + ".bak" })
+        {
+            try
+            {
+                if (!File.Exists(candidate)) continue;
+                DungeonSave save = JsonSerializer.Deserialize<DungeonSave>(File.ReadAllText(candidate));
+                if (save.Schema != 1 || save.RoomWidth < 320 || save.RoomHeight < 220) continue;
+                dungeon = new DungeonState
+                {
+                    Age = save.Age,
+                    RoomWidth = save.RoomWidth,
+                    RoomHeight = save.RoomHeight,
+                    KarlX = save.KarlX,
+                    KarlY = save.KarlY,
+                    TargetX = save.TargetX,
+                    TargetY = save.TargetY,
+                    Facing = save.Facing,
+                };
+                dungeon.CameraX = Math.Clamp((int)Math.Round(dungeon.KarlX - 200), 0, Math.Max(0, dungeon.RoomWidth - 400));
+                dungeon.CameraY = Math.Clamp((int)Math.Round(dungeon.KarlY - 140), 0, Math.Max(0, dungeon.RoomHeight - 280));
+                return true;
+            }
+            catch (JsonException)
+            {
+                // Try the backup before giving up.
+            }
+            catch (IOException)
+            {
+                // A temporarily unavailable save must not block a fresh campaign.
+            }
+        }
+        return false;
+    }
+
+    private static string DungeonSavePath(string slot)
+    {
+        string stateRoot = Environment.GetEnvironmentVariable("XDG_STATE_HOME") ??
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "state");
+        return Path.Combine(stateRoot, "waylandforge", "stormakt3020", "saves", slot + ".json");
     }
 
     private static double DistanceSquared(double x1, double y1, double x2, double y2)
@@ -2422,6 +2675,63 @@ internal sealed class StormaktGame
             }
             _stars[i] = star;
         }
+    }
+
+    private void DrawDungeon(uint[] frame)
+    {
+        DungeonState dungeon = _dungeon!;
+        DrawRect(frame, 0, 0, _width, _height, 0xff080b0a);
+        if (_sprites?.TryGet("dungeon_floor_wet", out Sprite floor) == true)
+        {
+            int startX = -(dungeon.CameraX % floor.Width);
+            int startY = 18 - (dungeon.CameraY % floor.Height);
+            for (int y = startY; y < _height; y += floor.Height)
+            for (int x = startX; x < _width; x += floor.Width)
+                DrawSprite(frame, floor, x, y);
+        }
+        DrawDungeonSprite(frame, dungeon, "dungeon_wall_timber", 105, 67);
+        DrawDungeonSprite(frame, dungeon, "dungeon_wall_timber", 205, 67);
+        DrawDungeonSprite(frame, dungeon, "dungeon_wall_corner", 280, 144);
+        DrawDungeonSprite(frame, dungeon, "dungeon_door_dark", 650, 218);
+        DrawDungeonSprite(frame, dungeon, "dungeon_rails", 380, 360);
+        DrawDungeonSprite(frame, dungeon, "dungeon_chain_lift", 88, 228);
+        DrawDungeonSprite(frame, dungeon, "dungeon_supply", 470, 300);
+        DrawDungeonSprite(frame, dungeon, "dungeon_descent_pit", 598, 126);
+
+        int karlX = (int)Math.Round(dungeon.KarlX) - dungeon.CameraX;
+        int karlY = (int)Math.Round(dungeon.KarlY) - dungeon.CameraY;
+        string karlName;
+        int gait = (int)(dungeon.GaitDistance / 5.0) & 3;
+        if (dungeon.Age < 150) karlName = dungeon.Age < 95 ? "dungeon_karl_kneel" : "dungeon_karl_s_idle";
+        else if (dungeon.Facing == DungeonFacing.North) karlName = dungeon.Moving && gait is 1 or 3 ? "dungeon_karl_n_walk" : "dungeon_karl_n_idle";
+        else if (dungeon.Facing is DungeonFacing.East or DungeonFacing.West) karlName = dungeon.Moving && gait is 1 or 3 ? "dungeon_karl_e_walk" : "dungeon_karl_e_idle";
+        else karlName = !dungeon.Moving || gait is 0 or 2 ? "dungeon_karl_s_idle" :
+            gait == 1 ? "dungeon_karl_s_walk_a" : "dungeon_karl_s_walk_b";
+        if (_sprites?.TryGet(karlName, out Sprite karl) == true)
+        {
+            int drawX = karlX - karl.Width / 2;
+            int drawY = karlY - karl.Height + 12;
+            if (dungeon.Facing == DungeonFacing.West) DrawSpriteFlippedX(frame, karl, drawX, drawY);
+            else DrawSprite(frame, karl, drawX, drawY);
+        }
+
+        DrawRect(frame, 0, 0, _width, 18, 0xee080d12);
+        DrawText(frame, 6, 5, "GRUVA I  ÖVERGIVNA ORTEN", 0xffffd66b);
+        DrawText(frame, _width - 78, 5, "AUTOSPAR", 0xff65c58a);
+        DrawRect(frame, 0, _height - 14, _width, 14, 0xee080d12);
+        DrawText(frame, 7, _height - 10,
+            dungeon.Age < 150 ? "KARL SÄNKS NER" : "UTFORSKA GRUVGÅNGEN", 0xffdce8f2);
+        if (_bossRadioCard is RadioCard radio && _bossRadioAge < radio.DurationFrames)
+        {
+            DrawRadioCard(frame, radio, _bossRadioAge);
+        }
+    }
+
+    private void DrawDungeonSprite(uint[] frame, DungeonState dungeon, string name, int worldX, int worldY)
+    {
+        if (_sprites?.TryGet(name, out Sprite sprite) != true) return;
+        DrawSprite(frame, sprite, worldX - dungeon.CameraX - sprite.Width / 2,
+            worldY - dungeon.CameraY - sprite.Height / 2);
     }
 
     private void DrawRts(uint[] frame)
@@ -4332,6 +4642,43 @@ internal sealed class StormaktGame
         }
     }
 
+    private void DrawSilverkroppenSelect(uint[] frame)
+    {
+        int panelWidth = Math.Min(340, _width - 24);
+        int panelX = (_width - panelWidth) / 2;
+        int panelTop = _height <= 224 ? 44 : 67;
+        int rowHeight = _height <= 224 ? 28 : 33;
+        int panelBottom = panelTop + 28 + rowHeight * 5;
+        DrawRect(frame, panelX, panelTop, panelWidth, panelBottom - panelTop, 0xf2080d12);
+        DrawLine(frame, panelX, panelTop, panelX + panelWidth - 1, panelTop, 0xffffd66b);
+        DrawLine(frame, panelX, panelBottom - 1, panelX + panelWidth - 1, panelBottom - 1, 0xff2f74c9);
+        DrawText(frame, panelX + 91, panelTop + 9, "SILVERKROPPEN", 0xffffd66b);
+        string[] titles =
+        [
+            "FÄLTSLAGET  SILVERKROPPEN",
+            "GRUVA I  ÖVERGIVNA ORTEN",
+            "GRUVA II  DJUPGRUVAN",
+            "GRUVA III  FÖRBANNADE GRUVAN",
+            "LEMMINKÄINENS TEMPEL",
+        ];
+        for (int index = 0; index < titles.Length; index++)
+        {
+            bool available = index == 0 || index == 1;
+            string status = index == 0 ? "RTS" : index == 1
+                ? File.Exists(DungeonSavePath("autosave")) ? "FORTSÄTT" : "NY"
+                : "LÅST";
+            DrawLevelOption(frame, panelX + 12, panelTop + 25 + index * rowHeight, panelWidth - 24,
+                rowHeight - 3, index, titles[index], status, _silverkroppenSelection == index);
+            if (!available && _silverkroppenSelection == index)
+            {
+                DrawText(frame, panelX + panelWidth - 50, panelTop + 34 + index * rowHeight, "LÅST", 0xff697680);
+            }
+        }
+        string footer = _lockedLevelNoticeFrames > 0 ? "DJUPET HAR INTE ÖPPNATS ÄN" : "START VÄLJ  ELD TILLBAKA";
+        DrawText(frame, (_width - footer.Length * 6) / 2, Math.Min(_height - 9, panelBottom + 5), footer,
+            _lockedLevelNoticeFrames > 0 ? 0xffff6b62 : 0xffb7c7d6);
+    }
+
     private void DrawLevelSelect(uint[] frame)
     {
         int panelWidth = Math.Min(340, _width - 24);
@@ -4359,20 +4706,23 @@ internal sealed class StormaktGame
 
         for (int index = 0; index < CampaignNames.Length; index++)
         {
-            string status = index == 0 ? "STRID" : _developerMode ? "DEV" : "LÅST";
+            string status = index == 3 && File.Exists(DungeonSavePath("autosave")) ? "FORTSÄTT" :
+                index == 0 ? "STRID" : _developerMode ? "DEV" : "LÅST";
             DrawLevelOption(frame, panelX + 12, listY + index * rowHeight, panelWidth - 24,
                 rowHeight - 2, index, $"{index + 1}  {CampaignNames[index]}", status);
         }
 
         string footer = _lockedLevelNoticeFrames > 0 ? "FÄLTTÅGET ÄR LÅST" :
+            _levelSelection == 3 && File.Exists(DungeonSavePath("autosave")) ? "START FORTSÄTT  SLOW+START NYTT" :
             _developerMode ? "UTVECKLARLÄGE  ALLT UPPLÅST" : "UPP NER VÄLJ  START";
         DrawText(frame, (_width - footer.Length * 6) / 2, panelBottom - 9, footer,
             _lockedLevelNoticeFrames > 0 ? 0xff65c58a : 0xffb7c7d6);
     }
 
-    private void DrawLevelOption(uint[] frame, int x, int y, int width, int height, int index, string title, string status)
+    private void DrawLevelOption(uint[] frame, int x, int y, int width, int height, int index, string title, string status,
+        bool? forceSelected = null)
     {
-        bool selected = _levelSelection == index;
+        bool selected = forceSelected ?? _levelSelection == index;
         uint border = selected ? 0xffffd66b : 0xff344d5c;
         uint fill = selected ? 0xff172536 : 0xff0d151d;
         DrawRect(frame, x, y, width, height, fill);
@@ -4409,14 +4759,25 @@ internal sealed class StormaktGame
             return;
         }
         const int width = 176;
-        const int height = 42;
+        int height = _dungeon is null ? 42 : 92;
         int x = (_width - width) / 2;
         int y = (_height - height) / 2;
         DrawRect(frame, x, y, width, height, 0xee080d12);
         DrawLine(frame, x, y, x + width - 1, y, 0xffffd66b);
         DrawLine(frame, x, y + height - 1, x + width - 1, y + height - 1, 0xff2f74c9);
         DrawText(frame, x + 73, y + 9, "PAUS", 0xffffd66b);
-        DrawText(frame, x + 34, y + 25, "START FORTSÄTTER", 0xffdce8f2);
+        if (_dungeon is null)
+        {
+            DrawText(frame, x + 34, y + 25, "START FORTSÄTTER", 0xffdce8f2);
+        }
+        else
+        {
+            DrawText(frame, x + 28, y + 25, "AUTOSAVE  GRUVA I", 0xff65c58a);
+            DrawText(frame, x + 28, y + 39, "LÄGE 1   TOMT", 0xff9bd4dc);
+            DrawText(frame, x + 28, y + 52, "LÄGE 2   TOMT", 0xff9bd4dc);
+            DrawText(frame, x + 28, y + 65, "LÄGE 3   TOMT", 0xff9bd4dc);
+            DrawText(frame, x + 28, y + 78, "START FORTSÄTTER", 0xffdce8f2);
+        }
     }
 
     private void DrawRadio(uint[] frame)
@@ -4920,6 +5281,34 @@ internal sealed class StormaktGame
         PowderBoar,
         OrganWagon,
     }
+
+    private enum DungeonFacing
+    {
+        South,
+        North,
+        East,
+        West,
+    }
+
+    private sealed class DungeonState
+    {
+        public int Age { get; set; }
+        public int RoomWidth { get; set; }
+        public int RoomHeight { get; set; }
+        public int CameraX { get; set; }
+        public int CameraY { get; set; }
+        public double KarlX { get; set; }
+        public double KarlY { get; set; }
+        public double TargetX { get; set; }
+        public double TargetY { get; set; }
+        public DungeonFacing Facing { get; set; }
+        public bool Moving { get; set; }
+        public double GaitDistance { get; set; }
+        public uint PreviousMouseButtons { get; set; }
+    }
+
+    private readonly record struct DungeonSave(int Schema, int Age, int RoomWidth, int RoomHeight,
+        double KarlX, double KarlY, double TargetX, double TargetY, DungeonFacing Facing);
 
     private sealed class SorenRivalState
     {

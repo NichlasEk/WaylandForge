@@ -18,6 +18,7 @@ internal sealed class StormaktMusicLoop : IDisposable
     private readonly float[] _combatSamples;
     private readonly float[]? _skanskaSamples;
     private readonly float[]? _rtsSamples;
+    private readonly float[]? _dungeonSamples;
     private readonly float[]? _bossSamples;
     private readonly Dictionary<StormaktSound, LoadedEffect> _effects;
     private readonly Dictionary<StormaktVoice, LoadedEffect> _voices;
@@ -45,6 +46,7 @@ internal sealed class StormaktMusicLoop : IDisposable
         float[]? menuSamples,
         float[]? skanskaSamples,
         float[]? rtsSamples,
+        float[]? dungeonSamples,
         float[]? bossSamples,
         Dictionary<StormaktSound, LoadedEffect> effects,
         Dictionary<StormaktVoice, LoadedEffect> voices,
@@ -55,6 +57,7 @@ internal sealed class StormaktMusicLoop : IDisposable
         _combatSamples = samples;
         _skanskaSamples = skanskaSamples;
         _rtsSamples = rtsSamples;
+        _dungeonSamples = dungeonSamples;
         _bossSamples = bossSamples;
         _effects = effects;
         _voices = voices;
@@ -107,6 +110,8 @@ internal sealed class StormaktMusicLoop : IDisposable
                 float[]? skanskaSamples = File.Exists(skanskaPath) ? LoadPcm16StereoWav(skanskaPath) : null;
                 string rtsPath = Path.Combine(musicDirectory, "silverkroppen-faltmarsch-loop-v1.wav");
                 float[]? rtsSamples = File.Exists(rtsPath) ? LoadPcm16StereoWav(rtsPath) : null;
+                string dungeonPath = Path.Combine(musicDirectory, "lemminkainen-gruva1-v1.wav");
+                float[]? dungeonSamples = File.Exists(dungeonPath) ? LoadPcm16StereoWav(dungeonPath) : null;
                 string loopedBossPath = Path.Combine(musicDirectory, "kronans-sista-salva-loop-v2.wav");
                 string originalBossPath = Path.Combine(musicDirectory, "kronans-sista-salva-v1.wav");
                 string bossPath = File.Exists(loopedBossPath) ? loopedBossPath : originalBossPath;
@@ -117,11 +122,12 @@ internal sealed class StormaktMusicLoop : IDisposable
                 string menuDescription = menuSamples is null ? "missing" : $"ready ({menuSamples.Length / Channels / SampleRate}s)";
                 string skanskaDescription = skanskaSamples is null ? "missing" : $"ready ({skanskaSamples.Length / Channels / SampleRate}s)";
                 string rtsDescription = rtsSamples is null ? "missing" : $"ready ({rtsSamples.Length / Channels / SampleRate}s)";
+                string dungeonDescription = dungeonSamples is null ? "missing" : $"ready ({dungeonSamples.Length / Channels / SampleRate}s)";
                 string bossDescription = bossSamples is null ? "missing" : $"ready ({bossSamples.Length / Channels / SampleRate}s)";
                 Console.Error.WriteLine($"Stormakt audio: loaded {Path.GetFileName(path)} ({samples.Length / Channels / SampleRate}s), " +
-                    $"menu march={menuDescription}, Skanska score={skanskaDescription}, RTS score={rtsDescription}, boss score={bossDescription}, " +
+                    $"menu march={menuDescription}, Skanska score={skanskaDescription}, RTS score={rtsDescription}, dungeon score={dungeonDescription}, boss score={bossDescription}, " +
                     $"{effects.Count} effects and {voices.Count} radio voices.");
-                return new StormaktMusicLoop(samples, menuSamples, skanskaSamples, rtsSamples, bossSamples, effects, voices, socketPath);
+                return new StormaktMusicLoop(samples, menuSamples, skanskaSamples, rtsSamples, dungeonSamples, bossSamples, effects, voices, socketPath);
             }
             catch (Exception exception)
             {
@@ -262,6 +268,7 @@ internal sealed class StormaktMusicLoop : IDisposable
                 StormaktMusicTrack.Combat => _combatSamples,
                 StormaktMusicTrack.Skanska => _skanskaSamples,
                 StormaktMusicTrack.Rts => _rtsSamples,
+                StormaktMusicTrack.Dungeon => _dungeonSamples,
                 StormaktMusicTrack.Boss => _bossSamples,
                 _ => null,
             };
@@ -729,5 +736,6 @@ internal enum StormaktMusicTrack
     Combat,
     Skanska,
     Rts,
+    Dungeon,
     Boss,
 }
