@@ -395,6 +395,7 @@ internal sealed class UiConfig
             "absolute" => "absolute",
             "capture" => "capture",
             "raptor" => "raptor",
+            "stormakt_rts" => "stormakt_rts",
             "none" => "none",
             _ => fallback,
         };

@@ -97,7 +97,7 @@ socket_path = "/tmp/waylandforge-raptor.sock"
 [external_core3]
 mode = "stdio"
 command = "dotnet"
-args = "/home/nichlas/WaylandForge/src/SystemRegisIII.ExternalCore.Stormakt3020/bin/Debug/net8.0/SystemRegisIII.ExternalCore.Stormakt3020.dll"
+args = "/home/nichlas/WaylandForge/src/SystemRegisIII.ExternalCore.Stormakt3020/bin/Release/net8.0/SystemRegisIII.ExternalCore.Stormakt3020.dll"
 working_directory = "/home/nichlas/WaylandForge"
 env = "WAYLANDFORGE_STORMAKT_DEVELOPER_MODE=1"
 wfex_path = "/tmp/waylandforge-stormakt3020.wfex"

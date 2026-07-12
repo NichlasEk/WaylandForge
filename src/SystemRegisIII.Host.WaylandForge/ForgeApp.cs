@@ -2664,8 +2664,11 @@ internal sealed unsafe class ForgeApp : IDisposable
 
         bool hasContent = content.Width > 0 && content.Height > 0;
         bool insideContent = _pointer.IsInside && hasContent && content.Contains(_pointer.X, _pointer.Y);
+        bool insideStormaktTile = pointerDriver == "stormakt_rts" &&
+            _pointer.IsInside && hasContent && _viewportWindow.Rect is RectI viewportTile &&
+            viewportTile.Contains(_pointer.X, _pointer.Y);
         bool capturePointer = pointerDriver is "capture" or "raptor";
-        bool inside = insideContent || (capturePointer && _pointer.IsInside && hasContent);
+        bool inside = insideContent || insideStormaktTile || (capturePointer && _pointer.IsInside && hasContent);
         if (inside && pointerDriver == "raptor")
         {
             int relativeX = Math.Clamp(_pointer.X - content.X, 0, content.Width - 1);
