@@ -1435,8 +1435,11 @@ internal sealed class StormaktGame
                 .OrderBy(chest => DistanceSquared(chest.X, chest.Y, worldX, worldY)).FirstOrDefault() : null;
             dungeon.PendingPickupItemId = clickedLoot?.Id ?? 0;
             dungeon.PendingChestId = clickedChest?.Id ?? 0;
-            dungeon.TargetX = Math.Clamp(clickedLoot?.WorldX ?? clickedChest?.X ?? worldX, 28, dungeon.RoomWidth - 29);
-            dungeon.TargetY = Math.Clamp(clickedLoot?.WorldY ?? clickedChest?.Y ?? worldY, 48, dungeon.RoomHeight - 29);
+            (double targetX, double targetY) = clickedLoot is null
+                ? (clickedChest?.X ?? worldX, clickedChest?.Y ?? worldY)
+                : FindDungeonPickupApproach(dungeon, clickedLoot);
+            dungeon.TargetX = Math.Clamp(targetX, 28, dungeon.RoomWidth - 29);
+            dungeon.TargetY = Math.Clamp(targetY, 48, dungeon.RoomHeight - 29);
         }
         dungeon.PreviousMouseButtons = pointer.Inside ? pointer.Buttons : 0;
 
@@ -1444,7 +1447,7 @@ internal sealed class StormaktGame
         {
             DungeonItem? pending = dungeon.Items.FirstOrDefault(item => item.Id == dungeon.PendingPickupItemId && item.OnGround);
             if (pending is null) dungeon.PendingPickupItemId = 0;
-            else if (DistanceSquared(pending.WorldX, pending.WorldY, dungeon.KarlX, dungeon.KarlY) < 30 * 30)
+            else if (DistanceSquared(pending.WorldX, pending.WorldY, dungeon.KarlX, dungeon.KarlY) < 38 * 38)
             {
                 pending.OnGround = false;
                 pending.InStash = false;
@@ -1754,6 +1757,39 @@ internal sealed class StormaktGame
         loot.OnGround = true;
         loot.WorldX = enemy.X;
         loot.WorldY = enemy.Y + 7;
+        if (DungeonBlocked(dungeon, loot.WorldX, loot.WorldY))
+        {
+            (loot.WorldX, loot.WorldY) = FindNearestDungeonFloor(dungeon, enemy.X, enemy.Y);
+        }
+    }
+
+    private static (double X, double Y) FindDungeonPickupApproach(DungeonState dungeon, DungeonItem item)
+    {
+        (double X, double Y) best = (item.WorldX, item.WorldY);
+        double bestDistance = double.MaxValue;
+        for (int index = 0; index < 16; index++)
+        {
+            double angle = index * Math.PI * 2 / 16;
+            double x = item.WorldX + Math.Cos(angle) * 27;
+            double y = item.WorldY + Math.Sin(angle) * 27;
+            if (DungeonBlocked(dungeon, x, y)) continue;
+            double distance = DistanceSquared(x, y, dungeon.KarlX, dungeon.KarlY);
+            if (distance < bestDistance) { best = (x, y); bestDistance = distance; }
+        }
+        return best;
+    }
+
+    private static (double X, double Y) FindNearestDungeonFloor(DungeonState dungeon, double originX, double originY)
+    {
+        for (int radius = 12; radius <= 60; radius += 12)
+        for (int index = 0; index < 16; index++)
+        {
+            double angle = index * Math.PI * 2 / 16;
+            double x = originX + Math.Cos(angle) * radius;
+            double y = originY + Math.Sin(angle) * radius;
+            if (!DungeonBlocked(dungeon, x, y)) return (x, y);
+        }
+        return (originX, originY);
     }
 
     private static (double X, double Y) DungeonFacingVector(DungeonFacing facing) => facing switch
@@ -1781,14 +1817,14 @@ internal sealed class StormaktGame
         if (x < 30 || x > dungeon.RoomWidth - 30 || y < 52 || y > dungeon.RoomHeight - 30) return true;
         if (dungeon.Depth == 2)
         {
-            bool galleryA = x > 245 && x < 330 && y > 70 && y < 285;
-            bool galleryB = x > 500 && x < 575 && y > 390 && y < 740;
-            bool galleryC = x > 745 && x < 850 && y > 85 && y < 405;
-            bool galleryD = x > 990 && x < 1070 && y > 470 && y < 770;
+            bool galleryA = x > 255 && x < 320 && y > 82 && y < 273;
+            bool galleryB = x > 510 && x < 565 && y > 402 && y < 728;
+            bool galleryC = x > 755 && x < 840 && y > 97 && y < 393;
+            bool galleryD = x > 1000 && x < 1060 && y > 482 && y < 758;
             return galleryA || galleryB || galleryC || galleryD;
         }
-        bool leftPillar = x > 245 && x < 315 && y > 116 && y < 220;
-        bool rightStore = x > 430 && x < 515 && y > 260 && y < 348;
+        bool leftPillar = x > 253 && x < 307 && y > 124 && y < 212;
+        bool rightStore = x > 438 && x < 507 && y > 268 && y < 340;
         return leftPillar || rightStore;
     }
 
