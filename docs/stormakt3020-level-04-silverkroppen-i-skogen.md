@@ -21,6 +21,8 @@ Speltid: cirka 7–9 minuter. Tempot ska kännas som ett koncentrerat `Command &
 - Danska styrkor kommer från en gammal fogdeväg och ett tullfort i nordost.
 - Kristallgranar, kolmilor och gruvvrak återanvänder bana 2:s visuella språk men visas ovanifrån.
 - Den spelbara kartan använder sexton riktiga propfamiljer: fyra trädtyper, silverhällar, sten/stubbe/buskage och en separat dansk front med spärrar, lyktor, mätstativ, skattekistor, gruvvagn och hjulspår. Alla placeras deterministiskt och Y-sorteras visuellt utan kollisionspåverkan.
+- Skogsmarken är en sömlös barr/mossa/rot-platta utan prototypcirklar. Silverådern använder separata glödande sprick-, gren- och malmknutssprites, och Karl landar på en utfälld blågul/mässingsplattform.
+- Stora träd, stenar, silverhällar, spärrar, kistor och gruvvagnar blockerar truppsteg och byggplacering. Simuleringen provar stabila vänster/höger-sidosteg runt terrängen; småbuskar, stubbar och markspår förblir passerbara.
 
 ## Kärnloop
 

@@ -453,7 +453,15 @@ internal sealed class StormaktGame
                     bool chosen = danishFront ? hash % 2 == 0 : hash % 3 == 0;
                     if (chosen && !clearFort && !clearRoad)
                     {
-                        resetRts.Props.Add(new RtsProp(propX, propY, palette[index], palette[index] == "rts_dk_wagon_rut"));
+                        string sprite = palette[index];
+                        int blockRadius = sprite switch
+                        {
+                            "rts_spruce_tall" or "rts_spruce_bent" or "rts_pine_dead" or "rts_spruce_crystal" => 11,
+                            "rts_moss_boulders" or "rts_silver_outcrop" or "rts_dk_barricade" => 14,
+                            "rts_dk_crates" or "rts_dk_minecart" => 10,
+                            _ => 0,
+                        };
+                        resetRts.Props.Add(new RtsProp(propX, propY, sprite, sprite == "rts_dk_wagon_rut", blockRadius));
                     }
                 }
             }
@@ -749,8 +757,8 @@ internal sealed class StormaktGame
             if (miner.Moving)
             {
                 const double speed = 0.82;
-                miner.X += dx / distance * Math.Min(speed, distance);
-                miner.Y += dy / distance * Math.Min(speed, distance);
+                (miner.X, miner.Y) = MoveRtsAroundTerrain(rts, miner.X, miner.Y,
+                    dx / distance * Math.Min(speed, distance), dy / distance * Math.Min(speed, distance), 5);
                 continue;
             }
             if (miner.Carrying)
@@ -784,6 +792,11 @@ internal sealed class StormaktGame
             {
                 return false;
             }
+        }
+        if (rts.Props.Any(prop => prop.BlockRadius > 0 &&
+            DistanceSquared(x, y, prop.X, prop.Y) < (18 + prop.BlockRadius) * (18 + prop.BlockRadius)))
+        {
+            return false;
         }
         if (rts.BuildStage == 0)
         {
@@ -927,8 +940,8 @@ internal sealed class StormaktGame
                 continue;
             }
             double speed = unit.Type == RtsUnitType.MooseCarolean ? 1.45 : 0.82;
-            unit.X += dx / distance * Math.Min(speed, distance);
-            unit.Y += dy / distance * Math.Min(speed, distance);
+            (unit.X, unit.Y) = MoveRtsAroundTerrain(rts, unit.X, unit.Y,
+                dx / distance * Math.Min(speed, distance), dy / distance * Math.Min(speed, distance), 7);
         }
     }
 
@@ -1129,8 +1142,8 @@ internal sealed class StormaktGame
                     _ => 0.54,
                 };
                 speed *= 0.91 + (enemy.AnimationPhase % 7) * 0.025;
-                enemy.X += dx / distance * speed;
-                enemy.Y += dy / distance * speed;
+                (enemy.X, enemy.Y) = MoveRtsAroundTerrain(rts, enemy.X, enemy.Y,
+                    dx / distance * speed, dy / distance * speed, 7);
                 enemy.Moving = true;
             }
         }
@@ -1154,6 +1167,21 @@ internal sealed class StormaktGame
         double dy = y2 - y1;
         return dx * dx + dy * dy;
     }
+
+    private static (double X, double Y) MoveRtsAroundTerrain(
+        RtsState rts, double x, double y, double stepX, double stepY, double radius)
+    {
+        if (!RtsTerrainBlocked(rts, x + stepX, y + stepY, radius)) return (x + stepX, y + stepY);
+        double sideX = -stepY;
+        double sideY = stepX;
+        if (!RtsTerrainBlocked(rts, x + sideX, y + sideY, radius)) return (x + sideX, y + sideY);
+        if (!RtsTerrainBlocked(rts, x - sideX, y - sideY, radius)) return (x - sideX, y - sideY);
+        return (x, y);
+    }
+
+    private static bool RtsTerrainBlocked(RtsState rts, double x, double y, double radius) =>
+        rts.Props.Any(prop => prop.BlockRadius > 0 &&
+            DistanceSquared(x, y, prop.X, prop.Y) < (radius + prop.BlockRadius) * (radius + prop.BlockRadius));
 
     private static bool RtsHasPower(RtsState rts)
     {
@@ -2312,27 +2340,26 @@ internal sealed class StormaktGame
         }
         DrawRect(frame, 0, 0, _width, _height, 0xff08110e);
         DrawRect(frame, 0, 18, _width, _height - 32, 0xff101b16);
-
-        for (int worldX = 18; worldX < rts.MapWidth; worldX += 29)
+        if (_sprites?.TryGet("rts_forest_floor", out Sprite floor) == true)
         {
-            int x = worldX - rts.CameraX;
-            if (x < -8 || x > _width + 8) continue;
-            for (int y = 30 + worldX % 17; y < rts.MapHeight; y += 47)
+            int startX = -(rts.CameraX % floor.Width);
+            for (int y = 18; y < _height - 14; y += floor.Height)
             {
-                uint earth = (worldX + y & 1) == 0 ? 0xff142019 : 0xff19231d;
-                FillCircle(frame, x, y, 3 + (worldX + y) % 5, earth);
+                for (int x = startX; x < _width; x += floor.Width) DrawSprite(frame, floor, x, y);
             }
         }
 
-        for (int worldY = 26; worldY < rts.MapHeight; worldY += 7)
+        for (int worldY = 34; worldY < rts.MapHeight; worldY += 26)
         {
             int worldX = SilverVeinWorldX(worldY);
             int x = worldX - rts.CameraX;
-            if (x >= -8 && x <= _width + 8)
+            string veinName = worldY % 104 == 34 ? "rts_vein_node" :
+                worldY % 78 == 60 ? "rts_vein_branch" :
+                worldY % 52 == 34 ? "rts_vein_curve" : "rts_vein_straight";
+            if (x >= -24 && x <= _width + 24 && _sprites?.TryGet(veinName, out Sprite vein) == true)
             {
-                FillCircle(frame, x, worldY, 4, 0xff6f7775);
-                PutPixel(frame, x, worldY, 0xffd6ded7);
-                PutPixel(frame, x + 2, worldY - 2, 0xff9fb8ad);
+                if ((worldY / 26 & 1) == 0) DrawSprite(frame, vein, x - vein.Width / 2, worldY - vein.Height / 2);
+                else DrawSpriteFlippedX(frame, vein, x - vein.Width / 2, worldY - vein.Height / 2);
             }
         }
 
@@ -2788,10 +2815,14 @@ internal sealed class StormaktGame
         int y = (int)Math.Round(-62 + (rts.LandingY + 62) * eased);
         if (rts.LandingAge >= 105)
         {
-            int padWidth = 64;
-            DrawRect(frame, x - padWidth / 2, rts.LandingY - 26, padWidth, 52, 0xff171d1b);
-            DrawLine(frame, x - 31, rts.LandingY - 25, x + 31, rts.LandingY - 25, 0xff8a6b38);
-            DrawLine(frame, x - 31, rts.LandingY + 25, x + 31, rts.LandingY + 25, 0xff2f74c9);
+            if (_sprites?.TryGet("rts_karl_landing_pad", out Sprite pad) == true)
+            {
+                DrawSprite(frame, pad, x - pad.Width / 2, rts.LandingY - pad.Height / 2);
+            }
+            else
+            {
+                DrawRect(frame, x - 32, rts.LandingY - 26, 64, 52, 0xff171d1b);
+            }
         }
         if (_sprites?.TryGet("player", out Sprite player) == true)
         {
@@ -4821,7 +4852,7 @@ internal sealed class StormaktGame
         public int AnimationPhase { get; } = animationPhase;
     }
 
-    private sealed record RtsProp(int X, int Y, string Sprite, bool GroundPatch);
+    private sealed record RtsProp(int X, int Y, string Sprite, bool GroundPatch, int BlockRadius);
 
     private sealed class RtsFortress(int x, int y)
     {

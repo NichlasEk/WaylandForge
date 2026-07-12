@@ -316,6 +316,25 @@ def append_rts_miner(entries: list[tuple[str, Image.Image]], source: Image.Image
         entries.append((name, canvas))
 
 
+def append_rts_terrain_details(
+    entries: list[tuple[str, Image.Image]],
+    floor: Image.Image,
+    vein: Image.Image,
+    landing_pad: Image.Image,
+) -> None:
+    floor_tile = floor.convert("RGBA").resize((160, 160), Image.Resampling.LANCZOS)
+    entries.append(("rts_forest_floor", floor_tile))
+    cell_width = vein.width // 4
+    for column, name in enumerate(["rts_vein_straight", "rts_vein_curve", "rts_vein_branch", "rts_vein_node"]):
+        right = vein.width if column == 3 else (column + 1) * cell_width
+        sprite = trim_alpha(vein.crop((column * cell_width, 0, right, vein.height)).convert("RGBA"))
+        sprite.thumbnail((28 if column < 3 else 40, 42 if column < 3 else 40), Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+    pad = trim_alpha(landing_pad.convert("RGBA"))
+    pad.thumbnail((104, 76), Image.Resampling.LANCZOS)
+    entries.append(("rts_karl_landing_pad", pad))
+
+
 def mirrored_background(source: Image.Image, width: int, height: int) -> Image.Image:
     plate = source.copy()
     plate.thumbnail((width, height), Image.Resampling.LANCZOS)
@@ -352,6 +371,9 @@ def build(
     rts_toldhus_input_path: Path,
     rts_forest_input_path: Path,
     rts_frontier_input_path: Path,
+    rts_floor_input_path: Path,
+    rts_vein_input_path: Path,
+    rts_landing_pad_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
 ) -> None:
@@ -381,6 +403,9 @@ def build(
     rts_toldhus_source = Image.open(rts_toldhus_input_path).convert("RGBA")
     rts_forest_source = Image.open(rts_forest_input_path).convert("RGBA")
     rts_frontier_source = Image.open(rts_frontier_input_path).convert("RGBA")
+    rts_floor_source = Image.open(rts_floor_input_path).convert("RGBA")
+    rts_vein_source = Image.open(rts_vein_input_path).convert("RGBA")
+    rts_landing_pad_source = Image.open(rts_landing_pad_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
@@ -458,6 +483,7 @@ def build(
         ("rts_dk_scorched", 2, 1, (34, 28)),
         ("rts_dk_wagon_rut", 3, 1, (42, 28)),
     ])
+    append_rts_terrain_details(entries, rts_floor_source, rts_vein_source, rts_landing_pad_source)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
@@ -586,6 +612,9 @@ def main() -> None:
     parser.add_argument("--rts-toldhus-input", type=Path, default=Path("assets/stormakt3020/rts-toldhus-v1.png"))
     parser.add_argument("--rts-forest-input", type=Path, default=Path("assets/stormakt3020/rts-forest-props-v1.png"))
     parser.add_argument("--rts-frontier-input", type=Path, default=Path("assets/stormakt3020/rts-danish-frontier-props-v1.png"))
+    parser.add_argument("--rts-floor-input", type=Path, default=Path("assets/stormakt3020/rts-forest-floor-v1.png"))
+    parser.add_argument("--rts-vein-input", type=Path, default=Path("assets/stormakt3020/rts-silver-vein-v1.png"))
+    parser.add_argument("--rts-landing-pad-input", type=Path, default=Path("assets/stormakt3020/rts-karl-landing-pad-v1.png"))
     parser.add_argument(
         "--logo-input",
         type=Path,
@@ -620,6 +649,9 @@ def main() -> None:
         args.rts_toldhus_input,
         args.rts_forest_input,
         args.rts_frontier_input,
+        args.rts_floor_input,
+        args.rts_vein_input,
+        args.rts_landing_pad_input,
         args.logo_input,
         args.output,
     )

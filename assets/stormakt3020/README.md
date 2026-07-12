@@ -34,7 +34,9 @@
 
 `rts-toldhus-v1.png` supplies intact, open-gate, burning and wreck states for Møntgrevens mobile Danish tax fortress plus intact/broken royal seal machinery. The boss occupies the enlarged eastern front of Silverkroppen and cannot expose its core until both seal health pools are destroyed.
 
-`rts-forest-props-v1.png` and `rts-danish-frontier-props-v1.png` replace Silverkroppen's triangle forest with sixteen deterministic environment families. Reset builds a stable prop field with a Swedish/neutral crystal-forest palette and a separate Danish customs-front palette. Root-anchored props participate in visual Y sorting but never navigation or combat collision.
+`rts-forest-props-v1.png` and `rts-danish-frontier-props-v1.png` replace Silverkroppen's triangle forest with sixteen deterministic environment families. Reset builds a stable prop field with a Swedish/neutral crystal-forest palette and a separate Danish customs-front palette. Root-anchored props participate in visual Y sorting; only the large physical families contribute navigation/build blockers, never combat hitboxes.
+
+`rts-forest-floor-v1.png` is the opaque repeating needle/moss/root ground plate. `rts-silver-vein-v1.png` supplies glowing straight, curved, branch and node overlays along the deterministic ore curve. `rts-karl-landing-pad-v1.png` replaces the provisional rectangle beneath the landed command frigate. Large trees, boulders, ore outcrops, crates, carts and barricades now contribute deterministic movement/build blockers; small foliage and ground marks remain passable.
 
 `stormakt-bridge-cannons-projectiles-v1.png` adds three bridge-collapse pieces, intact/destroyed Danish bridge cannon states, a detachable boss broadside cannon and red/white/gold enemy projectile families. Runtime uses the wreck pieces during the existing 45-frame collapse and mirrors the broadside module for the boss's right side.
 
