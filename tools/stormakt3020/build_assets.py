@@ -428,6 +428,22 @@ def append_dungeon_combat(entries: list[tuple[str, Image.Image]], karl: Image.Im
         entries.append((name, canvas))
 
 
+def append_dungeon_gruva2(entries: list[tuple[str, Image.Image]], loot: Image.Image, door: Image.Image) -> None:
+    for source, names, target in [
+        (loot, ["dungeon_chest_closed", "dungeon_chest_open", "dungeon_silver_vent", "dungeon_silver_mist"], (64, 54)),
+        (door, ["dungeon_wood_door", "dungeon_wood_door_damaged", "dungeon_wood_door_broken"], (84, 74)),
+    ]:
+        columns = len(names)
+        for index, name in enumerate(names):
+            left = index * source.width // columns
+            right = (index + 1) * source.width // columns
+            sprite = trim_alpha(source.crop((left, 0, right, source.height)).convert("RGBA"))
+            sprite.thumbnail(target, Image.Resampling.LANCZOS)
+            canvas = Image.new("RGBA", target, (0, 0, 0, 0))
+            canvas.alpha_composite(sprite, ((target[0] - sprite.width) // 2, target[1] - sprite.height))
+            entries.append((name, canvas))
+
+
 def mirrored_background(source: Image.Image, width: int, height: int) -> Image.Image:
     plate = source.copy()
     plate.thumbnail((width, height), Image.Resampling.LANCZOS)
@@ -475,6 +491,8 @@ def build(
     dungeon_karl_combat_input_path: Path,
     dungeon_enemies_input_path: Path,
     dungeon_karl_north_input_path: Path,
+    dungeon_gruva2_loot_input_path: Path,
+    dungeon_door_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
 ) -> None:
@@ -515,6 +533,8 @@ def build(
     dungeon_karl_combat_source = Image.open(dungeon_karl_combat_input_path).convert("RGBA")
     dungeon_enemies_source = Image.open(dungeon_enemies_input_path).convert("RGBA")
     dungeon_karl_north_source = Image.open(dungeon_karl_north_input_path).convert("RGBA")
+    dungeon_gruva2_loot_source = Image.open(dungeon_gruva2_loot_input_path).convert("RGBA")
+    dungeon_door_source = Image.open(dungeon_door_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
@@ -598,6 +618,7 @@ def build(
     append_dungeon_loot(entries, dungeon_loot_source)
     append_dungeon_ui(entries, dungeon_ui_source)
     append_dungeon_combat(entries, dungeon_karl_combat_source, dungeon_enemies_source, dungeon_karl_north_source)
+    append_dungeon_gruva2(entries, dungeon_gruva2_loot_source, dungeon_door_source)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
@@ -737,6 +758,8 @@ def main() -> None:
     parser.add_argument("--dungeon-karl-combat-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-combat-v1.png"))
     parser.add_argument("--dungeon-enemies-input", type=Path, default=Path("assets/stormakt3020/dungeon-danish-enemies-v1.png"))
     parser.add_argument("--dungeon-karl-north-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-north-combat-v1.png"))
+    parser.add_argument("--dungeon-gruva2-loot-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva2-loot-v1.png"))
+    parser.add_argument("--dungeon-door-input", type=Path, default=Path("assets/stormakt3020/dungeon-breakable-door-v1.png"))
     parser.add_argument(
         "--logo-input",
         type=Path,
@@ -782,6 +805,8 @@ def main() -> None:
         args.dungeon_karl_combat_input,
         args.dungeon_enemies_input,
         args.dungeon_karl_north_input,
+        args.dungeon_gruva2_loot_input,
+        args.dungeon_door_input,
         args.logo_input,
         args.output,
     )
