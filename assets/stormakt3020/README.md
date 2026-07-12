@@ -81,6 +81,8 @@ python tools/stormakt3020/build_assets.py --input path/to/sheet.png
 
 `WFSA` is intentionally tiny: magic/version/count, then named ARGB8888 sprites. Runtime does not need PNG decoding.
 
+The Silverkroppen dungeon extension adds versioned transparent sheets for Karl on foot, Gruva I terrain, twelve inventory items and reusable black-iron/Swedish-brass UI chrome. `dungeon-loot-v1.png` supplies the first six weapon families plus armor, ring and relic icons. `dungeon-ui-chrome-v1.png` supplies health/power orbs, slot/grid frames, Carolean equipment silhouette and stash crest. Their built-in image-generation prompts and chroma-key sources are preserved beside the runtime PNGs.
+
 ## Resolution
 
 Stormakt defaults to a 400x280 logical framebuffer. Assets retain their native gameplay pixel size, providing 25 percent more field in both directions and making ships smaller relative to the world. WaylandForge scales the WFEX frame to its viewport. Set `WAYLANDFORGE_STORMAKT_LEGACY_320=1` to A/B test the original 320x224 field; the pack contains a correctly sized background for both modes.

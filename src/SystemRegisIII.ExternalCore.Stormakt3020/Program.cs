@@ -1350,7 +1350,10 @@ internal sealed class StormaktGame
             TargetX = 92,
             TargetY = 228,
             Facing = DungeonFacing.South,
+            Health = 100,
+            MaxHealth = 100,
         };
+        SeedDungeonInventory(_dungeon);
         _audio?.SwitchMusic(StormaktMusicTrack.Dungeon);
         WriteDungeonSave(_dungeon, "autosave");
     }
@@ -1366,6 +1369,36 @@ internal sealed class StormaktGame
         }
         if (dungeon.Age < 150) return;
         if (dungeon.Age == 150) WriteDungeonSave(dungeon, "autosave");
+        if (Pressed(buttons, AltFire))
+        {
+            dungeon.InventoryOpen = !dungeon.InventoryOpen;
+            dungeon.ViewingStash = false;
+            dungeon.SelectedItemId = 0;
+            if (!dungeon.InventoryOpen) WriteDungeonSave(dungeon, "autosave");
+            return;
+        }
+        if (dungeon.InventoryOpen)
+        {
+            StepDungeonInventory(dungeon, buttons, pointer);
+            return;
+        }
+        if (Pressed(buttons, Fire))
+        {
+            DungeonItem? ground = dungeon.Items.Where(item => item.OnGround)
+                .OrderBy(item => DistanceSquared(item.WorldX, item.WorldY, dungeon.KarlX, dungeon.KarlY)).FirstOrDefault();
+            if (ground is not null && DistanceSquared(ground.WorldX, ground.WorldY, dungeon.KarlX, dungeon.KarlY) < 34 * 34)
+            {
+                ground.OnGround = false;
+                ground.InStash = false;
+                if (!TryPlaceFirstFree(dungeon, ground)) ground.OnGround = true;
+            }
+            else if (DistanceSquared(470, 300, dungeon.KarlX, dungeon.KarlY) < 48 * 48)
+            {
+                dungeon.InventoryOpen = true;
+                dungeon.ViewingStash = true;
+                dungeon.SelectedItemId = 0;
+            }
+        }
 
         const uint mouseLeft = 1u;
         bool mouseDown = pointer.Inside && (pointer.Buttons & mouseLeft) != 0;
@@ -1440,6 +1473,7 @@ internal sealed class StormaktGame
 
     private static void WriteDungeonSave(DungeonState dungeon, string slot)
     {
+        ValidateDungeonInventory(dungeon);
         try
         {
             string stateRoot = Environment.GetEnvironmentVariable("XDG_STATE_HOME") ??
@@ -1449,8 +1483,11 @@ internal sealed class StormaktGame
             string path = Path.Combine(directory, slot + ".json");
             string temporary = path + ".tmp";
             string backup = path + ".bak";
-            var snapshot = new DungeonSave(1, dungeon.Age, dungeon.RoomWidth, dungeon.RoomHeight,
-                dungeon.KarlX, dungeon.KarlY, dungeon.TargetX, dungeon.TargetY, dungeon.Facing);
+            var snapshot = new DungeonSave(2, dungeon.Age, dungeon.RoomWidth, dungeon.RoomHeight,
+                dungeon.KarlX, dungeon.KarlY, dungeon.TargetX, dungeon.TargetY, dungeon.Facing,
+                dungeon.Health, dungeon.MaxHealth, dungeon.Power, dungeon.NextItemId,
+                dungeon.Items.Select(item => new DungeonItemSave(item.Id, item.Definition, item.GridX, item.GridY,
+                    item.Equipped, item.Rarity, item.PowerRoll, item.OnGround, item.InStash, item.WorldX, item.WorldY)).ToList());
             File.WriteAllText(temporary, JsonSerializer.Serialize(snapshot));
             if (File.Exists(path)) File.Copy(path, backup, true);
             File.Move(temporary, path, true);
@@ -1458,6 +1495,23 @@ internal sealed class StormaktGame
         catch (IOException exception)
         {
             Console.Error.WriteLine($"Stormakt save warning: {exception.Message}");
+        }
+    }
+
+    private static void ValidateDungeonInventory(DungeonState dungeon)
+    {
+        if (dungeon.Items.Select(item => item.Id).Distinct().Count() != dungeon.Items.Count)
+            throw new InvalidOperationException("Dungeon inventory contains duplicate item ids.");
+        if (dungeon.Items.Where(item => item.Equipped != DungeonEquipmentSlot.None)
+            .GroupBy(item => item.Equipped).Any(group => group.Count() > 1))
+            throw new InvalidOperationException("Dungeon inventory contains duplicate equipment slots.");
+        foreach (DungeonItem item in dungeon.Items)
+        {
+            int owners = (item.OnGround ? 1 : 0) + (item.Equipped != DungeonEquipmentSlot.None ? 1 : 0) +
+                (!item.OnGround && item.Equipped == DungeonEquipmentSlot.None && item.GridX >= 0 ? 1 : 0);
+            if (owners != 1) throw new InvalidOperationException($"Dungeon item {item.Id} has invalid ownership.");
+            if (item.GridX >= 0 && !CanPlaceDungeonItem(dungeon, item, item.GridX, item.GridY))
+                throw new InvalidOperationException($"Dungeon item {item.Id} overlaps or exceeds its container.");
         }
     }
 
@@ -1471,7 +1525,7 @@ internal sealed class StormaktGame
             {
                 if (!File.Exists(candidate)) continue;
                 DungeonSave save = JsonSerializer.Deserialize<DungeonSave>(File.ReadAllText(candidate));
-                if (save.Schema != 1 || save.RoomWidth < 320 || save.RoomHeight < 220) continue;
+                if (save.Schema is not (1 or 2) || save.RoomWidth < 320 || save.RoomHeight < 220) continue;
                 dungeon = new DungeonState
                 {
                     Age = save.Age,
@@ -1482,7 +1536,25 @@ internal sealed class StormaktGame
                     TargetX = save.TargetX,
                     TargetY = save.TargetY,
                     Facing = save.Facing,
+                    Health = save.Schema >= 2 ? save.Health : 100,
+                    MaxHealth = save.Schema >= 2 ? save.MaxHealth : 100,
+                    Power = save.Schema >= 2 ? save.Power : 35,
+                    NextItemId = save.Schema >= 2 ? save.NextItemId : 1,
                 };
+                if (save.Schema >= 2 && save.Items is not null)
+                {
+                    foreach (DungeonItemSave item in save.Items)
+                    {
+                        if (item.Definition < 0 || item.Definition >= DungeonItemDefinitions.Length) continue;
+                        dungeon.Items.Add(new DungeonItem
+                        {
+                            Id = item.Id, Definition = item.Definition, GridX = item.GridX, GridY = item.GridY,
+                            Equipped = item.Equipped, Rarity = item.Rarity, PowerRoll = item.PowerRoll,
+                            OnGround = item.OnGround, InStash = item.InStash, WorldX = item.WorldX, WorldY = item.WorldY,
+                        });
+                    }
+                }
+                else SeedDungeonInventory(dungeon);
                 dungeon.CameraX = Math.Clamp((int)Math.Round(dungeon.KarlX - 200), 0, Math.Max(0, dungeon.RoomWidth - 400));
                 dungeon.CameraY = Math.Clamp((int)Math.Round(dungeon.KarlY - 140), 0, Math.Max(0, dungeon.RoomHeight - 280));
                 return true;
@@ -2698,6 +2770,16 @@ internal sealed class StormaktGame
         DrawDungeonSprite(frame, dungeon, "dungeon_supply", 470, 300);
         DrawDungeonSprite(frame, dungeon, "dungeon_descent_pit", 598, 126);
 
+        foreach (DungeonItem item in dungeon.Items.Where(candidate => candidate.OnGround))
+        {
+            DungeonItemDefinition definition = DungeonItemDefinitions[item.Definition];
+            int itemX = (int)Math.Round(item.WorldX) - dungeon.CameraX;
+            int itemY = (int)Math.Round(item.WorldY) - dungeon.CameraY;
+            DrawCircleOutline(frame, itemX, itemY, 9, DungeonRarityColor(item.Rarity));
+            if (_sprites?.TryGet(definition.Sprite, out Sprite icon) == true)
+                DrawSprite(frame, icon, itemX - icon.Width / 2, itemY - icon.Height / 2);
+        }
+
         int karlX = (int)Math.Round(dungeon.KarlX) - dungeon.CameraX;
         int karlY = (int)Math.Round(dungeon.KarlY) - dungeon.CameraY;
         string karlName;
@@ -2721,6 +2803,7 @@ internal sealed class StormaktGame
         DrawRect(frame, 0, 0, _width, 18, 0xee080d12);
         DrawText(frame, 6, 5, "GRUVA I  ÖVERGIVNA ORTEN", 0xffffd66b);
         DrawText(frame, _width - 78, 5, "AUTOSPAR", 0xff65c58a);
+        DrawDungeonHealth(frame, dungeon);
         DrawRect(frame, 0, _height - 14, _width, 14, 0xee080d12);
         DrawText(frame, 7, _height - 10,
             dungeon.Age < 150 ? "KARL SÄNKS NER" : "UTFORSKA GRUVGÅNGEN", 0xffdce8f2);
@@ -2728,7 +2811,263 @@ internal sealed class StormaktGame
         {
             DrawRadioCard(frame, radio, _bossRadioAge);
         }
+        if (dungeon.InventoryOpen) DrawDungeonInventory(frame, dungeon);
     }
+
+    private static readonly DungeonItemDefinition[] DungeonItemDefinitions =
+    [
+        new("rapier", "OFFICERSVÄRJA", "loot_rapier", 1, 3, DungeonEquipmentSlot.MainHand, 12, 0),
+        new("saber", "KAROLINSK SABEL", "loot_saber", 1, 3, DungeonEquipmentSlot.MainHand, 16, 0),
+        new("axe", "SVARTJÄRNSYXA", "loot_axe", 2, 3, DungeonEquipmentSlot.MainHand, 22, 0),
+        new("hammer", "GRUVHAMMARE", "loot_hammer", 2, 3, DungeonEquipmentSlot.MainHand, 25, 0),
+        new("spear", "SILVERSPJUT", "loot_spear", 1, 4, DungeonEquipmentSlot.MainHand, 18, 0),
+        new("pistol", "FOGDEPISTOL", "loot_pistol", 2, 2, DungeonEquipmentSlot.OffHand, 14, 0),
+        new("cuirass", "BLÅROCKSHARNESK", "loot_cuirass", 2, 3, DungeonEquipmentSlot.Chest, 0, 18),
+        new("helmet", "GRUVHJÄLM", "loot_helmet", 2, 2, DungeonEquipmentSlot.Head, 0, 8),
+        new("gauntlets", "GULA KRAGHANDSKE", "loot_gauntlets", 2, 2, DungeonEquipmentSlot.Gloves, 0, 4),
+        new("boots", "SOTSTÖVLAR", "loot_boots", 2, 2, DungeonEquipmentSlot.Boots, 0, 5),
+        new("ring", "SILVERRUNRING", "loot_ring", 1, 1, DungeonEquipmentSlot.RingLeft, 2, 2),
+        new("relic", "TEMPELSIGILL", "loot_relic", 2, 2, DungeonEquipmentSlot.Relic, 4, 4),
+    ];
+
+    private static void SeedDungeonInventory(DungeonState dungeon)
+    {
+        AddDungeonItem(dungeon, 0, -1, -1, DungeonEquipmentSlot.MainHand, DungeonItemRarity.Carolean);
+        AddDungeonItem(dungeon, 6, -1, -1, DungeonEquipmentSlot.Chest, DungeonItemRarity.Carolean);
+        AddDungeonItem(dungeon, 7, 0, 0, DungeonEquipmentSlot.None, DungeonItemRarity.Iron);
+        AddDungeonItem(dungeon, 3, 2, 0, DungeonEquipmentSlot.None, DungeonItemRarity.Carolean);
+        AddDungeonItem(dungeon, 8, 4, 0, DungeonEquipmentSlot.None, DungeonItemRarity.Iron);
+        AddDungeonItem(dungeon, 9, 6, 0, DungeonEquipmentSlot.None, DungeonItemRarity.Iron);
+        AddDungeonItem(dungeon, 10, 8, 0, DungeonEquipmentSlot.None, DungeonItemRarity.Silverbound);
+        AddDungeonItem(dungeon, 11, 8, 2, DungeonEquipmentSlot.None, DungeonItemRarity.Runic);
+        DungeonItem groundSaber = AddDungeonItem(dungeon, 1, -1, -1, DungeonEquipmentSlot.None, DungeonItemRarity.Silverbound);
+        groundSaber.OnGround = true;
+        groundSaber.WorldX = 358;
+        groundSaber.WorldY = 225;
+        DungeonItem stashAxe = AddDungeonItem(dungeon, 2, 0, 0, DungeonEquipmentSlot.None, DungeonItemRarity.Carolean);
+        stashAxe.InStash = true;
+        DungeonItem stashPistol = AddDungeonItem(dungeon, 5, 2, 0, DungeonEquipmentSlot.None, DungeonItemRarity.Silverbound);
+        stashPistol.InStash = true;
+    }
+
+    private static DungeonItem AddDungeonItem(DungeonState dungeon, int definition, int gridX, int gridY,
+        DungeonEquipmentSlot equipped, DungeonItemRarity rarity)
+    {
+        var item = new DungeonItem
+        {
+            Id = dungeon.NextItemId++,
+            Definition = definition,
+            GridX = gridX,
+            GridY = gridY,
+            Equipped = equipped,
+            Rarity = rarity,
+            PowerRoll = 3 + definition * 2,
+        };
+        dungeon.Items.Add(item);
+        return item;
+    }
+
+    private void StepDungeonInventory(DungeonState dungeon, uint buttons, RtsPointer pointer)
+    {
+        if (Pressed(buttons, Left)) dungeon.InventoryCursorX = Math.Max(0, dungeon.InventoryCursorX - 1);
+        if (Pressed(buttons, Right)) dungeon.InventoryCursorX = Math.Min(9, dungeon.InventoryCursorX + 1);
+        if (Pressed(buttons, Up)) dungeon.InventoryCursorY = Math.Max(0, dungeon.InventoryCursorY - 1);
+        if (Pressed(buttons, Down)) dungeon.InventoryCursorY = Math.Min(5, dungeon.InventoryCursorY + 1);
+
+        const uint mouseLeft = 1u;
+        const uint mouseRight = 2u;
+        bool leftPressed = pointer.Inside && (pointer.Buttons & mouseLeft) != 0 &&
+            (dungeon.PreviousInventoryMouseButtons & mouseLeft) == 0;
+        bool rightPressed = pointer.Inside && (pointer.Buttons & mouseRight) != 0 &&
+            (dungeon.PreviousInventoryMouseButtons & mouseRight) == 0;
+        int cell = _width <= 320 ? 14 : 18;
+        int gridX = _width <= 320 ? 154 : 184;
+        int gridY = 52;
+        if (pointer.Inside && pointer.X >= gridX && pointer.Y >= gridY)
+        {
+            int x = (pointer.X - gridX) / cell;
+            int y = (pointer.Y - gridY) / cell;
+            if (x is >= 0 and < 10 && y is >= 0 and < 6)
+            {
+                dungeon.InventoryCursorX = x;
+                dungeon.InventoryCursorY = y;
+                if (leftPressed) InventoryPickOrPlace(dungeon, x, y);
+                if (rightPressed)
+                {
+                    DungeonItem? item = DungeonItemAt(dungeon, x, y);
+                    if (item is not null)
+                    {
+                        if (dungeon.ViewingStash)
+                        {
+                            item.InStash = false;
+                            if (!TryPlaceFirstFree(dungeon, item)) item.InStash = true;
+                        }
+                        else EquipDungeonItem(dungeon, item);
+                    }
+                }
+            }
+        }
+        if (Pressed(buttons, Fire)) InventoryPickOrPlace(dungeon, dungeon.InventoryCursorX, dungeon.InventoryCursorY);
+        if (Pressed(buttons, Slow))
+        {
+            DungeonItem? item = DungeonItemAt(dungeon, dungeon.InventoryCursorX, dungeon.InventoryCursorY);
+            if (item is not null) EquipDungeonItem(dungeon, item);
+        }
+        dungeon.PreviousInventoryMouseButtons = pointer.Inside ? pointer.Buttons : 0;
+    }
+
+    private static DungeonItem? DungeonItemAt(DungeonState dungeon, int x, int y) => dungeon.Items.FirstOrDefault(item =>
+    {
+        if (item.Equipped != DungeonEquipmentSlot.None || item.OnGround || item.InStash != dungeon.ViewingStash || item.GridX < 0) return false;
+        DungeonItemDefinition definition = DungeonItemDefinitions[item.Definition];
+        return x >= item.GridX && x < item.GridX + definition.Width && y >= item.GridY && y < item.GridY + definition.Height;
+    });
+
+    private static void InventoryPickOrPlace(DungeonState dungeon, int x, int y)
+    {
+        if (dungeon.SelectedItemId == 0)
+        {
+            dungeon.SelectedItemId = DungeonItemAt(dungeon, x, y)?.Id ?? 0;
+            return;
+        }
+        DungeonItem? selected = dungeon.Items.FirstOrDefault(item => item.Id == dungeon.SelectedItemId);
+        if (selected is null) { dungeon.SelectedItemId = 0; return; }
+        if (CanPlaceDungeonItem(dungeon, selected, x, y))
+        {
+            selected.GridX = x;
+            selected.GridY = y;
+            selected.Equipped = DungeonEquipmentSlot.None;
+            dungeon.SelectedItemId = 0;
+        }
+    }
+
+    private static bool CanPlaceDungeonItem(DungeonState dungeon, DungeonItem item, int x, int y)
+    {
+        DungeonItemDefinition definition = DungeonItemDefinitions[item.Definition];
+        if (x < 0 || y < 0 || x + definition.Width > 10 || y + definition.Height > 6) return false;
+        return !dungeon.Items.Any(other => other.Id != item.Id && other.Equipped == DungeonEquipmentSlot.None &&
+            !other.OnGround && other.InStash == item.InStash && other.GridX >= 0 && RectanglesOverlap(x, y, definition.Width, definition.Height, other.GridX, other.GridY,
+                DungeonItemDefinitions[other.Definition].Width, DungeonItemDefinitions[other.Definition].Height));
+    }
+
+    private static bool RectanglesOverlap(int ax, int ay, int aw, int ah, int bx, int by, int bw, int bh) =>
+        ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+
+    private static void EquipDungeonItem(DungeonState dungeon, DungeonItem item)
+    {
+        DungeonEquipmentSlot slot = DungeonItemDefinitions[item.Definition].Slot;
+        if (slot == DungeonEquipmentSlot.None) return;
+        DungeonItem? previous = dungeon.Items.FirstOrDefault(candidate => candidate.Equipped == slot);
+        if (previous is not null && !TryPlaceFirstFree(dungeon, previous)) return;
+        item.Equipped = slot;
+        item.GridX = -1;
+        item.GridY = -1;
+        dungeon.SelectedItemId = 0;
+    }
+
+    private static bool TryPlaceFirstFree(DungeonState dungeon, DungeonItem item)
+    {
+        for (int y = 0; y < 6; y++)
+        for (int x = 0; x < 10; x++)
+        if (CanPlaceDungeonItem(dungeon, item, x, y))
+        {
+            item.Equipped = DungeonEquipmentSlot.None;
+            item.GridX = x;
+            item.GridY = y;
+            return true;
+        }
+        return false;
+    }
+
+    private void DrawDungeonHealth(uint[] frame, DungeonState dungeon)
+    {
+        if (_sprites?.TryGet("ui_health_orb", out Sprite healthOrb) == true)
+            DrawSprite(frame, healthOrb, 4, 20);
+        if (_sprites?.TryGet("ui_power_orb", out Sprite powerOrb) == true)
+            DrawSprite(frame, powerOrb, 61, 31);
+        int missing = (dungeon.MaxHealth - Math.Clamp(dungeon.Health, 0, dungeon.MaxHealth)) * 32 / dungeon.MaxHealth;
+        if (missing > 0) DrawRect(frame, 17, 31, 31, missing, 0xcc090b0c);
+        int missingPower = (100 - Math.Clamp(dungeon.Power, 0, 100)) * 22 / 100;
+        if (missingPower > 0) DrawRect(frame, 72, 41, 22, missingPower, 0xcc090b0c);
+    }
+
+    private void DrawDungeonInventory(uint[] frame, DungeonState dungeon)
+    {
+        DrawRect(frame, 0, 18, _width, _height - 18, 0xff080d12);
+        DrawLine(frame, 6, 20, _width - 7, 20, 0xffffd66b);
+        DrawLine(frame, 6, _height - 2, _width - 7, _height - 2, 0xff2f74c9);
+        if (_sprites?.TryGet("ui_inventory_corner", out Sprite corner) == true) DrawSprite(frame, corner, 5, 20);
+        if (_sprites?.TryGet("ui_inventory_divider", out Sprite divider) == true)
+            DrawSprite(frame, divider, (_width - divider.Width) / 2, 20);
+        if (_sprites?.TryGet(dungeon.ViewingStash ? "ui_stash_crest" : "ui_carolean_silhouette", out Sprite silhouette) == true)
+            DrawSpriteAlpha(frame, silhouette, 47 - silhouette.Width / 2, 72, 105);
+        DrawText(frame, 18, 29, "KARL CCLV", 0xffffd66b);
+        DrawText(frame, _width <= 320 ? 154 : 184, 29, dungeon.ViewingStash ? "FÖRRÅD 10X6" : "RYGGSÄCK 10X6", 0xff9bd4dc);
+        int cell = _width <= 320 ? 14 : 18;
+        int gridX = _width <= 320 ? 154 : 184;
+        int gridY = 52;
+        for (int y = 0; y < 6; y++)
+        for (int x = 0; x < 10; x++)
+        {
+            uint color = x == dungeon.InventoryCursorX && y == dungeon.InventoryCursorY ? 0xff6d5930 : 0xff17212a;
+            DrawRect(frame, gridX + x * cell, gridY + y * cell, cell - 1, cell - 1, color);
+        }
+        foreach (DungeonItem item in dungeon.Items.Where(candidate => candidate.Equipped == DungeonEquipmentSlot.None &&
+            !candidate.OnGround && candidate.InStash == dungeon.ViewingStash && candidate.GridX >= 0))
+        {
+            DungeonItemDefinition definition = DungeonItemDefinitions[item.Definition];
+            int x = gridX + item.GridX * cell;
+            int y = gridY + item.GridY * cell;
+            uint rarity = DungeonRarityColor(item.Rarity);
+            DrawLine(frame, x, y, x + definition.Width * cell - 2, y, rarity);
+            DrawLine(frame, x, y, x, y + definition.Height * cell - 2, rarity);
+            if (_sprites?.TryGet(definition.Sprite, out Sprite icon) == true)
+                DrawSprite(frame, icon, x + (definition.Width * cell - icon.Width) / 2, y + (definition.Height * cell - icon.Height) / 2);
+            if (item.Id == dungeon.SelectedItemId)
+                DrawCircleOutline(frame, x + definition.Width * cell / 2, y + definition.Height * cell / 2, 7, 0xffffffff);
+        }
+
+        string[] slotLabels = ["HUV", "BRÖ", "HAN", "STÖ", "BÄL", "AMU", "R 1", "R 2", "HND", "OFF", "REL"];
+        DungeonEquipmentSlot[] slots = [DungeonEquipmentSlot.Head, DungeonEquipmentSlot.Chest, DungeonEquipmentSlot.Gloves,
+            DungeonEquipmentSlot.Boots, DungeonEquipmentSlot.Belt, DungeonEquipmentSlot.Amulet, DungeonEquipmentSlot.RingLeft,
+            DungeonEquipmentSlot.RingRight, DungeonEquipmentSlot.MainHand, DungeonEquipmentSlot.OffHand, DungeonEquipmentSlot.Relic];
+        for (int index = 0; index < slots.Length; index++)
+        {
+            int column = index % 2;
+            int row = index / 2;
+            int x = 18 + column * 62;
+            int y = 50 + row * 27;
+            DrawRect(frame, x, y, 54, 23, 0xff151e25);
+            if (_sprites?.TryGet("ui_item_slot", out Sprite slotFrame) == true)
+                DrawSpriteAlpha(frame, slotFrame, x + 23, y - 3, 150);
+            DrawText(frame, x + 3, y + 8, slotLabels[index], 0xff697f8d);
+            DungeonItem? equipped = dungeon.Items.FirstOrDefault(item => item.Equipped == slots[index]);
+            if (equipped is not null && _sprites?.TryGet(DungeonItemDefinitions[equipped.Definition].Sprite, out Sprite icon) == true)
+                DrawSprite(frame, icon, x + 31, y + 1);
+        }
+        DungeonItem? focused = dungeon.SelectedItemId != 0
+            ? dungeon.Items.FirstOrDefault(item => item.Id == dungeon.SelectedItemId)
+            : DungeonItemAt(dungeon, dungeon.InventoryCursorX, dungeon.InventoryCursorY);
+        int infoY = gridY + cell * 6 + 8;
+        if (focused is not null)
+        {
+            DungeonItemDefinition definition = DungeonItemDefinitions[focused.Definition];
+            DrawText(frame, gridX, infoY, definition.Name, DungeonRarityColor(focused.Rarity));
+            DrawText(frame, gridX, infoY + 13, $"SKADA {definition.Damage:00}  RUST {definition.Armor:00}", 0xffdce8f2);
+            DrawText(frame, gridX, infoY + 26, $"KRAFTVÄRDE +{focused.PowerRoll}", 0xff65c58a);
+        }
+        DrawText(frame, 18, _height - 10, dungeon.ViewingStash ? "X STÄNG  HÖGERKLICK TA" :
+            "X STÄNG  Z FLYTTA  HÖGERKLICK UTRUSTA", 0xffb7c7d6);
+    }
+
+    private static uint DungeonRarityColor(DungeonItemRarity rarity) => rarity switch
+    {
+        DungeonItemRarity.Carolean => 0xffffd66b,
+        DungeonItemRarity.Silverbound => 0xff9bd4dc,
+        DungeonItemRarity.Runic => 0xff65c58a,
+        DungeonItemRarity.Unique => 0xffc589ff,
+        _ => 0xffaeb8bd,
+    };
 
     private void DrawDungeonSprite(uint[] frame, DungeonState dungeon, string name, int worldX, int worldY)
     {
@@ -5293,6 +5632,42 @@ internal sealed class StormaktGame
         West,
     }
 
+    private enum DungeonEquipmentSlot
+    {
+        None,
+        Head,
+        Chest,
+        Gloves,
+        Boots,
+        Belt,
+        Amulet,
+        RingLeft,
+        RingRight,
+        MainHand,
+        OffHand,
+        Relic,
+    }
+
+    private enum DungeonItemRarity { Iron, Carolean, Silverbound, Runic, Unique }
+
+    private readonly record struct DungeonItemDefinition(string Key, string Name, string Sprite, int Width, int Height,
+        DungeonEquipmentSlot Slot, int Damage, int Armor);
+
+    private sealed class DungeonItem
+    {
+        public ulong Id { get; set; }
+        public int Definition { get; set; }
+        public int GridX { get; set; }
+        public int GridY { get; set; }
+        public DungeonEquipmentSlot Equipped { get; set; }
+        public DungeonItemRarity Rarity { get; set; }
+        public int PowerRoll { get; set; }
+        public bool OnGround { get; set; }
+        public bool InStash { get; set; }
+        public double WorldX { get; set; }
+        public double WorldY { get; set; }
+    }
+
     private sealed class DungeonState
     {
         public int Age { get; set; }
@@ -5308,10 +5683,25 @@ internal sealed class StormaktGame
         public bool Moving { get; set; }
         public double GaitDistance { get; set; }
         public uint PreviousMouseButtons { get; set; }
+        public int Health { get; set; }
+        public int MaxHealth { get; set; }
+        public int Power { get; set; } = 35;
+        public List<DungeonItem> Items { get; } = [];
+        public ulong NextItemId { get; set; } = 1;
+        public bool InventoryOpen { get; set; }
+        public int InventoryCursorX { get; set; }
+        public int InventoryCursorY { get; set; }
+        public ulong SelectedItemId { get; set; }
+        public uint PreviousInventoryMouseButtons { get; set; }
+        public bool ViewingStash { get; set; }
     }
 
     private readonly record struct DungeonSave(int Schema, int Age, int RoomWidth, int RoomHeight,
-        double KarlX, double KarlY, double TargetX, double TargetY, DungeonFacing Facing);
+        double KarlX, double KarlY, double TargetX, double TargetY, DungeonFacing Facing,
+        int Health, int MaxHealth, int Power, ulong NextItemId, List<DungeonItemSave>? Items);
+    private readonly record struct DungeonItemSave(ulong Id, int Definition, int GridX, int GridY,
+        DungeonEquipmentSlot Equipped, DungeonItemRarity Rarity, int PowerRoll, bool OnGround, bool InStash,
+        double WorldX, double WorldY);
 
     private sealed class SorenRivalState
     {

@@ -369,6 +369,33 @@ def append_dungeon_assets(entries: list[tuple[str, Image.Image]], karl: Image.Im
         entries.append((name, sprite))
 
 
+def append_dungeon_loot(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    names = ["loot_rapier", "loot_saber", "loot_axe", "loot_hammer", "loot_spear", "loot_pistol",
+             "loot_cuirass", "loot_helmet", "loot_gauntlets", "loot_boots", "loot_ring", "loot_relic"]
+    for index, name in enumerate(names):
+        column, row = index % 4, index // 4
+        left, top = column * source.width // 4, row * source.height // 3
+        right, bottom = (column + 1) * source.width // 4, (row + 1) * source.height // 3
+        sprite = trim_alpha(source.crop((left, top, right, bottom)).convert("RGBA"))
+        sprite.thumbnail((18, 18), Image.Resampling.LANCZOS)
+        canvas = Image.new("RGBA", (20, 20), (0, 0, 0, 0))
+        canvas.alpha_composite(sprite, ((20 - sprite.width) // 2, (20 - sprite.height) // 2))
+        entries.append((name, canvas))
+
+
+def append_dungeon_ui(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    names = ["ui_health_orb", "ui_power_orb", "ui_inventory_corner", "ui_inventory_divider",
+             "ui_item_slot", "ui_backpack_grid", "ui_carolean_silhouette", "ui_stash_crest"]
+    targets = [(58, 58), (44, 44), (82, 82), (128, 22), (30, 30), (92, 92), (72, 104), (78, 78)]
+    for index, (name, target) in enumerate(zip(names, targets)):
+        column, row = index % 4, index // 4
+        left, top = column * source.width // 4, row * source.height // 2
+        right, bottom = (column + 1) * source.width // 4, (row + 1) * source.height // 2
+        sprite = trim_alpha(source.crop((left, top, right, bottom)).convert("RGBA"))
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def mirrored_background(source: Image.Image, width: int, height: int) -> Image.Image:
     plate = source.copy()
     plate.thumbnail((width, height), Image.Resampling.LANCZOS)
@@ -411,6 +438,8 @@ def build(
     rts_road_input_path: Path,
     dungeon_karl_input_path: Path,
     dungeon_mine_input_path: Path,
+    dungeon_loot_input_path: Path,
+    dungeon_ui_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
 ) -> None:
@@ -446,6 +475,8 @@ def build(
     rts_road_source = Image.open(rts_road_input_path).convert("RGBA")
     dungeon_karl_source = Image.open(dungeon_karl_input_path).convert("RGBA")
     dungeon_mine_source = Image.open(dungeon_mine_input_path).convert("RGBA")
+    dungeon_loot_source = Image.open(dungeon_loot_input_path).convert("RGBA")
+    dungeon_ui_source = Image.open(dungeon_ui_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
@@ -526,6 +557,8 @@ def build(
     append_rts_terrain_details(entries, rts_floor_source, rts_vein_source, rts_landing_pad_source)
     append_rts_frontier_road(entries, rts_road_source)
     append_dungeon_assets(entries, dungeon_karl_source, dungeon_mine_source)
+    append_dungeon_loot(entries, dungeon_loot_source)
+    append_dungeon_ui(entries, dungeon_ui_source)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
@@ -660,6 +693,8 @@ def main() -> None:
     parser.add_argument("--rts-road-input", type=Path, default=Path("assets/stormakt3020/rts-danish-frontier-road-v1.png"))
     parser.add_argument("--dungeon-karl-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-v1.png"))
     parser.add_argument("--dungeon-mine-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva1-environment-v1.png"))
+    parser.add_argument("--dungeon-loot-input", type=Path, default=Path("assets/stormakt3020/dungeon-loot-v1.png"))
+    parser.add_argument("--dungeon-ui-input", type=Path, default=Path("assets/stormakt3020/dungeon-ui-chrome-v1.png"))
     parser.add_argument(
         "--logo-input",
         type=Path,
@@ -700,6 +735,8 @@ def main() -> None:
         args.rts_road_input,
         args.dungeon_karl_input,
         args.dungeon_mine_input,
+        args.dungeon_loot_input,
+        args.dungeon_ui_input,
         args.logo_input,
         args.output,
     )
