@@ -329,6 +329,16 @@
       "sha256": "68bf8604f2f57849302f5cb24f25e1307c0cd983090a245e9673930fffd1859e",
       "request": "assets/stormakt3020/radio/raw/ebba-dungeon-telemetry-sv-request.json",
       "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-dungeon-near-death",
+      "role": "ebba-grip",
+      "job_id": "5404f22f181b4b78afc9fecc160586a0",
+      "file": "assets/stormakt3020/radio/raw/ebba-dungeon-near-death-sv-raw.wav",
+      "sha256": "86eeaa2465c8dbcdf07a2ca8b26ba25b5b0e86517d86d10a083e7c7c2bce58c4",
+      "request": "assets/stormakt3020/radio/raw/ebba-dungeon-near-death-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
     }
   ],
   "service": "http://127.0.0.1:8765",

@@ -187,6 +187,8 @@ internal sealed class StormaktGame
         new(0, 450, false, "EBBA GRIP", "GÅ NER SJÄLV", "ARBETARNA VÄGRAR", null, "portrait_ebba");
     private static readonly RadioCard DungeonDepthTwoWarningRadio =
         new(0, 510, false, "EBBA GRIP", "ÄR DU SÄKER?", "TELEMETRIN ÄR DÖD", StormaktVoice.EbbaDungeonTelemetry, "portrait_ebba");
+    private static readonly RadioCard DungeonNearDeathRadio =
+        new(0, 420, false, "EBBA GRIP", "NÄRA ÖGAT", "TA DET LUGNT NU", StormaktVoice.EbbaDungeonNearDeath, "portrait_ebba");
     private static readonly EnemyWave[] EnemyWaves =
     [
         new(240, 720, 180, 0, 2),
@@ -1377,6 +1379,8 @@ internal sealed class StormaktGame
                 _dungeon.CameraY = 250;
             }
         }
+        if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_DEATH_TEST"), "1", StringComparison.Ordinal))
+            _dungeon.Health = 0;
         _audio?.SwitchMusic(StormaktMusicTrack.Dungeon);
         WriteDungeonSave(_dungeon, "autosave");
     }
@@ -1389,6 +1393,20 @@ internal sealed class StormaktGame
         {
             _bossRadioCard = null;
             _bossRadioAge = 0;
+        }
+        if (dungeon.Health <= 0 && dungeon.DeathAge == 0)
+        {
+            dungeon.DeathAge = 1;
+            dungeon.HurtAge = 90;
+            dungeon.TargetX = dungeon.KarlX;
+            dungeon.TargetY = dungeon.KarlY;
+            dungeon.AttackAge = 0;
+        }
+        if (dungeon.DeathAge > 0)
+        {
+            dungeon.DeathAge++;
+            if (dungeon.DeathAge >= 90) RestartDungeonAfterDeath(dungeon);
+            return;
         }
         if (dungeon.Age < 150) return;
         if (dungeon.Age == 150) WriteDungeonSave(dungeon, "autosave");
@@ -1573,6 +1591,38 @@ internal sealed class StormaktGame
         dungeon.Chests.Add(new DungeonChest(3, 1165, 170));
         dungeon.MaxZoneReached = 1;
         WriteDungeonSave(dungeon, "autosave");
+    }
+
+    private void RestartDungeonAfterDeath(DungeonState fallen)
+    {
+        var restarted = new DungeonState
+        {
+            Age = 150,
+            RoomWidth = 720,
+            RoomHeight = 440,
+            KarlX = 92,
+            KarlY = 228,
+            TargetX = 92,
+            TargetY = 228,
+            Facing = DungeonFacing.South,
+            Health = Math.Max(100, fallen.MaxHealth),
+            MaxHealth = Math.Max(100, fallen.MaxHealth),
+            Power = 35,
+            Depth = 1,
+            DoorHealth = 3,
+            NextItemId = fallen.NextItemId,
+            NextEnemyId = fallen.NextEnemyId,
+        };
+        foreach (DungeonItem item in fallen.Items.Where(item => !item.OnGround))
+        {
+            item.OnGround = false;
+            restarted.Items.Add(item);
+        }
+        if (restarted.Items.Count == 0) SeedDungeonInventory(restarted);
+        SeedDungeonEncounter(restarted);
+        _dungeon = restarted;
+        ActivateBossRadio(DungeonNearDeathRadio);
+        WriteDungeonSave(restarted, "autosave");
     }
 
     private void OpenDungeonChest(DungeonState dungeon, DungeonChest chest)
@@ -3419,6 +3469,12 @@ internal sealed class StormaktGame
             DrawRadioCard(frame, radio, _bossRadioAge);
         }
         if (dungeon.InventoryOpen) DrawDungeonInventory(frame, dungeon);
+        if (dungeon.DeathAge > 0)
+        {
+            int alpha = Math.Clamp(dungeon.DeathAge * 3, 40, 210);
+            DrawRect(frame, 0, 18, _width, _height - 32, ((uint)alpha << 24) | 0x0026070c);
+            DrawText(frame, (_width - 66) / 2, _height / 2, "KARL FALLER", 0xffffc4c4);
+        }
     }
 
     private static readonly DungeonItemDefinition[] DungeonItemDefinitions =
@@ -6395,6 +6451,7 @@ internal sealed class StormaktGame
         public bool DescentWarningPlayed { get; set; }
         public bool PendingDoorEntry { get; set; }
         public int MaxZoneReached { get; set; }
+        public int DeathAge { get; set; }
     }
 
     private readonly record struct DungeonSave(int Schema, int Age, int RoomWidth, int RoomHeight,

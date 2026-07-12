@@ -360,6 +360,17 @@
       "subtitle_lines": ["ÄR DU SÄKER?", "TELEMETRIN ÄR DÖD"],
       "seed": 302190,
       "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-dungeon-near-death",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": -1,
+      "cue": "dungeon_near_death_restart",
+      "text": "Det var nära ögat, Karl. Gör inte om det där. Ta det lugnt nu.",
+      "subtitle_lines": ["NÄRA ÖGAT", "TA DET LUGNT NU"],
+      "seed": 302191,
+      "model_backend": "voxcpm2"
     }
   ]
 }
