@@ -1365,7 +1365,18 @@ internal sealed class StormaktGame
         SeedDungeonInventory(_dungeon);
         SeedDungeonEncounter(_dungeon);
         if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_DEPTH2_TEST"), "1", StringComparison.Ordinal))
+        {
             BeginDungeonDepthTwo(_dungeon);
+            if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_BOSS_TEST"), "1", StringComparison.Ordinal))
+            {
+                _dungeon.KarlX = 920;
+                _dungeon.KarlY = 390;
+                _dungeon.TargetX = 920;
+                _dungeon.TargetY = 390;
+                _dungeon.CameraX = 720;
+                _dungeon.CameraY = 250;
+            }
+        }
         _audio?.SwitchMusic(StormaktMusicTrack.Dungeon);
         WriteDungeonSave(_dungeon, "autosave");
     }
@@ -1483,6 +1494,7 @@ internal sealed class StormaktGame
         }
 
         StepDungeonCombat(dungeon);
+        StepDungeonSilverVents(dungeon);
         double moveX = 0;
         double moveY = 0;
         if ((buttons & Left) != 0) moveX--;
@@ -1546,25 +1558,29 @@ internal sealed class StormaktGame
         dungeon.RoomClearSaved = false;
         dungeon.DoorReady = false;
         dungeon.Enemies.Clear();
-        AddDungeonEnemy(dungeon, 330, 330, DungeonEnemyType.Stormer, 58);
-        AddDungeonEnemy(dungeon, 390, 470, DungeonEnemyType.Pikeman, 76);
-        AddDungeonEnemy(dungeon, 610, 250, DungeonEnemyType.Stormer, 64);
-        AddDungeonEnemy(dungeon, 690, 360, DungeonEnemyType.Pikeman, 82);
-        AddDungeonEnemy(dungeon, 780, 545, DungeonEnemyType.Stormer, 64);
-        AddDungeonEnemy(dungeon, 960, 270, DungeonEnemyType.Pikeman, 88);
-        AddDungeonEnemy(dungeon, 1030, 510, DungeonEnemyType.Stormer, 70);
-        AddDungeonEnemy(dungeon, 1140, 390, DungeonEnemyType.Pikeman, 92);
+        AddDungeonEnemy(dungeon, 330, 330, DungeonEnemyType.Stormer, 58, 1);
+        AddDungeonEnemy(dungeon, 390, 470, DungeonEnemyType.Pikeman, 76, 1);
+        AddDungeonEnemy(dungeon, 610, 250, DungeonEnemyType.Stormer, 64, 2);
+        AddDungeonEnemy(dungeon, 690, 360, DungeonEnemyType.Pikeman, 82, 2);
+        AddDungeonEnemy(dungeon, 780, 545, DungeonEnemyType.Stormer, 64, 2);
+        AddDungeonEnemy(dungeon, 960, 270, DungeonEnemyType.Pikeman, 88, 3);
+        AddDungeonEnemy(dungeon, 1030, 510, DungeonEnemyType.Stormer, 70, 3);
+        AddDungeonEnemy(dungeon, 1120, 450, DungeonEnemyType.Pikeman, 92, 3);
+        AddDungeonEnemy(dungeon, 1060, 390, DungeonEnemyType.SilverFogde, 240, 3);
         dungeon.Chests.Clear();
         dungeon.Chests.Add(new DungeonChest(1, 465, 205));
         dungeon.Chests.Add(new DungeonChest(2, 815, 650));
         dungeon.Chests.Add(new DungeonChest(3, 1165, 170));
+        dungeon.MaxZoneReached = 1;
         WriteDungeonSave(dungeon, "autosave");
     }
 
-    private static void OpenDungeonChest(DungeonState dungeon, DungeonChest chest)
+    private void OpenDungeonChest(DungeonState dungeon, DungeonChest chest)
     {
         if (chest.Open) return;
         chest.Open = true;
+        chest.OpenAge = 1;
+        _audio?.Trigger(StormaktSound.Deploy);
         int[] definitions = chest.Id switch { 1 => [5, 10], 2 => [2, 9], _ => [6, 11] };
         for (int index = 0; index < definitions.Length; index++)
         {
@@ -1575,6 +1591,44 @@ internal sealed class StormaktGame
             loot.WorldY = chest.Y + 16;
         }
         WriteDungeonSave(dungeon, "autosave");
+    }
+
+    private static int DungeonZone(DungeonState dungeon) => dungeon.Depth != 2 ? 0 : DungeonZoneFromX(dungeon.KarlX);
+    private static int DungeonZoneFromX(double x) => x < 520 ? 1 : x < 900 ? 2 : 3;
+
+    private static readonly (int X, int Y)[] DungeonSilverVents =
+        [(410, 320), (655, 590), (900, 220), (1110, 610)];
+
+    private static void StepDungeonSilverVents(DungeonState dungeon)
+    {
+        if (dungeon.Depth != 2) return;
+        foreach (DungeonChest chest in dungeon.Chests)
+            if (chest.OpenAge > 0 && chest.OpenAge < 45) chest.OpenAge++;
+        int zone = DungeonZone(dungeon);
+        if (zone > dungeon.MaxZoneReached)
+        {
+            dungeon.MaxZoneReached = zone;
+            WriteDungeonSave(dungeon, "autosave");
+        }
+        for (int index = 0; index < DungeonSilverVents.Length; index++)
+        {
+            (int ventX, int ventY) = DungeonSilverVents[index];
+            int cycle = (dungeon.Age + index * 43) % 180;
+            if (cycle is < 54 or >= 102 || cycle % 15 != 0) continue;
+            if (DistanceSquared(ventX, ventY, dungeon.KarlX, dungeon.KarlY) < 54 * 54)
+            {
+                dungeon.Health = Math.Max(0, dungeon.Health - 4);
+                dungeon.HurtAge = Math.Max(dungeon.HurtAge, 9);
+            }
+            foreach (DungeonEnemy enemy in dungeon.Enemies.Where(enemy => enemy.State != DungeonEnemyState.Dead &&
+                DistanceSquared(ventX, ventY, enemy.X, enemy.Y) < 58 * 58))
+            {
+                enemy.Health -= 6;
+                enemy.State = enemy.Health <= 0 ? DungeonEnemyState.Dead : DungeonEnemyState.Stagger;
+                enemy.StateAge = 0;
+                if (enemy.State == DungeonEnemyState.Dead) DropDungeonEnemyLoot(dungeon, enemy);
+            }
+        }
     }
 
     private void StartDungeonAttack(DungeonState dungeon, RtsPointer pointer)
@@ -1676,8 +1730,10 @@ internal sealed class StormaktGame
             double dx = dungeon.KarlX - enemy.X;
             double dy = dungeon.KarlY - enemy.Y;
             double distance = Math.Sqrt(dx * dx + dy * dy);
+            int currentZone = DungeonZone(dungeon);
+            if (dungeon.Depth == 2 && enemy.Zone != currentZone && distance > 180) continue;
             enemy.FacingLeft = dx < 0;
-            double attackRange = enemy.Type == DungeonEnemyType.Pikeman ? 54 : 35;
+            double attackRange = enemy.Type switch { DungeonEnemyType.Pikeman => 54, DungeonEnemyType.SilverFogde => 48, _ => 35 };
             if (enemy.State == DungeonEnemyState.Approach)
             {
                 if (distance <= attackRange)
@@ -1691,7 +1747,7 @@ internal sealed class StormaktGame
                     // Each soldier has his own cadence and yields to nearby comrades.
                     int stridePhase = (enemy.StateAge + enemy.Id * 13) % 54;
                     double cadence = stridePhase >= 47 ? 0.0 : stridePhase is < 5 or > 40 ? 0.55 : 1.0;
-                    double speed = (enemy.Type == DungeonEnemyType.Pikeman ? 0.27 : 0.39) * cadence;
+                    double speed = (enemy.Type switch { DungeonEnemyType.Pikeman => 0.27, DungeonEnemyType.SilverFogde => 0.22, _ => 0.39 }) * cadence;
                     double desiredX = dx / distance * speed;
                     double desiredY = dy / distance * speed;
                     foreach (DungeonEnemy other in dungeon.Enemies)
@@ -1716,14 +1772,15 @@ internal sealed class StormaktGame
                     enemy.GaitDistance += Math.Sqrt((enemy.X - beforeX) * (enemy.X - beforeX) + (enemy.Y - beforeY) * (enemy.Y - beforeY));
                 }
             }
-            else if (enemy.State == DungeonEnemyState.Telegraph && enemy.StateAge > (enemy.Type == DungeonEnemyType.Pikeman ? 30 : 22))
+            else if (enemy.State == DungeonEnemyState.Telegraph && enemy.StateAge >
+                (enemy.Type switch { DungeonEnemyType.Pikeman => 30, DungeonEnemyType.SilverFogde => 42, _ => 22 }))
             {
                 enemy.State = DungeonEnemyState.Attack;
                 enemy.StateAge = 0;
             }
             else if (enemy.State == DungeonEnemyState.Attack)
             {
-                int impact = enemy.Type == DungeonEnemyType.Pikeman ? 12 : 8;
+                int impact = enemy.Type switch { DungeonEnemyType.Pikeman => 12, DungeonEnemyType.SilverFogde => 18, _ => 8 };
                 if (enemy.StateAge == impact && distance <= attackRange + 9)
                 {
                     if (dungeon.Guarding)
@@ -1736,7 +1793,8 @@ internal sealed class StormaktGame
                     }
                     else
                     {
-                        dungeon.Health = Math.Max(0, dungeon.Health - (enemy.Type == DungeonEnemyType.Pikeman ? 11 : 7));
+                        dungeon.Health = Math.Max(0, dungeon.Health -
+                            (enemy.Type switch { DungeonEnemyType.Pikeman => 11, DungeonEnemyType.SilverFogde => 18, _ => 7 }));
                         dungeon.HurtAge = 18;
                         dungeon.HitStop = 3;
                     }
@@ -1770,9 +1828,18 @@ internal sealed class StormaktGame
     {
         if (enemy.LootDropped) return;
         enemy.LootDropped = true;
-        int definition = enemy.Type == DungeonEnemyType.Pikeman ? 4 : enemy.Id % 2 == 0 ? 7 : 8;
-        DungeonItemRarity rarity = enemy.Type == DungeonEnemyType.Pikeman
-            ? DungeonItemRarity.Silverbound : DungeonItemRarity.Iron;
+        int definition = enemy.Type switch
+        {
+            DungeonEnemyType.SilverFogde => 11,
+            DungeonEnemyType.Pikeman => 4,
+            _ => enemy.Id % 2 == 0 ? 7 : 8,
+        };
+        DungeonItemRarity rarity = enemy.Type switch
+        {
+            DungeonEnemyType.SilverFogde => DungeonItemRarity.Unique,
+            DungeonEnemyType.Pikeman => DungeonItemRarity.Silverbound,
+            _ => DungeonItemRarity.Iron,
+        };
         DungeonItem loot = AddDungeonItem(dungeon, definition, -1, -1, DungeonEquipmentSlot.None, rarity);
         loot.OnGround = true;
         loot.WorldX = enemy.X;
@@ -1866,17 +1933,18 @@ internal sealed class StormaktGame
             string path = Path.Combine(directory, slot + ".json");
             string temporary = path + ".tmp";
             string backup = path + ".bak";
-            var snapshot = new DungeonSave(6, dungeon.Age, dungeon.RoomWidth, dungeon.RoomHeight,
+            var snapshot = new DungeonSave(7, dungeon.Age, dungeon.RoomWidth, dungeon.RoomHeight,
                 dungeon.KarlX, dungeon.KarlY, dungeon.TargetX, dungeon.TargetY, dungeon.Facing,
                 dungeon.Health, dungeon.MaxHealth, dungeon.Power, dungeon.NextItemId,
                 dungeon.Items.Select(item => new DungeonItemSave(item.Id, item.Definition, item.GridX, item.GridY,
                     item.Equipped, item.Rarity, item.PowerRoll, item.OnGround, item.InStash, item.WorldX, item.WorldY)).ToList(),
                 dungeon.NextEnemyId, dungeon.AttackSerial, dungeon.AttackCombo, dungeon.RoomClear, dungeon.DoorReady,
-                dungeon.Depth, dungeon.DoorHealth, dungeon.DescentWarningPlayed,
+                dungeon.Depth, dungeon.DoorHealth, dungeon.DescentWarningPlayed, dungeon.MaxZoneReached,
                 dungeon.Enemies.Select(enemy => new DungeonEnemySave(enemy.Id, enemy.X, enemy.Y, enemy.Type,
                     enemy.Health, enemy.MaxHealth, enemy.State, enemy.StateAge, enemy.LastHitSerial, enemy.FacingLeft,
-                    enemy.LootDropped)).ToList(),
-                dungeon.Chests.Select(chest => new DungeonChestSave(chest.Id, chest.X, chest.Y, chest.Open)).ToList());
+                    enemy.LootDropped, enemy.Zone)).ToList(),
+                dungeon.Chests.Select(chest => new DungeonChestSave(chest.Id, chest.X, chest.Y, chest.Open,
+                    chest.OpenAge)).ToList());
             File.WriteAllText(temporary, JsonSerializer.Serialize(snapshot));
             if (File.Exists(path)) File.Copy(path, backup, true);
             File.Move(temporary, path, true);
@@ -1916,7 +1984,7 @@ internal sealed class StormaktGame
             {
                 if (!File.Exists(candidate)) continue;
                 DungeonSave save = JsonSerializer.Deserialize<DungeonSave>(File.ReadAllText(candidate));
-                if (save.Schema is < 1 or > 6 || save.RoomWidth < 320 || save.RoomHeight < 220) continue;
+                if (save.Schema is < 1 or > 7 || save.RoomWidth < 320 || save.RoomHeight < 220) continue;
                 dungeon = new DungeonState
                 {
                     Age = save.Age,
@@ -1940,6 +2008,7 @@ internal sealed class StormaktGame
                     Depth = save.Schema >= 5 ? save.Depth : 1,
                     DoorHealth = save.Schema >= 5 ? save.DoorHealth : save.DoorReady ? 0 : 3,
                     DescentWarningPlayed = save.Schema >= 6 ? save.DescentWarningPlayed : save.DoorReady,
+                    MaxZoneReached = save.Schema >= 7 ? save.MaxZoneReached : save.Depth == 2 ? DungeonZoneFromX(save.KarlX) : 0,
                 };
                 if (save.Schema >= 2 && save.Items is not null)
                 {
@@ -1964,14 +2033,23 @@ internal sealed class StormaktGame
                             Id = enemy.Id, Health = enemy.Health, State = enemy.State, StateAge = enemy.StateAge,
                             LastHitSerial = enemy.LastHitSerial, FacingLeft = enemy.FacingLeft,
                             LootDropped = save.Schema >= 4 && enemy.LootDropped,
+                            Zone = save.Schema >= 7 ? enemy.Zone : save.Depth == 2 ? DungeonZoneFromX(enemy.X) : 0,
                         };
                         dungeon.Enemies.Add(loaded);
                     }
                 }
                 else SeedDungeonEncounter(dungeon);
+                if (save.Schema < 7 && dungeon.Depth == 2 &&
+                    dungeon.Enemies.All(enemy => enemy.Type != DungeonEnemyType.SilverFogde))
+                {
+                    AddDungeonEnemy(dungeon, 1060, 390, DungeonEnemyType.SilverFogde, 240, 3);
+                    dungeon.RoomClear = false;
+                    dungeon.RoomClearSaved = false;
+                }
                 if (save.Schema >= 5 && save.Chests is not null)
                     foreach (DungeonChestSave chest in save.Chests)
-                        dungeon.Chests.Add(new DungeonChest(chest.Id, chest.X, chest.Y) { Open = chest.Open });
+                        dungeon.Chests.Add(new DungeonChest(chest.Id, chest.X, chest.Y)
+                            { Open = chest.Open, OpenAge = save.Schema >= 7 ? chest.OpenAge : chest.Open ? 45 : 0 });
                 dungeon.CameraX = Math.Clamp((int)Math.Round(dungeon.KarlX - 200), 0, Math.Max(0, dungeon.RoomWidth - 400));
                 dungeon.CameraY = Math.Clamp((int)Math.Round(dungeon.KarlY - 140), 0, Math.Max(0, dungeon.RoomHeight - 280));
                 return true;
@@ -3196,13 +3274,26 @@ internal sealed class StormaktGame
             foreach ((int x, int y) in new[] { (285, 175), (285, 245), (535, 470), (535, 610),
                 (795, 165), (795, 310), (1030, 545), (1030, 675) })
                 DrawDungeonSprite(frame, dungeon, "dungeon_wall_timber", x, y);
-            foreach ((int x, int y) in new[] { (410, 320), (655, 590), (900, 220), (1110, 610) })
+            for (int index = 0; index < DungeonSilverVents.Length; index++)
+            {
+                (int x, int y) = DungeonSilverVents[index];
                 DrawDungeonSprite(frame, dungeon, "dungeon_silver_vent", x, y);
+                int cycle = (dungeon.Age + index * 43) % 180;
+                if (_sprites?.TryGet("dungeon_silver_mist", out Sprite vapor) == true && cycle is >= 30 and < 102)
+                {
+                    int alpha = cycle < 54 ? 70 + (cycle - 30) * 5 : cycle < 84 ? 210 : 210 - (cycle - 84) * 11;
+                    DrawSpriteAlpha(frame, vapor, x - dungeon.CameraX - vapor.Width / 2,
+                        y - dungeon.CameraY - vapor.Height / 2 - 7, (uint)Math.Clamp(alpha, 40, 220));
+                }
+            }
             foreach ((int x, int y) in new[] { (355, 555), (680, 180), (910, 520), (1180, 315) })
                 DrawDungeonSprite(frame, dungeon, "dungeon_silver_mist", x, y);
             foreach (DungeonChest chest in dungeon.Chests)
+            {
+                int chestY = (int)Math.Round(chest.Y) - (chest.OpenAge is > 0 and < 12 ? chest.OpenAge % 3 : 0);
                 DrawDungeonSprite(frame, dungeon, chest.Open ? "dungeon_chest_open" : "dungeon_chest_closed",
-                    (int)Math.Round(chest.X), (int)Math.Round(chest.Y));
+                    (int)Math.Round(chest.X), chestY);
+            }
         }
 
         foreach (DungeonItem item in dungeon.Items.Where(candidate => candidate.OnGround))
@@ -3221,7 +3312,12 @@ internal sealed class StormaktGame
             bool stepping = enemy.State == DungeonEnemyState.Approach && Math.Abs(enemy.VelocityX) + Math.Abs(enemy.VelocityY) > 0.08;
             int foot = (int)(enemy.GaitDistance / 5.5) & 3;
             int enemyY = (int)Math.Round(enemy.Y) - dungeon.CameraY - (stepping && foot is 1 or 3 ? 1 : 0);
-            string prefix = enemy.Type == DungeonEnemyType.Pikeman ? "dk_pikeman" : "dk_stormer";
+            string prefix = enemy.Type switch
+            {
+                DungeonEnemyType.Pikeman => "dk_pikeman",
+                DungeonEnemyType.SilverFogde => "dk_silver_fogde",
+                _ => "dk_stormer",
+            };
             string enemyName = enemy.State switch
             {
                 DungeonEnemyState.Attack or DungeonEnemyState.Telegraph => prefix + "_attack",
@@ -3230,7 +3326,8 @@ internal sealed class StormaktGame
                 _ => prefix + "_idle",
             };
             if (enemy.State == DungeonEnemyState.Telegraph)
-                DrawCircleOutline(frame, enemyX, enemyY - 4, enemy.Type == DungeonEnemyType.Pikeman ? 22 : 17,
+                DrawCircleOutline(frame, enemyX, enemyY - 4,
+                    enemy.Type switch { DungeonEnemyType.Pikeman => 22, DungeonEnemyType.SilverFogde => 29, _ => 17 },
                     enemy.StateAge / 4 % 2 == 0 ? 0xffffc45c : 0xffb92f3f);
             if (_sprites?.TryGet(enemyName, out Sprite enemySprite) == true)
             {
@@ -3244,6 +3341,17 @@ internal sealed class StormaktGame
                 DrawRect(frame, enemyX - 15, enemyY - 36, 30, 3, 0xff26161a);
                 DrawRect(frame, enemyX - 15, enemyY - 36, 30 * enemy.Health / enemy.MaxHealth, 2, 0xffbf3348);
             }
+        }
+
+        DungeonEnemy? fogde = dungeon.Enemies.FirstOrDefault(enemy => enemy.Type == DungeonEnemyType.SilverFogde &&
+            enemy.State != DungeonEnemyState.Dead && DungeonZone(dungeon) == 3);
+        if (fogde is not null)
+        {
+            int barWidth = Math.Min(220, _width - 100);
+            int barX = (_width - barWidth) / 2;
+            DrawRect(frame, barX, 22, barWidth, 11, 0xee0b0d10);
+            DrawRect(frame, barX + 2, 24, (barWidth - 4) * fogde.Health / fogde.MaxHealth, 6, 0xffb7c7d6);
+            DrawText(frame, barX + 8, 35, "DEN FÖRSILVRADE GRUVFOGDEN", 0xffdce8f2);
         }
 
         int karlX = (int)Math.Round(dungeon.KarlX) - dungeon.CameraX;
@@ -3357,9 +3465,10 @@ internal sealed class StormaktGame
         AddDungeonEnemy(dungeon, 548, 174, DungeonEnemyType.Stormer, 42);
     }
 
-    private static void AddDungeonEnemy(DungeonState dungeon, double x, double y, DungeonEnemyType type, int health)
+    private static void AddDungeonEnemy(DungeonState dungeon, double x, double y, DungeonEnemyType type, int health,
+        int zone = 0)
     {
-        var enemy = new DungeonEnemy(x, y, type, health) { Id = dungeon.NextEnemyId++ };
+        var enemy = new DungeonEnemy(x, y, type, health) { Id = dungeon.NextEnemyId++, Zone = zone };
         dungeon.Enemies.Add(enemy);
     }
 
@@ -6182,7 +6291,7 @@ internal sealed class StormaktGame
 
     private enum DungeonItemRarity { Iron, Carolean, Silverbound, Runic, Unique }
 
-    private enum DungeonEnemyType { Stormer, Pikeman }
+    private enum DungeonEnemyType { Stormer, Pikeman, SilverFogde }
     private enum DungeonEnemyState { Approach, Telegraph, Attack, Recover, Stagger, Dead }
 
     private readonly record struct DungeonItemDefinition(string Key, string Name, string Sprite, int Width, int Height,
@@ -6228,6 +6337,7 @@ internal sealed class StormaktGame
         public double VelocityY { get; set; }
         public double GaitDistance { get; set; }
         public bool LootDropped { get; set; }
+        public int Zone { get; set; }
     }
 
     private sealed class DungeonChest(int id, double x, double y)
@@ -6236,6 +6346,7 @@ internal sealed class StormaktGame
         public double X { get; } = x;
         public double Y { get; } = y;
         public bool Open { get; set; }
+        public int OpenAge { get; set; }
     }
 
     private sealed class DungeonState
@@ -6283,21 +6394,22 @@ internal sealed class StormaktGame
         public List<DungeonChest> Chests { get; } = [];
         public bool DescentWarningPlayed { get; set; }
         public bool PendingDoorEntry { get; set; }
+        public int MaxZoneReached { get; set; }
     }
 
     private readonly record struct DungeonSave(int Schema, int Age, int RoomWidth, int RoomHeight,
         double KarlX, double KarlY, double TargetX, double TargetY, DungeonFacing Facing,
         int Health, int MaxHealth, int Power, ulong NextItemId, List<DungeonItemSave>? Items,
         int NextEnemyId, int AttackSerial, int AttackCombo, bool RoomClear, bool DoorReady,
-        int Depth, int DoorHealth, bool DescentWarningPlayed, List<DungeonEnemySave>? Enemies,
+        int Depth, int DoorHealth, bool DescentWarningPlayed, int MaxZoneReached, List<DungeonEnemySave>? Enemies,
         List<DungeonChestSave>? Chests);
     private readonly record struct DungeonItemSave(ulong Id, int Definition, int GridX, int GridY,
         DungeonEquipmentSlot Equipped, DungeonItemRarity Rarity, int PowerRoll, bool OnGround, bool InStash,
         double WorldX, double WorldY);
     private readonly record struct DungeonEnemySave(int Id, double X, double Y, DungeonEnemyType Type,
         int Health, int MaxHealth, DungeonEnemyState State, int StateAge, int LastHitSerial, bool FacingLeft,
-        bool LootDropped);
-    private readonly record struct DungeonChestSave(int Id, double X, double Y, bool Open);
+        bool LootDropped, int Zone);
+    private readonly record struct DungeonChestSave(int Id, double X, double Y, bool Open, int OpenAge);
 
     private sealed class SorenRivalState
     {
