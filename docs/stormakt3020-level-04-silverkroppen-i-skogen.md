@@ -20,6 +20,7 @@ Speltid: cirka 7–9 minuter. Tempot ska kännas som ett koncentrerat `Command &
 - Silverkroppen löper diagonalt genom kartans mitt som ljusa ådror under mörk skogsmark.
 - Danska styrkor kommer från en gammal fogdeväg och ett tullfort i nordost.
 - Kristallgranar, kolmilor och gruvvrak återanvänder bana 2:s visuella språk men visas ovanifrån.
+- Den spelbara kartan använder sexton riktiga propfamiljer: fyra trädtyper, silverhällar, sten/stubbe/buskage och en separat dansk front med spärrar, lyktor, mätstativ, skattekistor, gruvvagn och hjulspår. Alla placeras deterministiskt och Y-sorteras visuellt utan kollisionspåverkan.
 
 ## Kärnloop
 

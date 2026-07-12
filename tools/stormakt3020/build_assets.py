@@ -350,6 +350,8 @@ def build(
     rts_danish_input_path: Path,
     rts_miner_input_path: Path,
     rts_toldhus_input_path: Path,
+    rts_forest_input_path: Path,
+    rts_frontier_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
 ) -> None:
@@ -377,6 +379,8 @@ def build(
     rts_danish_source = Image.open(rts_danish_input_path).convert("RGBA")
     rts_miner_source = Image.open(rts_miner_input_path).convert("RGBA")
     rts_toldhus_source = Image.open(rts_toldhus_input_path).convert("RGBA")
+    rts_forest_source = Image.open(rts_forest_input_path).convert("RGBA")
+    rts_frontier_source = Image.open(rts_frontier_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
@@ -433,6 +437,26 @@ def build(
         ("rts_seal_intact", 0, 1, (32, 52)),
         ("rts_seal_broken", 1, 1, (32, 52)),
         ("rts_toldhus_wreck", 2, 1, (148, 72)),
+    ])
+    append_rts_sheet(entries, rts_forest_source, 4, [
+        ("rts_spruce_tall", 0, 0, (34, 54)),
+        ("rts_spruce_bent", 1, 0, (42, 48)),
+        ("rts_pine_dead", 2, 0, (32, 52)),
+        ("rts_spruce_crystal", 3, 0, (38, 54)),
+        ("rts_moss_boulders", 0, 1, (36, 28)),
+        ("rts_silver_outcrop", 1, 1, (36, 32)),
+        ("rts_forest_shrub", 2, 1, (34, 25)),
+        ("rts_forest_stump", 3, 1, (28, 24)),
+    ])
+    append_rts_sheet(entries, rts_frontier_source, 4, [
+        ("rts_dk_barricade", 0, 0, (40, 28)),
+        ("rts_dk_lantern", 1, 0, (24, 34)),
+        ("rts_dk_tripod", 2, 0, (28, 38)),
+        ("rts_dk_signpost", 3, 0, (24, 38)),
+        ("rts_dk_crates", 0, 1, (34, 30)),
+        ("rts_dk_minecart", 1, 1, (38, 28)),
+        ("rts_dk_scorched", 2, 1, (34, 28)),
+        ("rts_dk_wagon_rut", 3, 1, (42, 28)),
     ])
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
@@ -560,6 +584,8 @@ def main() -> None:
     parser.add_argument("--rts-danish-input", type=Path, default=Path("assets/stormakt3020/rts-danish-army-v1.png"))
     parser.add_argument("--rts-miner-input", type=Path, default=Path("assets/stormakt3020/rts-silver-miner-v1.png"))
     parser.add_argument("--rts-toldhus-input", type=Path, default=Path("assets/stormakt3020/rts-toldhus-v1.png"))
+    parser.add_argument("--rts-forest-input", type=Path, default=Path("assets/stormakt3020/rts-forest-props-v1.png"))
+    parser.add_argument("--rts-frontier-input", type=Path, default=Path("assets/stormakt3020/rts-danish-frontier-props-v1.png"))
     parser.add_argument(
         "--logo-input",
         type=Path,
@@ -592,6 +618,8 @@ def main() -> None:
         args.rts_danish_input,
         args.rts_miner_input,
         args.rts_toldhus_input,
+        args.rts_forest_input,
+        args.rts_frontier_input,
         args.logo_input,
         args.output,
     )

@@ -34,6 +34,8 @@
 
 `rts-toldhus-v1.png` supplies intact, open-gate, burning and wreck states for Møntgrevens mobile Danish tax fortress plus intact/broken royal seal machinery. The boss occupies the enlarged eastern front of Silverkroppen and cannot expose its core until both seal health pools are destroyed.
 
+`rts-forest-props-v1.png` and `rts-danish-frontier-props-v1.png` replace Silverkroppen's triangle forest with sixteen deterministic environment families. Reset builds a stable prop field with a Swedish/neutral crystal-forest palette and a separate Danish customs-front palette. Root-anchored props participate in visual Y sorting but never navigation or combat collision.
+
 `stormakt-bridge-cannons-projectiles-v1.png` adds three bridge-collapse pieces, intact/destroyed Danish bridge cannon states, a detachable boss broadside cannon and red/white/gold enemy projectile families. Runtime uses the wreck pieces during the existing 45-frame collapse and mirrors the broadside module for the boss's right side.
 
 Prompt summary:

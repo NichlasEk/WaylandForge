@@ -426,6 +426,37 @@ internal sealed class StormaktGame
         if (_rts is RtsState resetRts)
         {
             resetRts.Fortress = new RtsFortress(resetRts.MapWidth - 108, resetRts.MapHeight / 2);
+            string[] forestProps = ["rts_spruce_tall", "rts_spruce_bent", "rts_pine_dead", "rts_spruce_crystal",
+                "rts_moss_boulders", "rts_silver_outcrop", "rts_forest_shrub", "rts_forest_stump"];
+            string[] frontierProps = ["rts_dk_barricade", "rts_dk_lantern", "rts_dk_tripod", "rts_dk_signpost",
+                "rts_dk_crates", "rts_dk_minecart", "rts_dk_scorched", "rts_dk_wagon_rut"];
+            for (int y = 42; y < resetRts.MapHeight - 18; y += 38)
+            {
+                for (int x = 22; x < resetRts.MapWidth - 24; x += 44)
+                {
+                    int jitterX = (x * 17 + y * 31) % 19 - 9;
+                    int jitterY = (x * 29 + y * 13) % 13 - 6;
+                    int propX = x + jitterX;
+                    int propY = y + jitterY;
+                    if (DistanceSquared(propX, propY, resetRts.LandingX, resetRts.LandingY) < 72 * 72 ||
+                        Math.Abs(propX - SilverVeinWorldX(propY)) < 25)
+                    {
+                        continue;
+                    }
+                    bool danishFront = propX > resetRts.MapWidth - 270;
+                    string[] palette = danishFront ? frontierProps : forestProps;
+                    int hash = Math.Abs(propX * 7 + propY * 11);
+                    int index = hash % palette.Length;
+                    bool clearFort = danishFront &&
+                        DistanceSquared(propX, propY, resetRts.Fortress!.X, resetRts.Fortress.Y) < 92 * 92;
+                    bool clearRoad = danishFront && Math.Abs(propX - (resetRts.MapWidth - 74)) < 24;
+                    bool chosen = danishFront ? hash % 2 == 0 : hash % 3 == 0;
+                    if (chosen && !clearFort && !clearRoad)
+                    {
+                        resetRts.Props.Add(new RtsProp(propX, propY, palette[index], palette[index] == "rts_dk_wagon_rut"));
+                    }
+                }
+            }
         }
         _stageClear = false;
         _stageClearAge = 0;
@@ -2282,21 +2313,14 @@ internal sealed class StormaktGame
         DrawRect(frame, 0, 0, _width, _height, 0xff08110e);
         DrawRect(frame, 0, 18, _width, _height - 32, 0xff101b16);
 
-        for (int row = 0; row < 7; row++)
+        for (int worldX = 18; worldX < rts.MapWidth; worldX += 29)
         {
-            for (int column = 0; column < 11; column++)
+            int x = worldX - rts.CameraX;
+            if (x < -8 || x > _width + 8) continue;
+            for (int y = 30 + worldX % 17; y < rts.MapHeight; y += 47)
             {
-                int worldX = 22 + column * 47 + ((row * 31 + column * 17) % 23);
-                int worldY = 32 + row * 34 + ((row * 19 + column * 29) % 17);
-                int x = worldX - rts.CameraX;
-                if (x < -20 || x > _width + 20)
-                {
-                    continue;
-                }
-                uint trunk = (row + column & 1) == 0 ? 0xff28352d : 0xff31352f;
-                uint crown = (row * 3 + column & 1) == 0 ? 0xff173027 : 0xff202c27;
-                FillTriangle(frame, x, worldY - 13, x - 8, worldY + 12, x + 8, worldY + 12, crown);
-                DrawLine(frame, x, worldY - 9, x, worldY + 13, trunk);
+                uint earth = (worldX + y & 1) == 0 ? 0xff142019 : 0xff19231d;
+                FillCircle(frame, x, y, 3 + (worldX + y) % 5, earth);
             }
         }
 
@@ -2322,13 +2346,14 @@ internal sealed class StormaktGame
         }
 
         var drawables = new List<(double Y, int Kind, object? Entity)>(
-            rts.Buildings.Count + rts.Units.Count + rts.Enemies.Count + rts.Miners.Count + 2);
-        drawables.AddRange(rts.Buildings.Select(building => ((double)building.Y, 0, (object?)building)));
-        drawables.AddRange(rts.Units.Select(unit => (unit.Y, 1, (object?)unit)));
-        drawables.AddRange(rts.Enemies.Select(enemy => (enemy.Y, 2, (object?)enemy)));
-        drawables.AddRange(rts.Miners.Select(miner => (miner.Y, 3, (object?)miner)));
-        if (rts.Fortress is RtsFortress fortress) drawables.Add((fortress.Y, 4, fortress));
-        drawables.Add((rts.LandingY, 5, null));
+            rts.Props.Count + rts.Buildings.Count + rts.Units.Count + rts.Enemies.Count + rts.Miners.Count + 2);
+        drawables.AddRange(rts.Props.Select(prop => ((double)prop.Y, 0, (object?)prop)));
+        drawables.AddRange(rts.Buildings.Select(building => ((double)building.Y, 1, (object?)building)));
+        drawables.AddRange(rts.Units.Select(unit => (unit.Y, 2, (object?)unit)));
+        drawables.AddRange(rts.Enemies.Select(enemy => (enemy.Y, 3, (object?)enemy)));
+        drawables.AddRange(rts.Miners.Select(miner => (miner.Y, 4, (object?)miner)));
+        if (rts.Fortress is RtsFortress fortress) drawables.Add((fortress.Y, 5, fortress));
+        drawables.Add((rts.LandingY, 6, null));
         drawables.Sort(static (left, right) =>
         {
             int yOrder = left.Y.CompareTo(right.Y);
@@ -2338,11 +2363,12 @@ internal sealed class StormaktGame
         {
             switch (kind)
             {
-                case 0: DrawRtsBuilding(frame, rts, (RtsBuilding)entity!); break;
-                case 1: DrawRtsUnit(frame, rts, (RtsUnit)entity!); break;
-                case 2: DrawRtsEnemy(frame, rts, (RtsEnemy)entity!); break;
-                case 3: DrawRtsMiner(frame, rts, (RtsMiner)entity!); break;
-                case 4: DrawRtsFortress(frame, rts, (RtsFortress)entity!); break;
+                case 0: DrawRtsProp(frame, rts, (RtsProp)entity!); break;
+                case 1: DrawRtsBuilding(frame, rts, (RtsBuilding)entity!); break;
+                case 2: DrawRtsUnit(frame, rts, (RtsUnit)entity!); break;
+                case 3: DrawRtsEnemy(frame, rts, (RtsEnemy)entity!); break;
+                case 4: DrawRtsMiner(frame, rts, (RtsMiner)entity!); break;
+                case 5: DrawRtsFortress(frame, rts, (RtsFortress)entity!); break;
                 default: DrawRtsLandedKarl(frame, rts); break;
             }
         }
@@ -2539,6 +2565,15 @@ internal sealed class StormaktGame
         DrawLine(frame, x - 6, y - 14, x - 12, y - 21, 0xffffd66b);
         DrawLine(frame, x + 6, y - 14, x + 12, y - 21, 0xffffd66b);
         DrawRtsProductionBar(frame, x, y + 17, rts.AnimalHallTimer, 150);
+    }
+
+    private void DrawRtsProp(uint[] frame, RtsState rts, RtsProp prop)
+    {
+        if (_sprites?.TryGet(prop.Sprite, out Sprite sprite) != true) return;
+        int x = prop.X - rts.CameraX - sprite.Width / 2;
+        int y = prop.GroundPatch ? prop.Y - sprite.Height / 2 : prop.Y - sprite.Height;
+        if (x + sprite.Width < 0 || x >= _width) return;
+        DrawSprite(frame, sprite, x, y);
     }
 
     private void DrawRtsProductionBar(uint[] frame, int x, int y, int timer, int total)
@@ -4710,6 +4745,7 @@ internal sealed class StormaktGame
         public List<RtsUnit> Units { get; } = [];
         public List<RtsEnemy> Enemies { get; } = [];
         public List<RtsMiner> Miners { get; } = [];
+        public List<RtsProp> Props { get; } = [];
         public int BarracksTimer { get; set; }
         public int AnimalHallTimer { get; set; }
         public bool LastPlacementValid { get; set; }
@@ -4784,6 +4820,8 @@ internal sealed class StormaktGame
         public int LoadAge { get; set; }
         public int AnimationPhase { get; } = animationPhase;
     }
+
+    private sealed record RtsProp(int X, int Y, string Sprite, bool GroundPatch);
 
     private sealed class RtsFortress(int x, int y)
     {
