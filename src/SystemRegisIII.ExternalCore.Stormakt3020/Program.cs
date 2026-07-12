@@ -3277,18 +3277,6 @@ internal sealed class StormaktGame
             else DrawSprite(frame, karl, drawX, drawY);
         }
 
-        if (dungeon.Depth == 1 && dungeon.RoomClear)
-        {
-            int doorScreenX = 650 - dungeon.CameraX;
-            int doorScreenY = 218 - dungeon.CameraY;
-            if (doorScreenX > _width - 72 || doorScreenX < 0)
-            {
-                int markerY = Math.Clamp(doorScreenY, 38, _height - 34);
-                DrawText(frame, _width - 91, markerY,
-                    dungeon.DoorReady ? ">>> GRUVA II" : ">>> TRÄPORT", 0xffffd66b);
-            }
-        }
-
         DrawRect(frame, 0, 0, _width, 18, 0xee080d12);
         DrawText(frame, 6, 5, dungeon.Depth == 1 ? "GRUVA I  ÖVERGIVNA ORTEN" : "GRUVA II  SILVERÅNGORNA", 0xffffd66b);
         DrawText(frame, _width - 78, 5, "AUTOSPAR", 0xff65c58a);
