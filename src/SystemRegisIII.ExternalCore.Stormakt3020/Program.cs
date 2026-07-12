@@ -1378,6 +1378,22 @@ internal sealed class StormaktGame
                 _dungeon.CameraX = 720;
                 _dungeon.CameraY = 250;
             }
+            if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_BOSS_DEATH_TEST"), "1", StringComparison.Ordinal))
+            {
+                DungeonEnemy fogde = _dungeon.Enemies.First(enemy => enemy.Type == DungeonEnemyType.SilverFogde);
+                fogde.Health = 0;
+                fogde.State = DungeonEnemyState.Dead;
+                DefeatDungeonEnemy(_dungeon, fogde);
+                _dungeon.KarlX = 1080;
+                _dungeon.KarlY = 390;
+                _dungeon.TargetX = 1080;
+                _dungeon.TargetY = 390;
+            }
+            if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_DEPTH3_TEST"), "1", StringComparison.Ordinal))
+            {
+                _dungeon.DepthThreeOpen = true;
+                BeginDungeonDepthThree(_dungeon);
+            }
         }
         if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_DEATH_TEST"), "1", StringComparison.Ordinal))
             _dungeon.Health = 0;
@@ -1388,6 +1404,19 @@ internal sealed class StormaktGame
     private void StepDungeon(uint buttons, RtsPointer pointer)
     {
         DungeonState dungeon = _dungeon!;
+        const uint mouseLeft = 1u;
+        const uint mouseRight = 2u;
+        uint pointerButtons = pointer.Inside ? pointer.Buttons : 0;
+        bool leftPointerPressed = pointer.Inside && (pointerButtons & mouseLeft) != 0 &&
+            (dungeon.PreviousMouseButtons & mouseLeft) == 0;
+        bool leftPointerHeld = pointer.Inside && (pointerButtons & mouseLeft) != 0;
+        bool leftPointerReleased = pointer.Inside && (pointerButtons & mouseLeft) == 0 &&
+            (dungeon.PreviousMouseButtons & mouseLeft) != 0;
+        bool rightPointerPressed = pointer.Inside && (pointerButtons & mouseRight) != 0 &&
+            (dungeon.PreviousMouseButtons & mouseRight) == 0;
+        // Always consume releases before any death, hit-stop, radio or menu
+        // early-return. Otherwise one interrupted click can latch forever.
+        dungeon.PreviousMouseButtons = pointerButtons;
         dungeon.Age++;
         if (_bossRadioCard is RadioCard active && ++_bossRadioAge >= active.DurationFrames)
         {
@@ -1461,17 +1490,22 @@ internal sealed class StormaktGame
                 ReturnToDungeonDepthOne(dungeon);
                 interacted = true;
             }
+            else if (dungeon.Depth == 2 && dungeon.DepthThreeOpen &&
+                DistanceSquared(1190, 390, dungeon.KarlX, dungeon.KarlY) < 52 * 52)
+            {
+                BeginDungeonDepthThree(dungeon);
+                interacted = true;
+            }
+            else if (dungeon.Depth == 3 && DistanceSquared(60, 240, dungeon.KarlX, dungeon.KarlY) < 48 * 48)
+            {
+                ReturnToDungeonDepthTwo(dungeon);
+                interacted = true;
+            }
             if (!interacted) StartDungeonAttack(dungeon, pointer);
         }
 
-        const uint mouseLeft = 1u;
-        const uint mouseRight = 2u;
-        bool mouseDown = pointer.Inside && (pointer.Buttons & mouseLeft) != 0;
-        bool previousMouseDown = (dungeon.PreviousMouseButtons & mouseLeft) != 0;
-        bool rightPressed = pointer.Inside && (pointer.Buttons & mouseRight) != 0 &&
-            (dungeon.PreviousMouseButtons & mouseRight) == 0;
-        if (rightPressed) StartDungeonAttack(dungeon, pointer);
-        if (mouseDown && !previousMouseDown)
+        if (rightPointerPressed) StartDungeonAttack(dungeon, pointer);
+        if (leftPointerPressed || leftPointerHeld || leftPointerReleased)
         {
             double worldX = pointer.X + dungeon.CameraX;
             double worldY = pointer.Y + dungeon.CameraY;
@@ -1484,19 +1518,22 @@ internal sealed class StormaktGame
             bool clickedDoor = dungeon.Depth == 1 && dungeon.DoorReady &&
                 DistanceSquared(650, 218, worldX, worldY) < 44 * 44;
             bool clickedReturnDoor = dungeon.Depth == 2 && DistanceSquared(60, 410, worldX, worldY) < 44 * 44;
+            bool clickedDeepDoor = dungeon.Depth == 2 && dungeon.DepthThreeOpen &&
+                DistanceSquared(1190, 390, worldX, worldY) < 54 * 54;
+            bool clickedDepthThreeReturn = dungeon.Depth == 3 && DistanceSquared(60, 240, worldX, worldY) < 48 * 48;
             dungeon.PendingPickupItemId = clickedLoot?.Id ?? 0;
             dungeon.PendingChestId = clickedChest?.Id ?? 0;
             dungeon.PendingDoorEntry = clickedDoor;
             dungeon.PendingReturnEntry = clickedReturnDoor;
+            dungeon.PendingDepthThreeEntry = clickedDeepDoor;
+            dungeon.PendingDepthThreeReturn = clickedDepthThreeReturn;
             (double targetX, double targetY) = clickedLoot is null
-                ? (clickedChest?.X ?? (clickedDoor ? 650 : clickedReturnDoor ? 60 : worldX),
-                    clickedChest?.Y ?? (clickedDoor ? 218 : clickedReturnDoor ? 410 : worldY))
+                ? (clickedChest?.X ?? (clickedDoor ? 650 : clickedReturnDoor ? 60 : clickedDeepDoor ? 1190 : clickedDepthThreeReturn ? 60 : worldX),
+                    clickedChest?.Y ?? (clickedDoor ? 218 : clickedReturnDoor ? 410 : clickedDeepDoor ? 390 : clickedDepthThreeReturn ? 240 : worldY))
                 : FindDungeonPickupApproach(dungeon, clickedLoot);
             dungeon.TargetX = Math.Clamp(targetX, 28, dungeon.RoomWidth - 29);
             dungeon.TargetY = Math.Clamp(targetY, 48, dungeon.RoomHeight - 29);
         }
-        dungeon.PreviousMouseButtons = pointer.Inside ? pointer.Buttons : 0;
-
         if (dungeon.PendingPickupItemId != 0)
         {
             DungeonItem? pending = dungeon.Items.FirstOrDefault(item => item.Id == dungeon.PendingPickupItemId && item.OnGround);
@@ -1571,6 +1608,12 @@ internal sealed class StormaktGame
         else if (dungeon.Depth == 2 && dungeon.PendingReturnEntry &&
             DistanceSquared(60, 410, dungeon.KarlX, dungeon.KarlY) < 34 * 34)
             ReturnToDungeonDepthOne(dungeon);
+        else if (dungeon.Depth == 2 && dungeon.PendingDepthThreeEntry && dungeon.DepthThreeOpen &&
+            DistanceSquared(1190, 390, dungeon.KarlX, dungeon.KarlY) < 42 * 42)
+            BeginDungeonDepthThree(dungeon);
+        else if (dungeon.Depth == 3 && dungeon.PendingDepthThreeReturn &&
+            DistanceSquared(60, 240, dungeon.KarlX, dungeon.KarlY) < 38 * 38)
+            ReturnToDungeonDepthTwo(dungeon);
     }
 
     private static void BeginDungeonDepthTwo(DungeonState dungeon)
@@ -1666,6 +1709,36 @@ internal sealed class StormaktGame
         WriteDungeonSave(dungeon, "autosave");
     }
 
+    private static void BeginDungeonDepthThree(DungeonState dungeon)
+    {
+        dungeon.Depth = 3;
+        dungeon.RoomWidth = 760;
+        dungeon.RoomHeight = 480;
+        dungeon.KarlX = 115;
+        dungeon.KarlY = 240;
+        dungeon.TargetX = 115;
+        dungeon.TargetY = 240;
+        dungeon.CameraX = 0;
+        dungeon.CameraY = 100;
+        dungeon.PendingDepthThreeEntry = false;
+        WriteDungeonSave(dungeon, "autosave");
+    }
+
+    private static void ReturnToDungeonDepthTwo(DungeonState dungeon)
+    {
+        dungeon.Depth = 2;
+        dungeon.RoomWidth = 1280;
+        dungeon.RoomHeight = 820;
+        dungeon.KarlX = 1140;
+        dungeon.KarlY = 390;
+        dungeon.TargetX = 1140;
+        dungeon.TargetY = 390;
+        dungeon.CameraX = 880;
+        dungeon.CameraY = 250;
+        dungeon.PendingDepthThreeReturn = false;
+        WriteDungeonSave(dungeon, "autosave");
+    }
+
     private void OpenDungeonChest(DungeonState dungeon, DungeonChest chest)
     {
         if (chest.Open) return;
@@ -1693,6 +1766,21 @@ internal sealed class StormaktGame
     private static void StepDungeonSilverVents(DungeonState dungeon)
     {
         if (dungeon.Depth != 2) return;
+        if (dungeon.ForcedVentAge > 0) dungeon.ForcedVentAge--;
+        foreach (DungeonSilverWave wave in dungeon.SilverWaves)
+        {
+            wave.Age++;
+            wave.X += wave.Dx * 3.2;
+            wave.Y += wave.Dy * 3.2;
+            if (!wave.HitKarl && DistanceSquared(wave.X, wave.Y, dungeon.KarlX, dungeon.KarlY) < 22 * 22)
+            {
+                wave.HitKarl = true;
+                dungeon.Health = Math.Max(0, dungeon.Health - 10 - wave.Phase * 2);
+                dungeon.HurtAge = 14;
+            }
+        }
+        dungeon.SilverWaves.RemoveAll(wave => wave.Age > 95 ||
+            wave.X < 20 || wave.X > dungeon.RoomWidth - 20 || wave.Y < 40 || wave.Y > dungeon.RoomHeight - 20);
         foreach (DungeonChest chest in dungeon.Chests)
             if (chest.OpenAge > 0 && chest.OpenAge < 45) chest.OpenAge++;
         int zone = DungeonZone(dungeon);
@@ -1705,7 +1793,8 @@ internal sealed class StormaktGame
         {
             (int ventX, int ventY) = DungeonSilverVents[index];
             int cycle = (dungeon.Age + index * 43) % 180;
-            if (cycle is < 54 or >= 102 || cycle % 15 != 0) continue;
+            bool forced = dungeon.ForcedVentAge > 0;
+            if ((!forced && (cycle is < 54 or >= 102)) || (forced ? dungeon.ForcedVentAge : cycle) % 15 != 0) continue;
             if (DistanceSquared(ventX, ventY, dungeon.KarlX, dungeon.KarlY) < 54 * 54)
             {
                 dungeon.Health = Math.Max(0, dungeon.Health - 4);
@@ -1720,6 +1809,49 @@ internal sealed class StormaktGame
                 if (enemy.State == DungeonEnemyState.Dead) DefeatDungeonEnemy(dungeon, enemy);
             }
         }
+    }
+
+    private bool StepSilverFogdeSpecial(DungeonState dungeon, DungeonEnemy fogde)
+    {
+        fogde.Phase = fogde.Health <= fogde.MaxHealth * 3 / 10 ? 3 :
+            fogde.Health <= fogde.MaxHealth * 6 / 10 ? 2 : 1;
+        if (fogde.SpecialKind == 0)
+        {
+            if (fogde.SpecialCooldown > 0) { fogde.SpecialCooldown--; return false; }
+            fogde.SpecialSerial++;
+            fogde.SpecialKind = fogde.Phase >= 2 && fogde.SpecialSerial % 2 == 0 ? 2 : 1;
+            fogde.SpecialAge = 1;
+            fogde.State = DungeonEnemyState.Telegraph;
+            return true;
+        }
+        fogde.SpecialAge++;
+        fogde.State = fogde.SpecialAge < 34 ? DungeonEnemyState.Telegraph : DungeonEnemyState.Attack;
+        if (fogde.SpecialAge == 36)
+        {
+            _audio?.Trigger(StormaktSound.DungeonSilverWave);
+            if (fogde.SpecialKind == 1)
+            {
+                double dx = dungeon.KarlX - fogde.X;
+                double dy = dungeon.KarlY - fogde.Y;
+                double length = Math.Max(0.1, Math.Sqrt(dx * dx + dy * dy));
+                double angle = Math.Atan2(dy, dx);
+                int count = fogde.Phase == 1 ? 1 : fogde.Phase == 2 ? 3 : 5;
+                for (int index = 0; index < count; index++)
+                {
+                    double spread = (index - (count - 1) / 2.0) * 0.18;
+                    dungeon.SilverWaves.Add(new DungeonSilverWave(fogde.X, fogde.Y,
+                        Math.Cos(angle + spread), Math.Sin(angle + spread), fogde.Phase));
+                }
+            }
+            else dungeon.ForcedVentAge = fogde.Phase == 2 ? 75 : 105;
+        }
+        if (fogde.SpecialAge <= 72) return true;
+        fogde.SpecialKind = 0;
+        fogde.SpecialAge = 0;
+        fogde.SpecialCooldown = fogde.Phase switch { 1 => 150, 2 => 105, _ => 72 };
+        fogde.State = DungeonEnemyState.Approach;
+        fogde.StateAge = 0;
+        return false;
     }
 
     private void StartDungeonAttack(DungeonState dungeon, RtsPointer pointer)
@@ -1810,15 +1942,25 @@ internal sealed class StormaktGame
             }
         }
 
-        foreach (DungeonEnemy enemy in dungeon.Enemies)
+        foreach (DungeonEnemy enemy in dungeon.Enemies.Where(_ => dungeon.Depth != 3))
         {
             enemy.StateAge++;
-            if (enemy.State == DungeonEnemyState.Dead) continue;
+            if (enemy.State == DungeonEnemyState.Dead)
+            {
+                if (enemy.Type == DungeonEnemyType.SilverFogde && enemy.StateAge == 80 && !dungeon.DepthThreeOpen)
+                {
+                    dungeon.DepthThreeOpen = true;
+                    _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+                    WriteDungeonSave(dungeon, "autosave");
+                }
+                continue;
+            }
             if (enemy.State == DungeonEnemyState.Stagger)
             {
                 if (enemy.StateAge > 18) { enemy.State = DungeonEnemyState.Approach; enemy.StateAge = 0; }
                 continue;
             }
+            if (enemy.Type == DungeonEnemyType.SilverFogde && StepSilverFogdeSpecial(dungeon, enemy)) continue;
             double dx = dungeon.KarlX - enemy.X;
             double dy = dungeon.KarlY - enemy.Y;
             double distance = Math.Sqrt(dx * dx + dy * dy);
@@ -2029,6 +2171,11 @@ internal sealed class StormaktGame
                 if (Math.Abs(x - timberX) < 34 && Math.Abs(y - timberY) < 12) return true;
             return false;
         }
+        if (dungeon.Depth == 3)
+        {
+            bool antechamberTimber = Math.Abs(x - 300) < 34 && Math.Abs(y - 120) < 12;
+            return antechamberTimber;
+        }
         bool leftPillar = x > 253 && x < 307 && y > 124 && y < 212;
         bool rightStore = x > 438 && x < 507 && y > 268 && y < 340;
         return leftPillar || rightStore;
@@ -2046,17 +2193,18 @@ internal sealed class StormaktGame
             string path = Path.Combine(directory, slot + ".json");
             string temporary = path + ".tmp";
             string backup = path + ".bak";
-            var snapshot = new DungeonSave(8, dungeon.Age, dungeon.RoomWidth, dungeon.RoomHeight,
+            var snapshot = new DungeonSave(9, dungeon.Age, dungeon.RoomWidth, dungeon.RoomHeight,
                 dungeon.KarlX, dungeon.KarlY, dungeon.TargetX, dungeon.TargetY, dungeon.Facing,
                 dungeon.Health, dungeon.MaxHealth, dungeon.Power, dungeon.NextItemId,
                 dungeon.Items.Select(item => new DungeonItemSave(item.Id, item.Definition, item.GridX, item.GridY,
                     item.Equipped, item.Rarity, item.PowerRoll, item.OnGround, item.InStash, item.WorldX, item.WorldY)).ToList(),
                 dungeon.NextEnemyId, dungeon.AttackSerial, dungeon.AttackCombo, dungeon.RoomClear, dungeon.DoorReady,
                 dungeon.Depth, dungeon.DoorHealth, dungeon.DescentWarningPlayed, dungeon.MaxZoneReached,
-                dungeon.Level, dungeon.Experience,
+                dungeon.Level, dungeon.Experience, dungeon.DepthThreeOpen, dungeon.ForcedVentAge,
                 dungeon.Enemies.Select(enemy => new DungeonEnemySave(enemy.Id, enemy.X, enemy.Y, enemy.Type,
                     enemy.Health, enemy.MaxHealth, enemy.State, enemy.StateAge, enemy.LastHitSerial, enemy.FacingLeft,
-                    enemy.LootDropped, enemy.Zone, enemy.ExperienceAwarded)).ToList(),
+                    enemy.LootDropped, enemy.Zone, enemy.ExperienceAwarded, enemy.Phase, enemy.SpecialKind,
+                    enemy.SpecialAge, enemy.SpecialCooldown, enemy.SpecialSerial)).ToList(),
                 dungeon.Chests.Select(chest => new DungeonChestSave(chest.Id, chest.X, chest.Y, chest.Open,
                     chest.OpenAge)).ToList());
             File.WriteAllText(temporary, JsonSerializer.Serialize(snapshot));
@@ -2098,7 +2246,7 @@ internal sealed class StormaktGame
             {
                 if (!File.Exists(candidate)) continue;
                 DungeonSave save = JsonSerializer.Deserialize<DungeonSave>(File.ReadAllText(candidate));
-                if (save.Schema is < 1 or > 8 || save.RoomWidth < 320 || save.RoomHeight < 220) continue;
+                if (save.Schema is < 1 or > 9 || save.RoomWidth < 320 || save.RoomHeight < 220) continue;
                 dungeon = new DungeonState
                 {
                     Age = save.Age,
@@ -2125,6 +2273,8 @@ internal sealed class StormaktGame
                     MaxZoneReached = save.Schema >= 7 ? save.MaxZoneReached : save.Depth == 2 ? DungeonZoneFromX(save.KarlX) : 0,
                     Level = save.Schema >= 8 ? Math.Max(1, save.Level) : 1,
                     Experience = save.Schema >= 8 ? Math.Max(0, save.Experience) : 0,
+                    DepthThreeOpen = save.Schema >= 9 && save.DepthThreeOpen,
+                    ForcedVentAge = save.Schema >= 9 ? save.ForcedVentAge : 0,
                 };
                 if (save.Schema >= 2 && save.Items is not null)
                 {
@@ -2151,6 +2301,11 @@ internal sealed class StormaktGame
                             LootDropped = save.Schema >= 4 && enemy.LootDropped,
                             Zone = save.Schema >= 7 ? enemy.Zone : save.Depth == 2 ? DungeonZoneFromX(enemy.X) : 0,
                             ExperienceAwarded = save.Schema >= 8 && enemy.ExperienceAwarded,
+                            Phase = save.Schema >= 9 ? enemy.Phase : 1,
+                            SpecialKind = save.Schema >= 9 ? enemy.SpecialKind : 0,
+                            SpecialAge = save.Schema >= 9 ? enemy.SpecialAge : 0,
+                            SpecialCooldown = save.Schema >= 9 ? enemy.SpecialCooldown : 0,
+                            SpecialSerial = save.Schema >= 9 ? enemy.SpecialSerial : 0,
                         };
                         dungeon.Enemies.Add(loaded);
                     }
@@ -3386,7 +3541,7 @@ internal sealed class StormaktGame
             DrawDungeonSprite(frame, dungeon, "dungeon_supply", 470, 300);
             DrawDungeonSprite(frame, dungeon, "dungeon_descent_pit", 598, 126);
         }
-        else
+        else if (dungeon.Depth == 2)
         {
             DrawDungeonSprite(frame, dungeon, "dungeon_wood_door_broken", 60, 410);
             foreach ((int x, int y) in new[] { (285, 175), (285, 245), (535, 470), (535, 610),
@@ -3412,6 +3567,23 @@ internal sealed class StormaktGame
                 DrawDungeonSprite(frame, dungeon, chest.Open ? "dungeon_chest_open" : "dungeon_chest_closed",
                     (int)Math.Round(chest.X), chestY);
             }
+            DrawDungeonSprite(frame, dungeon,
+                dungeon.DepthThreeOpen ? "dungeon_gruva3_portal" : "dungeon_gruva3_wall", 1190, 390);
+        }
+        else
+        {
+            DrawDungeonSprite(frame, dungeon, "dungeon_gruva3_portal", 60, 240);
+            DrawDungeonSprite(frame, dungeon, "dungeon_wall_timber", 300, 120);
+            DrawDungeonSprite(frame, dungeon, "dungeon_silver_mist", 430, 300);
+        }
+
+        foreach (DungeonSilverWave wave in dungeon.SilverWaves)
+        {
+            int waveX = (int)Math.Round(wave.X) - dungeon.CameraX;
+            int waveY = (int)Math.Round(wave.Y) - dungeon.CameraY;
+            uint color = wave.Age / 3 % 2 == 0 ? 0xffdce8f2 : 0xff73b8d0;
+            DrawLine(frame, waveX - 7, waveY + 3, waveX, waveY - 5, color);
+            DrawLine(frame, waveX, waveY - 5, waveX + 7, waveY + 3, color);
         }
 
         foreach (DungeonItem item in dungeon.Items.Where(candidate => candidate.OnGround))
@@ -3424,7 +3596,7 @@ internal sealed class StormaktGame
                 DrawSprite(frame, icon, itemX - icon.Width / 2, itemY - icon.Height / 2);
         }
 
-        foreach (DungeonEnemy enemy in dungeon.Enemies.OrderBy(enemy => enemy.Y))
+        foreach (DungeonEnemy enemy in dungeon.Enemies.Where(_ => dungeon.Depth != 3).OrderBy(enemy => enemy.Y))
         {
             int enemyX = (int)Math.Round(enemy.X) - dungeon.CameraX;
             bool stepping = enemy.State == DungeonEnemyState.Approach && Math.Abs(enemy.VelocityX) + Math.Abs(enemy.VelocityY) > 0.08;
@@ -3438,6 +3610,8 @@ internal sealed class StormaktGame
             };
             string enemyName = enemy.State switch
             {
+                DungeonEnemyState.Dead when enemy.Type == DungeonEnemyType.SilverFogde => "dk_silver_fogde_death",
+                DungeonEnemyState.Attack when enemy.Type == DungeonEnemyType.SilverFogde && enemy.SpecialKind > 0 => "dk_silver_fogde_slam",
                 DungeonEnemyState.Attack or DungeonEnemyState.Telegraph => prefix + "_attack",
                 DungeonEnemyState.Stagger or DungeonEnemyState.Dead => prefix + "_hit",
                 DungeonEnemyState.Approach => stepping && foot is 1 or 2 ? prefix + "_walk" : prefix + "_idle",
@@ -3461,8 +3635,10 @@ internal sealed class StormaktGame
             }
         }
 
-        DungeonEnemy? fogde = dungeon.Enemies.FirstOrDefault(enemy => enemy.Type == DungeonEnemyType.SilverFogde &&
-            enemy.State != DungeonEnemyState.Dead && DungeonZone(dungeon) == 3);
+        DungeonEnemy? fogde = dungeon.Depth == 2
+            ? dungeon.Enemies.FirstOrDefault(enemy => enemy.Type == DungeonEnemyType.SilverFogde &&
+                enemy.State != DungeonEnemyState.Dead && DungeonZone(dungeon) == 3)
+            : null;
         if (fogde is not null)
         {
             int barWidth = Math.Min(220, _width - 100);
@@ -3520,7 +3696,12 @@ internal sealed class StormaktGame
         }
 
         DrawRect(frame, 0, 0, _width, 18, 0xee080d12);
-        DrawText(frame, 6, 5, dungeon.Depth == 1 ? "GRUVA I  ÖVERGIVNA ORTEN" : "GRUVA II  SILVERÅNGORNA", 0xffffd66b);
+        DrawText(frame, 6, 5, dungeon.Depth switch
+        {
+            1 => "GRUVA I  ÖVERGIVNA ORTEN",
+            2 => "GRUVA II  SILVERÅNGORNA",
+            _ => "GRUVA III  FÖRBANNADE FÖRGÅRDEN",
+        }, 0xffffd66b);
         DrawText(frame, _width - 78, 5, "AUTOSPAR", 0xff65c58a);
         DrawDungeonHealth(frame, dungeon);
         int experienceY = fogde is null ? 22 : 49;
@@ -6471,6 +6652,22 @@ internal sealed class StormaktGame
         public bool LootDropped { get; set; }
         public int Zone { get; set; }
         public bool ExperienceAwarded { get; set; }
+        public int Phase { get; set; } = 1;
+        public int SpecialKind { get; set; }
+        public int SpecialAge { get; set; }
+        public int SpecialCooldown { get; set; }
+        public int SpecialSerial { get; set; }
+    }
+
+    private sealed class DungeonSilverWave(double x, double y, double dx, double dy, int phase)
+    {
+        public double X { get; set; } = x;
+        public double Y { get; set; } = y;
+        public double Dx { get; } = dx;
+        public double Dy { get; } = dy;
+        public int Phase { get; } = phase;
+        public int Age { get; set; }
+        public bool HitKarl { get; set; }
     }
 
     private sealed class DungeonChest(int id, double x, double y)
@@ -6533,6 +6730,11 @@ internal sealed class StormaktGame
         public int Level { get; set; } = 1;
         public int Experience { get; set; }
         public int LevelPulse { get; set; }
+        public bool DepthThreeOpen { get; set; }
+        public int ForcedVentAge { get; set; }
+        public List<DungeonSilverWave> SilverWaves { get; } = [];
+        public bool PendingDepthThreeEntry { get; set; }
+        public bool PendingDepthThreeReturn { get; set; }
     }
 
     private readonly record struct DungeonSave(int Schema, int Age, int RoomWidth, int RoomHeight,
@@ -6540,14 +6742,15 @@ internal sealed class StormaktGame
         int Health, int MaxHealth, int Power, ulong NextItemId, List<DungeonItemSave>? Items,
         int NextEnemyId, int AttackSerial, int AttackCombo, bool RoomClear, bool DoorReady,
         int Depth, int DoorHealth, bool DescentWarningPlayed, int MaxZoneReached, int Level, int Experience,
-        List<DungeonEnemySave>? Enemies,
+        bool DepthThreeOpen, int ForcedVentAge, List<DungeonEnemySave>? Enemies,
         List<DungeonChestSave>? Chests);
     private readonly record struct DungeonItemSave(ulong Id, int Definition, int GridX, int GridY,
         DungeonEquipmentSlot Equipped, DungeonItemRarity Rarity, int PowerRoll, bool OnGround, bool InStash,
         double WorldX, double WorldY);
     private readonly record struct DungeonEnemySave(int Id, double X, double Y, DungeonEnemyType Type,
         int Health, int MaxHealth, DungeonEnemyState State, int StateAge, int LastHitSerial, bool FacingLeft,
-        bool LootDropped, int Zone, bool ExperienceAwarded);
+        bool LootDropped, int Zone, bool ExperienceAwarded, int Phase, int SpecialKind, int SpecialAge,
+        int SpecialCooldown, int SpecialSerial);
     private readonly record struct DungeonChestSave(int Id, double X, double Y, bool Open, int OpenAge);
 
     private sealed class SorenRivalState

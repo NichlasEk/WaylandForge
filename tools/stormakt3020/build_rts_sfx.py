@@ -49,6 +49,8 @@ def main() -> None:
     write("dungeon-sword-hit.wav", .34, lambda t,l,r: noise_burst(t,l,r,92,.72)+env(t,l,.002,7)*.24*math.sin(2*math.pi*710*t))
     write("dungeon-parry.wav", .48, lambda t,l,r: env(t,l,.002,5.5)*(.32*math.sin(2*math.pi*1280*t)+.20*math.sin(2*math.pi*1910*t)+r.uniform(-.10,.10)))
     write("dungeon-hammer-impact.wav", .72, lambda t,l,r: noise_burst(t,l,r,46,.70)+env(t,l,.002,3.6)*.28*math.sin(2*math.pi*73*t))
+    write("dungeon-silver-wave.wav", .88, lambda t,l,r: env(t,l,.003,2.4)*(.22*math.sin(2*math.pi*(880-620*t/l)*t)+.16*math.sin(2*math.pi*(1320-900*t/l)*t)+r.uniform(-.13,.13)))
+    write("dungeon-silver-shatter.wav", 1.12, lambda t,l,r: noise_burst(t,l,r,52,.55)+sum((.13*math.sin(2*math.pi*(620+i*170)*max(0,t-i*.025))*env(max(0,t-i*.025),l,.001,7) if t>=i*.025 else 0) for i in range(6)))
 
 
 if __name__ == "__main__":

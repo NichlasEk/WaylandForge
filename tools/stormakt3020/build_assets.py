@@ -482,6 +482,28 @@ def append_dungeon_silver_fogde(entries: list[tuple[str, Image.Image]], source: 
     )
 
 
+def append_dungeon_fogde_finale(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    cell_width = source.width // 4
+    character_source = source.crop((0, 0, cell_width * 2, source.height))
+    append_anchored_combat_strip(entries, character_source,
+        ["dk_silver_fogde_slam", "dk_silver_fogde_death"], columns=2, rows=1,
+        scale=0.15, canvas_size=(110, 100), ground_line=96, source_foot_lines=[614, 603])
+    for index, name in [(2, "dungeon_gruva3_wall"), (3, "dungeon_gruva3_entrance")]:
+        sprite = trim_alpha(source.crop((index * cell_width, 0, (index + 1) * cell_width, source.height)).convert("RGBA"))
+        sprite.thumbnail((112, 92), Image.Resampling.LANCZOS)
+        canvas = Image.new("RGBA", (116, 96), (0, 0, 0, 0))
+        canvas.alpha_composite(sprite, ((116 - sprite.width) // 2, 96 - sprite.height))
+        entries.append((name, canvas))
+
+
+def append_dungeon_gruva3_portal(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    sprite = trim_alpha(source.convert("RGBA"))
+    sprite.thumbnail((116, 96), Image.Resampling.LANCZOS)
+    canvas = Image.new("RGBA", (120, 100), (0, 0, 0, 0))
+    canvas.alpha_composite(sprite, ((120 - sprite.width) // 2, 100 - sprite.height))
+    entries.append(("dungeon_gruva3_portal", canvas))
+
+
 def mirrored_background(source: Image.Image, width: int, height: int) -> Image.Image:
     plate = source.copy()
     plate.thumbnail((width, height), Image.Resampling.LANCZOS)
@@ -532,6 +554,8 @@ def build(
     dungeon_gruva2_loot_input_path: Path,
     dungeon_door_input_path: Path,
     dungeon_silver_fogde_input_path: Path,
+    dungeon_fogde_finale_input_path: Path,
+    dungeon_gruva3_portal_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
 ) -> None:
@@ -575,6 +599,8 @@ def build(
     dungeon_gruva2_loot_source = Image.open(dungeon_gruva2_loot_input_path).convert("RGBA")
     dungeon_door_source = Image.open(dungeon_door_input_path).convert("RGBA")
     dungeon_silver_fogde_source = Image.open(dungeon_silver_fogde_input_path).convert("RGBA")
+    dungeon_fogde_finale_source = Image.open(dungeon_fogde_finale_input_path).convert("RGBA")
+    dungeon_gruva3_portal_source = Image.open(dungeon_gruva3_portal_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
@@ -660,6 +686,8 @@ def build(
     append_dungeon_combat(entries, dungeon_karl_combat_source, dungeon_enemies_source, dungeon_karl_north_source)
     append_dungeon_gruva2(entries, dungeon_gruva2_loot_source, dungeon_door_source)
     append_dungeon_silver_fogde(entries, dungeon_silver_fogde_source)
+    append_dungeon_fogde_finale(entries, dungeon_fogde_finale_source)
+    append_dungeon_gruva3_portal(entries, dungeon_gruva3_portal_source)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
@@ -802,6 +830,8 @@ def main() -> None:
     parser.add_argument("--dungeon-gruva2-loot-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva2-loot-v1.png"))
     parser.add_argument("--dungeon-door-input", type=Path, default=Path("assets/stormakt3020/dungeon-breakable-door-v1.png"))
     parser.add_argument("--dungeon-silver-fogde-input", type=Path, default=Path("assets/stormakt3020/dungeon-silver-fogde-v1.png"))
+    parser.add_argument("--dungeon-fogde-finale-input", type=Path, default=Path("assets/stormakt3020/dungeon-fogde-finale-v1.png"))
+    parser.add_argument("--dungeon-gruva3-portal-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva3-portal-v1.png"))
     parser.add_argument(
         "--logo-input",
         type=Path,
@@ -850,6 +880,8 @@ def main() -> None:
         args.dungeon_gruva2_loot_input,
         args.dungeon_door_input,
         args.dungeon_silver_fogde_input,
+        args.dungeon_fogde_finale_input,
+        args.dungeon_gruva3_portal_input,
         args.logo_input,
         args.output,
     )

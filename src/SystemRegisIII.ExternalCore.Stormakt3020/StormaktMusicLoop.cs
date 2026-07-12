@@ -542,6 +542,8 @@ internal sealed class StormaktMusicLoop : IDisposable
             (StormaktSound.DungeonSwordHit, "dungeon-sword-hit.wav", 0.50f),
             (StormaktSound.DungeonParry, "dungeon-parry.wav", 0.52f),
             (StormaktSound.DungeonHammerImpact, "dungeon-hammer-impact.wav", 0.58f),
+            (StormaktSound.DungeonSilverWave, "dungeon-silver-wave.wav", 0.52f),
+            (StormaktSound.DungeonSilverShatter, "dungeon-silver-shatter.wav", 0.62f),
         ];
 
         Dictionary<StormaktSound, LoadedEffect> effects = [];
@@ -707,6 +709,8 @@ internal enum StormaktSound
     DungeonSwordHit,
     DungeonParry,
     DungeonHammerImpact,
+    DungeonSilverWave,
+    DungeonSilverShatter,
 }
 
 internal enum StormaktVoice
