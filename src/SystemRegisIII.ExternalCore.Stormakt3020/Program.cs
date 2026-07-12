@@ -3056,7 +3056,19 @@ internal sealed class StormaktGame
         if (_sprites?.TryGet(karlName, out Sprite karl) == true)
         {
             int drawX = karlX - karl.Width / 2;
-            int drawY = karlY - karl.Height + 12;
+            // Combat cells include weapon arcs and impact debris below or
+            // around the body. Anchor the boots, not the alpha bounds, so
+            // Karl stays planted while his coat is free to flare in the pose.
+            int footAnchor = karlName switch
+            {
+                "karl_slash_windup" or "karl_slash_contact" or "karl_slash_follow" or "karl_parry" => 20,
+                "karl_slash_e_windup" or "karl_slash_e_contact" => 22,
+                "karl_slash_n_windup" or "karl_slash_n_contact" or "karl_slash_n_follow" or "karl_parry_n" => 16,
+                "karl_hammer_impact" => 30,
+                "karl_hit" => 25,
+                _ => 12,
+            };
+            int drawY = karlY - karl.Height + footAnchor;
             if (dungeon.Facing == DungeonFacing.West) DrawSpriteFlippedX(frame, karl, drawX, drawY);
             else DrawSprite(frame, karl, drawX, drawY);
         }
