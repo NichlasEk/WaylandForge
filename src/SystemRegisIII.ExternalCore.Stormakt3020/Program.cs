@@ -185,6 +185,8 @@ internal sealed class StormaktGame
         new(0, 330, false, "EBBA GRIP", "ETT TEMPEL...", "LEMMINKÄINENS?", StormaktVoice.EbbaRtsTemple, "portrait_ebba");
     private static readonly RadioCard DungeonDescentRadio =
         new(0, 450, false, "EBBA GRIP", "GÅ NER SJÄLV", "ARBETARNA VÄGRAR", null, "portrait_ebba");
+    private static readonly RadioCard DungeonDepthTwoWarningRadio =
+        new(0, 510, false, "EBBA GRIP", "ÄR DU SÄKER?", "TELEMETRIN ÄR DÖD", StormaktVoice.EbbaDungeonTelemetry, "portrait_ebba");
     private static readonly EnemyWave[] EnemyWaves =
     [
         new(240, 720, 180, 0, 2),
@@ -1418,6 +1420,12 @@ internal sealed class StormaktGame
                 dungeon.SelectedItemId = 0;
                 interacted = true;
             }
+            else if (dungeon.Depth == 1 && dungeon.DoorReady && dungeon.DescentWarningPlayed &&
+                _bossRadioCard is null && DistanceSquared(650, 218, dungeon.KarlX, dungeon.KarlY) < 48 * 48)
+            {
+                BeginDungeonDepthTwo(dungeon);
+                interacted = true;
+            }
             if (!interacted) StartDungeonAttack(dungeon, pointer);
         }
 
@@ -1438,10 +1446,13 @@ internal sealed class StormaktGame
             DungeonChest? clickedChest = clickedLoot is null ? dungeon.Chests.Where(chest =>
                     DistanceSquared(chest.X, chest.Y, worldX, worldY) < 28 * 28)
                 .OrderBy(chest => DistanceSquared(chest.X, chest.Y, worldX, worldY)).FirstOrDefault() : null;
+            bool clickedDoor = dungeon.Depth == 1 && dungeon.DoorReady &&
+                DistanceSquared(650, 218, worldX, worldY) < 44 * 44;
             dungeon.PendingPickupItemId = clickedLoot?.Id ?? 0;
             dungeon.PendingChestId = clickedChest?.Id ?? 0;
+            dungeon.PendingDoorEntry = clickedDoor;
             (double targetX, double targetY) = clickedLoot is null
-                ? (clickedChest?.X ?? worldX, clickedChest?.Y ?? worldY)
+                ? (clickedChest?.X ?? (clickedDoor ? 650 : worldX), clickedChest?.Y ?? (clickedDoor ? 218 : worldY))
                 : FindDungeonPickupApproach(dungeon, clickedLoot);
             dungeon.TargetX = Math.Clamp(targetX, 28, dungeon.RoomWidth - 29);
             dungeon.TargetY = Math.Clamp(targetY, 48, dungeon.RoomHeight - 29);
@@ -1515,7 +1526,8 @@ internal sealed class StormaktGame
         }
         dungeon.CameraX = Math.Clamp((int)Math.Round(dungeon.KarlX - _width / 2.0), 0, dungeon.RoomWidth - _width);
         dungeon.CameraY = Math.Clamp((int)Math.Round(dungeon.KarlY - _height / 2.0), 0, dungeon.RoomHeight - _height);
-        if (dungeon.Depth == 1 && dungeon.DoorReady && DistanceSquared(650, 218, dungeon.KarlX, dungeon.KarlY) < 28 * 28)
+        if (dungeon.Depth == 1 && dungeon.DoorReady && dungeon.PendingDoorEntry && dungeon.DescentWarningPlayed &&
+            _bossRadioCard is null && DistanceSquared(650, 218, dungeon.KarlX, dungeon.KarlY) < 34 * 34)
             BeginDungeonDepthTwo(dungeon);
     }
 
@@ -1630,6 +1642,9 @@ internal sealed class StormaktGame
                         if (dungeon.DoorHealth == 0)
                         {
                             dungeon.DoorReady = true;
+                            dungeon.DescentWarningPlayed = true;
+                            dungeon.PendingDoorEntry = false;
+                            ActivateBossRadio(DungeonDepthTwoWarningRadio);
                             WriteDungeonSave(dungeon, "autosave");
                         }
                     }
@@ -1851,13 +1866,13 @@ internal sealed class StormaktGame
             string path = Path.Combine(directory, slot + ".json");
             string temporary = path + ".tmp";
             string backup = path + ".bak";
-            var snapshot = new DungeonSave(5, dungeon.Age, dungeon.RoomWidth, dungeon.RoomHeight,
+            var snapshot = new DungeonSave(6, dungeon.Age, dungeon.RoomWidth, dungeon.RoomHeight,
                 dungeon.KarlX, dungeon.KarlY, dungeon.TargetX, dungeon.TargetY, dungeon.Facing,
                 dungeon.Health, dungeon.MaxHealth, dungeon.Power, dungeon.NextItemId,
                 dungeon.Items.Select(item => new DungeonItemSave(item.Id, item.Definition, item.GridX, item.GridY,
                     item.Equipped, item.Rarity, item.PowerRoll, item.OnGround, item.InStash, item.WorldX, item.WorldY)).ToList(),
                 dungeon.NextEnemyId, dungeon.AttackSerial, dungeon.AttackCombo, dungeon.RoomClear, dungeon.DoorReady,
-                dungeon.Depth, dungeon.DoorHealth,
+                dungeon.Depth, dungeon.DoorHealth, dungeon.DescentWarningPlayed,
                 dungeon.Enemies.Select(enemy => new DungeonEnemySave(enemy.Id, enemy.X, enemy.Y, enemy.Type,
                     enemy.Health, enemy.MaxHealth, enemy.State, enemy.StateAge, enemy.LastHitSerial, enemy.FacingLeft,
                     enemy.LootDropped)).ToList(),
@@ -1901,7 +1916,7 @@ internal sealed class StormaktGame
             {
                 if (!File.Exists(candidate)) continue;
                 DungeonSave save = JsonSerializer.Deserialize<DungeonSave>(File.ReadAllText(candidate));
-                if (save.Schema is < 1 or > 5 || save.RoomWidth < 320 || save.RoomHeight < 220) continue;
+                if (save.Schema is < 1 or > 6 || save.RoomWidth < 320 || save.RoomHeight < 220) continue;
                 dungeon = new DungeonState
                 {
                     Age = save.Age,
@@ -1924,6 +1939,7 @@ internal sealed class StormaktGame
                     DoorReady = save.Schema >= 4 && save.DoorReady,
                     Depth = save.Schema >= 5 ? save.Depth : 1,
                     DoorHealth = save.Schema >= 5 ? save.DoorHealth : save.DoorReady ? 0 : 3,
+                    DescentWarningPlayed = save.Schema >= 6 ? save.DescentWarningPlayed : save.DoorReady,
                 };
                 if (save.Schema >= 2 && save.Items is not null)
                 {
@@ -3285,7 +3301,9 @@ internal sealed class StormaktGame
         string objective = dungeon.Age < 150 ? "KARL SÄNKS NER" : "HÖGERKLICK HUGG  SLOW PARERA";
         if (dungeon.RoomClear)
             objective = dungeon.Depth == 1
-                ? dungeon.DoorReady ? "GÅ GENOM DEN RASERADE PORTEN I ÖSTER" : "HUGG SÖNDER TRÄPORTEN I ÖSTER"
+                ? dungeon.DoorReady
+                    ? _bossRadioCard is null ? "KLICKA PÅ GÅNGEN ELLER FIRE FÖR ATT GÅ NER" : "LYSSNA PÅ EBBA"
+                    : "HUGG SÖNDER TRÄPORTEN I ÖSTER"
                 : "GRUVA II SÄKRAD  SÖK I KISTORNA";
         DrawText(frame, 7, _height - 10, objective, 0xffdce8f2);
         if (_bossRadioCard is RadioCard radio && _bossRadioAge < radio.DurationFrames)
@@ -6263,13 +6281,16 @@ internal sealed class StormaktGame
         public int Depth { get; set; } = 1;
         public int DoorHealth { get; set; } = 3;
         public List<DungeonChest> Chests { get; } = [];
+        public bool DescentWarningPlayed { get; set; }
+        public bool PendingDoorEntry { get; set; }
     }
 
     private readonly record struct DungeonSave(int Schema, int Age, int RoomWidth, int RoomHeight,
         double KarlX, double KarlY, double TargetX, double TargetY, DungeonFacing Facing,
         int Health, int MaxHealth, int Power, ulong NextItemId, List<DungeonItemSave>? Items,
         int NextEnemyId, int AttackSerial, int AttackCombo, bool RoomClear, bool DoorReady,
-        int Depth, int DoorHealth, List<DungeonEnemySave>? Enemies, List<DungeonChestSave>? Chests);
+        int Depth, int DoorHealth, bool DescentWarningPlayed, List<DungeonEnemySave>? Enemies,
+        List<DungeonChestSave>? Chests);
     private readonly record struct DungeonItemSave(ulong Id, int Definition, int GridX, int GridY,
         DungeonEquipmentSlot Equipped, DungeonItemRarity Rarity, int PowerRoll, bool OnGround, bool InStash,
         double WorldX, double WorldY);

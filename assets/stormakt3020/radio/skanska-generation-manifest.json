@@ -319,6 +319,16 @@
       "sha256": "75ae7ab1cec69b89ebc047c61d0f30161997687663246ab26451d589760efb09",
       "request": "assets/stormakt3020/radio/raw/ebba-moose-ready-sv-request.json",
       "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-dungeon-telemetry",
+      "role": "ebba-grip",
+      "job_id": "42eea7a8484b41fb9cf88d744f2c403d",
+      "file": "assets/stormakt3020/radio/raw/ebba-dungeon-telemetry-sv-raw.wav",
+      "sha256": "68bf8604f2f57849302f5cb24f25e1307c0cd983090a245e9673930fffd1859e",
+      "request": "assets/stormakt3020/radio/raw/ebba-dungeon-telemetry-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
     }
   ],
   "service": "http://127.0.0.1:8765",

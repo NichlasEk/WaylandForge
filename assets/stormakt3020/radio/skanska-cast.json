@@ -349,6 +349,17 @@
       "subtitle_lines": ["ETT TEMPEL...", "LEMMINKÄINENS?"],
       "seed": 302189,
       "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-dungeon-telemetry",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": -1,
+      "cue": "dungeon_depth_two_warning",
+      "text": "Karl, är du säker på att du ska gå ner där? Vi har ingen telemetri där nere. Alla instrument har slocknat.",
+      "subtitle_lines": ["ÄR DU SÄKER?", "TELEMETRIN ÄR DÖD"],
+      "seed": 302190,
+      "model_backend": "voxcpm2"
     }
   ]
 }

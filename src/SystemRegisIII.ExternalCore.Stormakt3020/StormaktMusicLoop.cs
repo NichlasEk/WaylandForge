@@ -602,6 +602,7 @@ internal sealed class StormaktMusicLoop : IDisposable
             (StormaktVoice.EbbaRtsVictory, "ebba-rts-victory-sv-radio.wav", 0.82f),
             (StormaktVoice.EbbaRtsWaitMiner, "ebba-rts-wait-miner-sv-radio.wav", 0.86f),
             (StormaktVoice.EbbaRtsTemple, "ebba-rts-temple-sv-radio.wav", 0.82f),
+            (StormaktVoice.EbbaDungeonTelemetry, "ebba-dungeon-telemetry-sv-radio.wav", 0.84f),
         ];
         Dictionary<StormaktVoice, LoadedEffect> voices = [];
         foreach ((StormaktVoice voice, string file, float gain) in entries)
@@ -736,6 +737,7 @@ internal enum StormaktVoice
     EbbaRtsVictory,
     EbbaRtsWaitMiner,
     EbbaRtsTemple,
+    EbbaDungeonTelemetry,
 }
 
 internal enum StormaktMusicTrack
