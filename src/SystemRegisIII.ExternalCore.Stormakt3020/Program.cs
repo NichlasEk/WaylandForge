@@ -1562,8 +1562,33 @@ internal sealed class StormaktGame
                 }
                 else if (distance > 0.1)
                 {
-                    double speed = enemy.Type == DungeonEnemyType.Pikeman ? 0.32 : 0.48;
-                    MoveDungeonEnemy(enemy, dx / distance * speed, dy / distance * speed);
+                    // Advance in weighted steps instead of homing straight at Karl every frame.
+                    // Each soldier has his own cadence and yields to nearby comrades.
+                    int stridePhase = (enemy.StateAge + enemy.Id * 13) % 54;
+                    double cadence = stridePhase >= 47 ? 0.0 : stridePhase is < 5 or > 40 ? 0.55 : 1.0;
+                    double speed = (enemy.Type == DungeonEnemyType.Pikeman ? 0.27 : 0.39) * cadence;
+                    double desiredX = dx / distance * speed;
+                    double desiredY = dy / distance * speed;
+                    foreach (DungeonEnemy other in dungeon.Enemies)
+                    {
+                        if (other.Id == enemy.Id || other.State == DungeonEnemyState.Dead) continue;
+                        double apartX = enemy.X - other.X;
+                        double apartY = enemy.Y - other.Y;
+                        double apartSquared = apartX * apartX + apartY * apartY;
+                        if (apartSquared is > 0.01 and < 28 * 28)
+                        {
+                            double apart = Math.Sqrt(apartSquared);
+                            double push = (28 - apart) / 28.0 * 0.24;
+                            desiredX += apartX / apart * push;
+                            desiredY += apartY / apart * push;
+                        }
+                    }
+                    enemy.VelocityX += (desiredX - enemy.VelocityX) * 0.18;
+                    enemy.VelocityY += (desiredY - enemy.VelocityY) * 0.18;
+                    double beforeX = enemy.X;
+                    double beforeY = enemy.Y;
+                    MoveDungeonEnemy(enemy, enemy.VelocityX, enemy.VelocityY);
+                    enemy.GaitDistance += Math.Sqrt((enemy.X - beforeX) * (enemy.X - beforeX) + (enemy.Y - beforeY) * (enemy.Y - beforeY));
                 }
             }
             else if (enemy.State == DungeonEnemyState.Telegraph && enemy.StateAge > (enemy.Type == DungeonEnemyType.Pikeman ? 30 : 22))
@@ -1601,6 +1626,11 @@ internal sealed class StormaktGame
             {
                 enemy.State = DungeonEnemyState.Approach;
                 enemy.StateAge = 0;
+            }
+            if (enemy.State != DungeonEnemyState.Approach)
+            {
+                enemy.VelocityX *= 0.65;
+                enemy.VelocityY *= 0.65;
             }
         }
         dungeon.RoomClear = dungeon.Enemies.Count > 0 && dungeon.Enemies.All(enemy => enemy.State == DungeonEnemyState.Dead);
@@ -2968,13 +2998,15 @@ internal sealed class StormaktGame
         foreach (DungeonEnemy enemy in dungeon.Enemies.OrderBy(enemy => enemy.Y))
         {
             int enemyX = (int)Math.Round(enemy.X) - dungeon.CameraX;
-            int enemyY = (int)Math.Round(enemy.Y) - dungeon.CameraY;
+            bool stepping = enemy.State == DungeonEnemyState.Approach && Math.Abs(enemy.VelocityX) + Math.Abs(enemy.VelocityY) > 0.08;
+            int foot = (int)(enemy.GaitDistance / 5.5) & 3;
+            int enemyY = (int)Math.Round(enemy.Y) - dungeon.CameraY - (stepping && foot is 1 or 3 ? 1 : 0);
             string prefix = enemy.Type == DungeonEnemyType.Pikeman ? "dk_pikeman" : "dk_stormer";
             string enemyName = enemy.State switch
             {
                 DungeonEnemyState.Attack or DungeonEnemyState.Telegraph => prefix + "_attack",
                 DungeonEnemyState.Stagger or DungeonEnemyState.Dead => prefix + "_hit",
-                DungeonEnemyState.Approach => prefix + "_walk",
+                DungeonEnemyState.Approach => stepping && foot is 1 or 2 ? prefix + "_walk" : prefix + "_idle",
                 _ => prefix + "_idle",
             };
             if (enemy.State == DungeonEnemyState.Telegraph)
@@ -3224,9 +3256,27 @@ internal sealed class StormaktGame
         if (_sprites?.TryGet("ui_power_orb", out Sprite powerOrb) == true)
             DrawSprite(frame, powerOrb, 61, 31);
         int missing = (dungeon.MaxHealth - Math.Clamp(dungeon.Health, 0, dungeon.MaxHealth)) * 32 / dungeon.MaxHealth;
-        if (missing > 0) DrawRect(frame, 17, 31, 31, missing, 0xcc090b0c);
+        if (missing > 0) DrawOrbDepletion(frame, 32, 47, 15, 16, missing, 0xff16070a, 0xff8d2832);
         int missingPower = (100 - Math.Clamp(dungeon.Power, 0, 100)) * 22 / 100;
-        if (missingPower > 0) DrawRect(frame, 72, 41, 22, missingPower, 0xcc090b0c);
+        if (missingPower > 0) DrawOrbDepletion(frame, 83, 52, 11, 11, missingPower, 0xff050b16, 0xff356ab0);
+    }
+
+    private void DrawOrbDepletion(uint[] frame, int centerX, int centerY, int radiusX, int radiusY,
+        int missingPixels, uint emptyColor, uint surfaceColor)
+    {
+        int bottom = Math.Min(centerY + radiusY - 1, centerY - radiusY + missingPixels);
+        for (int y = centerY - radiusY + 1; y <= bottom; y++)
+        {
+            double normalizedY = (y - centerY) / (double)radiusY;
+            int halfWidth = (int)Math.Floor(radiusX * Math.Sqrt(Math.Max(0, 1 - normalizedY * normalizedY)));
+            if (halfWidth > 0) DrawLine(frame, centerX - halfWidth, y, centerX + halfWidth, y, emptyColor);
+        }
+        if (bottom >= centerY - radiusY + 2 && bottom < centerY + radiusY - 1)
+        {
+            double normalizedY = (bottom - centerY) / (double)radiusY;
+            int halfWidth = (int)Math.Floor(radiusX * Math.Sqrt(Math.Max(0, 1 - normalizedY * normalizedY)));
+            if (halfWidth > 2) DrawLine(frame, centerX - halfWidth + 2, bottom, centerX + halfWidth - 2, bottom, surfaceColor);
+        }
     }
 
     private void DrawDungeonInventory(uint[] frame, DungeonState dungeon)
@@ -5930,6 +5980,9 @@ internal sealed class StormaktGame
         public int StateAge { get; set; }
         public int LastHitSerial { get; set; }
         public bool FacingLeft { get; set; }
+        public double VelocityX { get; set; }
+        public double VelocityY { get; set; }
+        public double GaitDistance { get; set; }
     }
 
     private sealed class DungeonState
