@@ -558,7 +558,7 @@ internal sealed class StormaktGame
             rts.CameraX = Math.Min(rts.MapWidth - _width, rts.CursorX - (_width - 54));
         }
 
-        if (Pressed(buttons, Fire))
+        if (Pressed(buttons, Fire) || rts.MousePrimaryPressed)
         {
             int buildX = (rts.CursorX / 12) * 12;
             int buildY = (rts.CursorY / 12) * 12;
@@ -636,8 +636,9 @@ internal sealed class StormaktGame
         const uint mouseRight = 1u << 1;
         bool left = pointer.Inside && (pointer.Buttons & mouseLeft) != 0;
         bool previousLeft = (rts.PreviousMouseButtons & mouseLeft) != 0;
-        bool rightPressed = pointer.Inside && (pointer.Buttons & mouseRight) != 0 &&
-            (rts.PreviousMouseButtons & mouseRight) == 0;
+        bool right = pointer.Inside && (pointer.Buttons & mouseRight) != 0;
+        bool previousRight = (rts.PreviousMouseButtons & mouseRight) != 0;
+        rts.MousePrimaryPressed = left && !previousLeft;
 
         if (pointer.Inside)
         {
@@ -646,40 +647,53 @@ internal sealed class StormaktGame
             rts.CursorX = rts.MouseWorldX;
             rts.CursorY = rts.MouseWorldY;
         }
-        if (left && !previousLeft)
+        if (right && !previousRight)
         {
             rts.MouseSelecting = true;
             rts.MouseDragStartX = rts.MouseWorldX;
             rts.MouseDragStartY = rts.MouseWorldY;
         }
-        else if (!left && previousLeft && rts.MouseSelecting)
+        else if (!right && previousRight && rts.MouseSelecting)
         {
             int leftX = Math.Min(rts.MouseDragStartX, rts.MouseWorldX);
             int rightX = Math.Max(rts.MouseDragStartX, rts.MouseWorldX);
             int topY = Math.Min(rts.MouseDragStartY, rts.MouseWorldY);
             int bottomY = Math.Max(rts.MouseDragStartY, rts.MouseWorldY);
             bool click = rightX - leftX < 6 && bottomY - topY < 6;
-            foreach (RtsUnit unit in rts.Units)
+            RtsUnit? clickedUnit = click
+                ? rts.Units.FirstOrDefault(unit =>
+                    DistanceSquared(unit.X, unit.Y, rts.MouseWorldX, rts.MouseWorldY) <= 15 * 15)
+                : null;
+            bool hadSelection = rts.Units.Any(unit => unit.Selected);
+            if (click && clickedUnit is null && hadSelection)
             {
-                unit.Selected = click
-                    ? DistanceSquared(unit.X, unit.Y, rts.MouseWorldX, rts.MouseWorldY) <= 15 * 15
-                    : unit.X >= leftX && unit.X <= rightX && unit.Y >= topY && unit.Y <= bottomY;
+                IssueRtsFormationOrder(rts, rts.MouseWorldX, rts.MouseWorldY);
+            }
+            else
+            {
+                foreach (RtsUnit unit in rts.Units)
+                {
+                    unit.Selected = click
+                        ? ReferenceEquals(unit, clickedUnit)
+                        : unit.X >= leftX && unit.X <= rightX && unit.Y >= topY && unit.Y <= bottomY;
+                }
+                _audio?.Trigger(StormaktSound.RtsUnitReady);
             }
             rts.MouseSelecting = false;
-            _audio?.Trigger(StormaktSound.RtsUnitReady);
-        }
-        if (rightPressed)
-        {
-            int selectedIndex = 0;
-            foreach (RtsUnit unit in rts.Units.Where(candidate => candidate.Selected))
-            {
-                unit.TargetX = Math.Clamp(rts.MouseWorldX + (selectedIndex % 3 - 1) * 14, 12, rts.MapWidth - 13);
-                unit.TargetY = Math.Clamp(rts.MouseWorldY + (selectedIndex / 3) * 12, 30, rts.MapHeight - 14);
-                selectedIndex++;
-            }
-            if (selectedIndex > 0) _audio?.Trigger(StormaktSound.Deploy);
         }
         rts.PreviousMouseButtons = pointer.Inside ? pointer.Buttons : 0;
+    }
+
+    private void IssueRtsFormationOrder(RtsState rts, int targetX, int targetY)
+    {
+        int selectedIndex = 0;
+        foreach (RtsUnit unit in rts.Units.Where(candidate => candidate.Selected))
+        {
+            unit.TargetX = Math.Clamp(targetX + (selectedIndex % 3 - 1) * 14, 12, rts.MapWidth - 13);
+            unit.TargetY = Math.Clamp(targetY + (selectedIndex / 3) * 12, 30, rts.MapHeight - 14);
+            selectedIndex++;
+        }
+        if (selectedIndex > 0) _audio?.Trigger(StormaktSound.Deploy);
     }
 
     private bool IsValidRtsPlacement(RtsState rts, int x, int y)
@@ -2235,19 +2249,27 @@ internal sealed class StormaktGame
             DrawLine(frame, roadX - 9, y, roadX + 9, y + 5, 0xff342f27);
         }
 
-        foreach (RtsBuilding building in rts.Buildings)
+        var drawables = new List<(double Y, int Kind, object? Entity)>(
+            rts.Buildings.Count + rts.Units.Count + rts.Enemies.Count + 1);
+        drawables.AddRange(rts.Buildings.Select(building => ((double)building.Y, 0, (object?)building)));
+        drawables.AddRange(rts.Units.Select(unit => (unit.Y, 1, (object?)unit)));
+        drawables.AddRange(rts.Enemies.Select(enemy => (enemy.Y, 2, (object?)enemy)));
+        drawables.Add((rts.LandingY, 3, null));
+        drawables.Sort(static (left, right) =>
         {
-            DrawRtsBuilding(frame, rts, building);
-        }
-        foreach (RtsUnit unit in rts.Units)
+            int yOrder = left.Y.CompareTo(right.Y);
+            return yOrder != 0 ? yOrder : left.Kind.CompareTo(right.Kind);
+        });
+        foreach ((_, int kind, object? entity) in drawables)
         {
-            DrawRtsUnit(frame, rts, unit);
+            switch (kind)
+            {
+                case 0: DrawRtsBuilding(frame, rts, (RtsBuilding)entity!); break;
+                case 1: DrawRtsUnit(frame, rts, (RtsUnit)entity!); break;
+                case 2: DrawRtsEnemy(frame, rts, (RtsEnemy)entity!); break;
+                default: DrawRtsLandedKarl(frame, rts); break;
+            }
         }
-        foreach (RtsEnemy enemy in rts.Enemies)
-        {
-            DrawRtsEnemy(frame, rts, enemy);
-        }
-        DrawRtsLandedKarl(frame, rts);
         if (rts.LandingAge >= 120 && (rts.BuildStage < 4 || rts.TowerPlacementMode))
         {
             int buildX = (rts.CursorX / 12) * 12;
@@ -4594,6 +4616,7 @@ internal sealed class StormaktGame
         public int MouseDragStartY { get; set; }
         public bool MouseSelecting { get; set; }
         public uint PreviousMouseButtons { get; set; }
+        public bool MousePrimaryPressed { get; set; }
     }
 
     private sealed class RtsBuilding

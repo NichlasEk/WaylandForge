@@ -134,8 +134,8 @@ De ska vara absurda i koncept men spelas med samma allvar som resten av världen
 - `Z / Fire`: välj enhet eller byggnad, bekräfta order och placera bygge.
 - `X / AltFire`: avmarkera, avbryt placering eller beordra markerad stridsgrupp att hålla position.
 - `Start`: paus med separat bygg-/kontrollhjälp.
-- Vänster musknapp: klicka en grupp eller dra en markeringsruta runt valfri blandning av svenska trupper.
-- Höger musknapp: ge hela det markerade urvalet en gemensam formationsorder vid pekaren.
+- Höger musknapp: klicka en grupp eller dra en markeringsruta runt valfri blandning av svenska trupper. Högerklick på tom mark ger ett befintligt urval en gemensam formationsorder.
+- Vänster musknapp: primärhandling vid pekaren; placera aktuell byggnad eller aktivera produktion/objekt precis som `Z / Fire`.
 - Axel-/extra knappar växlar byggkategori när de finns; tangentbordsfallback får egna tydliga tangenter.
 - Klickfri gamepad-first-design: inga små ikoner eller krav på musprecision.
 
