@@ -3272,13 +3272,29 @@ internal sealed class StormaktGame
             else DrawSprite(frame, karl, drawX, drawY);
         }
 
+        if (dungeon.Depth == 1 && dungeon.RoomClear)
+        {
+            int doorScreenX = 650 - dungeon.CameraX;
+            int doorScreenY = 218 - dungeon.CameraY;
+            if (doorScreenX > _width - 72 || doorScreenX < 0)
+            {
+                int markerY = Math.Clamp(doorScreenY, 38, _height - 34);
+                DrawText(frame, _width - 91, markerY,
+                    dungeon.DoorReady ? ">>> GRUVA II" : ">>> TRÄPORT", 0xffffd66b);
+            }
+        }
+
         DrawRect(frame, 0, 0, _width, 18, 0xee080d12);
         DrawText(frame, 6, 5, dungeon.Depth == 1 ? "GRUVA I  ÖVERGIVNA ORTEN" : "GRUVA II  SILVERÅNGORNA", 0xffffd66b);
         DrawText(frame, _width - 78, 5, "AUTOSPAR", 0xff65c58a);
         DrawDungeonHealth(frame, dungeon);
         DrawRect(frame, 0, _height - 14, _width, 14, 0xee080d12);
-        DrawText(frame, 7, _height - 10,
-            dungeon.Age < 150 ? "KARL SÄNKS NER" : dungeon.RoomClear ? "RUMMET ÄR SÄKRAT" : "HÖGERKLICK HUGG  SLOW PARERA", 0xffdce8f2);
+        string objective = dungeon.Age < 150 ? "KARL SÄNKS NER" : "HÖGERKLICK HUGG  SLOW PARERA";
+        if (dungeon.RoomClear)
+            objective = dungeon.Depth == 1
+                ? dungeon.DoorReady ? "GÅ GENOM DEN RASERADE PORTEN I ÖSTER" : "HUGG SÖNDER TRÄPORTEN I ÖSTER"
+                : "GRUVA II SÄKRAD  SÖK I KISTORNA";
+        DrawText(frame, 7, _height - 10, objective, 0xffdce8f2);
         if (_bossRadioCard is RadioCard radio && _bossRadioAge < radio.DurationFrames)
         {
             DrawRadioCard(frame, radio, _bossRadioAge);
