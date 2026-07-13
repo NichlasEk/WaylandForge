@@ -402,6 +402,9 @@ Hälsotinkturer plockas nu upp som riktiga föremål, fyller ett fyrplatsers sna
 dricks med `Q` i stället för att förbrukas automatiskt på marken. Nästa tempelslice börjar bakom den
 andra förseglade porten; Svanen och Louhi ingår fortfarande inte i den landade delen.
 
+Inventoryföremål kan slängas med `D` eller den klickbara `SLÄNG`-knappen. Föremålet placeras på en
+giltig golvpunkt framför Karl, får marken som enda ägare och ligger kvar i samma position genom autosave.
+
 ### Checkpoint 8 – Balans, lootkurva och casting
 
 - Röstcasting och slutmix för Ebba, herden, fogden och Louhi.

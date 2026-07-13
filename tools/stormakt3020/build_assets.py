@@ -907,7 +907,7 @@ def main() -> None:
     parser.add_argument("--dungeon-gruva3-environment-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva3-environment-v1.png"))
     parser.add_argument("--dungeon-gruva3-enemies-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva3-enemies-v1.png"))
     parser.add_argument("--dungeon-blind-shepherd-input", type=Path, default=Path("assets/stormakt3020/dungeon-blind-shepherd-v1.png"))
-    parser.add_argument("--dungeon-temple-act1-input", type=Path, default=Path("assets/stormakt3020/dungeon-temple-act1-v1.png"))
+    parser.add_argument("--dungeon-temple-act1-input", type=Path, default=Path("assets/stormakt3020/dungeon-temple-act1-v2.png"))
     parser.add_argument(
         "--logo-input",
         type=Path,

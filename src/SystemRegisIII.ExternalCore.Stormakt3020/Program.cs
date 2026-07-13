@@ -116,6 +116,7 @@ internal sealed class StormaktGame
     private const uint AltFire = 1u << 7;
     private const uint Slow = 1u << 8;
     private const uint QuickPotion = 1u << 9;
+    private const uint DropItem = 1u << 10;
 
     private readonly int _width;
     private readonly int _height;
@@ -1756,6 +1757,26 @@ internal sealed class StormaktGame
             return true;
         }
         return false;
+    }
+
+    private void DropDungeonItem(DungeonState dungeon, DungeonItem item)
+    {
+        (double facingX, double facingY) = DungeonFacingVector(dungeon.Facing);
+        double dropX = dungeon.KarlX + facingX * 34;
+        double dropY = dungeon.KarlY + facingY * 34;
+        if (DungeonBlocked(dungeon, dropX, dropY))
+            (dropX, dropY) = FindNearestDungeonFloor(dungeon, dungeon.KarlX, dungeon.KarlY);
+        item.OnGround = true;
+        item.InStash = false;
+        item.QuickSlot = -1;
+        item.Equipped = DungeonEquipmentSlot.None;
+        item.GridX = -1;
+        item.GridY = -1;
+        item.WorldX = dropX;
+        item.WorldY = dropY;
+        dungeon.SelectedItemId = 0;
+        _audio?.Trigger(StormaktSound.Deploy);
+        WriteDungeonSave(dungeon, "autosave");
     }
 
     private static void BeginDungeonDepthTwo(DungeonState dungeon)
@@ -4353,6 +4374,18 @@ internal sealed class StormaktGame
         int beltX = 18;
         int beltCell = _width <= 320 ? 18 : 25;
         int beltY = _height - beltCell - 5;
+        DungeonItem? focusedItem = dungeon.SelectedItemId != 0
+            ? dungeon.Items.FirstOrDefault(item => item.Id == dungeon.SelectedItemId)
+            : DungeonItemAt(dungeon, dungeon.InventoryCursorX, dungeon.InventoryCursorY);
+        (int X, int Y, int Width, int Height) dropRect = DungeonDropRect();
+        if (focusedItem is not null && (Pressed(buttons, DropItem) ||
+            leftPressed && pointer.X >= dropRect.X && pointer.X < dropRect.X + dropRect.Width &&
+            pointer.Y >= dropRect.Y && pointer.Y < dropRect.Y + dropRect.Height))
+        {
+            DropDungeonItem(dungeon, focusedItem);
+            dungeon.PreviousInventoryMouseButtons = pointer.Inside ? pointer.Buttons : 0;
+            return;
+        }
         if (_width > 320 && !dungeon.ViewingStash && pointer.Inside && pointer.Y >= beltY && pointer.Y < beltY + beltCell &&
             pointer.X >= beltX && pointer.X < beltX + beltCell * 4)
         {
@@ -4542,6 +4575,10 @@ internal sealed class StormaktGame
         if (_sprites?.TryGet(dungeon.ViewingStash ? "ui_stash_crest" : "ui_carolean_silhouette", out Sprite silhouette) == true)
             DrawSpriteAlpha(frame, silhouette, 47 - silhouette.Width / 2, 72, 105);
         DrawText(frame, 18, 29, "KARL CCLV", 0xffffd66b);
+        (int X, int Y, int Width, int Height) dropRect = DungeonDropRect();
+        DrawRect(frame, dropRect.X, dropRect.Y, dropRect.Width, dropRect.Height, 0xff351b1f);
+        DrawRect(frame, dropRect.X + 1, dropRect.Y + 1, dropRect.Width - 2, dropRect.Height - 2, 0xff171115);
+        DrawText(frame, dropRect.X + 7, dropRect.Y + 5, "SLÄNG", 0xffff9c8f);
         DrawText(frame, _width <= 320 ? 154 : 184, 29, dungeon.ViewingStash ? "FÖRRÅD 10X6" : "RYGGSÄCK 10X6", 0xff9bd4dc);
         int cell = _width <= 320 ? 14 : 18;
         int gridX = _width <= 320 ? 154 : 184;
@@ -4626,9 +4663,13 @@ internal sealed class StormaktGame
                 $"KRÄVER NIVÅ {DungeonRequiredLevel(focused):00}", requirementColor);
             DrawText(frame, gridX, infoY + 52, $"TOTAL RUST {DungeonArmor(dungeon):00}  FÖRB {DungeonCurseWard(dungeon):00}%", 0xffaeb8bd);
         }
-        DrawText(frame, 18, _height - 10, dungeon.ViewingStash ? "X STÄNG  HÖGERKLICK TA" :
-            "X STÄNG  Z FLYTTA  HÖGERKLICK UTRUSTA/BÄLTE", 0xffb7c7d6);
+        string inventoryHelp = dungeon.ViewingStash ? "X STÄNG  HÖGERKLICK TA" : _width <= 320
+            ? "X STÄNG  Z FLYTTA  D SLÄNG"
+            : "X STÄNG  Z FLYTTA  D SLÄNG  HÖGERKLICK UTRUSTA/BÄLTE";
+        DrawText(frame, 18, _height - 10, inventoryHelp, 0xffb7c7d6);
     }
+
+    private (int X, int Y, int Width, int Height) DungeonDropRect() => (_width - 62, 27, 54, 17);
 
     private static uint DungeonRarityColor(DungeonItemRarity rarity) => rarity switch
     {
@@ -6994,6 +7035,7 @@ internal sealed class StormaktGame
         'Ö' => [0b01010, 0b00000, 0b01110, 0b10001, 0b10001, 0b10001, 0b01110],
         'Ø' => [0b01111, 0b10011, 0b10101, 0b10101, 0b11001, 0b10001, 0b11110],
         'P' => [0b11110, 0b10001, 0b10001, 0b11110, 0b10000, 0b10000, 0b10000],
+        'Q' => [0b01110, 0b10001, 0b10001, 0b10001, 0b10101, 0b10010, 0b01101],
         'R' => [0b11110, 0b10001, 0b10001, 0b11110, 0b10100, 0b10010, 0b10001],
         'S' => [0b01111, 0b10000, 0b10000, 0b01110, 0b00001, 0b00001, 0b11110],
         'T' => [0b11111, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100],

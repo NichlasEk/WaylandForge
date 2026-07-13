@@ -68,7 +68,7 @@ a = "z"
 b = "x"
 c = "c"
 x = "q"
-y = "a"
+y = "d"
 z = "s"
 
 [ui.layout]
