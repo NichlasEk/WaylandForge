@@ -4205,14 +4205,21 @@ internal sealed class StormaktGame
 
     private void DrawDungeonHealth(uint[] frame, DungeonState dungeon)
     {
+        const int healthX = 4;
+        const int healthY = 20;
+        const int powerX = 61;
+        const int powerY = 31;
         if (_sprites?.TryGet("ui_health_orb", out Sprite healthOrb) == true)
-            DrawSprite(frame, healthOrb, 4, 20);
+            DrawSprite(frame, healthOrb, healthX, healthY);
         if (_sprites?.TryGet("ui_power_orb", out Sprite powerOrb) == true)
-            DrawSprite(frame, powerOrb, 61, 31);
+            DrawSprite(frame, powerOrb, powerX, powerY);
         double healthFill = Math.Clamp(dungeon.Health / (double)Math.Max(1, dungeon.MaxHealth), 0, 1);
-        DrawOrbDepletion(frame, 32, 47, 15, 16, healthFill, 0xff16070a, 0xffb84750);
+        // These are local glass centers inside the trimmed sprites. Keeping
+        // them relative to the sprite origin prevents the liquid mask from
+        // drifting away when either ornament is moved in the HUD.
+        DrawOrbDepletion(frame, healthX + 25, healthY + 24, 15, 16, healthFill, 0xff16070a, 0xffb84750);
         double powerFill = Math.Clamp(dungeon.Power / 100.0, 0, 1);
-        DrawOrbDepletion(frame, 83, 52, 11, 11, powerFill, 0xff050b16, 0xff4f83c6);
+        DrawOrbDepletion(frame, powerX + 18, powerY + 20, 11, 11, powerFill, 0xff050b16, 0xff4f83c6);
     }
 
     private void DrawOrbDepletion(uint[] frame, int centerX, int centerY, int radiusX, int radiusY,
