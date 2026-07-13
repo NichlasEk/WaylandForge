@@ -118,6 +118,9 @@ internal sealed class StormaktGame
     private const int DungeonFogdeSpokenMask = 1 << 17;
     private const int DungeonSwanDefeatedMask = 1 << 18;
     private const int DungeonLouhiHeardMask = 1 << 19;
+    private const int DungeonShepherdHeardMask = 1 << 20;
+    private const int DungeonLouhiStartedMask = 1 << 21;
+    private const int DungeonLouhiPhaseOneMask = 1 << 22;
     private const uint Up = 1u << 1;
     private const uint Down = 1u << 2;
     private const uint Left = 1u << 3;
@@ -223,6 +226,14 @@ internal sealed class StormaktGame
         new(0, 510, false, "EBBA GRIP", "JAG HÖR DIG INTE", "NÅGOT SJUNGER", StormaktVoice.EbbaDungeonSwanReveal, "portrait_ebba");
     private static readonly RadioCard DungeonLouhiInvitationRadio =
         new(0, 780, true, "LOUHI", "NI BRÖT MIN SÅNG", "KOM DÅ KARL CCLV", StormaktVoice.LouhiTempleInvitation, "portrait_louhi");
+    private static readonly RadioCard DungeonShepherdDeathRadio =
+        new(0, 570, true, "HERDEN", "JAG SÅG ER EJ", "LOUHI HÖR ER", StormaktVoice.ShepherdTempleWarning, "portrait_shepherd");
+    private static readonly RadioCard DungeonLouhiArrivalRadio =
+        new(0, 690, true, "LOUHI", "HJÄRTAT VAKNAR", "LÄGG HJÄRTAT", StormaktVoice.LouhiTempleArrival, "portrait_louhi");
+    private static readonly RadioCard DungeonLouhiGreedRadio =
+        new(0, 480, true, "LOUHI", "HUGGEN VÄGER", "GIRIGHET VÄGER", StormaktVoice.LouhiGreedCurse, "portrait_louhi");
+    private static readonly RadioCard DungeonLouhiPhaseOneRadio =
+        new(0, 630, true, "LOUHI", "NI BRÖT KVINNAN", "VÄCK JÄRNFÅGELN", StormaktVoice.LouhiPhaseOneBreak, "portrait_louhi");
     private static readonly RadioCard[] DungeonLoreCards =
     [
         new(0, 330, false, "RISTNING", "SVANEN SJUNGER", "UNDER SVART VATTEN", null, "portrait_ebba"),
@@ -1572,6 +1583,50 @@ internal sealed class StormaktGame
                 }
             }
         }
+        if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_LOUHI_TEST"), "1", StringComparison.Ordinal))
+        {
+            BeginDungeonDepthTwo(_dungeon);
+            _dungeon.DepthThreeOpen = true;
+            BeginDungeonDepthThree(_dungeon);
+            _dungeon.TempleOpen = true;
+            BeginDungeonDepthFour(_dungeon);
+            _dungeon.LoreMask |= DungeonFirstSigilMask | DungeonFogdeRescuedMask | DungeonFogdeSpokenMask |
+                DungeonSecondSigilMask | DungeonThirdSigilMask | DungeonSwanRevealedMask |
+                DungeonSwanDefeatedMask | DungeonLouhiHeardMask | DungeonShepherdHeardMask | DungeonLouhiStartedMask;
+            DungeonEnemy louhi = EnsureDungeonLouhiEncounter(_dungeon);
+            louhi.State = DungeonEnemyState.Approach;
+            louhi.StateAge = 0;
+            louhi.SpecialCooldown = 0;
+            _dungeon.KarlX = 4060; _dungeon.KarlY = 380;
+            _dungeon.TargetX = 4060; _dungeon.TargetY = 380;
+            _dungeon.CameraX = 3890; _dungeon.CameraY = 240;
+            _bossRadioCard = DungeonLouhiArrivalRadio;
+            _bossRadioAge = 0;
+            if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_LOUHI_CORRIDOR_TEST"), "1", StringComparison.Ordinal))
+            {
+                _dungeon.LoreMask &= ~DungeonLouhiStartedMask;
+                _dungeon.Enemies.Remove(louhi);
+                _dungeon.KarlX = 3710; _dungeon.TargetX = 3710;
+                _dungeon.CameraX = 3510;
+                _bossRadioCard = null;
+            }
+            if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_LOUHI_RUNES_TEST"), "1", StringComparison.Ordinal))
+            {
+                louhi.SpecialSerial = 1; louhi.SpecialKind = 2;
+                louhi.State = DungeonEnemyState.Telegraph; louhi.StateAge = 1;
+                SpawnDungeonLouhiRunes(_dungeon, louhi);
+            }
+            if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_LOUHI_GREED_TEST"), "1", StringComparison.Ordinal))
+            {
+                louhi.SpecialKind = 4; louhi.State = DungeonEnemyState.Telegraph; louhi.StateAge = 1;
+                _bossRadioCard = DungeonLouhiGreedRadio;
+            }
+            if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_LOUHI_BREAK_TEST"), "1", StringComparison.Ordinal))
+            {
+                louhi.Health = 1; louhi.State = DungeonEnemyState.Stagger; louhi.StateAge = 0;
+                _dungeon.KarlX = 4130; _dungeon.TargetX = 4130;
+            }
+        }
         if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_DEATH_TEST"), "1", StringComparison.Ordinal))
             _dungeon.Health = 0;
         if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_ORB_TEST"), "1", StringComparison.Ordinal))
@@ -1818,10 +1873,17 @@ internal sealed class StormaktGame
         StepDungeonSecondTempleSigil(dungeon);
         StepDungeonThirdTempleSigil(dungeon);
         StepDungeonSwanReveal(dungeon);
+        StepDungeonLouhiEntrance(dungeon);
         StepDungeonSwanHazards(dungeon);
+        StepDungeonLouhiHazards(dungeon);
         StepDungeonCombat(dungeon);
         StepDungeonSilverVents(dungeon);
         StepDungeonCurse(dungeon);
+        if (dungeon.LouhiGreedAge > 0)
+        {
+            dungeon.LouhiGreedAge--;
+            if (dungeon.Guarding) dungeon.LouhiGreedAge = Math.Max(0, dungeon.LouhiGreedAge - 5);
+        }
         double moveX = 0;
         double moveY = 0;
         if ((buttons & Left) != 0) moveX--;
@@ -2097,7 +2159,7 @@ internal sealed class StormaktGame
 
     private static void BeginDungeonDepthFour(DungeonState dungeon)
     {
-        dungeon.Depth = 4; dungeon.RoomWidth = 3600; dungeon.RoomHeight = 760;
+        dungeon.Depth = 4; dungeon.RoomWidth = 4480; dungeon.RoomHeight = 760;
         dungeon.KarlX = 115; dungeon.KarlY = 250; dungeon.TargetX = 115; dungeon.TargetY = 250;
         dungeon.CameraX = 0; dungeon.CameraY = 110; dungeon.PendingTempleEntry = false;
         if (!dungeon.Enemies.Any(enemy => enemy.Depth == 4))
@@ -2117,6 +2179,40 @@ internal sealed class StormaktGame
         }
         EnsureDungeonFirstSigilEncounter(dungeon);
         EnsureDungeonSecondSigilEncounter(dungeon);
+        if ((dungeon.LoreMask & DungeonLouhiStartedMask) != 0) EnsureDungeonLouhiEncounter(dungeon);
+        WriteDungeonSave(dungeon, "autosave");
+    }
+
+    private static DungeonEnemy EnsureDungeonLouhiEncounter(DungeonState dungeon)
+    {
+        DungeonEnemy? louhi = dungeon.Enemies.FirstOrDefault(enemy =>
+            enemy.Depth == 4 && enemy.Type == DungeonEnemyType.Louhi);
+        if (louhi is not null) return louhi;
+        AddDungeonEnemy(dungeon, 4170, 380, DungeonEnemyType.Louhi, 560, 49);
+        louhi = dungeon.Enemies.Last();
+        louhi.SpecialCooldown = 75;
+        if ((dungeon.LoreMask & DungeonLouhiPhaseOneMask) != 0)
+        {
+            louhi.Health = 1;
+            louhi.Phase = 2;
+            louhi.State = DungeonEnemyState.Dead;
+        }
+        return louhi;
+    }
+
+    private void StepDungeonLouhiEntrance(DungeonState dungeon)
+    {
+        if (dungeon.Depth != 4 || (dungeon.LoreMask & DungeonSwanDefeatedMask) == 0 ||
+            (dungeon.LoreMask & DungeonLouhiStartedMask) != 0 || dungeon.KarlX < 4040) return;
+        dungeon.LoreMask |= DungeonLouhiStartedMask;
+        DungeonEnemy louhi = EnsureDungeonLouhiEncounter(dungeon);
+        louhi.State = DungeonEnemyState.Recover;
+        louhi.StateAge = 0;
+        louhi.SpecialCooldown = 90;
+        dungeon.TargetX = dungeon.KarlX;
+        dungeon.TargetY = dungeon.KarlY;
+        ActivateBossRadio(DungeonLouhiArrivalRadio);
+        _audio?.SwitchMusic(StormaktMusicTrack.Boss);
         WriteDungeonSave(dungeon, "autosave");
     }
 
@@ -2416,7 +2512,7 @@ internal sealed class StormaktGame
         3 => dungeon.KarlX < 500 ? 31 : dungeon.KarlX < 850 ? 32 : dungeon.KarlX < 1150 ? 33 : 34,
         4 => dungeon.KarlX < 600 ? 41 : dungeon.KarlX < 900 ? 42 : dungeon.KarlX < 1200 ? 43 :
             dungeon.KarlX < 1760 ? 44 : dungeon.KarlX < 2100 ? 45 : dungeon.KarlX < 2440 ? 46 :
-            dungeon.KarlX < 3150 ? 47 : 48,
+            dungeon.KarlX < 3150 ? 47 : dungeon.KarlX < 3950 ? 48 : 49,
         _ => 0,
     };
     private static int DungeonZoneFromX(double x) => x < 520 ? 1 : x < 900 ? 2 : 3;
@@ -2429,7 +2525,8 @@ internal sealed class StormaktGame
         [(500, 150), (900, 740)];
     private static readonly (int X, int Y)[] DungeonTempleWaters =
         [(350, 410), (775, 185), (990, 505), (1370, 150), (1660, 570), (1900, 390), (2135, 350),
-         (2530, 390), (2770, 190), (2910, 560), (3300, 340), (3410, 430), (3490, 320)];
+         (2530, 390), (2770, 190), (2910, 560), (3300, 340), (3410, 430), (3490, 320),
+         (3700, 155), (3700, 605), (4070, 150), (4300, 610)];
     private static readonly (int X, int Y)[] DungeonTempleShrines =
         [(210, 600), (660, 600), (1090, 165), (1580, 380), (2280, 380), (3030, 380)];
     private static readonly (int X, int Y)[] DungeonTempleGuardianStatues =
@@ -2442,6 +2539,10 @@ internal sealed class StormaktGame
         [(2030, 155), (1870, 610), (2200, 610)];
     private static readonly (int X, int Y)[] DungeonThirdTempleSteles =
         [(2520, 180), (2720, 610), (2920, 180)];
+    private static readonly (int X, int Y)[] DungeonLouhiProcessionStatues =
+        [(3680, 130), (3680, 630), (3860, 130), (3860, 630)];
+    private static readonly (int X, int Y)[] DungeonLouhiProcessionSarcophagi =
+        [(3760, 220), (3760, 540)];
 
     private static void StepDungeonCurse(DungeonState dungeon)
     {
@@ -2763,6 +2864,194 @@ internal sealed class StormaktGame
         }
     }
 
+    private void DamageDungeonLouhi(DungeonState dungeon, DungeonEnemy louhi, int damage, bool hammer)
+    {
+        if (louhi.Phase != 1 || louhi.State == DungeonEnemyState.Dead) return;
+        louhi.Health -= damage;
+        dungeon.Power = Math.Min(100, dungeon.Power + 7);
+        dungeon.HitStop = hammer ? 5 : 3;
+        _audio?.Trigger(hammer ? StormaktSound.DungeonHammerImpact : StormaktSound.DungeonSwordHit);
+        if (louhi.Health > 0)
+        {
+            louhi.State = DungeonEnemyState.Stagger;
+            louhi.StateAge = 0;
+            return;
+        }
+
+        louhi.Health = 1;
+        louhi.Phase = 2;
+        louhi.State = DungeonEnemyState.Dead;
+        louhi.StateAge = 0;
+        dungeon.LoreMask |= DungeonLouhiPhaseOneMask;
+        dungeon.LouhiRunes.Clear();
+        dungeon.BlackWaterHazards.Clear();
+        dungeon.LouhiGreedAge = 0;
+        dungeon.GreedAttackSlow = false;
+        dungeon.TargetX = dungeon.KarlX;
+        dungeon.TargetY = dungeon.KarlY;
+        dungeon.Curse = Math.Max(0, dungeon.Curse - 25);
+        ActivateBossRadio(DungeonLouhiPhaseOneRadio);
+        _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+        _audio?.SwitchMusic(StormaktMusicTrack.Dungeon);
+        WriteDungeonSave(dungeon, "autosave");
+    }
+
+    private void StepDungeonLouhi(DungeonState dungeon, DungeonEnemy louhi)
+    {
+        if (louhi.Phase != 1 || louhi.State == DungeonEnemyState.Dead) return;
+        if (louhi.State == DungeonEnemyState.Stagger)
+        {
+            if (louhi.StateAge >= 14)
+            {
+                louhi.State = DungeonEnemyState.Recover;
+                louhi.StateAge = 0;
+                louhi.SpecialCooldown = 28;
+            }
+            return;
+        }
+        if (louhi.State == DungeonEnemyState.Recover)
+        {
+            if (louhi.SpecialCooldown > 0) { louhi.SpecialCooldown--; return; }
+            louhi.State = DungeonEnemyState.Approach;
+            louhi.StateAge = 0;
+        }
+        if (louhi.State == DungeonEnemyState.Approach)
+        {
+            louhi.SpecialSerial++;
+            louhi.SpecialKind = (louhi.SpecialSerial - 1) % 4 + 1;
+            louhi.State = DungeonEnemyState.Telegraph;
+            louhi.StateAge = 0;
+            louhi.VelocityX = dungeon.KarlX;
+            louhi.VelocityY = dungeon.KarlY;
+            if (louhi.SpecialKind == 2) SpawnDungeonLouhiRunes(dungeon, louhi);
+            if (louhi.SpecialKind == 3)
+            {
+                (int X, int Y)[] destinations = [(4050, 215), (4280, 205), (4280, 555), (4050, 545)];
+                (int X, int Y) target = destinations[louhi.SpecialSerial % destinations.Length];
+                louhi.VelocityX = target.X;
+                louhi.VelocityY = target.Y;
+            }
+            if (louhi.SpecialKind == 4 && !dungeon.LouhiGreedSpoken)
+            {
+                dungeon.LouhiGreedSpoken = true;
+                ActivateBossRadio(DungeonLouhiGreedRadio);
+            }
+            return;
+        }
+        if (louhi.State == DungeonEnemyState.Telegraph)
+        {
+            int warning = louhi.SpecialKind switch { 1 => 34, 2 => 48, 3 => 38, _ => 42 };
+            if (louhi.StateAge >= warning)
+            {
+                louhi.State = DungeonEnemyState.Attack;
+                louhi.StateAge = 0;
+            }
+            return;
+        }
+        if (louhi.State == DungeonEnemyState.Attack)
+        {
+            if (louhi.StateAge == 8)
+            {
+                if (louhi.SpecialKind == 1) StrikeDungeonLouhiStaff(dungeon, louhi);
+                else if (louhi.SpecialKind == 3) TeleportDungeonLouhi(dungeon, louhi);
+                else if (louhi.SpecialKind == 4) ApplyDungeonLouhiGreed(dungeon);
+            }
+            int duration = louhi.SpecialKind switch { 1 => 22, 2 => 34, 3 => 28, _ => 24 };
+            if (louhi.StateAge >= duration)
+            {
+                louhi.State = DungeonEnemyState.Recover;
+                louhi.StateAge = 0;
+                louhi.SpecialCooldown = 36;
+            }
+        }
+    }
+
+    private static void SpawnDungeonLouhiRunes(DungeonState dungeon, DungeonEnemy louhi)
+    {
+        double baseAngle = Math.Atan2(dungeon.KarlY - louhi.Y, dungeon.KarlX - louhi.X);
+        for (int index = 0; index < 6; index++)
+        {
+            double angle = baseAngle + (index - 2.5) * 0.42;
+            double distance = 78 + index % 2 * 54;
+            dungeon.LouhiRunes.Add(new DungeonLouhiRune(
+                Math.Clamp(dungeon.KarlX + Math.Cos(angle) * distance, 3985, 4390),
+                Math.Clamp(dungeon.KarlY + Math.Sin(angle) * distance, 105, 655), 44 + index * 8));
+        }
+    }
+
+    private void StepDungeonLouhiHazards(DungeonState dungeon)
+    {
+        foreach (DungeonLouhiRune rune in dungeon.LouhiRunes)
+        {
+            rune.Age++;
+            if (rune.HitKarl || rune.Age != rune.ArmAge || dungeon.HurtAge > 0 ||
+                DistanceSquared(rune.X, rune.Y, dungeon.KarlX, dungeon.KarlY) > 38 * 38) continue;
+            rune.HitKarl = true;
+            if (!_invincibleTestMode) ApplyDungeonDamage(dungeon, 17);
+            ApplyDungeonCurse(dungeon, 9);
+            dungeon.HurtAge = 18;
+            dungeon.HitStop = 3;
+            _audio?.Trigger(StormaktSound.DungeonSilverWave);
+        }
+        dungeon.LouhiRunes.RemoveAll(rune => rune.Age > rune.ArmAge + 18);
+    }
+
+    private void StrikeDungeonLouhiStaff(DungeonState dungeon, DungeonEnemy louhi)
+    {
+        if (DistancePointToSegmentSquared(dungeon.KarlX, dungeon.KarlY,
+            louhi.X, louhi.Y - 16, louhi.VelocityX, louhi.VelocityY) > 22 * 22) return;
+        if (dungeon.Guarding)
+        {
+            dungeon.LouhiGreedAge = 0;
+            dungeon.Power = Math.Min(100, dungeon.Power + 16);
+            dungeon.HitStop = 3;
+            _audio?.Trigger(StormaktSound.DungeonParry);
+            return;
+        }
+        if (!_invincibleTestMode) ApplyDungeonDamage(dungeon, 21);
+        ApplyDungeonCurse(dungeon, 12);
+        dungeon.HurtAge = 20;
+        dungeon.HitStop = 4;
+    }
+
+    private void TeleportDungeonLouhi(DungeonState dungeon, DungeonEnemy louhi)
+    {
+        double oldX = louhi.X;
+        double oldY = louhi.Y;
+        louhi.X = louhi.VelocityX;
+        louhi.Y = louhi.VelocityY;
+        dungeon.BlackWaterHazards.Add(new DungeonBlackWaterHazard(oldX, oldY, 34, 0, 64, 13));
+        dungeon.BlackWaterHazards.Add(new DungeonBlackWaterHazard(louhi.X, louhi.Y, 34, 0, 64, 13));
+        if (DistanceSquared(louhi.X, louhi.Y, dungeon.KarlX, dungeon.KarlY) < 48 * 48 && dungeon.HurtAge == 0)
+        {
+            if (dungeon.Guarding)
+            {
+                dungeon.Power = Math.Min(100, dungeon.Power + 12);
+                _audio?.Trigger(StormaktSound.DungeonParry);
+            }
+            else
+            {
+                if (!_invincibleTestMode) ApplyDungeonDamage(dungeon, 18);
+                dungeon.HurtAge = 18;
+            }
+        }
+        _audio?.Trigger(StormaktSound.DungeonSilverWave);
+    }
+
+    private void ApplyDungeonLouhiGreed(DungeonState dungeon)
+    {
+        if (dungeon.Guarding)
+        {
+            dungeon.LouhiGreedAge = 0;
+            dungeon.Power = Math.Min(100, dungeon.Power + 10);
+            _audio?.Trigger(StormaktSound.DungeonParry);
+            return;
+        }
+        dungeon.LouhiGreedAge = 240;
+        ApplyDungeonCurse(dungeon, 15);
+        _audio?.Trigger(StormaktSound.DungeonSilverWave);
+    }
+
     private static double DistancePointToSegmentSquared(double px, double py,
         double ax, double ay, double bx, double by)
     {
@@ -2790,6 +3079,11 @@ internal sealed class StormaktGame
             return;
         }
         dungeon.AttackAge = 1;
+        if (dungeon.LouhiGreedAge > 0)
+        {
+            dungeon.GreedAttackSlow = true;
+            dungeon.LouhiGreedAge = 0;
+        }
         dungeon.AttackSerial++;
         dungeon.AttackCombo = dungeon.AttackCombo % 3 + 1;
         dungeon.TargetX = dungeon.KarlX;
@@ -2832,6 +3126,12 @@ internal sealed class StormaktGame
                         DamageDungeonSwan(dungeon, enemy, weaponDamage, hammer);
                         continue;
                     }
+                    if (enemy.Type == DungeonEnemyType.Louhi)
+                    {
+                        enemy.LastHitSerial = dungeon.AttackSerial;
+                        DamageDungeonLouhi(dungeon, enemy, weaponDamage, hammer);
+                        continue;
+                    }
                     enemy.LastHitSerial = dungeon.AttackSerial;
                     enemy.Health -= weaponDamage;
                     enemy.State = enemy.Health <= 0 ? DungeonEnemyState.Dead : DungeonEnemyState.Stagger;
@@ -2861,10 +3161,11 @@ internal sealed class StormaktGame
                     }
                 }
             }
-            dungeon.AttackAge++;
+            if (!dungeon.GreedAttackSlow || dungeon.Age % 2 == 0) dungeon.AttackAge++;
             if (dungeon.AttackAge > endAge)
             {
                 dungeon.AttackAge = 0;
+                dungeon.GreedAttackSlow = false;
                 if (dungeon.AttackQueued)
                 {
                     dungeon.AttackQueued = false;
@@ -2884,8 +3185,20 @@ internal sealed class StormaktGame
                 StepDungeonSwan(dungeon, enemy);
                 continue;
             }
+            if (enemy.Type == DungeonEnemyType.Louhi)
+            {
+                StepDungeonLouhi(dungeon, enemy);
+                continue;
+            }
             if (enemy.State == DungeonEnemyState.Dead)
             {
+                if (enemy.Type == DungeonEnemyType.BlindShepherd && enemy.StateAge == 20 &&
+                    (dungeon.LoreMask & DungeonShepherdHeardMask) == 0)
+                {
+                    dungeon.LoreMask |= DungeonShepherdHeardMask;
+                    ActivateBossRadio(DungeonShepherdDeathRadio);
+                    WriteDungeonSave(dungeon, "autosave");
+                }
                 if (enemy.Type == DungeonEnemyType.SilverFogde && enemy.StateAge == 80 && !dungeon.DepthThreeOpen)
                 {
                     dungeon.DepthThreeOpen = true;
@@ -3213,6 +3526,8 @@ internal sealed class StormaktGame
             if ((dungeon.LoreMask & DungeonSecondSigilMask) == 0 && x is > 2365 and < 2405) return true;
             if ((dungeon.LoreMask & DungeonThirdSigilMask) == 0 && x is > 3130 and < 3170) return true;
             if ((dungeon.LoreMask & DungeonSwanDefeatedMask) == 0 && x is > 3535 and < 3575) return true;
+            if ((dungeon.LoreMask & DungeonLouhiStartedMask) != 0 &&
+                (dungeon.LoreMask & DungeonLouhiPhaseOneMask) == 0 && x is > 3950 and < 3990) return true;
             foreach ((int obstacleX, int obstacleY) in new[] { (455, 360), (810, 500), (1050, 275) })
                 if (Math.Abs(x - obstacleX) < 35 && Math.Abs(y - obstacleY) < 22) return true;
             foreach ((int obstacleX, int obstacleY) in new[] { (300, 650), (700, 110), (1110, 600) })
@@ -3229,9 +3544,17 @@ internal sealed class StormaktGame
                 if (Math.Abs(x - obstacleX) < 44 && Math.Abs(y - obstacleY) < 62) return true;
             foreach ((int obstacleX, int obstacleY) in DungeonThirdTempleSteles)
                 if (Math.Abs(x - obstacleX) < 22 && Math.Abs(y - obstacleY) < 12) return true;
+            foreach ((int obstacleX, int obstacleY) in DungeonLouhiProcessionStatues)
+                if (Math.Abs(x - obstacleX) < 30 && Math.Abs(y - obstacleY) < 40) return true;
+            foreach ((int obstacleX, int obstacleY) in DungeonLouhiProcessionSarcophagi)
+                if (Math.Abs(x - obstacleX) < 62 && Math.Abs(y - obstacleY) < 48) return true;
             // Only the grounded feet block movement; Karl may walk close to the broad wings.
             if ((dungeon.LoreMask & DungeonSwanDefeatedMask) == 0 &&
                 Math.Abs(x - 3400) < 30 && Math.Abs(y - 380) < 18) return true;
+            if (Math.Abs(x - 4170) < 30 && Math.Abs(y - 380) < 18) return true;
+            DungeonEnemy? louhi = dungeon.Enemies.FirstOrDefault(enemy => enemy.Depth == 4 &&
+                enemy.Type == DungeonEnemyType.Louhi && enemy.State != DungeonEnemyState.Dead);
+            if (louhi is not null && Math.Abs(x - louhi.X) < 24 && Math.Abs(y - louhi.Y) < 17) return true;
             return false;
         }
         bool leftPillar = x > 253 && x < 307 && y > 124 && y < 212;
@@ -3398,7 +3721,7 @@ internal sealed class StormaktGame
                               Depth = save.Schema >= 10 ? chest.Depth : chest.Id <= 3 ? 2 : save.Depth });
                 if (dungeon.Depth == 4)
                 {
-                    dungeon.RoomWidth = Math.Max(3600, dungeon.RoomWidth);
+                    dungeon.RoomWidth = Math.Max(4480, dungeon.RoomWidth);
                     dungeon.RoomHeight = Math.Max(760, dungeon.RoomHeight);
                     if (!dungeon.Enemies.Any(enemy => enemy.Depth == 4 && enemy.Type == DungeonEnemyType.LemminkainenShadow))
                     {
@@ -3414,6 +3737,8 @@ internal sealed class StormaktGame
                     if ((dungeon.LoreMask & DungeonSwanRevealedMask) != 0 &&
                         (dungeon.LoreMask & DungeonSwanDefeatedMask) == 0)
                         EnsureDungeonSwanEncounter(dungeon);
+                    if ((dungeon.LoreMask & DungeonLouhiStartedMask) != 0)
+                        EnsureDungeonLouhiEncounter(dungeon);
                 }
                 dungeon.CameraX = Math.Clamp((int)Math.Round(dungeon.KarlX - 200), 0, Math.Max(0, dungeon.RoomWidth - 400));
                 dungeon.CameraY = Math.Clamp((int)Math.Round(dungeon.KarlY - 140), 0, Math.Max(0, dungeon.RoomHeight - 280));
@@ -4747,6 +5072,8 @@ internal sealed class StormaktGame
             DrawDungeonSprite(frame, dungeon, thirdSigilActive ? "dungeon_temple_gate_open" : "dungeon_temple_gate_closed",
                 3150, 380);
             bool swanDefeated = (dungeon.LoreMask & DungeonSwanDefeatedMask) != 0;
+            bool louhiStarted = (dungeon.LoreMask & DungeonLouhiStartedMask) != 0;
+            bool louhiPhaseOne = (dungeon.LoreMask & DungeonLouhiPhaseOneMask) != 0;
             DrawDungeonSprite(frame, dungeon, swanDefeated ? "dungeon_temple_gate_open" : "dungeon_temple_gate_closed", 3550, 380);
             int sigilX = 1580 - dungeon.CameraX;
             int sigilY = 380 - dungeon.CameraY;
@@ -4762,6 +5089,15 @@ internal sealed class StormaktGame
                 thirdSigilActive ? 0xffffd66b : thirdVerseProgress >= 3 ? 0xffdce8f2 : 0xff5e7180);
             bool swanRevealed = (dungeon.LoreMask & DungeonSwanRevealedMask) != 0;
             DrawDungeonSwanEncounter(frame, dungeon, swanRevealed, swanDefeated);
+            foreach ((int x, int y) in DungeonLouhiProcessionStatues)
+                DrawDungeonSprite(frame, dungeon, "dungeon_temple_guardian", x, y);
+            foreach ((int x, int y) in DungeonLouhiProcessionSarcophagi)
+                DrawDungeonSprite(frame, dungeon, "dungeon_temple_sarc_closed", x, y);
+            DrawDungeonSprite(frame, dungeon, "dungeon_runic_arch", 3890, 380);
+            DrawDungeonSprite(frame, dungeon,
+                louhiStarted && !louhiPhaseOne ? "dungeon_temple_gate_closed" : "dungeon_temple_gate_open", 3970, 380);
+            DrawDungeonSprite(frame, dungeon, "louhi_silver_altar", 4170, 380);
+            DrawDungeonLouhiEncounter(frame, dungeon);
             if (!shadowDefeated)
             {
                 int barrierX = 1165 - dungeon.CameraX;
@@ -4795,6 +5131,7 @@ internal sealed class StormaktGame
 
         foreach (DungeonEnemy enemy in dungeon.Enemies.Where(enemy => enemy.Depth == dungeon.Depth &&
             enemy.Type != DungeonEnemyType.TuonelaSwan &&
+            enemy.Type != DungeonEnemyType.Louhi &&
             (enemy.Type != DungeonEnemyType.LemminkainenShadow || enemy.Phase != 0)).OrderBy(enemy => enemy.Y))
         {
             int enemyX = (int)Math.Round(enemy.X) - dungeon.CameraX;
@@ -4858,7 +5195,11 @@ internal sealed class StormaktGame
             ? dungeon.Enemies.FirstOrDefault(enemy => enemy.Type == DungeonEnemyType.TuonelaSwan &&
                 enemy.State != DungeonEnemyState.Dead && DungeonZone(dungeon) == 48)
             : null;
-        DungeonEnemy? activeBoss = fogde ?? shepherd ?? shadow ?? swanBoss;
+        DungeonEnemy? louhiBoss = dungeon.Depth == 4
+            ? dungeon.Enemies.FirstOrDefault(enemy => enemy.Type == DungeonEnemyType.Louhi &&
+                enemy.Phase == 1 && enemy.State != DungeonEnemyState.Dead && DungeonZone(dungeon) == 49)
+            : null;
+        DungeonEnemy? activeBoss = fogde ?? shepherd ?? shadow ?? swanBoss ?? louhiBoss;
         if (activeBoss is not null)
         {
             int barWidth = Math.Min(220, _width - 100);
@@ -4866,7 +5207,7 @@ internal sealed class StormaktGame
             DrawRect(frame, barX, 20, barWidth, 27, 0xee0b0d10);
             string bossName = fogde is not null ? "DEN FÖRSILVRADE GRUVFOGDEN" :
                 shepherd is not null ? "DEN BLINDE HERDEN" : shadow is not null ?
-                "LEMMINKÄINENS SKUGGA" : "SVANEN I TUONELA";
+                "LEMMINKÄINENS SKUGGA" : swanBoss is not null ? "SVANEN I TUONELA" : "LOUHI AV POHJOLA";
             DrawText(frame, barX + 8, 24, bossName, 0xffdce8f2);
             DrawRect(frame, barX + 2, 37, barWidth - 4, 7, 0xff20171d);
             DrawRect(frame, barX + 3, 38, (barWidth - 6) * activeBoss.Health / activeBoss.MaxHealth, 5, 0xffb7c7d6);
@@ -4971,10 +5312,15 @@ internal sealed class StormaktGame
             bool thirdSigilActive = (dungeon.LoreMask & DungeonThirdSigilMask) != 0;
             bool swanRevealed = (dungeon.LoreMask & DungeonSwanRevealedMask) != 0;
             bool swanDefeated = (dungeon.LoreMask & DungeonSwanDefeatedMask) != 0;
+            bool louhiStarted = (dungeon.LoreMask & DungeonLouhiStartedMask) != 0;
+            bool louhiPhaseOne = (dungeon.LoreMask & DungeonLouhiPhaseOneMask) != 0;
             DungeonEnemy? swan = dungeon.Enemies.FirstOrDefault(enemy =>
                 enemy.Depth == 4 && enemy.Type == DungeonEnemyType.TuonelaSwan);
             bool heartOpen = swan is not null && swan.Phase == 3 && DungeonSwanVulnerable(swan);
-            objective = swanDefeated ? "LOUHIS PORT ÄR ÖPPEN I ÖSTER" :
+            objective = louhiPhaseOne ? "FAS I BRUTEN  JÄRNFÅGELN VAKNAR" :
+                louhiStarted && dungeon.LouhiGreedAge > 0 ? "GIRIGHET  PARERA ELLER VÄNTA  ANFALL INTE" :
+                louhiStarted ? "LÄS RUNORNA  PARERA STAVEN  BRYT LOUHI" :
+                swanDefeated ? "FÖLJ PROCESSIONSGÅNGEN TILL SILVERALTARET" :
                 swan?.State == DungeonEnemyState.Dead ? "SVANEN SJUNKER UNDER SVART VATTEN" :
                 heartOpen ? "SILVERHJÄRTAT ÄR ÖPPET  SLÅ NU" :
                 swan is { Phase: 3 } ? "UNDVIK DÖDSVÅGORNA  VÄNTA PÅ HJÄRTAT" :
@@ -5385,6 +5731,70 @@ internal sealed class StormaktGame
             DrawCircleOutline(frame, swanX, swanY - 7, 13, 0xffdce8f2);
             DrawText(frame, Math.Clamp(swanX - 42, 4, _width - 122), swanY + 66,
                 "SILVERHJÄRTAT ÖPPET", 0xffffd66b);
+        }
+    }
+
+    private void DrawDungeonLouhiEncounter(uint[] frame, DungeonState dungeon)
+    {
+        foreach (DungeonLouhiRune rune in dungeon.LouhiRunes)
+        {
+            int x = (int)Math.Round(rune.X) - dungeon.CameraX;
+            int y = (int)Math.Round(rune.Y) - dungeon.CameraY;
+            if (rune.Age < rune.ArmAge)
+            {
+                int radius = 12 + rune.Age * 20 / Math.Max(1, rune.ArmAge);
+                DrawCircleOutline(frame, x, y, radius,
+                    rune.Age / 4 % 2 == 0 ? 0xff73b8d0 : 0xffffd66b);
+                DrawLine(frame, x - radius, y, x + radius, y, 0xff7394a8);
+                DrawLine(frame, x, y - radius, x, y + radius, 0xff7394a8);
+            }
+            else
+            {
+                int flash = Math.Max(5, 45 - (rune.Age - rune.ArmAge) * 2);
+                FillCircle(frame, x, y, flash, 0xffdce8f2);
+                DrawCircleOutline(frame, x, y, flash + 4, 0xff73b8d0);
+            }
+        }
+
+        DungeonEnemy? louhi = dungeon.Enemies.FirstOrDefault(enemy =>
+            enemy.Depth == 4 && enemy.Type == DungeonEnemyType.Louhi);
+        if (louhi is null) return;
+        int xPos = (int)Math.Round(louhi.X) - dungeon.CameraX;
+        int yPos = (int)Math.Round(louhi.Y) - dungeon.CameraY;
+        if (louhi.State == DungeonEnemyState.Dead && louhi.StateAge >= 120) return;
+        string spriteName = louhi.State == DungeonEnemyState.Dead || louhi.SpecialKind == 3 &&
+            louhi.State is DungeonEnemyState.Telegraph or DungeonEnemyState.Attack
+            ? "louhi_teleport" : louhi.State is DungeonEnemyState.Telegraph or DungeonEnemyState.Attack
+                ? "louhi_cast" : "louhi_idle";
+        if (_sprites?.TryGet(spriteName, out Sprite sprite) == true)
+        {
+            uint opacity = louhi.State == DungeonEnemyState.Dead
+                ? (uint)Math.Clamp(255 - louhi.StateAge * 2, 20, 255) : 255;
+            DrawSpriteAlpha(frame, sprite, xPos - sprite.Width / 2, yPos - sprite.Height + 13, opacity);
+        }
+        if (louhi.State == DungeonEnemyState.Dead) return;
+        DrawCircleOutline(frame, xPos, yPos + 3, 28 + dungeon.Age / 8 % 3,
+            dungeon.Age / 7 % 2 == 0 ? 0xff73b8d0 : 0xffdce8f2);
+        if (louhi.State == DungeonEnemyState.Telegraph && louhi.SpecialKind == 1)
+        {
+            int targetX = (int)Math.Round(louhi.VelocityX) - dungeon.CameraX;
+            int targetY = (int)Math.Round(louhi.VelocityY) - dungeon.CameraY;
+            DrawLine(frame, xPos, yPos - 28, targetX, targetY,
+                louhi.StateAge / 4 % 2 == 0 ? 0xffffd66b : 0xff73b8d0);
+        }
+        if (louhi.State == DungeonEnemyState.Telegraph && louhi.SpecialKind == 3)
+        {
+            int targetX = (int)Math.Round(louhi.VelocityX) - dungeon.CameraX;
+            int targetY = (int)Math.Round(louhi.VelocityY) - dungeon.CameraY;
+            DrawCircleOutline(frame, targetX, targetY, 34,
+                louhi.StateAge / 4 % 2 == 0 ? 0xff73b8d0 : 0xff26394a);
+        }
+        if (louhi.State == DungeonEnemyState.Telegraph && louhi.SpecialKind == 4)
+        {
+            int karlX = (int)Math.Round(dungeon.KarlX) - dungeon.CameraX;
+            int karlY = (int)Math.Round(dungeon.KarlY) - dungeon.CameraY;
+            DrawCircleOutline(frame, karlX, karlY, 22 + louhi.StateAge / 3,
+                louhi.StateAge / 5 % 2 == 0 ? 0xffc589ff : 0xffffd66b);
         }
     }
 
@@ -8273,7 +8683,7 @@ internal sealed class StormaktGame
 
     private enum DungeonItemRarity { Iron, Carolean, Silverbound, Runic, Unique }
 
-    private enum DungeonEnemyType { Stormer, Pikeman, SilverFogde, UndeadMiner, TuonelaGuard, BlindShepherd, LemminkainenShadow, TuonelaSwan }
+    private enum DungeonEnemyType { Stormer, Pikeman, SilverFogde, UndeadMiner, TuonelaGuard, BlindShepherd, LemminkainenShadow, TuonelaSwan, Louhi }
     private enum DungeonEnemyState { Approach, Telegraph, Attack, Recover, Stagger, Dead }
 
     private readonly record struct DungeonItemDefinition(string Key, string Name, string Sprite, int Width, int Height,
@@ -8352,6 +8762,15 @@ internal sealed class StormaktGame
         public int Age { get; set; }
     }
 
+    private sealed class DungeonLouhiRune(double x, double y, int armAge)
+    {
+        public double X { get; } = x;
+        public double Y { get; } = y;
+        public int ArmAge { get; } = armAge;
+        public int Age { get; set; }
+        public bool HitKarl { get; set; }
+    }
+
     private sealed class DungeonChest(int id, double x, double y)
     {
         public int Id { get; } = id;
@@ -8418,6 +8837,10 @@ internal sealed class StormaktGame
         public int ForcedVentAge { get; set; }
         public List<DungeonSilverWave> SilverWaves { get; } = [];
         public List<DungeonBlackWaterHazard> BlackWaterHazards { get; } = [];
+        public List<DungeonLouhiRune> LouhiRunes { get; } = [];
+        public int LouhiGreedAge { get; set; }
+        public bool LouhiGreedSpoken { get; set; }
+        public bool GreedAttackSlow { get; set; }
         public bool PendingDepthThreeEntry { get; set; }
         public bool PendingDepthThreeReturn { get; set; }
         public int Curse { get; set; }

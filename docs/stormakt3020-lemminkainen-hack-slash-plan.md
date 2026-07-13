@@ -423,6 +423,15 @@ enda sårbara mål. Svanen sjunker utan vanlig explosion, lämnar den unika reli
 Stelarna och den breda svankroppen blockerar nu bara sin faktiska fot mot golvet, så Karl kan gå tätt
 intill ristningarna och in under vingarnas visuella siluett utan att stoppas av osynliga rektanglar.
 
+Östporten fortsätter nu in i en tyst processionsgång med parställda väktarstatyer och svansarkofager.
+När Karl passerar den sista runbågen stängs bossporten bakom honom och Louhi väntar synlig framför sitt
+silveraltare. Hennes första fas är komplett spelbar: stavhugget låser en tydlig linje som kan pareras,
+sex silverrunor tänds och briserar i läsbar ordning, svartvattenteleporten markerar både avfärd och
+landning och girighetsförbannelsen gör Karls nästa förhastade hugg långsamt. Väntan eller parad bryter
+förbannelsen. När fasen faller löses Louhi ned i altaret, autosparar och lovar att väcka järnfågeln;
+fas två startas inte förrän dess egen slice är byggd. En äldre sparfil från Svanens öppnade östport
+expanderar kartan och skapar exakt en Louhi utan att kampanjen behöver startas om.
+
 Den första sigillgården har fått en egen tydligare tempelidentitet: två svarta väktarstatyer, ett lågt
 offeraltare och både slutna och öppnade svansarkofager ersätter återanvänd gruvrekvisita. Föremålen är
 fysiska hinder men står längs rummets kanter så att strid och vägen till sigillet förblir fria.
@@ -437,9 +446,9 @@ frigör först kandidatens inventoryruta så att likstora föremål alltid kan b
 ### Checkpoint 8 – Balans, lootkurva och casting
 
 - Ebba har nu röst på samtliga implementerade tempelkort. Gruvfogden kan talas med efter räddningen
-  och ger den narrativa nyckeln till runordningen. Louhi har fått en egen syntetisk roll, röst och ett
-  neutralt/talande radioporträtt. Alla 37 befintliga spelrepliker använder en fast seed per
-  skådespelarroll; herdens dialogkort återstår.
+  och ger den narrativa nyckeln till runordningen. Den blinde herdens sista varning samt Louhis entré,
+  girighetsförbannelse och fasbrott är röstlagda. Alla 41 spelrepliker använder en fast seed för var
+  och en av de åtta syntetiska skådespelarrollerna.
 - Svårighetskurva, droprates, affixpooler, setbonusar, smideskostnad, checkpointkostnad, musergonomi och båda upplösningarna.
 - Full direkt-WFEX-genomspelning och determinismkontroll.
 

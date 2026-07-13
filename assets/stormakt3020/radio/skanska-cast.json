@@ -59,6 +59,15 @@
       "dialogue_seed": 302125
     },
     {
+      "id": "blind-shepherd",
+      "speaker": "DEN BLINDE HERDEN",
+      "language": "sv",
+      "voice_instruction": "An ancient blind Swedish male temple shepherd, dry deep bass whispered through a stone mask, grave and exhausted but perfectly intelligible, slow natural Swedish diction, prophetic without theatrical booming, never comic, young or breathy.",
+      "reference_text": "Jag har vaktat den sista stigen sedan berget ännu låg öppet mot himlen. Mina ögon minns inget ljus, men stenen berättar vem som går genom mörkret. Bakom mig väntar sången, och bakom sången väntar hon som aldrig glömmer ett namn.",
+      "reference_seed": 302027,
+      "dialogue_seed": 302127
+    },
+    {
       "id": "louhi",
       "speaker": "LOUHI, SILVERBERGETS HÄXA",
       "language": "sv",
@@ -481,6 +490,50 @@
       "text": "Ni bröt min sång och stal hjärtat ur Tuonelas vatten. Kom då, Karl tvåhundrafemtiofem. Silverberget minns redan ert namn.",
       "subtitle_lines": ["NI BRÖT MIN SÅNG", "KOM DÅ KARL CCLV"],
       "seed": 302199,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "shepherd-temple-warning",
+      "role": "blind-shepherd",
+      "level": 3,
+      "frame": -1,
+      "cue": "blind_shepherd_defeated",
+      "text": "Jag såg er aldrig, Karl, men Louhi hör varje steg ni tar. Hon väntar bakom svanens sång.",
+      "subtitle_lines": ["JAG SÅG ER EJ", "LOUHI HÖR ER"],
+      "seed": 302200,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "louhi-temple-arrival",
+      "role": "louhi",
+      "level": 3,
+      "frame": -1,
+      "cue": "louhi_phase_one_start",
+      "text": "Hjärtat slår igen i er packning. Lägg det på altaret, Karl, så skall jag göra er död mycket gammal.",
+      "subtitle_lines": ["HJÄRTAT VAKNAR", "LÄGG HJÄRTAT"],
+      "seed": 302201,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "louhi-greed-curse",
+      "role": "louhi",
+      "level": 3,
+      "frame": -1,
+      "cue": "louhi_greed_curse",
+      "text": "Varje hugg väger mer än det förra. Girighet har tyngd här nere.",
+      "subtitle_lines": ["HUGGEN VÄGER", "GIRIGHET VÄGER"],
+      "seed": 302202,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "louhi-phase-one-break",
+      "role": "louhi",
+      "level": 3,
+      "frame": -1,
+      "cue": "louhi_phase_one_break",
+      "text": "Ni har brutit kvinnan. Gott. Väck då järnfågeln, och se vad berget bar före människan.",
+      "subtitle_lines": ["NI BRÖT KVINNAN", "VÄCK JÄRNFÅGELN"],
+      "seed": 302203,
       "model_backend": "voxcpm2"
     }
   ]

@@ -48,7 +48,8 @@ frame, speaker_id, side, subtitle_lines, voice_asset, portrait_id, priority, ski
 - Varje roll har exakt en fast `dialogue_seed` i castfilen. Alla repliker för samma skådespelare
   renderas med den seedens värde; renderverktyget vägrar starta om en roll saknar seed eller delar den
   med en annan roll. Den 13 juli 2026 omrenderades samtliga dåvarande 36 svenska och danska spelrepliker
-  enligt regeln; Louhis senare tempelreplik följer samma regel som den sjunde rollen och det 37:e klippet.
+  enligt regeln. Louhi och Den blinde herden följer samma regel; den spelbara Louhi-fasens entré,
+  girighetsvarning och fasbrott ger nu totalt 41 klipp över åtta helt syntetiska roller.
 - Ett lätt radiofilter läggs vid assetbygget: högpass runt 180 Hz, lågpass runt 4.5 kHz, mild kompression och mycket svagt deterministiskt brus.
 
 ## Dots TTS - verifierat läge 2026-07-09

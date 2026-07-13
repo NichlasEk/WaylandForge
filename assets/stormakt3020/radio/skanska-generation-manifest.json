@@ -481,6 +481,62 @@
       "sha256": "7a947a311b4755920130659744595056e36e0e6d0dbbb5878851806873a14c4f",
       "request": "assets/stormakt3020/radio/raw/louhi-temple-invitation-sv-request.json",
       "reference_sha256": "e2ae3c1d549eaaca88894a12ef6c0708a783a270f13837be1166d2e64b1cbc7b"
+    },
+    {
+      "kind": "reference",
+      "role": "blind-shepherd",
+      "job_id": "cdac0304a09b4041b8c4dfdbfca9b190",
+      "file": "assets/stormakt3020/radio/references/blind-shepherd-reference.wav",
+      "sha256": "57c67194cfa681c93300233e163febf90f8b46ed3064d9fa9cb88ce137baea09",
+      "request": {
+        "text": "Jag har vaktat den sista stigen sedan berget ännu låg öppet mot himlen. Mina ögon minns inget ljus, men stenen berättar vem som går genom mörkret. Bakom mig väntar sången, och bakom sången väntar hon som aldrig glömmer ett namn.",
+        "language": "sv",
+        "voice_instruction": "An ancient blind Swedish male temple shepherd, dry deep bass whispered through a stone mask, grave and exhausted but perfectly intelligible, slow natural Swedish diction, prophetic without theatrical booming, never comic, young or breathy.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302027
+      }
+    },
+    {
+      "kind": "line",
+      "line": "shepherd-temple-warning",
+      "role": "blind-shepherd",
+      "job_id": "095c501152604512a9e3d19bd219039d",
+      "file": "assets/stormakt3020/radio/raw/shepherd-temple-warning-sv-raw.wav",
+      "sha256": "e860fe2001dafff27693f9716cb25ada2acbbf2aa6a7c4c80ee4ae269a3fee70",
+      "request": "assets/stormakt3020/radio/raw/shepherd-temple-warning-sv-request.json",
+      "reference_sha256": "57c67194cfa681c93300233e163febf90f8b46ed3064d9fa9cb88ce137baea09"
+    },
+    {
+      "kind": "line",
+      "line": "louhi-temple-arrival",
+      "role": "louhi",
+      "job_id": "3d32346fccf54eabbcf92a83984d7230",
+      "file": "assets/stormakt3020/radio/raw/louhi-temple-arrival-sv-raw.wav",
+      "sha256": "2e0e080a96ffe221089f3f6bad9226fcf89a0febac841fd9ed02a42343367776",
+      "request": "assets/stormakt3020/radio/raw/louhi-temple-arrival-sv-request.json",
+      "reference_sha256": "e2ae3c1d549eaaca88894a12ef6c0708a783a270f13837be1166d2e64b1cbc7b"
+    },
+    {
+      "kind": "line",
+      "line": "louhi-greed-curse",
+      "role": "louhi",
+      "job_id": "0b370eb8b61442ccafdfb7d955f37e0c",
+      "file": "assets/stormakt3020/radio/raw/louhi-greed-curse-sv-raw.wav",
+      "sha256": "5b64a849af238277ea7fa78a2e9924e90d53056c2d9baf3a1c010dcf51b73ee9",
+      "request": "assets/stormakt3020/radio/raw/louhi-greed-curse-sv-request.json",
+      "reference_sha256": "e2ae3c1d549eaaca88894a12ef6c0708a783a270f13837be1166d2e64b1cbc7b"
+    },
+    {
+      "kind": "line",
+      "line": "louhi-phase-one-break",
+      "role": "louhi",
+      "job_id": "c1d882788b06493bac15491ec2a4e7cc",
+      "file": "assets/stormakt3020/radio/raw/louhi-phase-one-break-sv-raw.wav",
+      "sha256": "9760101e7046e964c6539e17539004fd164a0125e84571a7614563d40872e50c",
+      "request": "assets/stormakt3020/radio/raw/louhi-phase-one-break-sv-request.json",
+      "reference_sha256": "e2ae3c1d549eaaca88894a12ef6c0708a783a270f13837be1166d2e64b1cbc7b"
     }
   ],
   "service": "http://127.0.0.1:8765",

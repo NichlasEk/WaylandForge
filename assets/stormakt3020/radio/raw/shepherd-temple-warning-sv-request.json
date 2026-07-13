@@ -1,0 +1,13 @@
+{
+  "text": "Jag såg er aldrig, Karl, men Louhi hör varje steg ni tar. Hon väntar bakom svanens sång.",
+  "language": "sv",
+  "model_backend": "voxcpm2",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Jag har vaktat den sista stigen sedan berget ännu låg öppet mot himlen. Mina ögon minns inget ljus, men stenen berättar vem som går genom mörkret. Bakom mig väntar sången, och bakom sången väntar hon som aldrig glömmer ett namn.",
+  "voice_instruction": "An ancient blind Swedish male temple shepherd, dry deep bass whispered through a stone mask, grave and exhausted but perfectly intelligible, slow natural Swedish diction, prophetic without theatrical booming, never comic, young or breathy.",
+  "seed": 302127,
+  "dots_num_steps": 4,
+  "dots_guidance_scale": 1.2,
+  "dots_speaker_scale": 1.5
+}

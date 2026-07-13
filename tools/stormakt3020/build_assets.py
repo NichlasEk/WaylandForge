@@ -542,6 +542,15 @@ def append_dungeon_gruva3(entries: list[tuple[str, Image.Image]], environment: I
         sprite = cell.resize((92, 92), Image.Resampling.LANCZOS)
         canvas = Image.new("RGBA", (106, 96), (0, 0, 0, 0)); canvas.alpha_composite(sprite, (7, 4))
         entries.append((name, canvas))
+    shepherd_portrait = trim_alpha(shepherd.crop((0, 0, shepherd.width // 4,
+                                                  shepherd.height // 2)).convert("RGBA"))
+    shepherd_portrait.thumbnail((36, 36), Image.Resampling.LANCZOS)
+    for name in ("portrait_shepherd_neutral", "portrait_shepherd_speak"):
+        portrait_canvas = Image.new("RGBA", (38, 38), (0, 0, 0, 0))
+        portrait_canvas.alpha_composite(shepherd_portrait,
+                                        ((38 - shepherd_portrait.width) // 2,
+                                         38 - shepherd_portrait.height))
+        entries.append((name, portrait_canvas))
     loot_names = ["loot_sun_disc", "loot_temple_key", "dungeon_cursed_chest", "dungeon_temple_stairs"]
     loot_targets = [(30, 30), (24, 32), (66, 54), (96, 88)]
     for index, name in enumerate(loot_names):
@@ -594,6 +603,19 @@ def append_dungeon_tuonela_swan(entries: list[tuple[str, Image.Image]], source: 
     names = ["tuonela_swan_dormant", "tuonela_swan_idle",
              "tuonela_swan_sweep", "tuonela_swan_strike"]
     targets = [(96, 90), (108, 104), (138, 108), (132, 100)]
+    for index, (name, target) in enumerate(zip(names, targets)):
+        column, row = index % 2, index // 2
+        left, top = column * source.width // 2 + 4, row * source.height // 2 + 4
+        right = (column + 1) * source.width // 2 - 4
+        bottom = (row + 1) * source.height // 2 - 4
+        sprite = trim_alpha(source.crop((left, top, right, bottom)).convert("RGBA"))
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
+def append_dungeon_louhi_phase1(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    names = ["louhi_idle", "louhi_cast", "louhi_teleport", "louhi_silver_altar"]
+    targets = [(72, 112), (96, 112), (104, 116), (126, 78)]
     for index, (name, target) in enumerate(zip(names, targets)):
         column, row = index % 2, index // 2
         left, top = column * source.width // 2 + 4, row * source.height // 2 + 4
@@ -662,6 +684,7 @@ def build(
     dungeon_temple_act1_input_path: Path,
     dungeon_temple_props_input_path: Path,
     dungeon_tuonela_swan_input_path: Path,
+    dungeon_louhi_phase1_input_path: Path,
     louhi_portrait_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
@@ -714,6 +737,7 @@ def build(
     dungeon_temple_act1_source = Image.open(dungeon_temple_act1_input_path).convert("RGBA")
     dungeon_temple_props_source = Image.open(dungeon_temple_props_input_path).convert("RGBA")
     dungeon_tuonela_swan_source = Image.open(dungeon_tuonela_swan_input_path).convert("RGBA")
+    dungeon_louhi_phase1_source = Image.open(dungeon_louhi_phase1_input_path).convert("RGBA")
     louhi_portrait_source = Image.open(louhi_portrait_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
@@ -807,6 +831,7 @@ def build(
     append_dungeon_temple_act1(entries, dungeon_temple_act1_source)
     append_dungeon_temple_props(entries, dungeon_temple_props_source)
     append_dungeon_tuonela_swan(entries, dungeon_tuonela_swan_source)
+    append_dungeon_louhi_phase1(entries, dungeon_louhi_phase1_source)
     append_louhi_portrait(entries, louhi_portrait_source)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
@@ -958,6 +983,7 @@ def main() -> None:
     parser.add_argument("--dungeon-temple-act1-input", type=Path, default=Path("assets/stormakt3020/dungeon-temple-act1-v2.png"))
     parser.add_argument("--dungeon-temple-props-input", type=Path, default=Path("assets/stormakt3020/dungeon-temple-props-v1.png"))
     parser.add_argument("--dungeon-tuonela-swan-input", type=Path, default=Path("assets/stormakt3020/dungeon-tuonela-swan-v1.png"))
+    parser.add_argument("--dungeon-louhi-phase1-input", type=Path, default=Path("assets/stormakt3020/dungeon-louhi-phase1-v1.png"))
     parser.add_argument("--louhi-portrait-input", type=Path, default=Path("assets/stormakt3020/louhi-radio-v1.png"))
     parser.add_argument(
         "--logo-input",
@@ -1015,6 +1041,7 @@ def main() -> None:
         args.dungeon_temple_act1_input,
         args.dungeon_temple_props_input,
         args.dungeon_tuonela_swan_input,
+        args.dungeon_louhi_phase1_input,
         args.louhi_portrait_input,
         args.logo_input,
         args.output,

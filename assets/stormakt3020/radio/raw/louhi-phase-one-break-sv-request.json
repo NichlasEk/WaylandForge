@@ -1,0 +1,13 @@
+{
+  "text": "Ni har brutit kvinnan. Gott. Väck då järnfågeln, och se vad berget bar före människan.",
+  "language": "sv",
+  "model_backend": "voxcpm2",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Jag har burit bergets minne sedan solen ännu hade ett namn. Varje silveråder känner min hand, varje mörk sjö min röst. Den som öppnar mina portar kommer inte som segrare. Han kommer som den sista raden i en mycket gammal bok.",
+  "voice_instruction": "An ancient Finnish-Swedish witch queen, very low powerful female contralto, calm and intimate authority with a cold metallic resonance, precise natural Swedish diction, threatening without shouting, never frail, comic, breathy or seductive.",
+  "seed": 302126,
+  "dots_num_steps": 4,
+  "dots_guidance_scale": 1.2,
+  "dots_speaker_scale": 1.5
+}

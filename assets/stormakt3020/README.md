@@ -91,6 +91,8 @@ The Silverkroppen dungeon extension adds versioned transparent sheets for Karl o
 
 `dungeon-tuonela-swan-v1.png` introduces Svanen i Tuonela as a coherent black-iron threshold boss set: dormant funerary form, awakened idle, wing-sweep telegraph and neck strike. The third-sigil checkpoint initially uses the dormant and awakened states for its non-combat revelation; the attack states are packed for the following boss slice. Its chroma-key source and exact reference-guided built-in generation prompt are preserved beside it.
 
+`dungeon-louhi-phase1-v1.png` supplies Louhi's idle, staff-casting and black-water teleport poses plus the silver altar used in her first boss phase. It is reference-guided from Louhi's established radio portrait, the Tuonela Swan sheet and the temple prop sheet; the untouched chroma-key source and exact built-in prompt are versioned beside the production alpha PNG.
+
 ## Resolution
 
 Stormakt defaults to a 400x280 logical framebuffer. Assets retain their native gameplay pixel size, providing 25 percent more field in both directions and making ships smaller relative to the world. WaylandForge scales the WFEX frame to its viewport. Set `WAYLANDFORGE_STORMAKT_LEGACY_320=1` to A/B test the original 320x224 field; the pack contains a correctly sized background for both modes.
