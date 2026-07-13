@@ -395,6 +395,13 @@ Död erbjuder `ÅTERUPPTA AUTOSAVE`, `LADDA LÄGE` och `TILL FÄLTTÅGET`. Det f
 - 8–12 tempelrum, svart vatten, tre sigill och gruvfogdens räddning.
 - Svanen i Tuonela, Louhis tre faser, slutsekvens och kampanjövergång.
 
+**Pågående 2026-07-13:** den första tempelsträckan är spelbar. Lemminkäinens skugga låser en fysisk
+runbarriär; efter segern öppnas porten till en separat sigillgård med tre zonbundna väktare. Det första
+sigillet renar förbannelse, lämnar ett runristat fragment, autosparar och etablerar att två sigill återstår.
+Hälsotinkturer plockas nu upp som riktiga föremål, fyller ett fyrplatsers snabbälte före ryggsäcken och
+dricks med `Q` i stället för att förbrukas automatiskt på marken. Nästa tempelslice börjar bakom den
+andra förseglade porten; Svanen och Louhi ingår fortfarande inte i den landade delen.
+
 ### Checkpoint 8 – Balans, lootkurva och casting
 
 - Röstcasting och slutmix för Ebba, herden, fogden och Louhi.

@@ -67,7 +67,7 @@ start = "enter"
 a = "z"
 b = "x"
 c = "c"
-x = "leftshift,rightshift"
+x = "q"
 y = "a"
 z = "s"
 
