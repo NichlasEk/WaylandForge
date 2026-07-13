@@ -1416,6 +1416,18 @@ internal sealed class StormaktGame
                 {
                     _dungeon.TempleOpen = true;
                     BeginDungeonDepthFour(_dungeon);
+                    if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_SHADOW_TEST"), "1", StringComparison.Ordinal))
+                    {
+                        _dungeon.KarlX = 910; _dungeon.KarlY = 380;
+                        _dungeon.TargetX = 910; _dungeon.TargetY = 380;
+                    }
+                    if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_TINCTURE_TEST"), "1", StringComparison.Ordinal))
+                    {
+                        _dungeon.Health = 35;
+                        DungeonItem tincture = AddDungeonItem(_dungeon, 14, -1, -1, DungeonEquipmentSlot.None,
+                            DungeonItemRarity.Carolean);
+                        tincture.OnGround = true; tincture.WorldX = _dungeon.KarlX + 32; tincture.WorldY = _dungeon.KarlY;
+                    }
                 }
             }
         }
@@ -1493,9 +1505,16 @@ internal sealed class StormaktGame
                 .OrderBy(item => DistanceSquared(item.WorldX, item.WorldY, dungeon.KarlX, dungeon.KarlY)).FirstOrDefault();
             if (ground is not null && DistanceSquared(ground.WorldX, ground.WorldY, dungeon.KarlX, dungeon.KarlY) < 34 * 34)
             {
-                ground.OnGround = false;
-                ground.InStash = false;
-                if (!TryPlaceFirstFree(dungeon, ground)) ground.OnGround = true;
+                if (ground.Definition == 14)
+                {
+                    if (dungeon.Health < dungeon.MaxHealth) ConsumeDungeonHealthTincture(dungeon, ground);
+                }
+                else
+                {
+                    ground.OnGround = false;
+                    ground.InStash = false;
+                    if (!TryPlaceFirstFree(dungeon, ground)) ground.OnGround = true;
+                }
                 interacted = true;
             }
             else if (DistanceSquared(470, 300, dungeon.KarlX, dungeon.KarlY) < 48 * 48)
@@ -1594,6 +1613,12 @@ internal sealed class StormaktGame
             if (pending is null) dungeon.PendingPickupItemId = 0;
             else if (DistanceSquared(pending.WorldX, pending.WorldY, dungeon.KarlX, dungeon.KarlY) < 38 * 38)
             {
+                if (pending.Definition == 14)
+                {
+                    if (dungeon.Health < dungeon.MaxHealth) ConsumeDungeonHealthTincture(dungeon, pending);
+                    dungeon.PendingPickupItemId = 0;
+                    return;
+                }
                 pending.OnGround = false;
                 pending.InStash = false;
                 if (TryPlaceFirstFree(dungeon, pending)) dungeon.PendingPickupItemId = 0;
@@ -1611,6 +1636,7 @@ internal sealed class StormaktGame
             }
         }
 
+        StepDungeonTempleAmbush(dungeon);
         StepDungeonCombat(dungeon);
         StepDungeonSilverVents(dungeon);
         StepDungeonCurse(dungeon);
@@ -1675,6 +1701,14 @@ internal sealed class StormaktGame
         else if (dungeon.Depth == 4 && dungeon.PendingTempleReturn &&
             DistanceSquared(60, 250, dungeon.KarlX, dungeon.KarlY) < 38 * 38)
             ReturnToDungeonDepthThree(dungeon);
+    }
+
+    private void ConsumeDungeonHealthTincture(DungeonState dungeon, DungeonItem tincture)
+    {
+        dungeon.Health = Math.Min(dungeon.MaxHealth, dungeon.Health + 35);
+        dungeon.Items.Remove(tincture);
+        _audio?.Trigger(StormaktSound.Deploy);
+        WriteDungeonSave(dungeon, "autosave");
     }
 
     private static void BeginDungeonDepthTwo(DungeonState dungeon)
@@ -1832,6 +1866,29 @@ internal sealed class StormaktGame
             dungeon.Chests.Add(new DungeonChest(41, 610, 135) { Depth = 4 });
             dungeon.Chests.Add(new DungeonChest(42, 1010, 665) { Depth = 4 });
         }
+        if (!dungeon.Enemies.Any(enemy => enemy.Depth == 4 && enemy.Type == DungeonEnemyType.LemminkainenShadow))
+        {
+            AddDungeonEnemy(dungeon, 1040, 380, DungeonEnemyType.LemminkainenShadow, 420, 43);
+            dungeon.Enemies.Last().Phase = 0;
+        }
+        WriteDungeonSave(dungeon, "autosave");
+    }
+
+    private void StepDungeonTempleAmbush(DungeonState dungeon)
+    {
+        if (dungeon.Depth != 4) return;
+        DungeonEnemy? shadow = dungeon.Enemies.FirstOrDefault(enemy =>
+            enemy.Depth == 4 && enemy.Type == DungeonEnemyType.LemminkainenShadow && enemy.State != DungeonEnemyState.Dead);
+        if (shadow is null || shadow.Phase != 0 || dungeon.KarlX < 900) return;
+        shadow.Phase = 1;
+        shadow.X = Math.Max(760, dungeon.KarlX - 82);
+        shadow.Y = Math.Clamp(dungeon.KarlY + 24, 100, dungeon.RoomHeight - 70);
+        shadow.State = DungeonEnemyState.Telegraph;
+        shadow.StateAge = 0;
+        shadow.SpecialSerial = 0;
+        dungeon.TargetX = dungeon.KarlX;
+        dungeon.TargetY = dungeon.KarlY;
+        _audio?.Trigger(StormaktSound.DungeonSilverShatter);
         WriteDungeonSave(dungeon, "autosave");
     }
 
@@ -2113,6 +2170,7 @@ internal sealed class StormaktGame
 
         foreach (DungeonEnemy enemy in dungeon.Enemies.Where(enemy => enemy.Depth == dungeon.Depth))
         {
+            if (enemy.Type == DungeonEnemyType.LemminkainenShadow && enemy.Phase == 0) continue;
             enemy.StateAge++;
             if (enemy.State == DungeonEnemyState.Dead)
             {
@@ -2145,6 +2203,7 @@ internal sealed class StormaktGame
             {
                 DungeonEnemyType.Pikeman => 54, DungeonEnemyType.SilverFogde => 48,
                 DungeonEnemyType.TuonelaGuard => 82, DungeonEnemyType.BlindShepherd => 92,
+                DungeonEnemyType.LemminkainenShadow => 74,
                 DungeonEnemyType.UndeadMiner => 38, _ => 35,
             };
             if (enemy.State == DungeonEnemyState.Approach)
@@ -2164,6 +2223,7 @@ internal sealed class StormaktGame
                     {
                         DungeonEnemyType.Pikeman => 0.27, DungeonEnemyType.SilverFogde => 0.22,
                         DungeonEnemyType.TuonelaGuard => 0.24, DungeonEnemyType.BlindShepherd => 0.18,
+                        DungeonEnemyType.LemminkainenShadow => 0.34,
                         DungeonEnemyType.UndeadMiner => 0.30, _ => 0.39,
                     }) * cadence;
                     double desiredX = dx / distance * speed;
@@ -2195,6 +2255,7 @@ internal sealed class StormaktGame
                 {
                     DungeonEnemyType.Pikeman => 30, DungeonEnemyType.SilverFogde => 42,
                     DungeonEnemyType.TuonelaGuard => 34, DungeonEnemyType.BlindShepherd => 52,
+                    DungeonEnemyType.LemminkainenShadow => 30,
                     DungeonEnemyType.UndeadMiner => 26, _ => 22,
                 }))
             {
@@ -2207,6 +2268,7 @@ internal sealed class StormaktGame
                 {
                     DungeonEnemyType.Pikeman => 12, DungeonEnemyType.SilverFogde => 18,
                     DungeonEnemyType.TuonelaGuard => 15, DungeonEnemyType.BlindShepherd => 24,
+                    DungeonEnemyType.LemminkainenShadow => 13,
                     DungeonEnemyType.UndeadMiner => 10, _ => 8,
                 };
                 if (enemy.StateAge == impact && distance <= attackRange + 9)
@@ -2225,11 +2287,13 @@ internal sealed class StormaktGame
                         {
                             DungeonEnemyType.Pikeman => 11, DungeonEnemyType.SilverFogde => 18,
                             DungeonEnemyType.TuonelaGuard => 12, DungeonEnemyType.BlindShepherd => 19,
+                            DungeonEnemyType.LemminkainenShadow => 16,
                             DungeonEnemyType.UndeadMiner => 9, _ => 7,
                         };
                         ApplyDungeonDamage(dungeon, damage);
                         if (enemy.Type == DungeonEnemyType.TuonelaGuard) ApplyDungeonCurse(dungeon, 8);
                         if (enemy.Type == DungeonEnemyType.BlindShepherd) ApplyDungeonCurse(dungeon, 20);
+                        if (enemy.Type == DungeonEnemyType.LemminkainenShadow) ApplyDungeonCurse(dungeon, 12);
                         dungeon.HurtAge = 18;
                         dungeon.HitStop = 3;
                     }
@@ -2242,6 +2306,14 @@ internal sealed class StormaktGame
             }
             else if (enemy.State == DungeonEnemyState.Recover && enemy.StateAge > 24)
             {
+                if (enemy.Type == DungeonEnemyType.LemminkainenShadow && enemy.SpecialSerial++ % 3 == 2)
+                {
+                    // The shadow slips sideways after every third assault;
+                    // enough to unsettle without teleporting onto Karl.
+                    double side = enemy.SpecialSerial % 2 == 0 ? 72 : -72;
+                    double destinationX = Math.Clamp(enemy.X + side, 70, dungeon.RoomWidth - 70);
+                    if (!DungeonBlocked(dungeon, destinationX, enemy.Y)) enemy.X = destinationX;
+                }
                 enemy.State = DungeonEnemyState.Approach;
                 enemy.StateAge = 0;
             }
@@ -2268,6 +2340,7 @@ internal sealed class StormaktGame
         {
             DungeonEnemyType.SilverFogde => 11,
             DungeonEnemyType.BlindShepherd => 12,
+            DungeonEnemyType.LemminkainenShadow => 11,
             DungeonEnemyType.TuonelaGuard => 10,
             DungeonEnemyType.Pikeman => 4,
             _ => enemy.Id % 2 == 0 ? 7 : 8,
@@ -2276,6 +2349,7 @@ internal sealed class StormaktGame
         {
             DungeonEnemyType.SilverFogde => DungeonItemRarity.Unique,
             DungeonEnemyType.BlindShepherd => DungeonItemRarity.Unique,
+            DungeonEnemyType.LemminkainenShadow => DungeonItemRarity.Unique,
             DungeonEnemyType.TuonelaGuard => DungeonItemRarity.Runic,
             DungeonEnemyType.Pikeman => DungeonItemRarity.Silverbound,
             _ => DungeonItemRarity.Iron,
@@ -2287,6 +2361,19 @@ internal sealed class StormaktGame
         if (DungeonBlocked(dungeon, loot.WorldX, loot.WorldY))
         {
             (loot.WorldX, loot.WorldY) = FindNearestDungeonFloor(dungeon, enemy.X, enemy.Y);
+        }
+        int tinctureChance = dungeon.Health * 100 / Math.Max(1, dungeon.MaxHealth) < 45 ? 42 : 22;
+        if (enemy.Type is DungeonEnemyType.SilverFogde or DungeonEnemyType.BlindShepherd or DungeonEnemyType.LemminkainenShadow)
+            tinctureChance = Math.Max(tinctureChance, 55);
+        if (Random.Shared.Next(100) < tinctureChance)
+        {
+            DungeonItem tincture = AddDungeonItem(dungeon, 14, -1, -1, DungeonEquipmentSlot.None,
+                DungeonItemRarity.Carolean);
+            tincture.OnGround = true;
+            tincture.WorldX = loot.WorldX + 15;
+            tincture.WorldY = loot.WorldY + 4;
+            if (DungeonBlocked(dungeon, tincture.WorldX, tincture.WorldY))
+                (tincture.WorldX, tincture.WorldY) = FindNearestDungeonFloor(dungeon, enemy.X, enemy.Y);
         }
     }
 
@@ -2304,6 +2391,7 @@ internal sealed class StormaktGame
         {
             DungeonEnemyType.SilverFogde => 180,
             DungeonEnemyType.BlindShepherd => 260,
+            DungeonEnemyType.LemminkainenShadow => 340,
             DungeonEnemyType.TuonelaGuard => 65,
             DungeonEnemyType.UndeadMiner => 40,
             DungeonEnemyType.Pikeman => 45,
@@ -2557,6 +2645,20 @@ internal sealed class StormaktGame
                         dungeon.Chests.Add(new DungeonChest(chest.Id, chest.X, chest.Y)
                             { Open = chest.Open, OpenAge = save.Schema >= 7 ? chest.OpenAge : chest.Open ? 45 : 0,
                               Depth = save.Schema >= 10 ? chest.Depth : chest.Id <= 3 ? 2 : save.Depth });
+                if (dungeon.Depth == 4)
+                {
+                    dungeon.RoomWidth = Math.Max(1200, dungeon.RoomWidth);
+                    dungeon.RoomHeight = Math.Max(760, dungeon.RoomHeight);
+                    if (!dungeon.Enemies.Any(enemy => enemy.Depth == 4 && enemy.Type == DungeonEnemyType.LemminkainenShadow))
+                    {
+                        AddDungeonEnemy(dungeon, 1040, 380, DungeonEnemyType.LemminkainenShadow, 420, 43);
+                        dungeon.Enemies.Last().Phase = 0;
+                    }
+                    if (dungeon.Chests.All(chest => chest.Id != 41))
+                        dungeon.Chests.Add(new DungeonChest(41, 610, 135) { Depth = 4 });
+                    if (dungeon.Chests.All(chest => chest.Id != 42))
+                        dungeon.Chests.Add(new DungeonChest(42, 1010, 665) { Depth = 4 });
+                }
                 dungeon.CameraX = Math.Clamp((int)Math.Round(dungeon.KarlX - 200), 0, Math.Max(0, dungeon.RoomWidth - 400));
                 dungeon.CameraY = Math.Clamp((int)Math.Round(dungeon.KarlY - 140), 0, Math.Max(0, dungeon.RoomHeight - 280));
                 return true;
@@ -3755,7 +3857,8 @@ internal sealed class StormaktGame
     {
         DungeonState dungeon = _dungeon!;
         DrawRect(frame, 0, 0, _width, _height, 0xff080b0a);
-        string floorName = dungeon.Depth >= 3 ? "dungeon_cursed_floor" : "dungeon_floor_wet";
+        string floorName = dungeon.Depth == 4 ? "dungeon_temple_floor" :
+            dungeon.Depth >= 3 ? "dungeon_cursed_floor" : "dungeon_floor_wet";
         if (_sprites?.TryGet(floorName, out Sprite floor) == true)
         {
             int startX = -(dungeon.CameraX % floor.Width);
@@ -3840,6 +3943,10 @@ internal sealed class StormaktGame
             foreach (DungeonChest chest in dungeon.Chests.Where(chest => chest.Depth == 4))
                 DrawDungeonSprite(frame, dungeon, chest.Open ? "dungeon_chest_open" : "dungeon_cursed_chest",
                     (int)chest.X, (int)chest.Y);
+            bool shadowDefeated = dungeon.Enemies.Any(enemy => enemy.Depth == 4 &&
+                enemy.Type == DungeonEnemyType.LemminkainenShadow && enemy.State == DungeonEnemyState.Dead);
+            DrawDungeonSprite(frame, dungeon, shadowDefeated ? "dungeon_temple_gate_open" : "dungeon_temple_gate_closed",
+                1140, 380);
         }
 
         foreach (DungeonSilverWave wave in dungeon.SilverWaves)
@@ -3861,7 +3968,8 @@ internal sealed class StormaktGame
                 DrawSprite(frame, icon, itemX - icon.Width / 2, itemY - icon.Height / 2);
         }
 
-        foreach (DungeonEnemy enemy in dungeon.Enemies.Where(enemy => enemy.Depth == dungeon.Depth).OrderBy(enemy => enemy.Y))
+        foreach (DungeonEnemy enemy in dungeon.Enemies.Where(enemy => enemy.Depth == dungeon.Depth &&
+            (enemy.Type != DungeonEnemyType.LemminkainenShadow || enemy.Phase != 0)).OrderBy(enemy => enemy.Y))
         {
             int enemyX = (int)Math.Round(enemy.X) - dungeon.CameraX;
             bool stepping = enemy.State == DungeonEnemyState.Approach && Math.Abs(enemy.VelocityX) + Math.Abs(enemy.VelocityY) > 0.08;
@@ -3874,12 +3982,15 @@ internal sealed class StormaktGame
                 DungeonEnemyType.UndeadMiner => "undead_miner",
                 DungeonEnemyType.TuonelaGuard => "tuonela_guard",
                 DungeonEnemyType.BlindShepherd => "blind_shepherd",
+                DungeonEnemyType.LemminkainenShadow => "lemminkainen_shadow",
                 _ => "dk_stormer",
             };
             string enemyName = enemy.State switch
             {
                 DungeonEnemyState.Dead when enemy.Type == DungeonEnemyType.SilverFogde => "dk_silver_fogde_death",
                 DungeonEnemyState.Dead when enemy.Type == DungeonEnemyType.BlindShepherd => "blind_shepherd_death",
+                DungeonEnemyState.Dead when enemy.Type == DungeonEnemyType.LemminkainenShadow => "lemminkainen_shadow_hit",
+                DungeonEnemyState.Telegraph when enemy.Type == DungeonEnemyType.LemminkainenShadow => "lemminkainen_shadow_split",
                 DungeonEnemyState.Attack when enemy.Type == DungeonEnemyType.SilverFogde && enemy.SpecialKind > 0 => "dk_silver_fogde_slam",
                 DungeonEnemyState.Attack or DungeonEnemyState.Telegraph => prefix + "_attack",
                 DungeonEnemyState.Stagger or DungeonEnemyState.Dead => prefix + "_hit",
@@ -3913,13 +4024,19 @@ internal sealed class StormaktGame
             ? dungeon.Enemies.FirstOrDefault(enemy => enemy.Type == DungeonEnemyType.BlindShepherd &&
                 enemy.State != DungeonEnemyState.Dead && DungeonZone(dungeon) == 34)
             : null;
-        DungeonEnemy? activeBoss = fogde ?? shepherd;
+        DungeonEnemy? shadow = dungeon.Depth == 4
+            ? dungeon.Enemies.FirstOrDefault(enemy => enemy.Type == DungeonEnemyType.LemminkainenShadow &&
+                enemy.State != DungeonEnemyState.Dead && enemy.Phase != 0 && DungeonZone(dungeon) == 43)
+            : null;
+        DungeonEnemy? activeBoss = fogde ?? shepherd ?? shadow;
         if (activeBoss is not null)
         {
             int barWidth = Math.Min(220, _width - 100);
             int barX = (_width - barWidth) / 2;
             DrawRect(frame, barX, 20, barWidth, 27, 0xee0b0d10);
-            DrawText(frame, barX + 8, 24, fogde is not null ? "DEN FÖRSILVRADE GRUVFOGDEN" : "DEN BLINDE HERDEN", 0xffdce8f2);
+            string bossName = fogde is not null ? "DEN FÖRSILVRADE GRUVFOGDEN" :
+                shepherd is not null ? "DEN BLINDE HERDEN" : "LEMMINKÄINENS SKUGGA";
+            DrawText(frame, barX + 8, 24, bossName, 0xffdce8f2);
             DrawRect(frame, barX + 2, 37, barWidth - 4, 7, 0xff20171d);
             DrawRect(frame, barX + 3, 38, (barWidth - 6) * activeBoss.Health / activeBoss.MaxHealth, 5, 0xffb7c7d6);
         }
@@ -4003,7 +4120,15 @@ internal sealed class StormaktGame
                     : "HUGG SÖNDER TRÄPORTEN I ÖSTER"
                 : "GRUVA II SÄKRAD  SÖK I KISTORNA";
         if (dungeon.Depth == 3 && dungeon.TempleOpen) objective = "TEMPELTRAPPAN ÄR ÖPPEN I ÖSTER";
-        if (dungeon.Depth == 4) objective = "TEMPLETS FÖRGÅRD  FINN VÄGEN GENOM SVARTVATTNET";
+        if (dungeon.Depth == 4)
+        {
+            bool shadowDefeated = dungeon.Enemies.Any(enemy => enemy.Depth == 4 &&
+                enemy.Type == DungeonEnemyType.LemminkainenShadow && enemy.State == DungeonEnemyState.Dead);
+            bool shadowAwake = dungeon.Enemies.Any(enemy => enemy.Depth == 4 &&
+                enemy.Type == DungeonEnemyType.LemminkainenShadow && enemy.Phase != 0 && enemy.State != DungeonEnemyState.Dead);
+            objective = shadowDefeated ? "RUNPORTEN ÄR ÖPPEN" :
+                shadowAwake ? "ÖVERLEV LEMMINKÄINENS SKUGGA" : "FÖLJ RUNORNA MOT DEN FÖRSEGLADE PORTEN";
+        }
         DrawText(frame, 7, _height - 10, objective, 0xffdce8f2);
         if (_bossRadioCard is RadioCard radio && _bossRadioAge < radio.DurationFrames)
         {
@@ -4036,6 +4161,7 @@ internal sealed class StormaktGame
         new("relic", "TEMPELSIGILL", "loot_relic", 2, 2, DungeonEquipmentSlot.Relic, 4, 4, 18, 2),
         new("sun_disc", "LEMMINKÄINENS SOLSKÄRVA", "loot_sun_disc", 2, 2, DungeonEquipmentSlot.Relic, 8, 8, 35, 3),
         new("temple_key", "TUONELAS TEMPELNYCKEL", "loot_temple_key", 1, 2, DungeonEquipmentSlot.Relic, 5, 6, 25, 3),
+        new("health_tincture", "KAROLINSK HÄLSOTINKTUR", "loot_health_tincture", 1, 1, DungeonEquipmentSlot.None, 0, 0, 0, 1),
     ];
 
     private static void SeedDungeonInventory(DungeonState dungeon)
@@ -6923,7 +7049,7 @@ internal sealed class StormaktGame
 
     private enum DungeonItemRarity { Iron, Carolean, Silverbound, Runic, Unique }
 
-    private enum DungeonEnemyType { Stormer, Pikeman, SilverFogde, UndeadMiner, TuonelaGuard, BlindShepherd }
+    private enum DungeonEnemyType { Stormer, Pikeman, SilverFogde, UndeadMiner, TuonelaGuard, BlindShepherd, LemminkainenShadow }
     private enum DungeonEnemyState { Approach, Telegraph, Attack, Recover, Stagger, Dead }
 
     private readonly record struct DungeonItemDefinition(string Key, string Name, string Sprite, int Width, int Height,

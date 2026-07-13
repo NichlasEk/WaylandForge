@@ -540,6 +540,31 @@ def append_dungeon_gruva3(entries: list[tuple[str, Image.Image]], environment: I
         entries.append((name, sprite))
 
 
+def append_dungeon_temple_act1(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    names = ["dungeon_temple_floor", "dungeon_temple_gate_closed", "dungeon_temple_gate_open",
+             "loot_health_tincture", "lemminkainen_shadow_idle", "lemminkainen_shadow_attack",
+             "lemminkainen_shadow_split", "lemminkainen_shadow_hit"]
+    targets = [(96, 72), (110, 96), (110, 96), (22, 28),
+               (92, 92), (92, 92), (92, 92), (92, 92)]
+    for index, (name, target) in enumerate(zip(names, targets)):
+        column, row = index % 4, index // 4
+        left, top = column * source.width // 4 + 4, row * source.height // 2 + 4
+        right = (column + 1) * source.width // 4 - 4
+        bottom = (row + 1) * source.height // 2 - 4
+        cell = source.crop((left, top, right, bottom)).convert("RGBA")
+        if row == 1:
+            # Preserve a common source cell and canvas so spectral flames or
+            # attack poses cannot make the boss breathe in size at runtime.
+            sprite = cell.resize(target, Image.Resampling.LANCZOS)
+            canvas = Image.new("RGBA", (106, 96), (0, 0, 0, 0))
+            canvas.alpha_composite(sprite, ((106 - sprite.width) // 2, 96 - sprite.height))
+            entries.append((name, canvas))
+        else:
+            sprite = trim_alpha(cell)
+            sprite.thumbnail(target, Image.Resampling.LANCZOS)
+            entries.append((name, sprite))
+
+
 def mirrored_background(source: Image.Image, width: int, height: int) -> Image.Image:
     plate = source.copy()
     plate.thumbnail((width, height), Image.Resampling.LANCZOS)
@@ -595,6 +620,7 @@ def build(
     dungeon_gruva3_environment_input_path: Path,
     dungeon_gruva3_enemies_input_path: Path,
     dungeon_blind_shepherd_input_path: Path,
+    dungeon_temple_act1_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
 ) -> None:
@@ -643,6 +669,7 @@ def build(
     dungeon_gruva3_environment_source = Image.open(dungeon_gruva3_environment_input_path).convert("RGBA")
     dungeon_gruva3_enemies_source = Image.open(dungeon_gruva3_enemies_input_path).convert("RGBA")
     dungeon_blind_shepherd_source = Image.open(dungeon_blind_shepherd_input_path).convert("RGBA")
+    dungeon_temple_act1_source = Image.open(dungeon_temple_act1_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
@@ -732,6 +759,7 @@ def build(
     append_dungeon_gruva3_portal(entries, dungeon_gruva3_portal_source)
     append_dungeon_gruva3(entries, dungeon_gruva3_environment_source, dungeon_gruva3_enemies_source,
                           dungeon_blind_shepherd_source)
+    append_dungeon_temple_act1(entries, dungeon_temple_act1_source)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
@@ -879,6 +907,7 @@ def main() -> None:
     parser.add_argument("--dungeon-gruva3-environment-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva3-environment-v1.png"))
     parser.add_argument("--dungeon-gruva3-enemies-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva3-enemies-v1.png"))
     parser.add_argument("--dungeon-blind-shepherd-input", type=Path, default=Path("assets/stormakt3020/dungeon-blind-shepherd-v1.png"))
+    parser.add_argument("--dungeon-temple-act1-input", type=Path, default=Path("assets/stormakt3020/dungeon-temple-act1-v1.png"))
     parser.add_argument(
         "--logo-input",
         type=Path,
@@ -932,6 +961,7 @@ def main() -> None:
         args.dungeon_gruva3_environment_input,
         args.dungeon_gruva3_enemies_input,
         args.dungeon_blind_shepherd_input,
+        args.dungeon_temple_act1_input,
         args.logo_input,
         args.output,
     )
