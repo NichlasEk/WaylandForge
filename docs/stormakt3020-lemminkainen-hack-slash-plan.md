@@ -415,8 +415,11 @@ Tre stelar måste läsas i ordningen `SOL → SILVER → HJÄRTA`; deras verser 
 att människorna bröt silver ur dess vinge och att Louhi gömde hjärtat i djupet. Fel vers nollställer
 läsningen och höjer förbannelsen. Den fulla texten väcker tredje sigillet, lämnar det sista runfragmentet
 och öppnar en separat svanport. När Karl går igenom reser sig Svanen i Tuonela ur det svarta vattnet i
-en kort, sparad uppenbarelse. Dess kompletta dormant/idle/vingtelegraph/halsattack-ark är packat, men
-själva tröskelbossens strid hör till nästa slice; Louhi är fortfarande inte landad.
+en kort, sparad uppenbarelse. Tröskelbossens tre faser är nu spelbara: vingarna märker ut sex växande
+svartvattensektorer med säkra mellanrum, halsen låser en flyktlinje som även kan pareras och det sista
+läget skickar tre expanderande dödsvågor genom salen. Under återhämtningen öppnas silverhjärtat som
+enda sårbara mål. Svanen sjunker utan vanlig explosion, lämnar den unika reliken `SVANENS SILVERHJÄRTA`,
+öppnar östporten och utlöser Louhis första röstlagda anrop. Hela dödsövergången autosparas.
 Stelarna och den breda svankroppen blockerar nu bara sin faktiska fot mot golvet, så Karl kan gå tätt
 intill ristningarna och in under vingarnas visuella siluett utan att stoppas av osynliga rektanglar.
 
@@ -434,8 +437,9 @@ frigör först kandidatens inventoryruta så att likstora föremål alltid kan b
 ### Checkpoint 8 – Balans, lootkurva och casting
 
 - Ebba har nu röst på samtliga implementerade tempelkort. Gruvfogden kan talas med efter räddningen
-  och ger den narrativa nyckeln till runordningen. Alla 36 befintliga spelrepliker är omrenderade med
-  en fast seed per skådespelarroll; herden och Louhi återstår när deras dialogkort implementeras.
+  och ger den narrativa nyckeln till runordningen. Louhi har fått en egen syntetisk roll, röst och ett
+  neutralt/talande radioporträtt. Alla 37 befintliga spelrepliker använder en fast seed per
+  skådespelarroll; herdens dialogkort återstår.
 - Svårighetskurva, droprates, affixpooler, setbonusar, smideskostnad, checkpointkostnad, musergonomi och båda upplösningarna.
 - Full direkt-WFEX-genomspelning och determinismkontroll.
 

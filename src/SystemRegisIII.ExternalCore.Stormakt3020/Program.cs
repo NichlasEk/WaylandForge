@@ -116,6 +116,8 @@ internal sealed class StormaktGame
     private const int DungeonThirdSigilMask = 1 << 15;
     private const int DungeonSwanRevealedMask = 1 << 16;
     private const int DungeonFogdeSpokenMask = 1 << 17;
+    private const int DungeonSwanDefeatedMask = 1 << 18;
+    private const int DungeonLouhiHeardMask = 1 << 19;
     private const uint Up = 1u << 1;
     private const uint Down = 1u << 2;
     private const uint Left = 1u << 3;
@@ -219,6 +221,8 @@ internal sealed class StormaktGame
         new(0, 450, false, "EBBA GRIP", "ALLA TRE LYSER", "TEMPLET ÖPPNAR SIG", StormaktVoice.EbbaDungeonThirdSigil, "portrait_ebba");
     private static readonly RadioCard DungeonSwanRevealRadio =
         new(0, 510, false, "EBBA GRIP", "JAG HÖR DIG INTE", "NÅGOT SJUNGER", StormaktVoice.EbbaDungeonSwanReveal, "portrait_ebba");
+    private static readonly RadioCard DungeonLouhiInvitationRadio =
+        new(0, 780, true, "LOUHI", "NI BRÖT MIN SÅNG", "KOM DÅ KARL CCLV", StormaktVoice.LouhiTempleInvitation, "portrait_louhi");
     private static readonly RadioCard[] DungeonLoreCards =
     [
         new(0, 330, false, "RISTNING", "SVANEN SJUNGER", "UNDER SVART VATTEN", null, "portrait_ebba"),
@@ -1536,9 +1540,32 @@ internal sealed class StormaktGame
                             if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_SWAN_TEST"), "1", StringComparison.Ordinal))
                             {
                                 SetDungeonThirdVerseProgress(_dungeon, 3);
-                                _dungeon.LoreMask |= DungeonThirdSigilMask;
+                                _dungeon.LoreMask |= DungeonThirdSigilMask | DungeonSwanRevealedMask;
                                 _dungeon.KarlX = 3265; _dungeon.KarlY = 380;
                                 _dungeon.TargetX = 3265; _dungeon.TargetY = 380;
+                                DungeonEnemy swan = EnsureDungeonSwanEncounter(_dungeon);
+                                if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_SWAN_PHASE2_TEST"), "1", StringComparison.Ordinal))
+                                {
+                                    swan.Health = 480; swan.Phase = 2; swan.SpecialSerial = 1;
+                                }
+                                if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_SWAN_PHASE3_TEST"), "1", StringComparison.Ordinal))
+                                {
+                                    swan.Health = 240; swan.Phase = 3; swan.SpecialKind = 3;
+                                    swan.State = DungeonEnemyState.Recover; swan.StateAge = 0;
+                                    _dungeon.KarlX = 3345; _dungeon.TargetX = 3345;
+                                }
+                                if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_SWAN_WAVE_TEST"), "1", StringComparison.Ordinal))
+                                {
+                                    swan.Health = 240; swan.Phase = 3; swan.SpecialKind = 3;
+                                    swan.State = DungeonEnemyState.Attack; swan.StateAge = 1;
+                                    _dungeon.KarlX = 3345; _dungeon.TargetX = 3345;
+                                }
+                                if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_SWAN_DEATH_TEST"), "1", StringComparison.Ordinal))
+                                {
+                                    swan.Health = 1; swan.Phase = 3; swan.SpecialKind = 3;
+                                    swan.State = DungeonEnemyState.Recover; swan.StateAge = 0;
+                                    _dungeon.KarlX = 3345; _dungeon.TargetX = 3345;
+                                }
                             }
                         }
                     }
@@ -1787,11 +1814,12 @@ internal sealed class StormaktGame
             dungeon.PendingTempleVerse = 0;
 
         StepDungeonTempleAmbush(dungeon);
-        StepDungeonCombat(dungeon);
         StepDungeonTempleSigil(dungeon);
         StepDungeonSecondTempleSigil(dungeon);
         StepDungeonThirdTempleSigil(dungeon);
         StepDungeonSwanReveal(dungeon);
+        StepDungeonSwanHazards(dungeon);
+        StepDungeonCombat(dungeon);
         StepDungeonSilverVents(dungeon);
         StepDungeonCurse(dungeon);
         double moveX = 0;
@@ -2320,11 +2348,36 @@ internal sealed class StormaktGame
         if (dungeon.Depth != 4 || (dungeon.LoreMask & DungeonThirdSigilMask) == 0 ||
             (dungeon.LoreMask & DungeonSwanRevealedMask) != 0 || dungeon.KarlX < 3260) return;
         dungeon.LoreMask |= DungeonSwanRevealedMask;
+        EnsureDungeonSwanEncounter(dungeon);
         dungeon.TargetX = dungeon.KarlX;
         dungeon.TargetY = dungeon.KarlY;
         ActivateBossRadio(DungeonSwanRevealRadio);
+        _audio?.SwitchMusic(StormaktMusicTrack.Boss);
         _audio?.Trigger(StormaktSound.DungeonSilverShatter);
         WriteDungeonSave(dungeon, "autosave");
+    }
+
+    private static DungeonEnemy EnsureDungeonSwanEncounter(DungeonState dungeon)
+    {
+        DungeonEnemy? existing = dungeon.Enemies.FirstOrDefault(enemy =>
+            enemy.Depth == 4 && enemy.Type == DungeonEnemyType.TuonelaSwan);
+        if (existing is not null)
+        {
+            if (existing.State != DungeonEnemyState.Dead && existing.SpecialKind != 0 &&
+                Math.Abs(existing.VelocityX) < 0.01 && Math.Abs(existing.VelocityY) < 0.01)
+            {
+                existing.State = DungeonEnemyState.Approach;
+                existing.StateAge = 0;
+                existing.SpecialKind = 0;
+                existing.SpecialCooldown = 30;
+            }
+            return existing;
+        }
+        AddDungeonEnemy(dungeon, 3400, 380, DungeonEnemyType.TuonelaSwan, 720, 48);
+        DungeonEnemy swan = dungeon.Enemies.Last();
+        swan.Phase = 1;
+        swan.SpecialCooldown = 80;
+        return swan;
     }
 
     private static void ReturnToDungeonDepthThree(DungeonState dungeon)
@@ -2527,6 +2580,200 @@ internal sealed class StormaktGame
         return false;
     }
 
+    private static bool DungeonSwanVulnerable(DungeonEnemy swan) =>
+        swan.Phase < 3 || swan.State == DungeonEnemyState.Recover && swan.SpecialKind == 3 && swan.StateAge < 100;
+
+    private void DamageDungeonSwan(DungeonState dungeon, DungeonEnemy swan, int damage, bool hammer)
+    {
+        swan.Health -= damage;
+        dungeon.Power = Math.Min(100, dungeon.Power + 7);
+        dungeon.HitStop = hammer ? 5 : 3;
+        _audio?.Trigger(hammer ? StormaktSound.DungeonHammerImpact : StormaktSound.DungeonSwordHit);
+        if (swan.Phase == 1 && swan.Health <= 480)
+        {
+            swan.Health = 480;
+            BeginDungeonSwanPhase(swan, 2);
+            dungeon.BlackWaterHazards.Clear();
+            _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+        }
+        else if (swan.Phase == 2 && swan.Health <= 240)
+        {
+            swan.Health = 240;
+            BeginDungeonSwanPhase(swan, 3);
+            dungeon.BlackWaterHazards.Clear();
+            _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+        }
+        else if (swan.Phase == 3 && swan.Health <= 0)
+        {
+            swan.Health = 0;
+            swan.State = DungeonEnemyState.Dead;
+            swan.StateAge = 0;
+            swan.SpecialKind = 0;
+            dungeon.BlackWaterHazards.Clear();
+            dungeon.TargetX = dungeon.KarlX;
+            dungeon.TargetY = dungeon.KarlY;
+            _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+        }
+    }
+
+    private static void BeginDungeonSwanPhase(DungeonEnemy swan, int phase)
+    {
+        swan.Phase = phase;
+        swan.State = DungeonEnemyState.Recover;
+        swan.StateAge = 0;
+        swan.SpecialKind = 0;
+        swan.SpecialCooldown = phase == 3 ? 45 : 70;
+    }
+
+    private void StepDungeonSwan(DungeonState dungeon, DungeonEnemy swan)
+    {
+        swan.X = 3400;
+        swan.Y = 380;
+        if (swan.State == DungeonEnemyState.Dead)
+        {
+            if (swan.StateAge >= 150 && (dungeon.LoreMask & DungeonSwanDefeatedMask) == 0)
+            {
+                dungeon.LoreMask |= DungeonSwanDefeatedMask | DungeonLouhiHeardMask;
+                DefeatDungeonEnemy(dungeon, swan);
+                dungeon.Curse = Math.Max(0, dungeon.Curse - 50);
+                ActivateBossRadio(DungeonLouhiInvitationRadio);
+                _audio?.SwitchMusic(StormaktMusicTrack.Dungeon);
+                WriteDungeonSave(dungeon, "autosave");
+            }
+            return;
+        }
+
+        if (swan.State == DungeonEnemyState.Approach)
+        {
+            if (swan.SpecialCooldown > 0) { swan.SpecialCooldown--; return; }
+            swan.SpecialSerial++;
+            swan.SpecialKind = swan.Phase switch
+            {
+                1 => 1,
+                2 => swan.SpecialSerial % 2 == 0 ? 2 : 1,
+                _ => 3,
+            };
+            swan.State = DungeonEnemyState.Telegraph;
+            swan.StateAge = 0;
+            swan.VelocityX = dungeon.KarlX;
+            swan.VelocityY = dungeon.KarlY;
+            if (swan.SpecialKind == 1) SpawnDungeonSwanWingPools(dungeon, swan);
+            return;
+        }
+
+        if (swan.State == DungeonEnemyState.Telegraph)
+        {
+            int warning = swan.SpecialKind switch { 1 => 46, 2 => 40, _ => 54 };
+            if (swan.StateAge >= warning)
+            {
+                swan.State = DungeonEnemyState.Attack;
+                swan.StateAge = 0;
+            }
+            return;
+        }
+
+        if (swan.State == DungeonEnemyState.Attack)
+        {
+            if (swan.SpecialKind == 2 && swan.StateAge == 9)
+                StrikeDungeonSwanNeck(dungeon, swan);
+            if (swan.SpecialKind == 3)
+                StepDungeonSwanHeartWaves(dungeon, swan);
+            int duration = swan.SpecialKind switch { 1 => 28, 2 => 22, _ => 78 };
+            if (swan.StateAge >= duration)
+            {
+                swan.State = DungeonEnemyState.Recover;
+                swan.StateAge = 0;
+            }
+            return;
+        }
+
+        if (swan.State == DungeonEnemyState.Recover)
+        {
+            int recovery = swan.SpecialKind == 3 ? 110 : swan.Phase == 2 ? 42 : 56;
+            if (swan.StateAge >= recovery)
+            {
+                swan.State = DungeonEnemyState.Approach;
+                swan.StateAge = 0;
+                swan.SpecialCooldown = swan.Phase == 3 ? 24 : 38;
+            }
+        }
+    }
+
+    private static void SpawnDungeonSwanWingPools(DungeonState dungeon, DungeonEnemy swan)
+    {
+        double baseAngle = Math.Atan2(swan.VelocityY - swan.Y, swan.VelocityX - swan.X);
+        for (int ring = 0; ring < 3; ring++)
+        for (int side = -1; side <= 1; side += 2)
+        {
+            double angle = baseAngle + side * (0.20 + ring * 0.12);
+            double distance = 72 + ring * 44;
+            dungeon.BlackWaterHazards.Add(new DungeonBlackWaterHazard(
+                Math.Clamp(swan.X + Math.Cos(angle) * distance, 3195, 3515),
+                Math.Clamp(swan.Y + Math.Sin(angle) * distance, 90, 670),
+                28 + ring * 3, 46, 185, 14 + swan.Phase * 2));
+        }
+    }
+
+    private void StepDungeonSwanHazards(DungeonState dungeon)
+    {
+        foreach (DungeonBlackWaterHazard hazard in dungeon.BlackWaterHazards)
+        {
+            hazard.Age++;
+            if (hazard.Age < hazard.ArmAge || hazard.Age >= hazard.Lifetime || hazard.Age % 8 != 0 ||
+                dungeon.HurtAge > 0 || DistanceSquared(hazard.X, hazard.Y, dungeon.KarlX, dungeon.KarlY) >= hazard.Radius * hazard.Radius)
+                continue;
+            if (!_invincibleTestMode) ApplyDungeonDamage(dungeon, hazard.Damage);
+            ApplyDungeonCurse(dungeon, 6);
+            dungeon.HurtAge = 18;
+            dungeon.HitStop = 2;
+        }
+        dungeon.BlackWaterHazards.RemoveAll(hazard => hazard.Age >= hazard.Lifetime);
+    }
+
+    private void StrikeDungeonSwanNeck(DungeonState dungeon, DungeonEnemy swan)
+    {
+        if (DistancePointToSegmentSquared(dungeon.KarlX, dungeon.KarlY,
+            swan.X, swan.Y - 18, swan.VelocityX, swan.VelocityY) > 24 * 24) return;
+        if (dungeon.Guarding)
+        {
+            dungeon.Power = Math.Min(100, dungeon.Power + 15);
+            dungeon.HitStop = 3;
+            _audio?.Trigger(StormaktSound.DungeonParry);
+            return;
+        }
+        if (!_invincibleTestMode) ApplyDungeonDamage(dungeon, 22);
+        ApplyDungeonCurse(dungeon, 10);
+        dungeon.HurtAge = 20;
+        dungeon.HitStop = 4;
+    }
+
+    private void StepDungeonSwanHeartWaves(DungeonState dungeon, DungeonEnemy swan)
+    {
+        if (dungeon.HurtAge > 0) return;
+        double distance = Math.Sqrt(DistanceSquared(swan.X, swan.Y, dungeon.KarlX, dungeon.KarlY));
+        foreach (int offset in new[] { 0, 24, 48 })
+        {
+            int waveAge = swan.StateAge - offset;
+            if (waveAge is < 1 or > 62 || Math.Abs(distance - waveAge * 4) > 5) continue;
+            if (!_invincibleTestMode) ApplyDungeonDamage(dungeon, 18);
+            ApplyDungeonCurse(dungeon, 8);
+            dungeon.HurtAge = 18;
+            dungeon.HitStop = 2;
+            break;
+        }
+    }
+
+    private static double DistancePointToSegmentSquared(double px, double py,
+        double ax, double ay, double bx, double by)
+    {
+        double dx = bx - ax;
+        double dy = by - ay;
+        double lengthSquared = dx * dx + dy * dy;
+        if (lengthSquared < 0.001) return DistanceSquared(px, py, ax, ay);
+        double t = Math.Clamp(((px - ax) * dx + (py - ay) * dy) / lengthSquared, 0, 1);
+        return DistanceSquared(px, py, ax + dx * t, ay + dy * t);
+    }
+
     private void StartDungeonAttack(DungeonState dungeon, RtsPointer pointer)
     {
         if (pointer.Inside)
@@ -2573,6 +2820,18 @@ internal sealed class StormaktGame
                     double range = hammer ? 53 : 47;
                     double distance = Math.Sqrt(dx * dx + dy * dy);
                     if (distance > range || distance < 0.1 || (dx * fx + dy * fy) / distance < 0.22 || enemy.LastHitSerial == dungeon.AttackSerial) continue;
+                    if (enemy.Type == DungeonEnemyType.TuonelaSwan)
+                    {
+                        enemy.LastHitSerial = dungeon.AttackSerial;
+                        if (!DungeonSwanVulnerable(enemy))
+                        {
+                            dungeon.HitStop = 2;
+                            _audio?.Trigger(StormaktSound.DungeonParry);
+                            continue;
+                        }
+                        DamageDungeonSwan(dungeon, enemy, weaponDamage, hammer);
+                        continue;
+                    }
                     enemy.LastHitSerial = dungeon.AttackSerial;
                     enemy.Health -= weaponDamage;
                     enemy.State = enemy.Health <= 0 ? DungeonEnemyState.Dead : DungeonEnemyState.Stagger;
@@ -2620,6 +2879,11 @@ internal sealed class StormaktGame
         {
             if (enemy.Type == DungeonEnemyType.LemminkainenShadow && enemy.Phase == 0) continue;
             enemy.StateAge++;
+            if (enemy.Type == DungeonEnemyType.TuonelaSwan)
+            {
+                StepDungeonSwan(dungeon, enemy);
+                continue;
+            }
             if (enemy.State == DungeonEnemyState.Dead)
             {
                 if (enemy.Type == DungeonEnemyType.SilverFogde && enemy.StateAge == 80 && !dungeon.DepthThreeOpen)
@@ -2786,6 +3050,7 @@ internal sealed class StormaktGame
         enemy.LootDropped = true;
         int definition = enemy.Type switch
         {
+            DungeonEnemyType.TuonelaSwan => 15,
             DungeonEnemyType.SilverFogde => 11,
             DungeonEnemyType.BlindShepherd => 12,
             DungeonEnemyType.LemminkainenShadow => 11,
@@ -2795,6 +3060,7 @@ internal sealed class StormaktGame
         };
         DungeonItemRarity rarity = enemy.Type switch
         {
+            DungeonEnemyType.TuonelaSwan => DungeonItemRarity.Unique,
             DungeonEnemyType.SilverFogde => DungeonItemRarity.Unique,
             DungeonEnemyType.BlindShepherd => DungeonItemRarity.Unique,
             DungeonEnemyType.LemminkainenShadow => DungeonItemRarity.Unique,
@@ -2811,7 +3077,8 @@ internal sealed class StormaktGame
             (loot.WorldX, loot.WorldY) = FindNearestDungeonFloor(dungeon, enemy.X, enemy.Y);
         }
         int tinctureChance = dungeon.Health * 100 / Math.Max(1, dungeon.MaxHealth) < 45 ? 42 : 22;
-        if (enemy.Type is DungeonEnemyType.SilverFogde or DungeonEnemyType.BlindShepherd or DungeonEnemyType.LemminkainenShadow)
+        if (enemy.Type is DungeonEnemyType.SilverFogde or DungeonEnemyType.BlindShepherd or
+            DungeonEnemyType.LemminkainenShadow or DungeonEnemyType.TuonelaSwan)
             tinctureChance = Math.Max(tinctureChance, 55);
         if (Random.Shared.Next(100) < tinctureChance)
         {
@@ -2837,6 +3104,7 @@ internal sealed class StormaktGame
         enemy.ExperienceAwarded = true;
         dungeon.Experience += enemy.Type switch
         {
+            DungeonEnemyType.TuonelaSwan => 600,
             DungeonEnemyType.SilverFogde => 180,
             DungeonEnemyType.BlindShepherd => 260,
             DungeonEnemyType.LemminkainenShadow => 340,
@@ -2944,7 +3212,7 @@ internal sealed class StormaktGame
             if ((dungeon.LoreMask & DungeonFirstSigilMask) == 0 && x is > 1685 and < 1725) return true;
             if ((dungeon.LoreMask & DungeonSecondSigilMask) == 0 && x is > 2365 and < 2405) return true;
             if ((dungeon.LoreMask & DungeonThirdSigilMask) == 0 && x is > 3130 and < 3170) return true;
-            if (x is > 3535 and < 3575) return true;
+            if ((dungeon.LoreMask & DungeonSwanDefeatedMask) == 0 && x is > 3535 and < 3575) return true;
             foreach ((int obstacleX, int obstacleY) in new[] { (455, 360), (810, 500), (1050, 275) })
                 if (Math.Abs(x - obstacleX) < 35 && Math.Abs(y - obstacleY) < 22) return true;
             foreach ((int obstacleX, int obstacleY) in new[] { (300, 650), (700, 110), (1110, 600) })
@@ -2962,7 +3230,8 @@ internal sealed class StormaktGame
             foreach ((int obstacleX, int obstacleY) in DungeonThirdTempleSteles)
                 if (Math.Abs(x - obstacleX) < 22 && Math.Abs(y - obstacleY) < 12) return true;
             // Only the grounded feet block movement; Karl may walk close to the broad wings.
-            if (Math.Abs(x - 3400) < 30 && Math.Abs(y - 380) < 18) return true;
+            if ((dungeon.LoreMask & DungeonSwanDefeatedMask) == 0 &&
+                Math.Abs(x - 3400) < 30 && Math.Abs(y - 380) < 18) return true;
             return false;
         }
         bool leftPillar = x > 253 && x < 307 && y > 124 && y < 212;
@@ -3142,6 +3411,9 @@ internal sealed class StormaktGame
                         dungeon.Chests.Add(new DungeonChest(42, 1010, 665) { Depth = 4 });
                     EnsureDungeonFirstSigilEncounter(dungeon);
                     EnsureDungeonSecondSigilEncounter(dungeon);
+                    if ((dungeon.LoreMask & DungeonSwanRevealedMask) != 0 &&
+                        (dungeon.LoreMask & DungeonSwanDefeatedMask) == 0)
+                        EnsureDungeonSwanEncounter(dungeon);
                 }
                 dungeon.CameraX = Math.Clamp((int)Math.Round(dungeon.KarlX - 200), 0, Math.Max(0, dungeon.RoomWidth - 400));
                 dungeon.CameraY = Math.Clamp((int)Math.Round(dungeon.KarlY - 140), 0, Math.Max(0, dungeon.RoomHeight - 280));
@@ -4474,7 +4746,8 @@ internal sealed class StormaktGame
             bool thirdSigilActive = (dungeon.LoreMask & DungeonThirdSigilMask) != 0;
             DrawDungeonSprite(frame, dungeon, thirdSigilActive ? "dungeon_temple_gate_open" : "dungeon_temple_gate_closed",
                 3150, 380);
-            DrawDungeonSprite(frame, dungeon, "dungeon_temple_gate_closed", 3550, 380);
+            bool swanDefeated = (dungeon.LoreMask & DungeonSwanDefeatedMask) != 0;
+            DrawDungeonSprite(frame, dungeon, swanDefeated ? "dungeon_temple_gate_open" : "dungeon_temple_gate_closed", 3550, 380);
             int sigilX = 1580 - dungeon.CameraX;
             int sigilY = 380 - dungeon.CameraY;
             DrawCircleOutline(frame, sigilX, sigilY, firstSigilActive ? 34 : 27,
@@ -4488,16 +4761,7 @@ internal sealed class StormaktGame
             DrawCircleOutline(frame, thirdSigilX, thirdSigilY, thirdSigilActive ? 34 : 27,
                 thirdSigilActive ? 0xffffd66b : thirdVerseProgress >= 3 ? 0xffdce8f2 : 0xff5e7180);
             bool swanRevealed = (dungeon.LoreMask & DungeonSwanRevealedMask) != 0;
-            DrawDungeonSprite(frame, dungeon, swanRevealed ? "tuonela_swan_idle" : "tuonela_swan_dormant",
-                3400, 380);
-            if (swanRevealed)
-            {
-                int swanX = 3400 - dungeon.CameraX;
-                int swanY = 380 - dungeon.CameraY;
-                uint swanGlow = dungeon.Age / 10 % 2 == 0 ? 0xff73b8d0 : 0xff9bd4dc;
-                DrawCircleOutline(frame, swanX, swanY + 24, 58 + dungeon.Age / 12 % 3, swanGlow);
-                DrawText(frame, swanX - 50, swanY - 66, "SVANEN I TUONELA", 0xffdce8f2);
-            }
+            DrawDungeonSwanEncounter(frame, dungeon, swanRevealed, swanDefeated);
             if (!shadowDefeated)
             {
                 int barrierX = 1165 - dungeon.CameraX;
@@ -4530,6 +4794,7 @@ internal sealed class StormaktGame
         }
 
         foreach (DungeonEnemy enemy in dungeon.Enemies.Where(enemy => enemy.Depth == dungeon.Depth &&
+            enemy.Type != DungeonEnemyType.TuonelaSwan &&
             (enemy.Type != DungeonEnemyType.LemminkainenShadow || enemy.Phase != 0)).OrderBy(enemy => enemy.Y))
         {
             int enemyX = (int)Math.Round(enemy.X) - dungeon.CameraX;
@@ -4589,14 +4854,19 @@ internal sealed class StormaktGame
             ? dungeon.Enemies.FirstOrDefault(enemy => enemy.Type == DungeonEnemyType.LemminkainenShadow &&
                 enemy.State != DungeonEnemyState.Dead && enemy.Phase != 0 && DungeonZone(dungeon) == 43)
             : null;
-        DungeonEnemy? activeBoss = fogde ?? shepherd ?? shadow;
+        DungeonEnemy? swanBoss = dungeon.Depth == 4
+            ? dungeon.Enemies.FirstOrDefault(enemy => enemy.Type == DungeonEnemyType.TuonelaSwan &&
+                enemy.State != DungeonEnemyState.Dead && DungeonZone(dungeon) == 48)
+            : null;
+        DungeonEnemy? activeBoss = fogde ?? shepherd ?? shadow ?? swanBoss;
         if (activeBoss is not null)
         {
             int barWidth = Math.Min(220, _width - 100);
             int barX = (_width - barWidth) / 2;
             DrawRect(frame, barX, 20, barWidth, 27, 0xee0b0d10);
             string bossName = fogde is not null ? "DEN FÖRSILVRADE GRUVFOGDEN" :
-                shepherd is not null ? "DEN BLINDE HERDEN" : "LEMMINKÄINENS SKUGGA";
+                shepherd is not null ? "DEN BLINDE HERDEN" : shadow is not null ?
+                "LEMMINKÄINENS SKUGGA" : "SVANEN I TUONELA";
             DrawText(frame, barX + 8, 24, bossName, 0xffdce8f2);
             DrawRect(frame, barX + 2, 37, barWidth - 4, 7, 0xff20171d);
             DrawRect(frame, barX + 3, 38, (barWidth - 6) * activeBoss.Health / activeBoss.MaxHealth, 5, 0xffb7c7d6);
@@ -4700,7 +4970,15 @@ internal sealed class StormaktGame
             int thirdVerseProgress = DungeonThirdVerseProgress(dungeon);
             bool thirdSigilActive = (dungeon.LoreMask & DungeonThirdSigilMask) != 0;
             bool swanRevealed = (dungeon.LoreMask & DungeonSwanRevealedMask) != 0;
-            objective = swanRevealed ? "SVANEN I TUONELA VÄNTAR I SVART VATTEN" :
+            bool swanDefeated = (dungeon.LoreMask & DungeonSwanDefeatedMask) != 0;
+            DungeonEnemy? swan = dungeon.Enemies.FirstOrDefault(enemy =>
+                enemy.Depth == 4 && enemy.Type == DungeonEnemyType.TuonelaSwan);
+            bool heartOpen = swan is not null && swan.Phase == 3 && DungeonSwanVulnerable(swan);
+            objective = swanDefeated ? "LOUHIS PORT ÄR ÖPPEN I ÖSTER" :
+                swan?.State == DungeonEnemyState.Dead ? "SVANEN SJUNKER UNDER SVART VATTEN" :
+                heartOpen ? "SILVERHJÄRTAT ÄR ÖPPET  SLÅ NU" :
+                swan is { Phase: 3 } ? "UNDVIK DÖDSVÅGORNA  VÄNTA PÅ HJÄRTAT" :
+                swanRevealed ? "BRYT SVANENS SILVERBAND" :
                 thirdSigilActive ? "TREDJE SIGILLET VÄCKT  SVANENS PORT ÄR ÖPPEN" :
                 secondSigilActive && dungeon.KarlX < 2440 ? "SLUTPORTEN ÄR ÖPPEN  LÄS DEN SISTA SIDAN" :
                 secondSigilActive && thirdVerseProgress < 3 ?
@@ -4751,6 +5029,7 @@ internal sealed class StormaktGame
         new("sun_disc", "LEMMINKÄINENS SOLSKÄRVA", "loot_sun_disc", 2, 2, DungeonEquipmentSlot.Relic, 8, 8, 35, 3),
         new("temple_key", "TUONELAS TEMPELNYCKEL", "loot_temple_key", 1, 2, DungeonEquipmentSlot.Relic, 5, 6, 25, 3),
         new("health_tincture", "KAROLINSK HÄLSOTINKTUR", "loot_health_tincture", 1, 1, DungeonEquipmentSlot.None, 0, 0, 0, 1),
+        new("swan_heart", "SVANENS SILVERHJÄRTA", "loot_relic", 2, 2, DungeonEquipmentSlot.Relic, 12, 10, 45, 4),
     ];
 
     private static void SeedDungeonInventory(DungeonState dungeon)
@@ -5017,6 +5296,96 @@ internal sealed class StormaktGame
             return true;
         }
         return false;
+    }
+
+    private void DrawDungeonSwanEncounter(uint[] frame, DungeonState dungeon, bool revealed, bool defeated)
+    {
+        foreach (DungeonBlackWaterHazard hazard in dungeon.BlackWaterHazards)
+        {
+            int x = (int)Math.Round(hazard.X) - dungeon.CameraX;
+            int y = (int)Math.Round(hazard.Y) - dungeon.CameraY;
+            if (hazard.Age < hazard.ArmAge)
+            {
+                int pulse = Math.Max(4, hazard.Radius * hazard.Age / Math.Max(1, hazard.ArmAge));
+                DrawCircleOutline(frame, x, y, pulse,
+                    hazard.Age / 5 % 2 == 0 ? 0xff73b8d0 : 0xffffd66b);
+            }
+            else
+            {
+                FillCircle(frame, x, y, hazard.Radius, 0xff071017);
+                DrawCircleOutline(frame, x, y, hazard.Radius,
+                    hazard.Age / 8 % 2 == 0 ? 0xff26394a : 0xff48657a);
+                DrawCircleOutline(frame, x, y, Math.Max(4, hazard.Radius - 8), 0xff101f2b);
+            }
+        }
+
+        int swanX = 3400 - dungeon.CameraX;
+        int swanY = 380 - dungeon.CameraY;
+        DungeonEnemy? swan = dungeon.Enemies.FirstOrDefault(enemy =>
+            enemy.Depth == 4 && enemy.Type == DungeonEnemyType.TuonelaSwan);
+        if (!revealed)
+        {
+            DrawDungeonSprite(frame, dungeon, "tuonela_swan_dormant", 3400, 380);
+            return;
+        }
+        if (defeated) return;
+
+        string spriteName = swan?.State == DungeonEnemyState.Attack
+            ? swan.SpecialKind == 1 ? "tuonela_swan_sweep" :
+              swan.SpecialKind == 2 ? "tuonela_swan_strike" : "tuonela_swan_idle"
+            : swan?.State == DungeonEnemyState.Dead ? "tuonela_swan_dormant" : "tuonela_swan_idle";
+        if (_sprites?.TryGet(spriteName, out Sprite sprite) == true)
+        {
+            int sink = swan?.State == DungeonEnemyState.Dead ? Math.Min(30, swan.StateAge / 5) : 0;
+            uint opacity = swan?.State == DungeonEnemyState.Dead
+                ? (uint)Math.Clamp(255 - swan.StateAge * 3 / 2, 28, 255) : 255;
+            DrawSpriteAlpha(frame, sprite, swanX - sprite.Width / 2,
+                swanY - sprite.Height / 2 + sink, opacity);
+        }
+
+        if (swan is null || swan.State == DungeonEnemyState.Dead) return;
+        uint swanGlow = dungeon.Age / 10 % 2 == 0 ? 0xff73b8d0 : 0xff9bd4dc;
+        DrawCircleOutline(frame, swanX, swanY + 24, 58 + dungeon.Age / 12 % 3, swanGlow);
+        DrawText(frame, swanX - 50, Math.Max(52, swanY - 66), "SVANEN I TUONELA", 0xffdce8f2);
+
+        if (swan.State == DungeonEnemyState.Telegraph && swan.SpecialKind == 2)
+        {
+            int targetX = (int)Math.Round(swan.VelocityX) - dungeon.CameraX;
+            int targetY = (int)Math.Round(swan.VelocityY) - dungeon.CameraY;
+            uint line = swan.StateAge / 5 % 2 == 0 ? 0xffffd66b : 0xffdce8f2;
+            DrawLine(frame, swanX, swanY - 18, targetX, targetY, line);
+            DrawCircleOutline(frame, targetX, targetY, 22, line);
+        }
+        if (swan.State == DungeonEnemyState.Attack && swan.SpecialKind == 2)
+        {
+            int targetX = (int)Math.Round(swan.VelocityX) - dungeon.CameraX;
+            int targetY = (int)Math.Round(swan.VelocityY) - dungeon.CameraY;
+            DrawLine(frame, swanX, swanY - 18, targetX, targetY, 0xfff1f5f6);
+            DrawLine(frame, swanX + 1, swanY - 18, targetX + 1, targetY, 0xff73b8d0);
+        }
+        if (swan.State == DungeonEnemyState.Telegraph && swan.SpecialKind == 3)
+        {
+            int radius = Math.Max(12, 66 - swan.StateAge);
+            DrawCircleOutline(frame, swanX, swanY - 7, radius,
+                swan.StateAge / 4 % 2 == 0 ? 0xffffd66b : 0xffb7c7d6);
+        }
+        if (swan.State == DungeonEnemyState.Attack && swan.SpecialKind == 3)
+        {
+            foreach (int offset in new[] { 0, 24, 48 })
+            {
+                int waveAge = swan.StateAge - offset;
+                if (waveAge is >= 1 and <= 62)
+                    DrawCircleOutline(frame, swanX, swanY, waveAge * 4,
+                        waveAge / 5 % 2 == 0 ? 0xff73b8d0 : 0xffb7c7d6);
+            }
+        }
+        if (DungeonSwanVulnerable(swan) && swan.Phase == 3)
+        {
+            FillCircle(frame, swanX, swanY - 7, 8 + dungeon.Age / 6 % 3, 0xffffd66b);
+            DrawCircleOutline(frame, swanX, swanY - 7, 13, 0xffdce8f2);
+            DrawText(frame, Math.Clamp(swanX - 42, 4, _width - 122), swanY + 66,
+                "SILVERHJÄRTAT ÖPPET", 0xffffd66b);
+        }
     }
 
     private void DrawDungeonHealth(uint[] frame, DungeonState dungeon)
@@ -7904,7 +8273,7 @@ internal sealed class StormaktGame
 
     private enum DungeonItemRarity { Iron, Carolean, Silverbound, Runic, Unique }
 
-    private enum DungeonEnemyType { Stormer, Pikeman, SilverFogde, UndeadMiner, TuonelaGuard, BlindShepherd, LemminkainenShadow }
+    private enum DungeonEnemyType { Stormer, Pikeman, SilverFogde, UndeadMiner, TuonelaGuard, BlindShepherd, LemminkainenShadow, TuonelaSwan }
     private enum DungeonEnemyState { Approach, Telegraph, Attack, Recover, Stagger, Dead }
 
     private readonly record struct DungeonItemDefinition(string Key, string Name, string Sprite, int Width, int Height,
@@ -7972,6 +8341,17 @@ internal sealed class StormaktGame
         public bool HitKarl { get; set; }
     }
 
+    private sealed class DungeonBlackWaterHazard(double x, double y, int radius, int armAge, int lifetime, int damage)
+    {
+        public double X { get; } = x;
+        public double Y { get; } = y;
+        public int Radius { get; } = radius;
+        public int ArmAge { get; } = armAge;
+        public int Lifetime { get; } = lifetime;
+        public int Damage { get; } = damage;
+        public int Age { get; set; }
+    }
+
     private sealed class DungeonChest(int id, double x, double y)
     {
         public int Id { get; } = id;
@@ -8037,6 +8417,7 @@ internal sealed class StormaktGame
         public bool DepthThreeOpen { get; set; }
         public int ForcedVentAge { get; set; }
         public List<DungeonSilverWave> SilverWaves { get; } = [];
+        public List<DungeonBlackWaterHazard> BlackWaterHazards { get; } = [];
         public bool PendingDepthThreeEntry { get; set; }
         public bool PendingDepthThreeReturn { get; set; }
         public int Curse { get; set; }

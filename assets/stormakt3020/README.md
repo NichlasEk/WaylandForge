@@ -20,6 +20,8 @@
 
 `birgitte-bille-radio-v1.png` introduces Glimminge Järn's commander, Kommandør Birgitte Bille, with matched neutral/speaking radio portraits.
 
+`louhi-radio-v1.png` introduces Silverbergets häxa with matched neutral/speaking radio portraits for her first transmission beyond the defeated Swan. Its chroma-key source and exact reference-guided prompt are retained beside it.
+
 `skanska-signal-beacon-v1.png` replaces the last physical triangle placeholder with intact/damaged mining-beacon sprites.
 
 `glimminge-iron-raven-v1.png` supplies neutral, banking-attack and damaged states for Birgitte's boss escort fighters.

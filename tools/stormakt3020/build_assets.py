@@ -125,6 +125,17 @@ def append_two_frame_portrait(entries: list[tuple[str, Image.Image]], source: Im
         entries.append((name, sprite))
 
 
+def append_louhi_portrait(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    half = source.width // 2
+    for name, crop in [
+        ("portrait_louhi_neutral", (0, 0, half, source.height)),
+        ("portrait_louhi_speak", (half, 0, source.width, source.height)),
+    ]:
+        sprite = trim_alpha(source.crop(crop).convert("RGBA"))
+        sprite.thumbnail((38, 38), Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def append_three_frame_corsair(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
     third = source.width // 3
     definitions = [
@@ -651,6 +662,7 @@ def build(
     dungeon_temple_act1_input_path: Path,
     dungeon_temple_props_input_path: Path,
     dungeon_tuonela_swan_input_path: Path,
+    louhi_portrait_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
 ) -> None:
@@ -702,6 +714,7 @@ def build(
     dungeon_temple_act1_source = Image.open(dungeon_temple_act1_input_path).convert("RGBA")
     dungeon_temple_props_source = Image.open(dungeon_temple_props_input_path).convert("RGBA")
     dungeon_tuonela_swan_source = Image.open(dungeon_tuonela_swan_input_path).convert("RGBA")
+    louhi_portrait_source = Image.open(louhi_portrait_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
@@ -794,6 +807,7 @@ def build(
     append_dungeon_temple_act1(entries, dungeon_temple_act1_source)
     append_dungeon_temple_props(entries, dungeon_temple_props_source)
     append_dungeon_tuonela_swan(entries, dungeon_tuonela_swan_source)
+    append_louhi_portrait(entries, louhi_portrait_source)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
@@ -944,6 +958,7 @@ def main() -> None:
     parser.add_argument("--dungeon-temple-act1-input", type=Path, default=Path("assets/stormakt3020/dungeon-temple-act1-v2.png"))
     parser.add_argument("--dungeon-temple-props-input", type=Path, default=Path("assets/stormakt3020/dungeon-temple-props-v1.png"))
     parser.add_argument("--dungeon-tuonela-swan-input", type=Path, default=Path("assets/stormakt3020/dungeon-tuonela-swan-v1.png"))
+    parser.add_argument("--louhi-portrait-input", type=Path, default=Path("assets/stormakt3020/louhi-radio-v1.png"))
     parser.add_argument(
         "--logo-input",
         type=Path,
@@ -1000,6 +1015,7 @@ def main() -> None:
         args.dungeon_temple_act1_input,
         args.dungeon_temple_props_input,
         args.dungeon_tuonela_swan_input,
+        args.louhi_portrait_input,
         args.logo_input,
         args.output,
     )

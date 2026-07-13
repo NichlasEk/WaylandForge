@@ -455,6 +455,32 @@
       "sha256": "f57d3b4ad78a90023d3851d423dcb941761eca890a30a22d914cede4b1062b8e",
       "request": "assets/stormakt3020/radio/raw/ebba-dungeon-swan-reveal-sv-request.json",
       "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "reference",
+      "role": "louhi",
+      "job_id": "12759558798845018cd82b04d9f3902c",
+      "file": "assets/stormakt3020/radio/references/louhi-reference.wav",
+      "sha256": "e2ae3c1d549eaaca88894a12ef6c0708a783a270f13837be1166d2e64b1cbc7b",
+      "request": {
+        "text": "Jag har burit bergets minne sedan solen ännu hade ett namn. Varje silveråder känner min hand, varje mörk sjö min röst. Den som öppnar mina portar kommer inte som segrare. Han kommer som den sista raden i en mycket gammal bok.",
+        "language": "sv",
+        "voice_instruction": "An ancient Finnish-Swedish witch queen, very low powerful female contralto, calm and intimate authority with a cold metallic resonance, precise natural Swedish diction, threatening without shouting, never frail, comic, breathy or seductive.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302026
+      }
+    },
+    {
+      "kind": "line",
+      "line": "louhi-temple-invitation",
+      "role": "louhi",
+      "job_id": "5fad813ff30f49c1a5531e1e67f4b549",
+      "file": "assets/stormakt3020/radio/raw/louhi-temple-invitation-sv-raw.wav",
+      "sha256": "7a947a311b4755920130659744595056e36e0e6d0dbbb5878851806873a14c4f",
+      "request": "assets/stormakt3020/radio/raw/louhi-temple-invitation-sv-request.json",
+      "reference_sha256": "e2ae3c1d549eaaca88894a12ef6c0708a783a270f13837be1166d2e64b1cbc7b"
     }
   ],
   "service": "http://127.0.0.1:8765",

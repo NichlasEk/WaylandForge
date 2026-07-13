@@ -57,6 +57,15 @@
       "reference_text": "Lyssna, Karl. Berget har talat genom silvret längre än någon av oss har levt. Jag såg männen öppna salar som aldrig borde ha fått luft. Där nere sjunger järnet, och något gammalt väntar bakom den sista porten.",
       "reference_seed": 302025,
       "dialogue_seed": 302125
+    },
+    {
+      "id": "louhi",
+      "speaker": "LOUHI, SILVERBERGETS HÄXA",
+      "language": "sv",
+      "voice_instruction": "An ancient Finnish-Swedish witch queen, very low powerful female contralto, calm and intimate authority with a cold metallic resonance, precise natural Swedish diction, threatening without shouting, never frail, comic, breathy or seductive.",
+      "reference_text": "Jag har burit bergets minne sedan solen ännu hade ett namn. Varje silveråder känner min hand, varje mörk sjö min röst. Den som öppnar mina portar kommer inte som segrare. Han kommer som den sista raden i en mycket gammal bok.",
+      "reference_seed": 302026,
+      "dialogue_seed": 302126
     }
   ],
   "lines": [
@@ -461,6 +470,17 @@
       "text": "Karl? Jag hör dig inte längre. Något sjunger genom hela berget.",
       "subtitle_lines": ["JAG HÖR DIG INTE", "NÅGOT SJUNGER"],
       "seed": 302198,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "louhi-temple-invitation",
+      "role": "louhi",
+      "level": 3,
+      "frame": -1,
+      "cue": "dungeon_swan_defeated",
+      "text": "Ni bröt min sång och stal hjärtat ur Tuonelas vatten. Kom då, Karl tvåhundrafemtiofem. Silverberget minns redan ert namn.",
+      "subtitle_lines": ["NI BRÖT MIN SÅNG", "KOM DÅ KARL CCLV"],
+      "seed": 302199,
       "model_backend": "voxcpm2"
     }
   ]
