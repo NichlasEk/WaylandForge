@@ -606,6 +606,13 @@ internal sealed class StormaktMusicLoop : IDisposable
             (StormaktVoice.EbbaRtsTemple, "ebba-rts-temple-sv-radio.wav", 0.82f),
             (StormaktVoice.EbbaDungeonTelemetry, "ebba-dungeon-telemetry-sv-radio.wav", 0.84f),
             (StormaktVoice.EbbaDungeonNearDeath, "ebba-dungeon-near-death-sv-radio.wav", 0.84f),
+            (StormaktVoice.EbbaDungeonDescent, "ebba-dungeon-descent-sv-radio.wav", 0.84f),
+            (StormaktVoice.EbbaDungeonFirstSigil, "ebba-dungeon-first-sigil-sv-radio.wav", 0.84f),
+            (StormaktVoice.EbbaDungeonFogdeRescue, "ebba-dungeon-fogde-rescue-sv-radio.wav", 0.84f),
+            (StormaktVoice.DungeonGruvfogde, "gruvfogde-dungeon-warning-sv-radio.wav", 0.86f),
+            (StormaktVoice.EbbaDungeonSecondSigil, "ebba-dungeon-second-sigil-sv-radio.wav", 0.84f),
+            (StormaktVoice.EbbaDungeonThirdSigil, "ebba-dungeon-third-sigil-sv-radio.wav", 0.84f),
+            (StormaktVoice.EbbaDungeonSwanReveal, "ebba-dungeon-swan-reveal-sv-radio.wav", 0.88f),
         ];
         Dictionary<StormaktVoice, LoadedEffect> voices = [];
         foreach ((StormaktVoice voice, string file, float gain) in entries)
@@ -744,6 +751,13 @@ internal enum StormaktVoice
     EbbaRtsTemple,
     EbbaDungeonTelemetry,
     EbbaDungeonNearDeath,
+    EbbaDungeonDescent,
+    EbbaDungeonFirstSigil,
+    EbbaDungeonFogdeRescue,
+    DungeonGruvfogde,
+    EbbaDungeonSecondSigil,
+    EbbaDungeonThirdSigil,
+    EbbaDungeonSwanReveal,
 }
 
 internal enum StormaktMusicTrack

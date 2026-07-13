@@ -402,11 +402,23 @@ Hälsotinkturer plockas nu upp som riktiga föremål, fyller ett fyrplatsers sna
 dricks med `Q` i stället för att förbrukas automatiskt på marken.
 
 Bakom den öppnade östporten finns nu den andra tempelgården. Karl frigör den saknade gruvfogden ur en
-öppnad svansarkofag, vilket bekräftar att silverfyndigheten var ett lås. Därefter aktiveras ordningen
+öppnad svansarkofag, vilket bekräftar att silverfyndigheten var ett lås. Fogden står därefter kvar i
+Karl-skala och kan talas med via klick eller `Fire`; hans varning är den obligatoriska berättelsebryggan
+före runorna. Därefter aktiveras ordningen
 `SOL → SVAN → KRONA`: varje rätt runa återuppväcker gårdens tre väktare, medan fel runa nollställer
 ordningen och reser dem igen utan nytt loot eller XP. Den fullbordade ordningen öppnar andra sigillet,
 renar förbannelse, lämnar nästa runfragment, autosparar och etablerar att ett sigill återstår. Nästa
-tempelslice börjar bakom den östra slutporten; tredje sigillet, Svanen och Louhi är ännu inte landade.
+tempelslice börjar bakom den östra slutporten.
+
+Den tredje sigillgården är nu landad som en tystare berättelseritual utan ännu en vanlig fiendevåg.
+Tre stelar måste läsas i ordningen `SOL → SILVER → HJÄRTA`; deras verser berättar att Svanen bar solen,
+att människorna bröt silver ur dess vinge och att Louhi gömde hjärtat i djupet. Fel vers nollställer
+läsningen och höjer förbannelsen. Den fulla texten väcker tredje sigillet, lämnar det sista runfragmentet
+och öppnar en separat svanport. När Karl går igenom reser sig Svanen i Tuonela ur det svarta vattnet i
+en kort, sparad uppenbarelse. Dess kompletta dormant/idle/vingtelegraph/halsattack-ark är packat, men
+själva tröskelbossens strid hör till nästa slice; Louhi är fortfarande inte landad.
+Stelarna och den breda svankroppen blockerar nu bara sin faktiska fot mot golvet, så Karl kan gå tätt
+intill ristningarna och in under vingarnas visuella siluett utan att stoppas av osynliga rektanglar.
 
 Den första sigillgården har fått en egen tydligare tempelidentitet: två svarta väktarstatyer, ett lågt
 offeraltare och både slutna och öppnade svansarkofager ersätter återanvänd gruvrekvisita. Föremålen är
@@ -421,7 +433,9 @@ frigör först kandidatens inventoryruta så att likstora föremål alltid kan b
 
 ### Checkpoint 8 – Balans, lootkurva och casting
 
-- Röstcasting och slutmix för Ebba, herden, fogden och Louhi.
+- Ebba har nu röst på samtliga implementerade tempelkort. Gruvfogden kan talas med efter räddningen
+  och ger den narrativa nyckeln till runordningen. Alla 36 befintliga spelrepliker är omrenderade med
+  en fast seed per skådespelarroll; herden och Louhi återstår när deras dialogkort implementeras.
 - Svårighetskurva, droprates, affixpooler, setbonusar, smideskostnad, checkpointkostnad, musergonomi och båda upplösningarna.
 - Full direkt-WFEX-genomspelning och determinismkontroll.
 

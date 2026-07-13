@@ -111,6 +111,11 @@ internal sealed class StormaktGame
     private const int DungeonSecondRuneShift = 10;
     private const int DungeonSecondRuneProgressMask = 3 << DungeonSecondRuneShift;
     private const int DungeonSecondSigilMask = 1 << 12;
+    private const int DungeonThirdVerseShift = 13;
+    private const int DungeonThirdVerseProgressMask = 3 << DungeonThirdVerseShift;
+    private const int DungeonThirdSigilMask = 1 << 15;
+    private const int DungeonSwanRevealedMask = 1 << 16;
+    private const int DungeonFogdeSpokenMask = 1 << 17;
     private const uint Up = 1u << 1;
     private const uint Down = 1u << 2;
     private const uint Left = 1u << 3;
@@ -191,17 +196,29 @@ internal sealed class StormaktGame
     private static readonly RadioCard RtsTempleRadio =
         new(0, 330, false, "EBBA GRIP", "ETT TEMPEL...", "LEMMINKÄINENS?", StormaktVoice.EbbaRtsTemple, "portrait_ebba");
     private static readonly RadioCard DungeonDescentRadio =
-        new(0, 450, false, "EBBA GRIP", "GÅ NER SJÄLV", "ARBETARNA VÄGRAR", null, "portrait_ebba");
+        new(0, 450, false, "EBBA GRIP", "GÅ NER SJÄLV", "ARBETARNA VÄGRAR", StormaktVoice.EbbaDungeonDescent, "portrait_ebba");
     private static readonly RadioCard DungeonDepthTwoWarningRadio =
         new(0, 510, false, "EBBA GRIP", "ÄR DU SÄKER?", "TELEMETRIN ÄR DÖD", StormaktVoice.EbbaDungeonTelemetry, "portrait_ebba");
     private static readonly RadioCard DungeonNearDeathRadio =
         new(0, 420, false, "EBBA GRIP", "NÄRA ÖGAT", "TA DET LUGNT NU", StormaktVoice.EbbaDungeonNearDeath, "portrait_ebba");
     private static readonly RadioCard DungeonFirstSigilRadio =
-        new(0, 450, false, "EBBA GRIP", "JAG HÖR FOGDEN", "TVÅ SIGILL KVAR", null, "portrait_ebba");
+        new(0, 450, false, "EBBA GRIP", "JAG HÖR FOGDEN", "TVÅ SIGILL KVAR", StormaktVoice.EbbaDungeonFirstSigil, "portrait_ebba");
     private static readonly RadioCard DungeonFogdeRescueRadio =
-        new(0, 480, false, "EBBA GRIP", "FOGDEN LEVER", "SILVRET VAR ETT LÅS", null, "portrait_ebba");
+        new(0, 600, false, "EBBA GRIP", "FOGDEN LEVER", "SILVRET VAR ETT LÅS", StormaktVoice.EbbaDungeonFogdeRescue, "portrait_ebba");
+    private static readonly RadioCard DungeonFogdeTalkRadio =
+        new(0, 540, false, "GRUVFOGDEN", "SVANEN SOV", "UNDER VÅRA FÖTTER", StormaktVoice.DungeonGruvfogde, "portrait_rasmus");
     private static readonly RadioCard DungeonSecondSigilRadio =
-        new(0, 450, false, "EBBA GRIP", "ANDRA SIGILLET", "ETT ÅTERSTÅR", null, "portrait_ebba");
+        new(0, 450, false, "EBBA GRIP", "ANDRA SIGILLET", "ETT ÅTERSTÅR", StormaktVoice.EbbaDungeonSecondSigil, "portrait_ebba");
+    private static readonly RadioCard[] DungeonThirdVerseCards =
+    [
+        new(0, 390, false, "RISTNING", "I BEGYNNELSEN", "BAR SVANEN SOLEN", null, "portrait_ebba"),
+        new(0, 390, false, "RISTNING", "MÄNNEN BRÖT", "SILVER UR VINGEN", null, "portrait_ebba"),
+        new(0, 420, false, "RISTNING", "LOUHI GÖMDE", "HJÄRTAT I DJUPET", null, "portrait_ebba"),
+    ];
+    private static readonly RadioCard DungeonThirdSigilRadio =
+        new(0, 450, false, "EBBA GRIP", "ALLA TRE LYSER", "TEMPLET ÖPPNAR SIG", StormaktVoice.EbbaDungeonThirdSigil, "portrait_ebba");
+    private static readonly RadioCard DungeonSwanRevealRadio =
+        new(0, 510, false, "EBBA GRIP", "JAG HÖR DIG INTE", "NÅGOT SJUNGER", StormaktVoice.EbbaDungeonSwanReveal, "portrait_ebba");
     private static readonly RadioCard[] DungeonLoreCards =
     [
         new(0, 330, false, "RISTNING", "SVANEN SJUNGER", "UNDER SVART VATTEN", null, "portrait_ebba"),
@@ -1474,7 +1491,7 @@ internal sealed class StormaktGame
                             _dungeon.LoreMask |= DungeonFogdeRescuedMask;
                         if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_RUNE_TEST"), "1", StringComparison.Ordinal))
                         {
-                            _dungeon.LoreMask |= DungeonFogdeRescuedMask;
+                            _dungeon.LoreMask |= DungeonFogdeRescuedMask | DungeonFogdeSpokenMask;
                             SetDungeonSecondRuneProgress(_dungeon, 2);
                             foreach (DungeonEnemy enemy in _dungeon.Enemies.Where(enemy => enemy.Depth == 4 && enemy.Zone is 45 or 46))
                             {
@@ -1485,7 +1502,7 @@ internal sealed class StormaktGame
                         }
                         if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_SECOND_SIGIL_TEST"), "1", StringComparison.Ordinal))
                         {
-                            _dungeon.LoreMask |= DungeonFogdeRescuedMask;
+                            _dungeon.LoreMask |= DungeonFogdeRescuedMask | DungeonFogdeSpokenMask;
                             SetDungeonSecondRuneProgress(_dungeon, 3);
                             foreach (DungeonEnemy enemy in _dungeon.Enemies.Where(enemy => enemy.Depth == 4 && enemy.Zone is 45 or 46))
                             {
@@ -1493,6 +1510,36 @@ internal sealed class StormaktGame
                             }
                             _dungeon.KarlX = 2280; _dungeon.KarlY = 380;
                             _dungeon.TargetX = 2280; _dungeon.TargetY = 380;
+                        }
+                        if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_THIRD_COURT_TEST"), "1", StringComparison.Ordinal))
+                        {
+                            _dungeon.LoreMask |= DungeonFogdeRescuedMask | DungeonFogdeSpokenMask | DungeonSecondSigilMask;
+                            SetDungeonSecondRuneProgress(_dungeon, 3);
+                            foreach (DungeonEnemy enemy in _dungeon.Enemies.Where(enemy => enemy.Depth == 4 && enemy.Zone is 45 or 46))
+                            {
+                                enemy.Health = 0; enemy.State = DungeonEnemyState.Dead; enemy.StateAge = 120;
+                            }
+                            _dungeon.KarlX = 2460; _dungeon.KarlY = 380;
+                            _dungeon.TargetX = 2460; _dungeon.TargetY = 380;
+                            if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_THIRD_VERSE_TEST"), "1", StringComparison.Ordinal))
+                            {
+                                SetDungeonThirdVerseProgress(_dungeon, 2);
+                                _dungeon.KarlX = 2860; _dungeon.KarlY = 180;
+                                _dungeon.TargetX = 2860; _dungeon.TargetY = 180;
+                            }
+                            if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_THIRD_SIGIL_TEST"), "1", StringComparison.Ordinal))
+                            {
+                                SetDungeonThirdVerseProgress(_dungeon, 3);
+                                _dungeon.KarlX = 3030; _dungeon.KarlY = 380;
+                                _dungeon.TargetX = 3030; _dungeon.TargetY = 380;
+                            }
+                            if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_SWAN_TEST"), "1", StringComparison.Ordinal))
+                            {
+                                SetDungeonThirdVerseProgress(_dungeon, 3);
+                                _dungeon.LoreMask |= DungeonThirdSigilMask;
+                                _dungeon.KarlX = 3265; _dungeon.KarlY = 380;
+                                _dungeon.TargetX = 3265; _dungeon.TargetY = 380;
+                            }
                         }
                     }
                 }
@@ -1622,7 +1669,15 @@ internal sealed class StormaktGame
             {
                 interacted = true;
             }
+            else if (dungeon.Depth == 4 && TrySpeakTempleFogde(dungeon))
+            {
+                interacted = true;
+            }
             else if (dungeon.Depth == 4 && TryActivateNearbySecondTempleRune(dungeon))
+            {
+                interacted = true;
+            }
+            else if (dungeon.Depth == 4 && TryActivateNearbyThirdTempleVerse(dungeon))
             {
                 interacted = true;
             }
@@ -1663,8 +1718,14 @@ internal sealed class StormaktGame
             bool clickedTempleReturn = dungeon.Depth == 4 && DistanceSquared(60, 250, worldX, worldY) < 48 * 48;
             bool clickedFogde = dungeon.Depth == 4 && (dungeon.LoreMask & DungeonFirstSigilMask) != 0 &&
                 (dungeon.LoreMask & DungeonFogdeRescuedMask) == 0 && DistanceSquared(1850, 150, worldX, worldY) < 68 * 68;
-            int clickedRune = dungeon.Depth == 4 && (dungeon.LoreMask & DungeonFogdeRescuedMask) != 0
+            bool clickedFogdeTalk = dungeon.Depth == 4 && (dungeon.LoreMask & DungeonFogdeRescuedMask) != 0 &&
+                (dungeon.LoreMask & DungeonFogdeSpokenMask) == 0 &&
+                DistanceSquared(1905, 220, worldX, worldY) < 62 * 62;
+            int clickedRune = dungeon.Depth == 4 && (dungeon.LoreMask & DungeonFogdeSpokenMask) != 0
                 ? Array.FindIndex(DungeonSecondTempleRunes, rune => DistanceSquared(rune.X, rune.Y, worldX, worldY) < 62 * 62)
+                : -1;
+            int clickedVerse = dungeon.Depth == 4 && (dungeon.LoreMask & DungeonSecondSigilMask) != 0
+                ? Array.FindIndex(DungeonThirdTempleSteles, stele => DistanceSquared(stele.X, stele.Y, worldX, worldY) < 58 * 58)
                 : -1;
             dungeon.PendingPickupItemId = clickedLoot?.Id ?? 0;
             dungeon.PendingChestId = clickedChest?.Id ?? 0;
@@ -1675,7 +1736,9 @@ internal sealed class StormaktGame
             dungeon.PendingTempleEntry = clickedTemple;
             dungeon.PendingTempleReturn = clickedTempleReturn;
             dungeon.PendingFogdeRescue = clickedFogde;
+            dungeon.PendingFogdeTalk = clickedFogdeTalk;
             dungeon.PendingTempleRune = clickedRune + 1;
+            dungeon.PendingTempleVerse = clickedVerse + 1;
             (double targetX, double targetY) = clickedLoot is not null
                 ? FindDungeonPickupApproach(dungeon, clickedLoot)
                 : clickedChest is not null ? (clickedChest.X, clickedChest.Y)
@@ -1686,7 +1749,9 @@ internal sealed class StormaktGame
                 : clickedTemple ? (1320, 450)
                 : clickedTempleReturn ? (60, 250)
                 : clickedFogde ? (1850, 215)
+                : clickedFogdeTalk ? (1905, 270)
                 : clickedRune >= 0 ? DungeonSecondTempleRunes[clickedRune]
+                : clickedVerse >= 0 ? DungeonThirdTempleSteles[clickedVerse]
                 : (worldX, worldY);
             dungeon.TargetX = Math.Clamp(targetX, 28, dungeon.RoomWidth - 29);
             dungeon.TargetY = Math.Clamp(targetY, 48, dungeon.RoomHeight - 29);
@@ -1712,14 +1777,21 @@ internal sealed class StormaktGame
         }
         if (dungeon.PendingFogdeRescue && TryRescueTempleFogde(dungeon))
             dungeon.PendingFogdeRescue = false;
+        if (dungeon.PendingFogdeTalk && TrySpeakTempleFogde(dungeon))
+            dungeon.PendingFogdeTalk = false;
         if (dungeon.PendingTempleRune > 0 &&
             TryActivateSecondTempleRune(dungeon, dungeon.PendingTempleRune - 1))
             dungeon.PendingTempleRune = 0;
+        if (dungeon.PendingTempleVerse > 0 &&
+            TryActivateThirdTempleVerse(dungeon, dungeon.PendingTempleVerse - 1))
+            dungeon.PendingTempleVerse = 0;
 
         StepDungeonTempleAmbush(dungeon);
         StepDungeonCombat(dungeon);
         StepDungeonTempleSigil(dungeon);
         StepDungeonSecondTempleSigil(dungeon);
+        StepDungeonThirdTempleSigil(dungeon);
+        StepDungeonSwanReveal(dungeon);
         StepDungeonSilverVents(dungeon);
         StepDungeonCurse(dungeon);
         double moveX = 0;
@@ -1997,7 +2069,7 @@ internal sealed class StormaktGame
 
     private static void BeginDungeonDepthFour(DungeonState dungeon)
     {
-        dungeon.Depth = 4; dungeon.RoomWidth = 2440; dungeon.RoomHeight = 760;
+        dungeon.Depth = 4; dungeon.RoomWidth = 3600; dungeon.RoomHeight = 760;
         dungeon.KarlX = 115; dungeon.KarlY = 250; dungeon.TargetX = 115; dungeon.TargetY = 250;
         dungeon.CameraX = 0; dungeon.CameraY = 110; dungeon.PendingTempleEntry = false;
         if (!dungeon.Enemies.Any(enemy => enemy.Depth == 4))
@@ -2109,6 +2181,16 @@ internal sealed class StormaktGame
         return true;
     }
 
+    private bool TrySpeakTempleFogde(DungeonState dungeon)
+    {
+        if (dungeon.Depth != 4 || (dungeon.LoreMask & DungeonFogdeRescuedMask) == 0 ||
+            DistanceSquared(1905, 220, dungeon.KarlX, dungeon.KarlY) >= 78 * 78) return false;
+        dungeon.LoreMask |= DungeonFogdeSpokenMask;
+        ActivateBossRadio(DungeonFogdeTalkRadio);
+        WriteDungeonSave(dungeon, "autosave");
+        return true;
+    }
+
     private bool TryActivateNearbySecondTempleRune(DungeonState dungeon)
     {
         int rune = Array.FindIndex(DungeonSecondTempleRunes, candidate =>
@@ -2119,7 +2201,7 @@ internal sealed class StormaktGame
     private bool TryActivateSecondTempleRune(DungeonState dungeon, int rune)
     {
         if (dungeon.Depth != 4 || rune < 0 || rune >= DungeonSecondTempleRunes.Length ||
-            (dungeon.LoreMask & DungeonFogdeRescuedMask) == 0 ||
+            (dungeon.LoreMask & DungeonFogdeSpokenMask) == 0 ||
             (dungeon.LoreMask & DungeonSecondSigilMask) != 0 ||
             DistanceSquared(DungeonSecondTempleRunes[rune].X, DungeonSecondTempleRunes[rune].Y,
                 dungeon.KarlX, dungeon.KarlY) >= 82 * 82 || !DungeonSecondCourtyardClear(dungeon)) return false;
@@ -2174,6 +2256,77 @@ internal sealed class StormaktGame
         WriteDungeonSave(dungeon, "autosave");
     }
 
+    private static int DungeonThirdVerseProgress(DungeonState dungeon) =>
+        (dungeon.LoreMask & DungeonThirdVerseProgressMask) >> DungeonThirdVerseShift;
+
+    private static void SetDungeonThirdVerseProgress(DungeonState dungeon, int progress)
+    {
+        dungeon.LoreMask = (dungeon.LoreMask & ~DungeonThirdVerseProgressMask) |
+            (Math.Clamp(progress, 0, 3) << DungeonThirdVerseShift);
+    }
+
+    private bool TryActivateNearbyThirdTempleVerse(DungeonState dungeon)
+    {
+        int verse = Array.FindIndex(DungeonThirdTempleSteles, candidate =>
+            DistanceSquared(candidate.X, candidate.Y, dungeon.KarlX, dungeon.KarlY) < 76 * 76);
+        return verse >= 0 && TryActivateThirdTempleVerse(dungeon, verse);
+    }
+
+    private bool TryActivateThirdTempleVerse(DungeonState dungeon, int verse)
+    {
+        if (dungeon.Depth != 4 || verse < 0 || verse >= DungeonThirdTempleSteles.Length ||
+            (dungeon.LoreMask & DungeonSecondSigilMask) == 0 ||
+            (dungeon.LoreMask & DungeonThirdSigilMask) != 0 ||
+            DistanceSquared(DungeonThirdTempleSteles[verse].X, DungeonThirdTempleSteles[verse].Y,
+                dungeon.KarlX, dungeon.KarlY) >= 76 * 76) return false;
+
+        int progress = DungeonThirdVerseProgress(dungeon);
+        if (verse != progress)
+        {
+            SetDungeonThirdVerseProgress(dungeon, 0);
+            ApplyDungeonCurse(dungeon, 18);
+            _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+            WriteDungeonSave(dungeon, "autosave");
+            return true;
+        }
+
+        SetDungeonThirdVerseProgress(dungeon, progress + 1);
+        dungeon.Curse = Math.Max(0, dungeon.Curse - 6);
+        ActivateBossRadio(DungeonThirdVerseCards[verse]);
+        _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+        WriteDungeonSave(dungeon, "autosave");
+        return true;
+    }
+
+    private void StepDungeonThirdTempleSigil(DungeonState dungeon)
+    {
+        if (dungeon.Depth != 4 || (dungeon.LoreMask & DungeonThirdSigilMask) != 0 ||
+            DungeonThirdVerseProgress(dungeon) < 3 ||
+            DistanceSquared(3030, 380, dungeon.KarlX, dungeon.KarlY) >= 48 * 48) return;
+        dungeon.LoreMask |= DungeonThirdSigilMask;
+        dungeon.Curse = Math.Max(0, dungeon.Curse - 35);
+        DungeonItem fragment = AddDungeonItem(dungeon, 11, -1, -1, DungeonEquipmentSlot.None,
+            DungeonItemRarity.Unique);
+        fragment.OnGround = true;
+        fragment.WorldX = 3030;
+        fragment.WorldY = 410;
+        ActivateBossRadio(DungeonThirdSigilRadio);
+        _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+        WriteDungeonSave(dungeon, "autosave");
+    }
+
+    private void StepDungeonSwanReveal(DungeonState dungeon)
+    {
+        if (dungeon.Depth != 4 || (dungeon.LoreMask & DungeonThirdSigilMask) == 0 ||
+            (dungeon.LoreMask & DungeonSwanRevealedMask) != 0 || dungeon.KarlX < 3260) return;
+        dungeon.LoreMask |= DungeonSwanRevealedMask;
+        dungeon.TargetX = dungeon.KarlX;
+        dungeon.TargetY = dungeon.KarlY;
+        ActivateBossRadio(DungeonSwanRevealRadio);
+        _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+        WriteDungeonSave(dungeon, "autosave");
+    }
+
     private static void ReturnToDungeonDepthThree(DungeonState dungeon)
     {
         dungeon.Depth = 3; dungeon.RoomWidth = 1400; dungeon.RoomHeight = 900;
@@ -2209,7 +2362,8 @@ internal sealed class StormaktGame
         2 => DungeonZoneFromX(dungeon.KarlX),
         3 => dungeon.KarlX < 500 ? 31 : dungeon.KarlX < 850 ? 32 : dungeon.KarlX < 1150 ? 33 : 34,
         4 => dungeon.KarlX < 600 ? 41 : dungeon.KarlX < 900 ? 42 : dungeon.KarlX < 1200 ? 43 :
-            dungeon.KarlX < 1760 ? 44 : dungeon.KarlX < 2100 ? 45 : 46,
+            dungeon.KarlX < 1760 ? 44 : dungeon.KarlX < 2100 ? 45 : dungeon.KarlX < 2440 ? 46 :
+            dungeon.KarlX < 3150 ? 47 : 48,
         _ => 0,
     };
     private static int DungeonZoneFromX(double x) => x < 520 ? 1 : x < 900 ? 2 : 3;
@@ -2221,17 +2375,20 @@ internal sealed class StormaktGame
     private static readonly (int X, int Y)[] DungeonHolyShrines =
         [(500, 150), (900, 740)];
     private static readonly (int X, int Y)[] DungeonTempleWaters =
-        [(350, 410), (775, 185), (990, 505), (1370, 150), (1660, 570), (1900, 390), (2135, 350)];
+        [(350, 410), (775, 185), (990, 505), (1370, 150), (1660, 570), (1900, 390), (2135, 350),
+         (2530, 390), (2770, 190), (2910, 560), (3300, 340), (3410, 430), (3490, 320)];
     private static readonly (int X, int Y)[] DungeonTempleShrines =
-        [(210, 600), (660, 600), (1090, 165), (1580, 380), (2280, 380)];
+        [(210, 600), (660, 600), (1090, 165), (1580, 380), (2280, 380), (3030, 380)];
     private static readonly (int X, int Y)[] DungeonTempleGuardianStatues =
         [(1275, 190), (1660, 190)];
     private static readonly (int X, int Y)[] DungeonTempleClosedSarcophagi =
-        [(1290, 645), (1650, 650), (2010, 680), (2290, 675)];
+        [(1290, 645), (1650, 650), (2010, 680), (2290, 675), (2600, 680)];
     private static readonly (int X, int Y)[] DungeonTempleOpenSarcophagi =
-        [(1450, 135), (1850, 150)];
+        [(1450, 135), (1850, 150), (2850, 135)];
     private static readonly (int X, int Y)[] DungeonSecondTempleRunes =
         [(2030, 155), (1870, 610), (2200, 610)];
+    private static readonly (int X, int Y)[] DungeonThirdTempleSteles =
+        [(2520, 180), (2720, 610), (2920, 180)];
 
     private static void StepDungeonCurse(DungeonState dungeon)
     {
@@ -2785,14 +2942,16 @@ internal sealed class StormaktGame
                 enemy.Type == DungeonEnemyType.LemminkainenShadow && enemy.State == DungeonEnemyState.Dead);
             if (!shadowDefeated && x is > 1145 and < 1185) return true;
             if ((dungeon.LoreMask & DungeonFirstSigilMask) == 0 && x is > 1685 and < 1725) return true;
-            if (x is > 2365 and < 2405) return true;
+            if ((dungeon.LoreMask & DungeonSecondSigilMask) == 0 && x is > 2365 and < 2405) return true;
+            if ((dungeon.LoreMask & DungeonThirdSigilMask) == 0 && x is > 3130 and < 3170) return true;
+            if (x is > 3535 and < 3575) return true;
             foreach ((int obstacleX, int obstacleY) in new[] { (455, 360), (810, 500), (1050, 275) })
                 if (Math.Abs(x - obstacleX) < 35 && Math.Abs(y - obstacleY) < 22) return true;
             foreach ((int obstacleX, int obstacleY) in new[] { (300, 650), (700, 110), (1110, 600) })
                 if (Math.Abs(x - obstacleX) < 30 && Math.Abs(y - obstacleY) < 24) return true;
             foreach ((int obstacleX, int obstacleY) in DungeonTempleGuardianStatues)
                 if (Math.Abs(x - obstacleX) < 44 && Math.Abs(y - obstacleY) < 62) return true;
-            foreach ((int altarX, int altarY) in new[] { (1580, 380), (2280, 380) })
+            foreach ((int altarX, int altarY) in new[] { (1580, 380), (2280, 380), (3030, 380) })
                 if (Math.Abs(x - altarX) < 60 && Math.Abs(y - altarY) < 46) return true;
             foreach ((int obstacleX, int obstacleY) in DungeonTempleClosedSarcophagi)
                 if (Math.Abs(x - obstacleX) < 62 && Math.Abs(y - obstacleY) < 48) return true;
@@ -2800,6 +2959,10 @@ internal sealed class StormaktGame
                 if (Math.Abs(x - obstacleX) < 66 && Math.Abs(y - obstacleY) < 56) return true;
             foreach ((int obstacleX, int obstacleY) in DungeonSecondTempleRunes)
                 if (Math.Abs(x - obstacleX) < 44 && Math.Abs(y - obstacleY) < 62) return true;
+            foreach ((int obstacleX, int obstacleY) in DungeonThirdTempleSteles)
+                if (Math.Abs(x - obstacleX) < 22 && Math.Abs(y - obstacleY) < 12) return true;
+            // Only the grounded feet block movement; Karl may walk close to the broad wings.
+            if (Math.Abs(x - 3400) < 30 && Math.Abs(y - 380) < 18) return true;
             return false;
         }
         bool leftPillar = x > 253 && x < 307 && y > 124 && y < 212;
@@ -2966,7 +3129,7 @@ internal sealed class StormaktGame
                               Depth = save.Schema >= 10 ? chest.Depth : chest.Id <= 3 ? 2 : save.Depth });
                 if (dungeon.Depth == 4)
                 {
-                    dungeon.RoomWidth = Math.Max(2440, dungeon.RoomWidth);
+                    dungeon.RoomWidth = Math.Max(3600, dungeon.RoomWidth);
                     dungeon.RoomHeight = Math.Max(760, dungeon.RoomHeight);
                     if (!dungeon.Enemies.Any(enemy => enemy.Depth == 4 && enemy.Type == DungeonEnemyType.LemminkainenShadow))
                     {
@@ -4275,13 +4438,20 @@ internal sealed class StormaktGame
                 DrawDungeonSprite(frame, dungeon, "dungeon_temple_guardian", x, y);
                 DrawSecondTempleRuneMarker(frame, dungeon, x, y, index, index < secondRuneProgress);
             }
+            int thirdVerseProgress = DungeonThirdVerseProgress(dungeon);
+            for (int index = 0; index < DungeonThirdTempleSteles.Length; index++)
+            {
+                (int x, int y) = DungeonThirdTempleSteles[index];
+                DrawDungeonSprite(frame, dungeon, "dungeon_lore_stele", x, y);
+                DrawThirdTempleVerseMarker(frame, dungeon, x, y, index, index < thirdVerseProgress);
+            }
             bool fogdeRescued = (dungeon.LoreMask & DungeonFogdeRescuedMask) != 0;
             if (!fogdeRescued)
                 DrawDungeonSprite(frame, dungeon, "dk_silver_fogde_death", 1850, 185);
             else if (_sprites?.TryGet("dk_silver_fogde_idle", out Sprite rescuedFogde) == true)
             {
-                int fogdeWidth = rescuedFogde.Width * 3 / 5;
-                int fogdeHeight = rescuedFogde.Height * 3 / 5;
+                int fogdeWidth = rescuedFogde.Width * 4 / 5;
+                int fogdeHeight = rescuedFogde.Height * 4 / 5;
                 int fogdeX = 1905 - dungeon.CameraX;
                 int fogdeY = 220 - dungeon.CameraY;
                 DrawSpriteScaled(frame, rescuedFogde, fogdeX - fogdeWidth / 2, fogdeY - fogdeHeight / 2,
@@ -4298,16 +4468,36 @@ internal sealed class StormaktGame
             bool firstSigilActive = (dungeon.LoreMask & DungeonFirstSigilMask) != 0;
             DrawDungeonSprite(frame, dungeon, firstSigilActive ? "dungeon_temple_gate_open" : "dungeon_temple_gate_closed",
                 1705, 380);
-            DrawDungeonSprite(frame, dungeon, "dungeon_temple_gate_closed", 2385, 380);
+            bool secondSigilActive = (dungeon.LoreMask & DungeonSecondSigilMask) != 0;
+            DrawDungeonSprite(frame, dungeon, secondSigilActive ? "dungeon_temple_gate_open" : "dungeon_temple_gate_closed",
+                2385, 380);
+            bool thirdSigilActive = (dungeon.LoreMask & DungeonThirdSigilMask) != 0;
+            DrawDungeonSprite(frame, dungeon, thirdSigilActive ? "dungeon_temple_gate_open" : "dungeon_temple_gate_closed",
+                3150, 380);
+            DrawDungeonSprite(frame, dungeon, "dungeon_temple_gate_closed", 3550, 380);
             int sigilX = 1580 - dungeon.CameraX;
             int sigilY = 380 - dungeon.CameraY;
             DrawCircleOutline(frame, sigilX, sigilY, firstSigilActive ? 34 : 27,
                 firstSigilActive ? 0xffffd66b : 0xff73b8d0);
             int secondSigilX = 2280 - dungeon.CameraX;
             int secondSigilY = 380 - dungeon.CameraY;
-            bool secondSigilActive = (dungeon.LoreMask & DungeonSecondSigilMask) != 0;
             DrawCircleOutline(frame, secondSigilX, secondSigilY, secondSigilActive ? 34 : 27,
                 secondSigilActive ? 0xffffd66b : secondRuneProgress >= 3 ? 0xffdce8f2 : 0xff5e7180);
+            int thirdSigilX = 3030 - dungeon.CameraX;
+            int thirdSigilY = 380 - dungeon.CameraY;
+            DrawCircleOutline(frame, thirdSigilX, thirdSigilY, thirdSigilActive ? 34 : 27,
+                thirdSigilActive ? 0xffffd66b : thirdVerseProgress >= 3 ? 0xffdce8f2 : 0xff5e7180);
+            bool swanRevealed = (dungeon.LoreMask & DungeonSwanRevealedMask) != 0;
+            DrawDungeonSprite(frame, dungeon, swanRevealed ? "tuonela_swan_idle" : "tuonela_swan_dormant",
+                3400, 380);
+            if (swanRevealed)
+            {
+                int swanX = 3400 - dungeon.CameraX;
+                int swanY = 380 - dungeon.CameraY;
+                uint swanGlow = dungeon.Age / 10 % 2 == 0 ? 0xff73b8d0 : 0xff9bd4dc;
+                DrawCircleOutline(frame, swanX, swanY + 24, 58 + dungeon.Age / 12 % 3, swanGlow);
+                DrawText(frame, swanX - 50, swanY - 66, "SVANEN I TUONELA", 0xffdce8f2);
+            }
             if (!shadowDefeated)
             {
                 int barrierX = 1165 - dungeon.CameraX;
@@ -4503,12 +4693,22 @@ internal sealed class StormaktGame
                 .All(enemy => enemy.State == DungeonEnemyState.Dead);
             bool firstSigilActive = (dungeon.LoreMask & DungeonFirstSigilMask) != 0;
             bool fogdeRescued = (dungeon.LoreMask & DungeonFogdeRescuedMask) != 0;
+            bool fogdeSpoken = (dungeon.LoreMask & DungeonFogdeSpokenMask) != 0;
             bool secondCourtyardClear = DungeonSecondCourtyardClear(dungeon);
             int secondRuneProgress = DungeonSecondRuneProgress(dungeon);
             bool secondSigilActive = (dungeon.LoreMask & DungeonSecondSigilMask) != 0;
-            objective = secondSigilActive ? "ANDRA SIGILLET VÄCKT  ETT ÅTERSTÅR" :
+            int thirdVerseProgress = DungeonThirdVerseProgress(dungeon);
+            bool thirdSigilActive = (dungeon.LoreMask & DungeonThirdSigilMask) != 0;
+            bool swanRevealed = (dungeon.LoreMask & DungeonSwanRevealedMask) != 0;
+            objective = swanRevealed ? "SVANEN I TUONELA VÄNTAR I SVART VATTEN" :
+                thirdSigilActive ? "TREDJE SIGILLET VÄCKT  SVANENS PORT ÄR ÖPPEN" :
+                secondSigilActive && dungeon.KarlX < 2440 ? "SLUTPORTEN ÄR ÖPPEN  LÄS DEN SISTA SIDAN" :
+                secondSigilActive && thirdVerseProgress < 3 ?
+                    $"VERSER SOL > SILVER > HJÄRTA  {thirdVerseProgress}/3" :
+                secondSigilActive ? "STIG IN I TREDJE SIGILLET" :
                 firstSigilActive && dungeon.KarlX < 1740 ? "ÖSTPORTEN ÄR ÖPPEN  SÖK FOGDEN" :
                 firstSigilActive && !fogdeRescued ? "FRIGÖR GRUVFOGDEN UR SARKOFAGEN" :
+                firstSigilActive && !fogdeSpoken ? "TALA MED GRUVFOGDEN" :
                 firstSigilActive && !secondCourtyardClear ? "VÄKTARNA RESER SIG KRING RUNORNA" :
                 firstSigilActive && secondRuneProgress < 3 ?
                     $"RUNOR SOL > SVAN > KRONA  {secondRuneProgress}/3" :
@@ -5071,6 +5271,21 @@ internal sealed class StormaktGame
             DrawLine(frame, x - 7, y - 4, x - 2, y + 1, color);
             DrawLine(frame, x - 2, y + 1, x + 2, y - 5, color);
             DrawLine(frame, x + 2, y - 5, x + 7, y + 4, color);
+        }
+    }
+
+    private void DrawThirdTempleVerseMarker(uint[] frame, DungeonState dungeon, int worldX, int worldY,
+        int verse, bool read)
+    {
+        int x = worldX - dungeon.CameraX;
+        int y = worldY - dungeon.CameraY - 38;
+        uint color = read ? 0xffffd66b : 0xff73b8d0;
+        DrawLine(frame, x - 9, y - 5, x + 9, y - 5, color);
+        DrawLine(frame, x - 9, y + 5, x + 9, y + 5, color);
+        for (int index = 0; index <= verse; index++)
+        {
+            int markX = x - verse * 3 + index * 6;
+            DrawLine(frame, markX, y - 2, markX, y + 2, color);
         }
     }
 
@@ -7829,7 +8044,9 @@ internal sealed class StormaktGame
         public bool PendingTempleEntry { get; set; }
         public bool PendingTempleReturn { get; set; }
         public bool PendingFogdeRescue { get; set; }
+        public bool PendingFogdeTalk { get; set; }
         public int PendingTempleRune { get; set; }
+        public int PendingTempleVerse { get; set; }
         public int LoreMask { get; set; }
     }
 

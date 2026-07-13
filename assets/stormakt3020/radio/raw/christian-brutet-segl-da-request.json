@@ -5,7 +5,8 @@
   "output_format": "wav",
   "normalize": false,
   "prompt_text": "Alle fregatter frem! Hold Dannebrog højt og luk deres flugtvej! Jeg vil høre kanonerne svare fra hver eneste bro. De svenske blåfrakker har hånet min krone for sidste gang. Bryd deres linje, knus deres skjolde, og driv Karl tohundrede femoghalvtreds levende frem for mig!",
-  "seed": 873113,
+  "voice_instruction": "A powerful barrel-chested adult Danish male war king, huge booming rough bass-baritone, loud military projection, gravel and iron in the chest, barking furious orders across cannon fire. Angry Danish naval commander who dominates a battlefield without sounding old, weak, refined, feminine, soft, breathy or comedic. Strong consonants, broad resonance, controlled rage, unmistakably masculine physical power.",
+  "seed": 873121,
   "dots_num_steps": 10,
   "dots_guidance_scale": 1.7,
   "dots_speaker_scale": 1.35

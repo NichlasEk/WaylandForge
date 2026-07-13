@@ -45,6 +45,9 @@ frame, speaker_id, side, subtitle_lines, voice_asset, portrait_id, priority, ski
 - START pausar även under ett radiokort; kortets röst/tidslinje fortsätter först när spelet återupptas.
 - `StormaktMusicLoop` utökas till att mixa en separat voice-kanal. Musik duckas cirka 6 dB under tal, SFX fortsätter men tunga explosioner begränsas under repliken.
 - Röster förgenereras till PCM16, mono eller stereo, 48 kHz. Ingen TTS-modell eller GPU krävs när spelet körs.
+- Varje roll har exakt en fast `dialogue_seed` i castfilen. Alla repliker för samma skådespelare
+  renderas med den seedens värde; renderverktyget vägrar starta om en roll saknar seed eller delar den
+  med en annan roll. Den 13 juli 2026 omrenderades samtliga 36 svenska och danska spelrepliker enligt regeln.
 - Ett lätt radiofilter läggs vid assetbygget: högpass runt 180 Hz, lågpass runt 4.5 kHz, mild kompression och mycket svagt deterministiskt brus.
 
 ## Dots TTS - verifierat läge 2026-07-09

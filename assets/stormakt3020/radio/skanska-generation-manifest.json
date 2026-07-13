@@ -33,46 +33,6 @@
       }
     },
     {
-      "kind": "line",
-      "line": "soren-svarta-skogen",
-      "role": "soren-svartkrut",
-      "job_id": "3296dcf00936401192a6cfd315e7bf48",
-      "file": "assets/stormakt3020/radio/raw/soren-svarta-skogen-sv-raw.wav",
-      "sha256": "e6ff6efc491c15f19454b56a419c472ead0455c70af92bb21b2432dd9c4b7e0f",
-      "request": "assets/stormakt3020/radio/raw/soren-svarta-skogen-sv-request.json",
-      "reference_sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b"
-    },
-    {
-      "kind": "line",
-      "line": "ebba-identifierar-soren",
-      "role": "ebba-grip",
-      "job_id": "ddfb61acb1484a92966b5b2c0f70371d",
-      "file": "assets/stormakt3020/radio/raw/ebba-identifierar-soren-sv-raw.wav",
-      "sha256": "683d599a568e69e4c6b8d5c41198611748c57bf4beb5d084ce3e4c0fb411f1da",
-      "request": "assets/stormakt3020/radio/raw/ebba-identifierar-soren-sv-request.json",
-      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
-    },
-    {
-      "kind": "line",
-      "line": "ebba-skanska-signal",
-      "role": "ebba-grip",
-      "job_id": "1b97893d07c4431eba78ce8d6fad08b0",
-      "file": "assets/stormakt3020/radio/raw/ebba-skanska-signal-sv-raw.wav",
-      "sha256": "d38ad8e0c1716b0d2786779f3f7adc7df17c3f29c5abed4eb597b2a37174eca7",
-      "request": "assets/stormakt3020/radio/raw/ebba-skanska-signal-sv-request.json",
-      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
-    },
-    {
-      "kind": "line",
-      "line": "soren-fogdekonvoj",
-      "role": "soren-svartkrut",
-      "job_id": "fc393e6afb2e44ccadeb1bad662759ff",
-      "file": "assets/stormakt3020/radio/raw/soren-fogdekonvoj-sv-raw.wav",
-      "sha256": "18e8694dfc222e5fd4dfee480804d35ebadd43a47624fe88e1e254ab371ad5d8",
-      "request": "assets/stormakt3020/radio/raw/soren-fogdekonvoj-sv-request.json",
-      "reference_sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b"
-    },
-    {
       "kind": "reference",
       "role": "rasmus-gyldentold",
       "job_id": "f76d72949e1741d18eb9c894f16f1348",
@@ -87,36 +47,6 @@
         "normalize": false,
         "seed": 302023
       }
-    },
-    {
-      "kind": "line",
-      "line": "ebba-stora-balt",
-      "role": "ebba-grip",
-      "job_id": "43b5010b61114eb5ae2b54a909ca4367",
-      "file": "assets/stormakt3020/radio/raw/ebba-stora-balt-sv-raw.wav",
-      "sha256": "4fc4fce05a4eaa968554e02bcbef1423f92b8506cf4d5cf1df7ae0b5aef47505",
-      "request": "assets/stormakt3020/radio/raw/ebba-stora-balt-sv-request.json",
-      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
-    },
-    {
-      "kind": "line",
-      "line": "rasmus-lagg-bi",
-      "role": "rasmus-gyldentold",
-      "job_id": "00120cf072854d02a89f12b403a84cfb",
-      "file": "assets/stormakt3020/radio/raw/rasmus-lagg-bi-da-raw.wav",
-      "sha256": "a1c17c1b1ac4607138274c5faef63b8cc3a85dc6deae2d6224814a14747d150e",
-      "request": "assets/stormakt3020/radio/raw/rasmus-lagg-bi-da-request.json",
-      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
-    },
-    {
-      "kind": "line",
-      "line": "rasmus-kronens-tiende",
-      "role": "rasmus-gyldentold",
-      "job_id": "5f67801e65a54d2d9c6ceb4e4a31339d",
-      "file": "assets/stormakt3020/radio/raw/rasmus-kronens-tiende-da-raw.wav",
-      "sha256": "3f6d149802b31c18f0f3dd59e1882d7edf8ac0173e2e23d7c8720a696edd9129",
-      "request": "assets/stormakt3020/radio/raw/rasmus-kronens-tiende-da-request.json",
-      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
     },
     {
       "kind": "reference",
@@ -135,86 +65,6 @@
       }
     },
     {
-      "kind": "line",
-      "line": "christian-brutet-segl",
-      "role": "kung-christian",
-      "job_id": "5d337a1a3b3142cc87419d86a4329b90",
-      "file": "assets/stormakt3020/radio/raw/christian-brutet-segl-da-raw.wav",
-      "sha256": "4a81ee9f71fd05505bd2196ede2881f746e363d58aadd225bb456cff587d2ac3",
-      "request": "assets/stormakt3020/radio/raw/christian-brutet-segl-da-request.json",
-      "reference_sha256": "391fd7d3d32e09408e2fa6cb3e1fc64b8d57600861322173df6e27cffcd70bf9"
-    },
-    {
-      "kind": "line",
-      "line": "ebba-svarar-christian",
-      "role": "ebba-grip",
-      "job_id": "fc9bc5e2630243f0aa9762be55c508c0",
-      "file": "assets/stormakt3020/radio/raw/ebba-svarar-christian-sv-raw.wav",
-      "sha256": "7acad52845a31aed821a0f796bf44012829b41a25c28e0e66a85368f26ca9f9e",
-      "request": "assets/stormakt3020/radio/raw/ebba-svarar-christian-sv-request.json",
-      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
-    },
-    {
-      "kind": "line",
-      "line": "christian-hot-mot-karl",
-      "role": "kung-christian",
-      "job_id": "0389a193240c415e9373a1c4380eb3e4",
-      "file": "assets/stormakt3020/radio/raw/christian-hot-mot-karl-da-raw.wav",
-      "sha256": "d659735bd46563ca3e65147ea9c346e3c4a374694fd9387fe695f793d04ed2f6",
-      "request": "assets/stormakt3020/radio/raw/christian-hot-mot-karl-da-request.json",
-      "reference_sha256": "391fd7d3d32e09408e2fa6cb3e1fc64b8d57600861322173df6e27cffcd70bf9"
-    },
-    {
-      "kind": "line",
-      "line": "christian-for-satan",
-      "role": "kung-christian",
-      "job_id": "bb73dff6180f49b18173ef96636b141c",
-      "file": "assets/stormakt3020/radio/raw/christian-for-satan-da-raw.wav",
-      "sha256": "2b95639edbee083739d601febcf373a045becb7481a2adc467c0428b49f4ca0e",
-      "request": "assets/stormakt3020/radio/raw/christian-for-satan-da-request.json",
-      "reference_sha256": "391fd7d3d32e09408e2fa6cb3e1fc64b8d57600861322173df6e27cffcd70bf9"
-    },
-    {
-      "kind": "line",
-      "line": "rasmus-boss-fornaekter",
-      "role": "rasmus-gyldentold",
-      "job_id": "23ef3fe6ecef44069bc0f049f86c90b5",
-      "file": "assets/stormakt3020/radio/raw/rasmus-boss-fornaekter-da-raw.wav",
-      "sha256": "afbd6db1054ddec92d0ab8d721353fb922f609b649b05cd7ff238d44afb1f09a",
-      "request": "assets/stormakt3020/radio/raw/rasmus-boss-fornaekter-da-request.json",
-      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
-    },
-    {
-      "kind": "line",
-      "line": "rasmus-boss-panik",
-      "role": "rasmus-gyldentold",
-      "job_id": "32ef8e1ef64e417895cc9b3cf1d4c18c",
-      "file": "assets/stormakt3020/radio/raw/rasmus-boss-panik-da-raw.wav",
-      "sha256": "9fdf3556bd53c4acf1e4edda704a4f8244232e00252ae0db59a2f6a68d477cf1",
-      "request": "assets/stormakt3020/radio/raw/rasmus-boss-panik-da-request.json",
-      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
-    },
-    {
-      "kind": "line",
-      "line": "rasmus-boss-undergang",
-      "role": "rasmus-gyldentold",
-      "job_id": "5daaf166d4c64d8f828386949def18c0",
-      "file": "assets/stormakt3020/radio/raw/rasmus-boss-undergang-da-raw.wav",
-      "sha256": "4f6b06e82fbccf57f0173df4d730df1077d1ff2e365acf94e49f3e7cd10c419a",
-      "request": "assets/stormakt3020/radio/raw/rasmus-boss-undergang-da-request.json",
-      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
-    },
-    {
-      "kind": "line",
-      "line": "rasmus-boss-efterspel",
-      "role": "rasmus-gyldentold",
-      "job_id": "77917b3d68cd44d79186fe72839cc33c",
-      "file": "assets/stormakt3020/radio/raw/rasmus-boss-efterspel-da-raw.wav",
-      "sha256": "118665b7722e8296ffa711998af651f7770200732f3ff7aaa9bcfa3e5e145195",
-      "request": "assets/stormakt3020/radio/raw/rasmus-boss-efterspel-da-request.json",
-      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
-    },
-    {
       "kind": "reference",
       "role": "birgitte-bille",
       "job_id": "957d2d5cd530476bb9be256f8d3ccab6",
@@ -231,12 +81,108 @@
       }
     },
     {
+      "kind": "reference",
+      "role": "gruvfogde",
+      "job_id": "13d3b8f897514710bf7b26570bd88c45",
+      "file": "assets/stormakt3020/radio/references/gruvfogde-reference.wav",
+      "sha256": "05f3ce5b273bf8f6d50fde78a784579aaaba43316d483b56ce3fc98ffeae9e68",
+      "request": {
+        "text": "Lyssna, Karl. Berget har talat genom silvret längre än någon av oss har levt. Jag såg männen öppna salar som aldrig borde ha fått luft. Där nere sjunger järnet, och något gammalt väntar bakom den sista porten.",
+        "language": "sv",
+        "voice_instruction": "An exhausted older Swedish mine bailiff, weathered low baritone, steady and grave after surviving underground, natural Swedish diction, intimate warning rather than theatrical narration, never comic or villainous.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302025
+      }
+    },
+    {
+      "kind": "line",
+      "line": "ebba-stora-balt",
+      "role": "ebba-grip",
+      "job_id": "491fb32c51c54f529a350c1d7981abd2",
+      "file": "assets/stormakt3020/radio/raw/ebba-stora-balt-sv-raw.wav",
+      "sha256": "29d4594c9b7db6a771df33d572913ae3e6573ff2b63057c0ac744018970ac1cd",
+      "request": "assets/stormakt3020/radio/raw/ebba-stora-balt-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "rasmus-lagg-bi",
+      "role": "rasmus-gyldentold",
+      "job_id": "f6b4f5d4a2f54da9a442b9ff56ff35d9",
+      "file": "assets/stormakt3020/radio/raw/rasmus-lagg-bi-da-raw.wav",
+      "sha256": "43bad3e8373339a5f78d95382ae012367d03a3d03d0fdd9ee82186fe7c4054bd",
+      "request": "assets/stormakt3020/radio/raw/rasmus-lagg-bi-da-request.json",
+      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
+    },
+    {
+      "kind": "line",
+      "line": "christian-brutet-segl",
+      "role": "kung-christian",
+      "job_id": "d4f19b2379c84f42b13cc646ef131b44",
+      "file": "assets/stormakt3020/radio/raw/christian-brutet-segl-da-raw.wav",
+      "sha256": "08dc6164db106ec5f0afc10d5d9d2a1151ca0677591ee8e38aed046617f341ab",
+      "request": "assets/stormakt3020/radio/raw/christian-brutet-segl-da-request.json",
+      "reference_sha256": "391fd7d3d32e09408e2fa6cb3e1fc64b8d57600861322173df6e27cffcd70bf9"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-svarar-christian",
+      "role": "ebba-grip",
+      "job_id": "a422c5541f3a47fa827a26c469345018",
+      "file": "assets/stormakt3020/radio/raw/ebba-svarar-christian-sv-raw.wav",
+      "sha256": "5dcf718605948e43cc30663d4f82b2d7f8b6314a51e93b595c318971509b3926",
+      "request": "assets/stormakt3020/radio/raw/ebba-svarar-christian-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "christian-hot-mot-karl",
+      "role": "kung-christian",
+      "job_id": "80b426e4f4b94b7690ea36a979aa794f",
+      "file": "assets/stormakt3020/radio/raw/christian-hot-mot-karl-da-raw.wav",
+      "sha256": "34281572e3c8a517ffbd597f311f7ada8977aec4c42a59de6bc0f593ecef3141",
+      "request": "assets/stormakt3020/radio/raw/christian-hot-mot-karl-da-request.json",
+      "reference_sha256": "391fd7d3d32e09408e2fa6cb3e1fc64b8d57600861322173df6e27cffcd70bf9"
+    },
+    {
+      "kind": "line",
+      "line": "christian-for-satan",
+      "role": "kung-christian",
+      "job_id": "39d85ab7948946fa997cb5d4eb1ac9d0",
+      "file": "assets/stormakt3020/radio/raw/christian-for-satan-da-raw.wav",
+      "sha256": "bc53285e41d7d096a1c535b72b7790ab312f9e1dd6ac67adc9952fd1068e67c2",
+      "request": "assets/stormakt3020/radio/raw/christian-for-satan-da-request.json",
+      "reference_sha256": "391fd7d3d32e09408e2fa6cb3e1fc64b8d57600861322173df6e27cffcd70bf9"
+    },
+    {
+      "kind": "line",
+      "line": "rasmus-kronens-tiende",
+      "role": "rasmus-gyldentold",
+      "job_id": "7072fe2748114eb2ba4f76497ded1f27",
+      "file": "assets/stormakt3020/radio/raw/rasmus-kronens-tiende-da-raw.wav",
+      "sha256": "4412ef01949cbfc5da98343010dc9bcd27cc7732b6e2655c8c749809c0da34f2",
+      "request": "assets/stormakt3020/radio/raw/rasmus-kronens-tiende-da-request.json",
+      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
+    },
+    {
+      "kind": "line",
+      "line": "rasmus-boss-fornaekter",
+      "role": "rasmus-gyldentold",
+      "job_id": "e6c691d01223440b8e1019761672116d",
+      "file": "assets/stormakt3020/radio/raw/rasmus-boss-fornaekter-da-raw.wav",
+      "sha256": "83f87ddf8da853f3f6294260ccb12f5e7353c2f980a5d62386035c3e117f19ab",
+      "request": "assets/stormakt3020/radio/raw/rasmus-boss-fornaekter-da-request.json",
+      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
+    },
+    {
       "kind": "line",
       "line": "birgitte-glimminge-intro",
       "role": "birgitte-bille",
-      "job_id": "f73b6aa8508341fa9ac22b1426033376",
+      "job_id": "756acfb9c30a49fda8e33c62860061c1",
       "file": "assets/stormakt3020/radio/raw/birgitte-glimminge-intro-da-raw.wav",
-      "sha256": "c599faf38f884ebd4d467081e71d9f5d2d7c1a6fe95c417958a8c9efe3ec5a15",
+      "sha256": "5ea5b64c71a6417934e6429959b26b576aecb06d299aaf14de083b36c8a790e4",
       "request": "assets/stormakt3020/radio/raw/birgitte-glimminge-intro-da-request.json",
       "reference_sha256": "a3c0408d6c2ff93f63413b00db272cff028a5ec10127599c0b02acb7dd16053f"
     },
@@ -244,9 +190,9 @@
       "kind": "line",
       "line": "birgitte-glimminge-bor",
       "role": "birgitte-bille",
-      "job_id": "695eb436653846acbd7bd59523f9a06d",
+      "job_id": "f8f89914e3e2441fb837617bc17a372e",
       "file": "assets/stormakt3020/radio/raw/birgitte-glimminge-bor-da-raw.wav",
-      "sha256": "93dd29ea99204f4169014ac044ae0c74f7455542d51de68c242288de548fbfae",
+      "sha256": "f3cef82c8699558c23ab10ec630142e351a26cec0490ea6b45aca54100992684",
       "request": "assets/stormakt3020/radio/raw/birgitte-glimminge-bor-da-request.json",
       "reference_sha256": "a3c0408d6c2ff93f63413b00db272cff028a5ec10127599c0b02acb7dd16053f"
     },
@@ -254,19 +200,89 @@
       "kind": "line",
       "line": "birgitte-glimminge-falder",
       "role": "birgitte-bille",
-      "job_id": "b0e0f9cecdba48879480e8052b3dd4a0",
+      "job_id": "9a8668e8e9094a56b1011b7fd143af4a",
       "file": "assets/stormakt3020/radio/raw/birgitte-glimminge-falder-da-raw.wav",
-      "sha256": "66896ea9f386df68faa229dbac2dae4a7eb0dfabeff9c505012302f000bb3911",
+      "sha256": "172d5b6b0cd28bff22b70718b44a1a09218f7782fef272667e267cc8beca0fa0",
       "request": "assets/stormakt3020/radio/raw/birgitte-glimminge-falder-da-request.json",
       "reference_sha256": "a3c0408d6c2ff93f63413b00db272cff028a5ec10127599c0b02acb7dd16053f"
     },
     {
       "kind": "line",
+      "line": "rasmus-boss-panik",
+      "role": "rasmus-gyldentold",
+      "job_id": "2e7b0af48629409ca0508e45c3bea284",
+      "file": "assets/stormakt3020/radio/raw/rasmus-boss-panik-da-raw.wav",
+      "sha256": "cc5cfb1ef837c939d52ed88045aabe4eb399a44812ee0086a164d5df3d7f6ddd",
+      "request": "assets/stormakt3020/radio/raw/rasmus-boss-panik-da-request.json",
+      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
+    },
+    {
+      "kind": "line",
+      "line": "rasmus-boss-undergang",
+      "role": "rasmus-gyldentold",
+      "job_id": "dea77bbe95b4409d913293b18c60e78e",
+      "file": "assets/stormakt3020/radio/raw/rasmus-boss-undergang-da-raw.wav",
+      "sha256": "16b48ce31dc0f70607f705f394facfa02791665f478bf67c64f81468ea49e34c",
+      "request": "assets/stormakt3020/radio/raw/rasmus-boss-undergang-da-request.json",
+      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
+    },
+    {
+      "kind": "line",
+      "line": "rasmus-boss-efterspel",
+      "role": "rasmus-gyldentold",
+      "job_id": "3e90d42c2c7e48fda0c336112ca53a9e",
+      "file": "assets/stormakt3020/radio/raw/rasmus-boss-efterspel-da-raw.wav",
+      "sha256": "a20feee3f7bad6eff7c81f884a361fca6a6de7bc66bd47bf35c165a2b575d436",
+      "request": "assets/stormakt3020/radio/raw/rasmus-boss-efterspel-da-request.json",
+      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-skanska-signal",
+      "role": "ebba-grip",
+      "job_id": "1c279e35c61b42ecbaf205be7a576c7e",
+      "file": "assets/stormakt3020/radio/raw/ebba-skanska-signal-sv-raw.wav",
+      "sha256": "5da3822a73538010c9d331dacc34a656a79fa2156bae0487c01c2ca880971fa2",
+      "request": "assets/stormakt3020/radio/raw/ebba-skanska-signal-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "soren-svarta-skogen",
+      "role": "soren-svartkrut",
+      "job_id": "dc626d125a1b4781b9cc60217a790d27",
+      "file": "assets/stormakt3020/radio/raw/soren-svarta-skogen-sv-raw.wav",
+      "sha256": "e6ff6efc491c15f19454b56a419c472ead0455c70af92bb21b2432dd9c4b7e0f",
+      "request": "assets/stormakt3020/radio/raw/soren-svarta-skogen-sv-request.json",
+      "reference_sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-identifierar-soren",
+      "role": "ebba-grip",
+      "job_id": "624fa33064c24f95acb34487ad8c28e5",
+      "file": "assets/stormakt3020/radio/raw/ebba-identifierar-soren-sv-raw.wav",
+      "sha256": "fc6f24dc893ff51cc681ee3e0d7073b2eac15c5cb7e301ac249392d57ebb7116",
+      "request": "assets/stormakt3020/radio/raw/ebba-identifierar-soren-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "soren-fogdekonvoj",
+      "role": "soren-svartkrut",
+      "job_id": "4474af2934d34954be4037a5c670d985",
+      "file": "assets/stormakt3020/radio/raw/soren-fogdekonvoj-sv-raw.wav",
+      "sha256": "b12b396dc283ca511051014a6347e34a1ef5baf46a38e2508994e27b4318d2fa",
+      "request": "assets/stormakt3020/radio/raw/soren-fogdekonvoj-sv-request.json",
+      "reference_sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b"
+    },
+    {
+      "kind": "line",
       "line": "ebba-silver-body",
       "role": "ebba-grip",
-      "job_id": "5334764a5bcd48bbb5b26f6da6c443a3",
+      "job_id": "d71531a4f2be42d6a83fc97d71c9b7b6",
       "file": "assets/stormakt3020/radio/raw/ebba-silver-body-sv-raw.wav",
-      "sha256": "cab872c5f904756694ac21a22506d1110c1353410be083ba64198672d2216a20",
+      "sha256": "e3b3832f7537112d693d4913a27b87ff929728ed90acf5c34372b2c587d59b02",
       "request": "assets/stormakt3020/radio/raw/ebba-silver-body-sv-request.json",
       "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
     },
@@ -274,9 +290,9 @@
       "kind": "line",
       "line": "ebba-steam-online",
       "role": "ebba-grip",
-      "job_id": "ab880dc3c22d44ffad17caea71f6c98c",
+      "job_id": "4db844473aa543508968f613cd71b55e",
       "file": "assets/stormakt3020/radio/raw/ebba-steam-online-sv-raw.wav",
-      "sha256": "52a2970b143152f8a3dad8fe3735a69ad98c78e22225fdc3aaa79da2e7fb0b35",
+      "sha256": "333b3e032c4133e4ee69c2e240555a29338f88468e96acfa8111f9e4e91c3291",
       "request": "assets/stormakt3020/radio/raw/ebba-steam-online-sv-request.json",
       "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
     },
@@ -284,9 +300,9 @@
       "kind": "line",
       "line": "rasmus-silver-claim",
       "role": "rasmus-gyldentold",
-      "job_id": "353f08821cbd489b97cdbbdc953f523e",
+      "job_id": "8da2de0e1c2c43618c71384d06c5f942",
       "file": "assets/stormakt3020/radio/raw/rasmus-silver-claim-da-raw.wav",
-      "sha256": "302251960e128701d1c8827e6b2e0dd9967dd6d4c907d71418131247300108ef",
+      "sha256": "e70051a65c31bc94c24a11162c78a407fbae54e13103b462d6856346a25478fa",
       "request": "assets/stormakt3020/radio/raw/rasmus-silver-claim-da-request.json",
       "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
     },
@@ -294,9 +310,9 @@
       "kind": "line",
       "line": "ebba-powder-warning",
       "role": "ebba-grip",
-      "job_id": "c1d9652e33c54d8abbff8df3af6af52e",
+      "job_id": "b59556967c6a454f898d81a6973a7f28",
       "file": "assets/stormakt3020/radio/raw/ebba-powder-warning-sv-raw.wav",
-      "sha256": "18d7b49d98e4e36f482a4bbac02cb894311085866bd1a203ea725a3b1754316c",
+      "sha256": "e86c2d00bf4cce44c9879db433c9b0e8b03c03bc962eff259b329fbc2e1fe2e0",
       "request": "assets/stormakt3020/radio/raw/ebba-powder-warning-sv-request.json",
       "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
     },
@@ -304,9 +320,9 @@
       "kind": "line",
       "line": "rasmus-organ-order",
       "role": "rasmus-gyldentold",
-      "job_id": "7a188083c57140f0bad0cb38114b9370",
+      "job_id": "0c2ebf49542b4da2b17491869c50ff2e",
       "file": "assets/stormakt3020/radio/raw/rasmus-organ-order-da-raw.wav",
-      "sha256": "900f3eede9d0d32eddc6c75acb237b815925e3cc01f2f61d78b7f6b829de970e",
+      "sha256": "8c8e747c64d9029fa6df7921200e9f7616633116f6bf3c958735b26d9680eb22",
       "request": "assets/stormakt3020/radio/raw/rasmus-organ-order-da-request.json",
       "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
     },
@@ -314,19 +330,49 @@
       "kind": "line",
       "line": "ebba-moose-ready",
       "role": "ebba-grip",
-      "job_id": "e4010f4705d14dbf88baf50e2c3c6ef3",
+      "job_id": "8136eb3bf90a4dcc8a5f8496c0676cf8",
       "file": "assets/stormakt3020/radio/raw/ebba-moose-ready-sv-raw.wav",
-      "sha256": "75ae7ab1cec69b89ebc047c61d0f30161997687663246ab26451d589760efb09",
+      "sha256": "ceca9feb4e2daba67afc2e8ab69bc45f13795ac8ac1defcbc73bd7808fd51a3c",
       "request": "assets/stormakt3020/radio/raw/ebba-moose-ready-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-rts-victory",
+      "role": "ebba-grip",
+      "job_id": "9b7bf33a96c648fe9cdf24266d829c57",
+      "file": "assets/stormakt3020/radio/raw/ebba-rts-victory-sv-raw.wav",
+      "sha256": "fc2176508cdb9375048789dcc645ae0484444acfc322b80ef1332af6fbbff6f2",
+      "request": "assets/stormakt3020/radio/raw/ebba-rts-victory-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-rts-wait-miner",
+      "role": "ebba-grip",
+      "job_id": "7bc6bf0fb8d449c0b9d742da603ffac1",
+      "file": "assets/stormakt3020/radio/raw/ebba-rts-wait-miner-sv-raw.wav",
+      "sha256": "690a880725154f17ab71685b04b6439318be5356792074e0c51b9149d64b7693",
+      "request": "assets/stormakt3020/radio/raw/ebba-rts-wait-miner-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-rts-temple",
+      "role": "ebba-grip",
+      "job_id": "a5549885759f4920934a17de99211258",
+      "file": "assets/stormakt3020/radio/raw/ebba-rts-temple-sv-raw.wav",
+      "sha256": "f55df6a015bbccb2aae7df52845f54b54019e20543f9f135b34c323d16ede5ab",
+      "request": "assets/stormakt3020/radio/raw/ebba-rts-temple-sv-request.json",
       "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
     },
     {
       "kind": "line",
       "line": "ebba-dungeon-telemetry",
       "role": "ebba-grip",
-      "job_id": "42eea7a8484b41fb9cf88d744f2c403d",
+      "job_id": "6a9b9cb9e6f64bc9997b35d05c71de04",
       "file": "assets/stormakt3020/radio/raw/ebba-dungeon-telemetry-sv-raw.wav",
-      "sha256": "68bf8604f2f57849302f5cb24f25e1307c0cd983090a245e9673930fffd1859e",
+      "sha256": "6b7af8e3a384806cc5b325d87be2c3b6aa56a17a283a0ff822f15b232aff6344",
       "request": "assets/stormakt3020/radio/raw/ebba-dungeon-telemetry-sv-request.json",
       "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
     },
@@ -334,10 +380,80 @@
       "kind": "line",
       "line": "ebba-dungeon-near-death",
       "role": "ebba-grip",
-      "job_id": "5404f22f181b4b78afc9fecc160586a0",
+      "job_id": "4d70d9b423a14af48f8260e23337959e",
       "file": "assets/stormakt3020/radio/raw/ebba-dungeon-near-death-sv-raw.wav",
-      "sha256": "86eeaa2465c8dbcdf07a2ca8b26ba25b5b0e86517d86d10a083e7c7c2bce58c4",
+      "sha256": "1777815e68e110d4ca5fd69ceb5c2b25ca52bf3e89782feab99c3b186da4f4c7",
       "request": "assets/stormakt3020/radio/raw/ebba-dungeon-near-death-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-dungeon-descent",
+      "role": "ebba-grip",
+      "job_id": "5bb74d2a112b43d5bc71612249598346",
+      "file": "assets/stormakt3020/radio/raw/ebba-dungeon-descent-sv-raw.wav",
+      "sha256": "ee191be529c6201596abdde0d0111e889b25e943b56362625801afb4cd1f6c6e",
+      "request": "assets/stormakt3020/radio/raw/ebba-dungeon-descent-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-dungeon-first-sigil",
+      "role": "ebba-grip",
+      "job_id": "d0b8ee0100d2491391f98f212ef9591e",
+      "file": "assets/stormakt3020/radio/raw/ebba-dungeon-first-sigil-sv-raw.wav",
+      "sha256": "c270be896de965d1f5a778123c5cc0a6c6c9d36ee865da084a66134cdc9891a0",
+      "request": "assets/stormakt3020/radio/raw/ebba-dungeon-first-sigil-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-dungeon-fogde-rescue",
+      "role": "ebba-grip",
+      "job_id": "9a954c625a5444b5af48712cdc9dd7d3",
+      "file": "assets/stormakt3020/radio/raw/ebba-dungeon-fogde-rescue-sv-raw.wav",
+      "sha256": "e534f72e093164c052380f24d38268db5f1e446b3030a161cdabb46b5466a6ee",
+      "request": "assets/stormakt3020/radio/raw/ebba-dungeon-fogde-rescue-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "gruvfogde-dungeon-warning",
+      "role": "gruvfogde",
+      "job_id": "c39c0ee992264ff6807ffeb68d5b961f",
+      "file": "assets/stormakt3020/radio/raw/gruvfogde-dungeon-warning-sv-raw.wav",
+      "sha256": "b97c6e880a815253cfab926cb8bf973de0ad900cc21c2b5b83f07e41398f44ed",
+      "request": "assets/stormakt3020/radio/raw/gruvfogde-dungeon-warning-sv-request.json",
+      "reference_sha256": "05f3ce5b273bf8f6d50fde78a784579aaaba43316d483b56ce3fc98ffeae9e68"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-dungeon-second-sigil",
+      "role": "ebba-grip",
+      "job_id": "5b5fbc45a35344a1a623aabf7b1da374",
+      "file": "assets/stormakt3020/radio/raw/ebba-dungeon-second-sigil-sv-raw.wav",
+      "sha256": "0c6c48841e89f205242108e2807351052057a4048d4389e5fe1bea64e40f319e",
+      "request": "assets/stormakt3020/radio/raw/ebba-dungeon-second-sigil-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-dungeon-third-sigil",
+      "role": "ebba-grip",
+      "job_id": "b66e6248a79340e0a89746cb5edd3dc1",
+      "file": "assets/stormakt3020/radio/raw/ebba-dungeon-third-sigil-sv-raw.wav",
+      "sha256": "bde49472d51cf2d289398db61f9585fc81de38f3941c8c2762eb3bf558075614",
+      "request": "assets/stormakt3020/radio/raw/ebba-dungeon-third-sigil-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-dungeon-swan-reveal",
+      "role": "ebba-grip",
+      "job_id": "afdb196d095f4fc1b0d103f0ab714a30",
+      "file": "assets/stormakt3020/radio/raw/ebba-dungeon-swan-reveal-sv-raw.wav",
+      "sha256": "f57d3b4ad78a90023d3851d423dcb941761eca890a30a22d914cede4b1062b8e",
+      "request": "assets/stormakt3020/radio/raw/ebba-dungeon-swan-reveal-sv-request.json",
       "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
     }
   ],

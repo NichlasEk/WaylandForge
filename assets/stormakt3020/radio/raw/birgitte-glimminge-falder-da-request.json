@@ -6,7 +6,7 @@
   "normalize": false,
   "prompt_text": "Hør mig, danske søfolk. Jeg er Kommandør Birgitte Bille, og Glimminge Jern bøjer sig hverken for storm, ild eller svenske kroner. Hold skjoldmuren samlet, spænd boret fast og lad hver kanon tale med én stemme. Den, der forlader sin post, skal svare til mig personligt.",
   "voice_instruction": "An imposing older Danish female fleet commander, broad powerful contralto, stern matronly authority, huge chest resonance, crisp natural Danish military diction, controlled anger that rises into a formidable battlefield roar, never young, soft, breathy, seductive, shrill, weak or comedic.",
-  "seed": 302173,
+  "seed": 302124,
   "dots_num_steps": 10,
   "dots_guidance_scale": 1.9,
   "dots_speaker_scale": 1.7

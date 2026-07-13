@@ -62,6 +62,11 @@ def main() -> None:
     cast = json.loads(args.cast.read_text())
     service = cast["service"].rstrip("/")
     roles = {role["id"]: role for role in cast["roles"]}
+    dialogue_seeds = [role.get("dialogue_seed") for role in roles.values()]
+    if any(seed is None for seed in dialogue_seeds):
+        raise ValueError("Every casting role must define one fixed dialogue_seed")
+    if len(set(dialogue_seeds)) != len(dialogue_seeds):
+        raise ValueError("Casting roles must use distinct dialogue_seed values")
     records: list[dict] = []
 
     if args.phase in {"references", "all"}:
@@ -107,7 +112,9 @@ def main() -> None:
                 "reference_wav_base64": wav_base64(reference),
                 "prompt_text": role["reference_text"],
                 "voice_instruction": role["voice_instruction"],
-                "seed": line["seed"],
+                # Voice identity is deterministic per actor. Individual lines must never
+                # silently drift to a different delivery seed when re-rendered.
+                "seed": role["dialogue_seed"],
                 "dots_num_steps": line.get("dots_num_steps", 4),
                 "dots_guidance_scale": line.get("dots_guidance_scale", 1.2),
                 "dots_speaker_scale": line.get("dots_speaker_scale", 1.5),

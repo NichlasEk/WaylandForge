@@ -87,6 +87,8 @@ The Silverkroppen dungeon extension adds versioned transparent sheets for Karl o
 
 `dungeon-temple-props-v1.png` furnishes the first sigil court with black-iron guardian statues, a low sacrificial altar and closed/open Tuonela-swan sarcophagi. They replace the reused mine clutter in the eastern court and have matching physical navigation blockers. The chroma-key source and exact built-in image-generation prompt are preserved beside the runtime sheet.
 
+`dungeon-tuonela-swan-v1.png` introduces Svanen i Tuonela as a coherent black-iron threshold boss set: dormant funerary form, awakened idle, wing-sweep telegraph and neck strike. The third-sigil checkpoint initially uses the dormant and awakened states for its non-combat revelation; the attack states are packed for the following boss slice. Its chroma-key source and exact reference-guided built-in generation prompt are preserved beside it.
+
 ## Resolution
 
 Stormakt defaults to a 400x280 logical framebuffer. Assets retain their native gameplay pixel size, providing 25 percent more field in both directions and making ships smaller relative to the world. WaylandForge scales the WFEX frame to its viewport. Set `WAYLANDFORGE_STORMAKT_LEGACY_320=1` to A/B test the original 320x224 field; the pack contains a correctly sized background for both modes.

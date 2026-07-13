@@ -10,7 +10,8 @@
       "language": "sv",
       "voice_instruction": "An adult Swedish female general-admiral, composed and authoritative, low warm register, crisp military diction, restrained urgency, natural Swedish pronunciation, never theatrical or breathy.",
       "reference_text": "Karl CCLV, lyssna noga. Flottan håller kursen genom mörkret och ingen lämnas bakom oss. Instrumenten visar främmande signaler mellan gruvmånarna. Jag vill ha lugn eld, öppna ögon och full kontroll över skeppet tills vi vet vem som följer oss.",
-      "reference_seed": 302021
+      "reference_seed": 302021,
+      "dialogue_seed": 302121
     },
     {
       "id": "soren-svartkrut",
@@ -18,7 +19,8 @@
       "language": "sv",
       "voice_instruction": "An adult Scanian male outlaw captain, rugged baritone, dry wit and controlled menace, clear Swedish with a subtle southern Scanian color, intelligent and charismatic, never comic or exaggerated.",
       "reference_text": "Ni blårockar färdas långt från era kartor. Här bär varje sten ett namn och varje mörk signal har ett minne. Jag heter Sören Svartkrut. Håll fingret från avtryckaren, så kanske skogen låter er passera med både skepp och stolthet i behåll.",
-      "reference_seed": 302022
+      "reference_seed": 302022,
+      "dialogue_seed": 302122
     },
     {
       "id": "rasmus-gyldentold",
@@ -26,7 +28,8 @@
       "language": "da",
       "voice_instruction": "An adult Danish royal bailiff and warship commander, broad resonant baritone, immaculate formal diction, proud controlled menace, theatrical authority without comedy, natural Danish pronunciation.",
       "reference_text": "Svenske fartøj, lyt nøje. Jeg er foged Rasmus Gyldentold, og Kronens tiende forfalder i dag. Mine kanoner vogter broerne, mine segl lukker farvandet, og intet skib passerer uden at betale. Læg bi med værdighed, før regnskabet bliver skrevet med jern og ild.",
-      "reference_seed": 302023
+      "reference_seed": 302023,
+      "dialogue_seed": 302123
     },
     {
       "id": "kung-christian",
@@ -34,7 +37,8 @@
       "language": "da",
       "voice_instruction": "A powerful barrel-chested adult Danish male war king, huge booming rough bass-baritone, loud military projection, gravel and iron in the chest, barking furious orders across cannon fire. Angry Danish naval commander who dominates a battlefield without sounding old, weak, refined, feminine, soft, breathy or comedic. Strong consonants, broad resonance, controlled rage, unmistakably masculine physical power.",
       "reference_text": "Alle fregatter frem! Hold Dannebrog højt og luk deres flugtvej! Jeg vil høre kanonerne svare fra hver eneste bro. De svenske blåfrakker har hånet min krone for sidste gang. Bryd deres linje, knus deres skjolde, og driv Karl tohundrede femoghalvtreds levende frem for mig!",
-      "reference_seed": 873021
+      "reference_seed": 873021,
+      "dialogue_seed": 873121
     },
     {
       "id": "birgitte-bille",
@@ -42,7 +46,17 @@
       "language": "da",
       "voice_instruction": "An imposing older Danish female fleet commander, broad powerful contralto, stern matronly authority, huge chest resonance, crisp natural Danish military diction, controlled anger that rises into a formidable battlefield roar, never young, soft, breathy, seductive, shrill, weak or comedic.",
       "reference_text": "Hør mig, danske søfolk. Jeg er Kommandør Birgitte Bille, og Glimminge Jern bøjer sig hverken for storm, ild eller svenske kroner. Hold skjoldmuren samlet, spænd boret fast og lad hver kanon tale med én stemme. Den, der forlader sin post, skal svare til mig personligt.",
-      "reference_seed": 302024
+      "reference_seed": 302024,
+      "dialogue_seed": 302124
+    },
+    {
+      "id": "gruvfogde",
+      "speaker": "GRUVFOGDEN",
+      "language": "sv",
+      "voice_instruction": "An exhausted older Swedish mine bailiff, weathered low baritone, steady and grave after surviving underground, natural Swedish diction, intimate warning rather than theatrical narration, never comic or villainous.",
+      "reference_text": "Lyssna, Karl. Berget har talat genom silvret längre än någon av oss har levt. Jag såg männen öppna salar som aldrig borde ha fått luft. Där nere sjunger järnet, och något gammalt väntar bakom den sista porten.",
+      "reference_seed": 302025,
+      "dialogue_seed": 302125
     }
   ],
   "lines": [
@@ -370,6 +384,83 @@
       "text": "Det var nära ögat, Karl. Gör inte om det där. Ta det lugnt nu.",
       "subtitle_lines": ["NÄRA ÖGAT", "TA DET LUGNT NU"],
       "seed": 302191,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-dungeon-descent",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": -1,
+      "cue": "dungeon_descent",
+      "text": "Du får gå ner själv, Karl. Arbetarna vägrar följa dig in i mörkret.",
+      "subtitle_lines": ["GÅ NER SJÄLV", "ARBETARNA VÄGRAR"],
+      "seed": 302192,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-dungeon-first-sigil",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": -1,
+      "cue": "dungeon_first_sigil",
+      "text": "Jag hör fogden, Karl. Svagt, bortom porten. Två sigill återstår.",
+      "subtitle_lines": ["JAG HÖR FOGDEN", "TVÅ SIGILL KVAR"],
+      "seed": 302193,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-dungeon-fogde-rescue",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": -1,
+      "cue": "dungeon_fogde_rescue",
+      "text": "Fogden lever. Hans mätare rör sig igen. Silvret var inte en skatt, Karl. Det var ett lås.",
+      "subtitle_lines": ["FOGDEN LEVER", "SILVRET VAR ETT LÅS"],
+      "seed": 302194,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "gruvfogde-dungeon-warning",
+      "role": "gruvfogde",
+      "level": 3,
+      "frame": -1,
+      "cue": "dungeon_fogde_talk",
+      "text": "Svanen sov under våra fötter. Louhi band den med vårt silver. Bryt runorna i den gamla ordningen.",
+      "subtitle_lines": ["SVANEN SOV", "UNDER VÅRA FÖTTER"],
+      "seed": 302195,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-dungeon-second-sigil",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": -1,
+      "cue": "dungeon_second_sigil",
+      "text": "Andra sigillet svarar. Ett återstår. Något längre in har börjat röra sig.",
+      "subtitle_lines": ["ANDRA SIGILLET", "ETT ÅTERSTÅR"],
+      "seed": 302196,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-dungeon-third-sigil",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": -1,
+      "cue": "dungeon_third_sigil",
+      "text": "Alla tre lyser. Templet öppnar sig, men instrumenten visar ingenting bakom porten.",
+      "subtitle_lines": ["ALLA TRE LYSER", "TEMPLET ÖPPNAR SIG"],
+      "seed": 302197,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-dungeon-swan-reveal",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": -1,
+      "cue": "dungeon_swan_reveal",
+      "text": "Karl? Jag hör dig inte längre. Något sjunger genom hela berget.",
+      "subtitle_lines": ["JAG HÖR DIG INTE", "NÅGOT SJUNGER"],
+      "seed": 302198,
       "model_backend": "voxcpm2"
     }
   ]
