@@ -164,6 +164,10 @@ public sealed class UiContext
         _hot = null;
         _pointer = pointer;
         _previousPointer = previousPointer;
+        if (!_pointer.LeftPressed)
+        {
+            _active = null;
+        }
         _textInput = textInput;
         _scrollInput = scrollInput;
         _inputEnabled = true;
@@ -248,7 +252,10 @@ public sealed class UiContext
             _focused = id.Value;
         }
 
-        bool dragging = _inputEnabled && _pointer.LeftPressed && (_active == id.Value || hovered);
+        // A slider owns pointer movement only when the press began inside it.
+        // Merely hovering while another click is held, or clicking elsewhere
+        // after a completed drag, must never move the value.
+        bool dragging = _inputEnabled && _pointer.LeftPressed && _active == id.Value;
         bool changed = false;
         if (dragging)
         {
