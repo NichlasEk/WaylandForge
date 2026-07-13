@@ -408,6 +408,9 @@ fysiska hinder men står längs rummets kanter så att strid och vägen till sig
 
 Inventoryföremål kan slängas med `D` eller den klickbara `SLÄNG`-knappen. Föremålet placeras på en
 giltig golvpunkt framför Karl, får marken som enda ägare och ligger kvar i samma position genom autosave.
+Utrustningsrutorna går nu också att klicka för att granska det burna föremålet. Ett klick på utrustningsbar
+loot i ryggsäcken visar dess verkliga byte mot nuvarande plats med gröna plus, röda minus och grå nollor
+för skada, rustning, kraft och förbannelsevärn.
 
 ### Checkpoint 8 – Balans, lootkurva och casting
 
