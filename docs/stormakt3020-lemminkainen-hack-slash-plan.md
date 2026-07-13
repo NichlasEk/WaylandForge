@@ -402,6 +402,10 @@ Hälsotinkturer plockas nu upp som riktiga föremål, fyller ett fyrplatsers sna
 dricks med `Q` i stället för att förbrukas automatiskt på marken. Nästa tempelslice börjar bakom den
 andra förseglade porten; Svanen och Louhi ingår fortfarande inte i den landade delen.
 
+Den första sigillgården har fått en egen tydligare tempelidentitet: två svarta väktarstatyer, ett lågt
+offeraltare och både slutna och öppnade svansarkofager ersätter återanvänd gruvrekvisita. Föremålen är
+fysiska hinder men står längs rummets kanter så att strid och vägen till sigillet förblir fria.
+
 Inventoryföremål kan slängas med `D` eller den klickbara `SLÄNG`-knappen. Föremålet placeras på en
 giltig golvpunkt framför Karl, får marken som enda ägare och ligger kvar i samma position genom autosave.
 

@@ -565,6 +565,20 @@ def append_dungeon_temple_act1(entries: list[tuple[str, Image.Image]], source: I
             entries.append((name, sprite))
 
 
+def append_dungeon_temple_props(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    names = ["dungeon_temple_guardian", "dungeon_temple_altar",
+             "dungeon_temple_sarc_closed", "dungeon_temple_sarc_open"]
+    targets = [(70, 96), (96, 62), (100, 66), (108, 82)]
+    for index, (name, target) in enumerate(zip(names, targets)):
+        column, row = index % 2, index // 2
+        left, top = column * source.width // 2 + 4, row * source.height // 2 + 4
+        right = (column + 1) * source.width // 2 - 4
+        bottom = (row + 1) * source.height // 2 - 4
+        sprite = trim_alpha(source.crop((left, top, right, bottom)).convert("RGBA"))
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def mirrored_background(source: Image.Image, width: int, height: int) -> Image.Image:
     plate = source.copy()
     plate.thumbnail((width, height), Image.Resampling.LANCZOS)
@@ -621,6 +635,7 @@ def build(
     dungeon_gruva3_enemies_input_path: Path,
     dungeon_blind_shepherd_input_path: Path,
     dungeon_temple_act1_input_path: Path,
+    dungeon_temple_props_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
 ) -> None:
@@ -670,6 +685,7 @@ def build(
     dungeon_gruva3_enemies_source = Image.open(dungeon_gruva3_enemies_input_path).convert("RGBA")
     dungeon_blind_shepherd_source = Image.open(dungeon_blind_shepherd_input_path).convert("RGBA")
     dungeon_temple_act1_source = Image.open(dungeon_temple_act1_input_path).convert("RGBA")
+    dungeon_temple_props_source = Image.open(dungeon_temple_props_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
     append_sprites(entries, source, PRIMARY_SPRITES)
@@ -760,6 +776,7 @@ def build(
     append_dungeon_gruva3(entries, dungeon_gruva3_environment_source, dungeon_gruva3_enemies_source,
                           dungeon_blind_shepherd_source)
     append_dungeon_temple_act1(entries, dungeon_temple_act1_source)
+    append_dungeon_temple_props(entries, dungeon_temple_props_source)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
@@ -908,6 +925,7 @@ def main() -> None:
     parser.add_argument("--dungeon-gruva3-enemies-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva3-enemies-v1.png"))
     parser.add_argument("--dungeon-blind-shepherd-input", type=Path, default=Path("assets/stormakt3020/dungeon-blind-shepherd-v1.png"))
     parser.add_argument("--dungeon-temple-act1-input", type=Path, default=Path("assets/stormakt3020/dungeon-temple-act1-v2.png"))
+    parser.add_argument("--dungeon-temple-props-input", type=Path, default=Path("assets/stormakt3020/dungeon-temple-props-v1.png"))
     parser.add_argument(
         "--logo-input",
         type=Path,
@@ -962,6 +980,7 @@ def main() -> None:
         args.dungeon_gruva3_enemies_input,
         args.dungeon_blind_shepherd_input,
         args.dungeon_temple_act1_input,
+        args.dungeon_temple_props_input,
         args.logo_input,
         args.output,
     )

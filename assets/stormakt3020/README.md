@@ -85,6 +85,8 @@ The Silverkroppen dungeon extension adds versioned transparent sheets for Karl o
 
 `dungeon-temple-act1-v2.png` replaces the first temple floor's dominant cross medallion with a quieter seamless field of small black basalt and iron slabs. The lower contrast keeps Karl, enemies, loot and telegraphs readable; the two gates, health tincture and Lemminkäinen shadow poses remain derived unchanged from the v1 source. The v1 sheet remains versioned for comparison and rollback.
 
+`dungeon-temple-props-v1.png` furnishes the first sigil court with black-iron guardian statues, a low sacrificial altar and closed/open Tuonela-swan sarcophagi. They replace the reused mine clutter in the eastern court and have matching physical navigation blockers. The chroma-key source and exact built-in image-generation prompt are preserved beside the runtime sheet.
+
 ## Resolution
 
 Stormakt defaults to a 400x280 logical framebuffer. Assets retain their native gameplay pixel size, providing 25 percent more field in both directions and making ships smaller relative to the world. WaylandForge scales the WFEX frame to its viewport. Set `WAYLANDFORGE_STORMAKT_LEGACY_320=1` to A/B test the original 320x224 field; the pack contains a correctly sized background for both modes.

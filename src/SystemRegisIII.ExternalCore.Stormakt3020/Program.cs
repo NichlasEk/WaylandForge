@@ -2043,6 +2043,12 @@ internal sealed class StormaktGame
         [(350, 410), (775, 185), (990, 505), (1370, 150), (1660, 570)];
     private static readonly (int X, int Y)[] DungeonTempleShrines =
         [(210, 600), (660, 600), (1090, 165), (1580, 380)];
+    private static readonly (int X, int Y)[] DungeonTempleGuardianStatues =
+        [(1275, 190), (1660, 190)];
+    private static readonly (int X, int Y)[] DungeonTempleClosedSarcophagi =
+        [(1290, 645), (1650, 650)];
+    private static readonly (int X, int Y)[] DungeonTempleOpenSarcophagi =
+        [(1450, 135)];
 
     private static void StepDungeonCurse(DungeonState dungeon)
     {
@@ -2590,10 +2596,15 @@ internal sealed class StormaktGame
             if (!shadowDefeated && x is > 1145 and < 1185) return true;
             foreach ((int obstacleX, int obstacleY) in new[] { (455, 360), (810, 500), (1050, 275) })
                 if (Math.Abs(x - obstacleX) < 35 && Math.Abs(y - obstacleY) < 22) return true;
-            foreach ((int obstacleX, int obstacleY) in new[] { (300, 650), (700, 110), (1110, 600), (1370, 150), (1660, 570) })
+            foreach ((int obstacleX, int obstacleY) in new[] { (300, 650), (700, 110), (1110, 600) })
                 if (Math.Abs(x - obstacleX) < 30 && Math.Abs(y - obstacleY) < 24) return true;
-            foreach ((int obstacleX, int obstacleY) in new[] { (1290, 600), (1450, 120), (1680, 250) })
-                if (Math.Abs(x - obstacleX) < 35 && Math.Abs(y - obstacleY) < 22) return true;
+            foreach ((int obstacleX, int obstacleY) in DungeonTempleGuardianStatues)
+                if (Math.Abs(x - obstacleX) < 22 && Math.Abs(y - obstacleY) < 30) return true;
+            if (Math.Abs(x - 1580) < 44 && Math.Abs(y - 380) < 20) return true;
+            foreach ((int obstacleX, int obstacleY) in DungeonTempleClosedSarcophagi)
+                if (Math.Abs(x - obstacleX) < 44 && Math.Abs(y - obstacleY) < 24) return true;
+            foreach ((int obstacleX, int obstacleY) in DungeonTempleOpenSarcophagi)
+                if (Math.Abs(x - obstacleX) < 52 && Math.Abs(y - obstacleY) < 30) return true;
             return false;
         }
         bool leftPillar = x > 253 && x < 307 && y > 124 && y < 212;
@@ -4047,13 +4058,20 @@ internal sealed class StormaktGame
             foreach ((int x, int y) in DungeonTempleWaters)
                 DrawDungeonSprite(frame, dungeon, "dungeon_black_water", x, y);
             foreach ((int x, int y) in DungeonTempleShrines)
-                DrawDungeonSprite(frame, dungeon, "dungeon_holy_shrine", x, y);
-            foreach ((int x, int y) in new[] { (455, 360), (810, 500), (1050, 275), (1290, 600), (1450, 120), (1680, 250) })
+                DrawDungeonSprite(frame, dungeon,
+                    x == 1580 ? "dungeon_temple_altar" : "dungeon_holy_shrine", x, y);
+            foreach ((int x, int y) in new[] { (455, 360), (810, 500), (1050, 275) })
                 DrawDungeonSprite(frame, dungeon, "dungeon_runic_arch", x, y);
-            foreach ((int x, int y) in new[] { (300, 650), (700, 110), (1110, 600), (1370, 150), (1660, 570) })
+            foreach ((int x, int y) in new[] { (300, 650), (700, 110), (1110, 600) })
                 DrawDungeonSprite(frame, dungeon, "dungeon_twisted_silver", x, y);
-            foreach ((int x, int y) in new[] { (520, 680), (900, 105), (1360, 680), (1610, 100) })
+            foreach ((int x, int y) in new[] { (520, 680), (900, 105) })
                 DrawDungeonSprite(frame, dungeon, "dungeon_side_chamber", x, y);
+            foreach ((int x, int y) in DungeonTempleGuardianStatues)
+                DrawDungeonSprite(frame, dungeon, "dungeon_temple_guardian", x, y);
+            foreach ((int x, int y) in DungeonTempleClosedSarcophagi)
+                DrawDungeonSprite(frame, dungeon, "dungeon_temple_sarc_closed", x, y);
+            foreach ((int x, int y) in DungeonTempleOpenSarcophagi)
+                DrawDungeonSprite(frame, dungeon, "dungeon_temple_sarc_open", x, y);
             foreach (DungeonChest chest in dungeon.Chests.Where(chest => chest.Depth == 4))
                 DrawDungeonSprite(frame, dungeon, chest.Open ? "dungeon_chest_open" : "dungeon_cursed_chest",
                     (int)chest.X, (int)chest.Y);
@@ -4231,9 +4249,10 @@ internal sealed class StormaktGame
         DrawDungeonPotionBelt(frame, dungeon);
         if (dungeon.Depth == 3)
         {
-            DrawText(frame, 108, 22, "FÖRBANNELSE", 0xffc589ff);
-            DrawRect(frame, 108, 32, 84, 6, 0xff17111d);
-            DrawRect(frame, 110, 34, 80 * dungeon.Curse / 100, 2,
+            int curseY = _bossRadioCard is not null ? 92 : activeBoss is null ? 22 : 52;
+            DrawText(frame, 108, curseY, "FÖRBANNELSE", 0xffc589ff);
+            DrawRect(frame, 108, curseY + 10, 84, 6, 0xff17111d);
+            DrawRect(frame, 110, curseY + 12, 80 * dungeon.Curse / 100, 2,
                 dungeon.Curse >= 80 ? 0xffff6b62 : 0xff9867c5);
         }
         int experienceY = activeBoss is null ? 22 : 49;
