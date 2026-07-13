@@ -399,8 +399,14 @@ Död erbjuder `ÅTERUPPTA AUTOSAVE`, `LADDA LÄGE` och `TILL FÄLTTÅGET`. Det f
 runbarriär; efter segern öppnas porten till en separat sigillgård med tre zonbundna väktare. Det första
 sigillet renar förbannelse, lämnar ett runristat fragment, autosparar och etablerar att två sigill återstår.
 Hälsotinkturer plockas nu upp som riktiga föremål, fyller ett fyrplatsers snabbälte före ryggsäcken och
-dricks med `Q` i stället för att förbrukas automatiskt på marken. Nästa tempelslice börjar bakom den
-andra förseglade porten; Svanen och Louhi ingår fortfarande inte i den landade delen.
+dricks med `Q` i stället för att förbrukas automatiskt på marken.
+
+Bakom den öppnade östporten finns nu den andra tempelgården. Karl frigör den saknade gruvfogden ur en
+öppnad svansarkofag, vilket bekräftar att silverfyndigheten var ett lås. Därefter aktiveras ordningen
+`SOL → SVAN → KRONA`: varje rätt runa återuppväcker gårdens tre väktare, medan fel runa nollställer
+ordningen och reser dem igen utan nytt loot eller XP. Den fullbordade ordningen öppnar andra sigillet,
+renar förbannelse, lämnar nästa runfragment, autosparar och etablerar att ett sigill återstår. Nästa
+tempelslice börjar bakom den östra slutporten; tredje sigillet, Svanen och Louhi är ännu inte landade.
 
 Den första sigillgården har fått en egen tydligare tempelidentitet: två svarta väktarstatyer, ett lågt
 offeraltare och både slutna och öppnade svansarkofager ersätter återanvänd gruvrekvisita. Föremålen är
