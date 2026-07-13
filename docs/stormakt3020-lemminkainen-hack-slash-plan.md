@@ -410,7 +410,8 @@ Inventoryföremål kan slängas med `D` eller den klickbara `SLÄNG`-knappen. F�
 giltig golvpunkt framför Karl, får marken som enda ägare och ligger kvar i samma position genom autosave.
 Utrustningsrutorna går nu också att klicka för att granska det burna föremålet. Ett klick på utrustningsbar
 loot i ryggsäcken visar dess verkliga byte mot nuvarande plats med gröna plus, röda minus och grå nollor
-för skada, rustning, kraft och förbannelsevärn.
+för skada, rustning, kraft och förbannelsevärn. Ett andra klick på samma föremål utrustar det; byteskoden
+frigör först kandidatens inventoryruta så att likstora föremål alltid kan byta plats även i en full ryggsäck.
 
 ### Checkpoint 8 – Balans, lootkurva och casting
 

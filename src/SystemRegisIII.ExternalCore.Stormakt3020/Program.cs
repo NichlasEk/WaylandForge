@@ -4512,6 +4512,17 @@ internal sealed class StormaktGame
         }
         DungeonItem? selected = dungeon.Items.FirstOrDefault(item => item.Id == dungeon.SelectedItemId);
         if (selected is null) { dungeon.SelectedItemId = 0; return; }
+        DungeonItem? clicked = DungeonItemAt(dungeon, x, y);
+        if (clicked?.Id == selected.Id)
+        {
+            EquipDungeonItem(dungeon, selected);
+            return;
+        }
+        if (clicked is not null)
+        {
+            dungeon.SelectedItemId = clicked.Id;
+            return;
+        }
         if (CanPlaceDungeonItem(dungeon, selected, x, y))
         {
             selected.GridX = x;
@@ -4546,11 +4557,26 @@ internal sealed class StormaktGame
         DungeonEquipmentSlot slot = DungeonItemDefinitions[item.Definition].Slot;
         if (slot == DungeonEquipmentSlot.None || dungeon.Level < DungeonRequiredLevel(item)) return;
         DungeonItem? previous = dungeon.Items.FirstOrDefault(candidate => candidate.Equipped == slot);
-        if (previous is not null && !TryPlaceFirstFree(dungeon, previous)) return;
-        item.Equipped = slot;
+        int oldGridX = item.GridX;
+        int oldGridY = item.GridY;
+        int oldQuickSlot = item.QuickSlot;
+        bool oldInStash = item.InStash;
+        // Free the candidate's footprint before finding room for the replaced
+        // item. A full backpack can then always swap equal-sized gear, such as
+        // one ring for another, instead of incorrectly rejecting the change.
         item.GridX = -1;
         item.GridY = -1;
         item.QuickSlot = -1;
+        if (previous is not null && !TryPlaceFirstFree(dungeon, previous))
+        {
+            item.GridX = oldGridX;
+            item.GridY = oldGridY;
+            item.QuickSlot = oldQuickSlot;
+            item.InStash = oldInStash;
+            return;
+        }
+        item.Equipped = slot;
+        item.InStash = false;
         dungeon.SelectedItemId = 0;
         dungeon.InspectedItemId = 0;
     }
@@ -4764,8 +4790,13 @@ internal sealed class StormaktGame
                 DrawDungeonStatDelta(frame, secondColumn, infoY + line * 4, "VÄRN", definition.CurseWard - comparedWard);
             }
             uint requirementColor = dungeon.Level >= DungeonRequiredLevel(focused) ? 0xff9bd4dc : 0xffff6b62;
-            DrawText(frame, gridX, infoY + line * 5, focused.Definition == 14 ? "HÖGERKLICK TILL SNABBBÄLTE" :
-                $"KRÄVER NIVÅ {DungeonRequiredLevel(focused):00}", requirementColor);
+            string actionHint = focused.Definition == 14
+                ? (_width <= 320 ? "IGEN=TILL BÄLTE" : "KLICKA IGEN TILL SNABBBÄLTE")
+                : focused.Equipped != DungeonEquipmentSlot.None
+                    ? $"KRÄVER NIVÅ {DungeonRequiredLevel(focused):00}"
+                    : (_width <= 320 ? $"NIVÅ {DungeonRequiredLevel(focused):00}  IGEN=UTRUSTA" :
+                        $"NIVÅ {DungeonRequiredLevel(focused):00}  KLICKA IGEN UTRUSTA");
+            DrawText(frame, gridX, infoY + line * 5, actionHint, requirementColor);
             DrawText(frame, gridX, infoY + line * 6, $"TOTAL RUST {DungeonArmor(dungeon):00}  FÖRB {DungeonCurseWard(dungeon):00}%", 0xffaeb8bd);
         }
         string inventoryHelp = dungeon.ViewingStash ? "X STÄNG  HÖGERKLICK TA" : _width <= 320
