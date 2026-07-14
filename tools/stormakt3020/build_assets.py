@@ -439,6 +439,37 @@ def append_dungeon_combat(entries: list[tuple[str, Image.Image]], karl: Image.Im
         entries.append((name, canvas))
 
 
+def append_dungeon_karl_hammer(entries: list[tuple[str, Image.Image]],
+                               movement: Image.Image, attack: Image.Image) -> None:
+    movement_names = [
+        "karl_hammer_s_idle", "karl_hammer_s_walk_a", "karl_hammer_s_walk_b",
+        "karl_hammer_n_idle", "karl_hammer_n_walk_a", "karl_hammer_n_walk_b",
+        "karl_hammer_e_idle", "karl_hammer_e_walk_a", "karl_hammer_e_walk_b",
+    ]
+    attack_names = [
+        "karl_hammer_s_windup", "karl_hammer_s_contact", "karl_hammer_s_recover",
+        "karl_hammer_n_windup", "karl_hammer_n_contact", "karl_hammer_n_recover",
+        "karl_hammer_e_windup", "karl_hammer_e_contact", "karl_hammer_e_recover",
+    ]
+    for source, names, target, canvas_size in [
+        (movement, movement_names, (62, 58), (68, 64)),
+        (attack, attack_names, (72, 64), (76, 70)),
+    ]:
+        for index, name in enumerate(names):
+            column, row = index % 3, index // 3
+            bleed = 24
+            left = max(0, column * source.width // 3 - bleed)
+            top = max(0, row * source.height // 3 - bleed)
+            right = min(source.width, (column + 1) * source.width // 3 + bleed)
+            bottom = min(source.height, (row + 1) * source.height // 3 + bleed)
+            sprite = trim_alpha(source.crop((left, top, right, bottom)).convert("RGBA"))
+            sprite.thumbnail(target, Image.Resampling.LANCZOS)
+            canvas = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
+            canvas.alpha_composite(sprite, ((canvas_size[0] - sprite.width) // 2,
+                                            canvas_size[1] - sprite.height - 2))
+            entries.append((name, canvas))
+
+
 def append_dungeon_gruva2(entries: list[tuple[str, Image.Image]], loot: Image.Image, door: Image.Image) -> None:
     for source, names, target in [
         (loot, ["dungeon_chest_closed", "dungeon_chest_open", "dungeon_silver_vent", "dungeon_silver_mist"], (64, 54)),
@@ -687,6 +718,8 @@ def build(
     dungeon_karl_combat_input_path: Path,
     dungeon_enemies_input_path: Path,
     dungeon_karl_north_input_path: Path,
+    dungeon_karl_hammer_move_input_path: Path,
+    dungeon_karl_hammer_attack_input_path: Path,
     dungeon_gruva2_loot_input_path: Path,
     dungeon_door_input_path: Path,
     dungeon_silver_fogde_input_path: Path,
@@ -741,6 +774,8 @@ def build(
     dungeon_karl_combat_source = Image.open(dungeon_karl_combat_input_path).convert("RGBA")
     dungeon_enemies_source = Image.open(dungeon_enemies_input_path).convert("RGBA")
     dungeon_karl_north_source = Image.open(dungeon_karl_north_input_path).convert("RGBA")
+    dungeon_karl_hammer_move_source = Image.open(dungeon_karl_hammer_move_input_path).convert("RGBA")
+    dungeon_karl_hammer_attack_source = Image.open(dungeon_karl_hammer_attack_input_path).convert("RGBA")
     dungeon_gruva2_loot_source = Image.open(dungeon_gruva2_loot_input_path).convert("RGBA")
     dungeon_door_source = Image.open(dungeon_door_input_path).convert("RGBA")
     dungeon_silver_fogde_source = Image.open(dungeon_silver_fogde_input_path).convert("RGBA")
@@ -838,6 +873,7 @@ def build(
     append_dungeon_loot(entries, dungeon_loot_source)
     append_dungeon_ui(entries, dungeon_ui_source)
     append_dungeon_combat(entries, dungeon_karl_combat_source, dungeon_enemies_source, dungeon_karl_north_source)
+    append_dungeon_karl_hammer(entries, dungeon_karl_hammer_move_source, dungeon_karl_hammer_attack_source)
     append_dungeon_gruva2(entries, dungeon_gruva2_loot_source, dungeon_door_source)
     append_dungeon_silver_fogde(entries, dungeon_silver_fogde_source)
     append_dungeon_fogde_finale(entries, dungeon_fogde_finale_source)
@@ -989,6 +1025,8 @@ def main() -> None:
     parser.add_argument("--dungeon-karl-combat-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-combat-v1.png"))
     parser.add_argument("--dungeon-enemies-input", type=Path, default=Path("assets/stormakt3020/dungeon-danish-enemies-v1.png"))
     parser.add_argument("--dungeon-karl-north-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-north-combat-v1.png"))
+    parser.add_argument("--dungeon-karl-hammer-move-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-hammer-move-v1.png"))
+    parser.add_argument("--dungeon-karl-hammer-attack-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-hammer-attack-v1.png"))
     parser.add_argument("--dungeon-gruva2-loot-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva2-loot-v1.png"))
     parser.add_argument("--dungeon-door-input", type=Path, default=Path("assets/stormakt3020/dungeon-breakable-door-v1.png"))
     parser.add_argument("--dungeon-silver-fogde-input", type=Path, default=Path("assets/stormakt3020/dungeon-silver-fogde-v1.png"))
@@ -1048,6 +1086,8 @@ def main() -> None:
         args.dungeon_karl_combat_input,
         args.dungeon_enemies_input,
         args.dungeon_karl_north_input,
+        args.dungeon_karl_hammer_move_input,
+        args.dungeon_karl_hammer_attack_input,
         args.dungeon_gruva2_loot_input,
         args.dungeon_door_input,
         args.dungeon_silver_fogde_input,

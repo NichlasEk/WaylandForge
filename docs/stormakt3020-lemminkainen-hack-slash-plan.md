@@ -459,6 +459,11 @@ frigör först kandidatens inventoryruta så att likstora föremål alltid kan b
 Högerklick accepteras på både tryck och släpp, och om det gamla föremålet är större än den enda lediga
 ytan läggs det beständigt på golvet vid Karl i stället för att bytet tyst vägras. Inventoryt visar varför.
 
+Gruvhammaren har nu ett komplett visuellt vapenläge i stället för att bara ändra skada och attacktid.
+När den är utrustad bär Karl den synligt i vila och tvåstegsgång från syd, nord och sida; värjan visas
+inte under rörelse, gardering eller träffreaktion. Hammarslaget använder tre riktningsspecifika faser:
+tyngdförskjutet uppdrag, markkontakt med ett kompakt stenutslag och en låg återhämtning.
+
 Övergången från den förbannade gruvan läser nu den östra stenen som en riktig tempelingång: den har en
 lysande markering och aktiveras automatiskt när Karl går fram till den, innan rummets högra världsgräns
 kan kännas som en osynlig vägg. Templets senare berättelselås har i stället synliga, rumshöga runsegel

@@ -1458,6 +1458,16 @@ internal sealed class StormaktGame
             DoorHealth = 3,
         };
         SeedDungeonInventory(_dungeon);
+        if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_HAMMER_TEST"), "1", StringComparison.Ordinal))
+        {
+            DungeonItem rapier = _dungeon.Items.First(item => item.Equipped == DungeonEquipmentSlot.MainHand);
+            DungeonItem hammerItem = _dungeon.Items.First(item => item.Definition == 3);
+            rapier.Equipped = DungeonEquipmentSlot.None;
+            hammerItem.Equipped = DungeonEquipmentSlot.MainHand;
+            hammerItem.GridX = -1;
+            hammerItem.GridY = -1;
+            TryPlaceFirstFree(_dungeon, rapier);
+        }
         SeedDungeonEncounter(_dungeon);
         if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_DEPTH2_TEST"), "1", StringComparison.Ordinal))
         {
@@ -5516,9 +5526,21 @@ internal sealed class StormaktGame
         // long, deliberate Carolean stride at both normal and Slow speed.
         int gait = (int)(dungeon.GaitDistance / 8.5) & 3;
         bool hammer = dungeon.Items.Any(item => item.Equipped == DungeonEquipmentSlot.MainHand && item.Definition == 3);
-        if (dungeon.HurtAge > 0) karlName = "karl_hit";
-        else if (dungeon.Guarding) karlName = dungeon.Facing == DungeonFacing.North ? "karl_parry_n" : "karl_parry";
-        else if (dungeon.AttackAge > 0 && hammer) karlName = "karl_hammer_impact";
+        string hammerDirection = dungeon.Facing switch
+        {
+            DungeonFacing.North => "n",
+            DungeonFacing.East or DungeonFacing.West => "e",
+            _ => "s",
+        };
+        string hammerIdle = $"karl_hammer_{hammerDirection}_idle";
+        if (dungeon.HurtAge > 0) karlName = hammer ? hammerIdle : "karl_hit";
+        else if (dungeon.Guarding) karlName = hammer ? hammerIdle :
+            dungeon.Facing == DungeonFacing.North ? "karl_parry_n" : "karl_parry";
+        else if (dungeon.AttackAge > 0 && hammer)
+        {
+            string phase = dungeon.AttackAge < 10 ? "windup" : dungeon.AttackAge < 19 ? "contact" : "recover";
+            karlName = $"karl_hammer_{hammerDirection}_{phase}";
+        }
         else if (dungeon.AttackAge > 0 && dungeon.Facing is DungeonFacing.East or DungeonFacing.West)
             karlName = dungeon.AttackAge < 9 ? "karl_slash_e_windup" : "karl_slash_e_contact";
         else if (dungeon.AttackAge > 0 && dungeon.Facing == DungeonFacing.North)
@@ -5531,6 +5553,10 @@ internal sealed class StormaktGame
             < 8 => "karl_slash_windup", < 13 => "karl_slash_contact", _ => "karl_slash_follow",
         };
         else if (dungeon.Age < 150) karlName = dungeon.Age < 95 ? "dungeon_karl_kneel" : "dungeon_karl_s_idle";
+        else if (hammer && !dungeon.Moving) karlName = hammerIdle;
+        else if (hammer) karlName = gait is 1 or 2
+            ? $"karl_hammer_{hammerDirection}_walk_a"
+            : $"karl_hammer_{hammerDirection}_walk_b";
         else if (dungeon.Facing == DungeonFacing.North) karlName = dungeon.Moving && gait is 1 or 3 ? "dungeon_karl_n_walk" : "dungeon_karl_n_idle";
         else if (dungeon.Facing is DungeonFacing.East or DungeonFacing.West) karlName = dungeon.Moving && gait is 1 or 3 ? "dungeon_karl_e_walk" : "dungeon_karl_e_idle";
         else karlName = !dungeon.Moving || gait is 0 or 2 ? "dungeon_karl_s_idle" :
@@ -5546,7 +5572,7 @@ internal sealed class StormaktGame
                 "karl_slash_windup" or "karl_slash_contact" or "karl_slash_follow" or "karl_parry" => 20,
                 "karl_slash_e_windup" or "karl_slash_e_contact" => 22,
                 "karl_slash_n_windup" or "karl_slash_n_contact" or "karl_slash_n_follow" or "karl_parry_n" => 16,
-                "karl_hammer_impact" => 30,
+                "karl_hammer_s_contact" or "karl_hammer_n_contact" or "karl_hammer_e_contact" => 19,
                 "karl_hit" => 25,
                 _ => 12,
             };
