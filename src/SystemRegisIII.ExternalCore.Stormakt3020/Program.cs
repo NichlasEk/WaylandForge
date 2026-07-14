@@ -1947,7 +1947,8 @@ internal sealed class StormaktGame
         }
         if (dungeon.PendingChestId != 0)
         {
-            DungeonChest? chest = dungeon.Chests.FirstOrDefault(candidate => candidate.Id == dungeon.PendingChestId);
+            DungeonChest? chest = dungeon.Chests.FirstOrDefault(candidate =>
+                candidate.Id == dungeon.PendingChestId && candidate.Depth == dungeon.Depth);
             if (chest is null || chest.Open) dungeon.PendingChestId = 0;
             else if (DistanceSquared(chest.X, chest.Y, dungeon.KarlX, dungeon.KarlY) < 38 * 38)
             {
