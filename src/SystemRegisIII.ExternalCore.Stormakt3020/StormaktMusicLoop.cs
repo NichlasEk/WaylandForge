@@ -20,6 +20,8 @@ internal sealed class StormaktMusicLoop : IDisposable
     private readonly float[]? _rtsSamples;
     private readonly float[]? _dungeonSamples;
     private readonly float[]? _bossSamples;
+    private readonly float[]? _escapeSamples;
+    private readonly float[]? _reliefSamples;
     private readonly Dictionary<StormaktSound, LoadedEffect> _effects;
     private readonly Dictionary<StormaktVoice, LoadedEffect> _voices;
     private readonly ConcurrentQueue<StormaktSound> _pendingEffects = new();
@@ -48,6 +50,8 @@ internal sealed class StormaktMusicLoop : IDisposable
         float[]? rtsSamples,
         float[]? dungeonSamples,
         float[]? bossSamples,
+        float[]? escapeSamples,
+        float[]? reliefSamples,
         Dictionary<StormaktSound, LoadedEffect> effects,
         Dictionary<StormaktVoice, LoadedEffect> voices,
         string socketPath)
@@ -59,6 +63,8 @@ internal sealed class StormaktMusicLoop : IDisposable
         _rtsSamples = rtsSamples;
         _dungeonSamples = dungeonSamples;
         _bossSamples = bossSamples;
+        _escapeSamples = escapeSamples;
+        _reliefSamples = reliefSamples;
         _effects = effects;
         _voices = voices;
         _totalFrames = samples.Length / Channels;
@@ -116,6 +122,10 @@ internal sealed class StormaktMusicLoop : IDisposable
                 string originalBossPath = Path.Combine(musicDirectory, "kronans-sista-salva-v1.wav");
                 string bossPath = File.Exists(loopedBossPath) ? loopedBossPath : originalBossPath;
                 float[]? bossSamples = File.Exists(bossPath) ? LoadPcm16StereoWav(bossPath) : null;
+                string escapePath = Path.Combine(musicDirectory, "lemminkainen-flykt-v1.wav");
+                float[]? escapeSamples = File.Exists(escapePath) ? LoadPcm16StereoWav(escapePath) : null;
+                string reliefPath = Path.Combine(musicDirectory, "lemminkainen-lattnad-v1.wav");
+                float[]? reliefSamples = File.Exists(reliefPath) ? LoadPcm16StereoWav(reliefPath) : null;
                 Dictionary<StormaktSound, LoadedEffect> effects = LoadEffects(path);
                 Dictionary<StormaktVoice, LoadedEffect> voices = LoadVoices(path);
                 string socketPath = Environment.GetEnvironmentVariable("WAYLANDFORGE_AUDIO_SOCKET") ?? DefaultSocketPath;
@@ -124,10 +134,14 @@ internal sealed class StormaktMusicLoop : IDisposable
                 string rtsDescription = rtsSamples is null ? "missing" : $"ready ({rtsSamples.Length / Channels / SampleRate}s)";
                 string dungeonDescription = dungeonSamples is null ? "missing" : $"ready ({dungeonSamples.Length / Channels / SampleRate}s)";
                 string bossDescription = bossSamples is null ? "missing" : $"ready ({bossSamples.Length / Channels / SampleRate}s)";
+                string escapeDescription = escapeSamples is null ? "missing" : $"ready ({escapeSamples.Length / Channels / SampleRate}s)";
+                string reliefDescription = reliefSamples is null ? "missing" : $"ready ({reliefSamples.Length / Channels / SampleRate}s)";
                 Console.Error.WriteLine($"Stormakt audio: loaded {Path.GetFileName(path)} ({samples.Length / Channels / SampleRate}s), " +
                     $"menu march={menuDescription}, Skanska score={skanskaDescription}, RTS score={rtsDescription}, dungeon score={dungeonDescription}, boss score={bossDescription}, " +
+                    $"escape score={escapeDescription}, relief score={reliefDescription}, " +
                     $"{effects.Count} effects and {voices.Count} radio voices.");
-                return new StormaktMusicLoop(samples, menuSamples, skanskaSamples, rtsSamples, dungeonSamples, bossSamples, effects, voices, socketPath);
+                return new StormaktMusicLoop(samples, menuSamples, skanskaSamples, rtsSamples, dungeonSamples,
+                    bossSamples, escapeSamples, reliefSamples, effects, voices, socketPath);
             }
             catch (Exception exception)
             {
@@ -270,6 +284,8 @@ internal sealed class StormaktMusicLoop : IDisposable
                 StormaktMusicTrack.Rts => _rtsSamples,
                 StormaktMusicTrack.Dungeon => _dungeonSamples,
                 StormaktMusicTrack.Boss => _bossSamples,
+                StormaktMusicTrack.Escape => _escapeSamples,
+                StormaktMusicTrack.Relief => _reliefSamples,
                 _ => null,
             };
             if (requestedSamples is not null && _currentTrack != track && _transitionTrack != track)
@@ -802,4 +818,6 @@ internal enum StormaktMusicTrack
     Rts,
     Dungeon,
     Boss,
+    Escape,
+    Relief,
 }

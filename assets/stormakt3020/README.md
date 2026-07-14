@@ -103,6 +103,8 @@ The Silverkroppen dungeon extension adds versioned transparent sheets for Karl o
 
 `dungeon-ore-mother-ring-v1.png` is the unique permanent reward from Louhi's final form: black meteoric iron, old Swedish silver, three crowns and a green-red living ore rune. Its pickup begins the collapsing-temple escape through the deep lift, mounted moose run and launch of Karl CCLV.
 
+`dungeon-karl-moose-escape-v1.png` gives the temple escape its own Karl-specific mounted ready and charge poses instead of reusing the helmeted RTS Carolean. `dungeon-moose-dismounted-v1.png` supplies the empty saddle after Karl jumps down and walks aboard Karl CCLV.
+
 ## Resolution
 
 Stormakt defaults to a 400x280 logical framebuffer. Assets retain their native gameplay pixel size, providing 25 percent more field in both directions and making ships smaller relative to the world. WaylandForge scales the WFEX frame to its viewport. Set `WAYLANDFORGE_STORMAKT_LEGACY_320=1` to A/B test the original 320x224 field; the pack contains a correctly sized background for both modes.
@@ -134,6 +136,8 @@ Additional scored roles live under `music/`:
 - `music/lemminkainen-djupgruva-v1.wav`: reserved 64-second D-minor Djupgruvan score.
 - `music/lemminkainen-forbannad-gruva-v1.wav`: reserved 64-second F-sharp-minor cursed-mine score.
 - `music/lemminkainen-tempel-v1.wav`: reserved 64-second C-sharp-minor temple score.
+- `music/lemminkainen-flykt-v1.wav`: active 48-second D-minor, 116 BPM collapse-and-lift escape score, generated locally with fixed seed `30201661`.
+- `music/lemminkainen-lattnad-v1.wav`: active 48-second G-major/E-minor, 92 BPM mounted escape and spacecraft departure score, generated locally with fixed seed `30201662`.
 - `oresund-i-brand-v1.wav`: faster normal-combat loop.
 - `kronans-sista-salva-v1.wav`: monumental boss loop.
 

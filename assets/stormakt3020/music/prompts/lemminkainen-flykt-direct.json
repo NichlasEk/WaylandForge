@@ -1,0 +1,22 @@
+{
+  "prompt": "Instrumental epic collapsing-temple escape music for a dark Swedish retro-futurist action RPG. D minor, 116 BPM, urgent circular twelve-bar pursuit. Relentless low nyckelharpa and cello ostinato, rapid Carolean field snare, pounding frame drums and timpani, groaning mine chains, falling-stone impacts, alarmed natural horns and dark brass repeating the three-note Swedish fate motif. Ancient Nordic ritual dread turns into desperate forward momentum as Karl races through a magical cave-in and a mine lift tears upward. Dense and heroic but never cheerful, immediate full motion, no quiet intro, no terminal cadence and no fade. No vocals, no choir, no EDM, no rock guitar, no modern trailer braams, no comedy.",
+  "lyrics": "[Instrumental]",
+  "vocal_language": "unknown",
+  "audio_duration": 48,
+  "audio_format": "wav",
+  "task_type": "text2music",
+  "batch_size": 1,
+  "thinking": false,
+  "use_format": false,
+  "bpm": 116,
+  "key_scale": "D minor",
+  "time_signature": "4/4",
+  "inference_steps": 8,
+  "guidance_scale": 8.0,
+  "use_random_seed": false,
+  "seed": 30201661,
+  "constrained_decoding": true,
+  "use_cot_caption": false,
+  "use_cot_language": false,
+  "lm_negative_prompt": "vocals, choir, singing, EDM, rock, pop, comedy, cheerful, ambient intro, trailer braams, final cadence, fade"
+}

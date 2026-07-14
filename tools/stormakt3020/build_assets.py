@@ -402,6 +402,25 @@ def append_dungeon_ore_mother_ring(entries: list[tuple[str, Image.Image]], sourc
     entries.append(("loot_ore_mother_ring", canvas))
 
 
+def append_dungeon_karl_moose_escape(
+    entries: list[tuple[str, Image.Image]],
+    mounted: Image.Image,
+    riderless: Image.Image,
+) -> None:
+    half = mounted.width // 2
+    frames = [
+        ("epilogue_karl_moose_ready", mounted.crop((0, 0, half, mounted.height))),
+        ("epilogue_karl_moose_charge", mounted.crop((half, 0, mounted.width, mounted.height))),
+        ("epilogue_moose_riderless", riderless),
+    ]
+    for name, frame in frames:
+        sprite = trim_alpha(frame.convert("RGBA"))
+        sprite.thumbnail((94, 66), Image.Resampling.LANCZOS)
+        canvas = Image.new("RGBA", (98, 70), (0, 0, 0, 0))
+        canvas.alpha_composite(sprite, ((98 - sprite.width) // 2, 70 - sprite.height))
+        entries.append((name, canvas))
+
+
 def append_dungeon_ui(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
     names = ["ui_health_orb", "ui_power_orb", "ui_inventory_corner", "ui_inventory_divider",
              "ui_item_slot", "ui_backpack_grid", "ui_carolean_silhouette", "ui_stash_crest"]
@@ -778,6 +797,8 @@ def build(
     dungeon_louhi_ore_mother_input_path: Path,
     dungeon_temple_seal_fog_input_path: Path,
     dungeon_ore_mother_ring_input_path: Path,
+    dungeon_karl_moose_escape_input_path: Path,
+    dungeon_moose_dismounted_input_path: Path,
     louhi_portrait_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
@@ -837,6 +858,8 @@ def build(
     dungeon_louhi_ore_mother_source = Image.open(dungeon_louhi_ore_mother_input_path).convert("RGBA")
     dungeon_temple_seal_fog_source = Image.open(dungeon_temple_seal_fog_input_path).convert("RGBA")
     dungeon_ore_mother_ring_source = Image.open(dungeon_ore_mother_ring_input_path).convert("RGBA")
+    dungeon_karl_moose_escape_source = Image.open(dungeon_karl_moose_escape_input_path).convert("RGBA")
+    dungeon_moose_dismounted_source = Image.open(dungeon_moose_dismounted_input_path).convert("RGBA")
     louhi_portrait_source = Image.open(louhi_portrait_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
@@ -936,6 +959,7 @@ def build(
     append_dungeon_louhi_ore_mother(entries, dungeon_louhi_ore_mother_source)
     append_dungeon_temple_seal_fog(entries, dungeon_temple_seal_fog_source)
     append_dungeon_ore_mother_ring(entries, dungeon_ore_mother_ring_source)
+    append_dungeon_karl_moose_escape(entries, dungeon_karl_moose_escape_source, dungeon_moose_dismounted_source)
     append_louhi_portrait(entries, louhi_portrait_source)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
@@ -1094,6 +1118,8 @@ def main() -> None:
     parser.add_argument("--dungeon-louhi-ore-mother-input", type=Path, default=Path("assets/stormakt3020/dungeon-louhi-ore-mother-v1.png"))
     parser.add_argument("--dungeon-temple-seal-fog-input", type=Path, default=Path("assets/stormakt3020/dungeon-temple-seal-fog-v1.png"))
     parser.add_argument("--dungeon-ore-mother-ring-input", type=Path, default=Path("assets/stormakt3020/dungeon-ore-mother-ring-v1.png"))
+    parser.add_argument("--dungeon-karl-moose-escape-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-moose-escape-v1.png"))
+    parser.add_argument("--dungeon-moose-dismounted-input", type=Path, default=Path("assets/stormakt3020/dungeon-moose-dismounted-v1.png"))
     parser.add_argument("--louhi-portrait-input", type=Path, default=Path("assets/stormakt3020/louhi-radio-v1.png"))
     parser.add_argument(
         "--logo-input",
@@ -1158,6 +1184,8 @@ def main() -> None:
         args.dungeon_louhi_ore_mother_input,
         args.dungeon_temple_seal_fog_input,
         args.dungeon_ore_mother_ring_input,
+        args.dungeon_karl_moose_escape_input,
+        args.dungeon_moose_dismounted_input,
         args.louhi_portrait_input,
         args.logo_input,
         args.output,

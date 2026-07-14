@@ -2018,6 +2018,16 @@ internal sealed class StormaktGame
             TryActivateThirdTempleVerse(dungeon, dungeon.PendingTempleVerse - 1))
             dungeon.PendingTempleVerse = 0;
 
+        // Reaching the awakened lift is enough. Do not leave Karl standing on
+        // the platform waiting for an old click latch while the collapse timer
+        // continues behind him.
+        if (dungeon.Depth == 4 && (dungeon.LoreMask & DungeonLouhiRelicMask) != 0 &&
+            DistanceSquared(4380, 380, dungeon.KarlX, dungeon.KarlY) < 52 * 52)
+        {
+            BeginDungeonEpilogue(dungeon);
+            return;
+        }
+
         StepDungeonTempleAmbush(dungeon);
         StepDungeonTempleSigil(dungeon);
         StepDungeonSecondTempleSigil(dungeon);
@@ -2104,9 +2114,9 @@ internal sealed class StormaktGame
         else if (dungeon.Depth == 4 && dungeon.PendingTempleReturn &&
             DistanceSquared(60, 250, dungeon.KarlX, dungeon.KarlY) < 38 * 38)
             ReturnToDungeonDepthThree(dungeon);
-        else if (dungeon.Depth == 4 && dungeon.PendingFinalLift &&
+        else if (dungeon.Depth == 4 &&
             (dungeon.LoreMask & DungeonLouhiRelicMask) != 0 &&
-            DistanceSquared(4380, 380, dungeon.KarlX, dungeon.KarlY) < 42 * 42)
+            DistanceSquared(4380, 380, dungeon.KarlX, dungeon.KarlY) < 52 * 52)
             BeginDungeonEpilogue(dungeon);
     }
 
@@ -2421,6 +2431,7 @@ internal sealed class StormaktGame
         dungeon.AttackAge = 0;
         dungeon.InventoryOpen = false;
         ClearBossRadio();
+        _audio?.SwitchMusic(StormaktMusicTrack.Escape);
         _audio?.Trigger(StormaktSound.Deploy);
         WriteDungeonSave(dungeon, "autosave");
     }
@@ -2436,7 +2447,9 @@ internal sealed class StormaktGame
             dungeon.HitStop = Math.Max(dungeon.HitStop, 2);
             _audio?.Trigger(StormaktSound.DungeonSilverShatter);
         }
-        if (dungeon.CollapseAge > 1500 && dungeon.Health > 0)
+        bool safelyInLift = (dungeon.LoreMask & DungeonLouhiRelicMask) != 0 &&
+            DistanceSquared(4380, 380, dungeon.KarlX, dungeon.KarlY) < 58 * 58;
+        if (dungeon.CollapseAge > 1500 && dungeon.Health > 0 && !safelyInLift)
         {
             dungeon.PickupNotice = "TEMPLET SLUKAR ALLT";
             dungeon.PickupNoticeAge = 120;
@@ -2447,13 +2460,13 @@ internal sealed class StormaktGame
     private void StepDungeonEpilogue(DungeonState dungeon, uint buttons)
     {
         dungeon.EpilogueAge++;
-        if (dungeon.EpilogueAge == 150) _audio?.SwitchMusic(StormaktMusicTrack.Combat);
-        if (dungeon.EpilogueAge == 850)
+        if (dungeon.EpilogueAge == 300) _audio?.SwitchMusic(StormaktMusicTrack.Relief);
+        if (dungeon.EpilogueAge == 900)
         {
             dungeon.LoreMask |= DungeonEpilogueCompleteMask;
             WriteDungeonSave(dungeon, "autosave");
         }
-        if (dungeon.EpilogueAge < 920 || !Pressed(buttons, Fire)) return;
+        if (dungeon.EpilogueAge < 970 || !Pressed(buttons, Fire)) return;
         _dungeon = null;
         _inLevelSelect = true;
         _inSilverkroppenSelect = false;
@@ -6192,7 +6205,9 @@ internal sealed class StormaktGame
                 for (int x = 0; x < _width; x += stone.Width) DrawSprite(frame, stone, x, y);
             }
             DrawEpilogueSprite(frame, "dungeon_chain_lift", _width / 2, _height / 2 + 10);
-            DrawEpilogueSprite(frame, "dungeon_karl_s_idle", _width / 2, _height / 2 + 26);
+            // Karl's boots stay on the platform instead of hanging below its
+            // front edge while the shaft races past.
+            DrawEpilogueSprite(frame, "dungeon_karl_s_idle", _width / 2, _height / 2 + 3);
             DrawLine(frame, _width / 2 - 30, 18, _width / 2 - 30, _height - 18, 0xff6f7775);
             DrawLine(frame, _width / 2 + 30, 18, _width / 2 + 30, _height - 18, 0xff6f7775);
             DrawText(frame, Math.Max(6, (_width - 126) / 2), 24, "GRUVHISSEN STIGER", 0xff9fd6a4);
@@ -6207,7 +6222,7 @@ internal sealed class StormaktGame
         }
         DrawRect(frame, 0, 0, _width, 36, 0xff101923);
         DrawText(frame, 8, 8, age < 430 ? "SILVERKROPPENS YTA" : "MOT KARL CCLV", 0xffffd66b);
-        int travel = Math.Max(0, age - 300) * 3;
+        int travel = Math.Max(0, age - 260) * 3;
         string[] trees = ["rts_spruce_tall", "rts_spruce_bent", "rts_pine_dead"];
         for (int index = 0; index < 7; index++)
         {
@@ -6217,30 +6232,60 @@ internal sealed class StormaktGame
 
         if (age < 330)
         {
-            int mooseX = Math.Min(_width / 2 - 34, -35 + (age - 150) * 3);
-            DrawEpilogueSprite(frame, "rts_moose_charge", mooseX, _height - 68);
-            if (age < 270) DrawEpilogueSprite(frame, "dungeon_karl_e_idle", _width / 2 + 22, _height - 62);
-            DrawText(frame, 8, _height - 16, age < 270 ? "ÄLGEN MINNS VÄGEN" : "KARL SITTER UPP", 0xffdce8f2);
+            int incomingMooseX = Math.Min(_width / 2 - 25, -55 + (age - 150) * 3);
+            DrawEpilogueSprite(frame, age < 225 ? "epilogue_karl_moose_ready" : "epilogue_karl_moose_charge",
+                incomingMooseX, _height - 55);
+            DrawText(frame, 8, _height - 16, age < 225 ? "ÄLGEN MINNS VÄGEN" : "KARL SITTER UPP", 0xffdce8f2);
             DrawDungeonCollapseOverlay(frame, age + 700);
             return;
         }
 
-        int shipX = Math.Min(_width / 2 + 90, _width + 70 - Math.Max(0, age - 440) * 2);
-        if (age < 650)
+        int shipX = Math.Min(_width / 2 + 62, _width + 70 - Math.Max(0, age - 430) * 2);
+        if (age < 620)
         {
-            DrawEpilogueSprite(frame, "rts_moose_charge", _width / 2 - 45, _height - 67);
+            DrawEpilogueSprite(frame, "epilogue_karl_moose_charge", _width / 2 - 35, _height - 55);
             DrawEpilogueShip(frame, shipX, _height - 82, 0);
             DrawText(frame, 8, _height - 16, "RASET FÖLJER EFTER", 0xffdce8f2);
-            DrawDungeonCollapseOverlay(frame, age + 900);
+            if (age < 470) DrawDungeonCollapseOverlay(frame, age + 900);
             return;
         }
 
-        int lift = Math.Max(0, age - 720);
-        DrawEpilogueSprite(frame, "rts_moose_ready", _width / 2 - 82, _height - 66);
-        DrawEpilogueShip(frame, _width / 2 + 25, _height - 82 - lift, lift);
-        if (age < 720)
+        const int mooseX = 104;
+        const int groundY = 224;
+        int lift = Math.Max(0, age - 790);
+        string mooseSprite = age < 675 ? "epilogue_karl_moose_ready" : "epilogue_moose_riderless";
+        DrawEpilogueSprite(frame, mooseSprite, mooseX, groundY);
+        DrawEpilogueShip(frame, _width / 2 + 62, _height - 82 - lift, lift);
+        if (age >= 675 && age < 790)
+        {
+            int dismountAge = age - 675;
+            int karlX;
+            int karlFootY;
+            string karlSprite;
+            if (dismountAge < 24)
+            {
+                double t = dismountAge / 23.0;
+                karlX = mooseX + 3 + (int)Math.Round(t * 30);
+                karlFootY = groundY - 28 + (int)Math.Round(t * 28 - Math.Sin(t * Math.PI) * 13);
+                karlSprite = "dungeon_karl_e_idle";
+            }
+            else
+            {
+                int walkAge = dismountAge - 24;
+                karlX = Math.Min(_width / 2 + 44, mooseX + 33 + walkAge * 2);
+                karlFootY = groundY;
+                karlSprite = walkAge / 8 % 2 == 0 ? "dungeon_karl_e_idle" : "dungeon_karl_e_walk";
+            }
+            if (karlX < _width / 2 + 42)
+                DrawEpilogueSprite(frame, karlSprite, karlX, karlFootY);
+        }
+        if (age < 675)
+            DrawText(frame, 8, _height - 16, "SKEPPET VÄNTAR", 0xffffd66b);
+        else if (age < 715)
+            DrawText(frame, 8, _height - 16, "KARL HOPPAR AV", 0xffffd66b);
+        else if (age < 790)
             DrawText(frame, 8, _height - 16, "OMBORD PÅ KARL CCLV", 0xffffd66b);
-        else if (age < 850)
+        else if (age < 900)
             DrawText(frame, 8, _height - 16, "KURS MOT NÄSTA STORM", 0xff9bd4dc);
         else
         {
@@ -6252,7 +6297,7 @@ internal sealed class StormaktGame
             DrawText(frame, Math.Max(26, (_width - 90) / 2), _height / 2 + 16,
                 "ELD FORTSÄTT", 0xffdce8f2);
         }
-        if (age < 850) DrawDungeonCollapseOverlay(frame, age + 1100);
+        if (age < 700) DrawDungeonCollapseOverlay(frame, age + 1100);
     }
 
     private void DrawEpilogueSprite(uint[] frame, string name, int centerX, int footY)

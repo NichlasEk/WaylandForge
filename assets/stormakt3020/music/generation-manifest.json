@@ -88,6 +88,24 @@
       "thinking": false
     },
     {
+      "role": "level_04_temple_escape",
+      "file": "lemminkainen-flykt-v1.wav",
+      "request": "prompts/lemminkainen-flykt-direct.json",
+      "task_id": "8c1e2b81-eef6-42b1-83cc-1ce3537294d2",
+      "seed": "30201661",
+      "duration_seconds": 48,
+      "thinking": false
+    },
+    {
+      "role": "level_04_moose_and_ship_relief",
+      "file": "lemminkainen-lattnad-v1.wav",
+      "request": "prompts/lemminkainen-lattnad-direct.json",
+      "task_id": "30b5f90f-dc8d-4f2b-a436-457a0e645acb",
+      "seed": "30201662",
+      "duration_seconds": 48,
+      "thinking": false
+    },
+    {
       "role": "combat_fast",
       "file": "oresund-i-brand-v1.wav",
       "request": "prompts/oresund-i-brand.json",

@@ -1,0 +1,22 @@
+{
+  "prompt": "Instrumental Nordic relief and departure theme for a Swedish retro-futurist action RPG epilogue. G major with a wistful E minor shadow, 92 BPM, flowing circular twelve-bar ride. Warm nyckelharpa carries the transformed three-note Carolean fate motif, answered by noble natural horns, bass viol, steady hoof-like hand drum, soft field snare, wooden clacks and a restrained bright brass lift as Karl rides an armored moose out of a collapsing forest and boards his spacecraft. The first bars feel like breath returning after terror; the ending grows spacious, hopeful and adventurous for launch toward the next storm without becoming a victory jingle. Begin immediately, no final cadence and no fade. No vocals, no choir, no EDM, no rock guitar, no modern pop drums, no comedy, no sentimental Hollywood strings.",
+  "lyrics": "[Instrumental]",
+  "vocal_language": "unknown",
+  "audio_duration": 48,
+  "audio_format": "wav",
+  "task_type": "text2music",
+  "batch_size": 1,
+  "thinking": false,
+  "use_format": false,
+  "bpm": 92,
+  "key_scale": "G major",
+  "time_signature": "4/4",
+  "inference_steps": 8,
+  "guidance_scale": 8.0,
+  "use_random_seed": false,
+  "seed": 30201662,
+  "constrained_decoding": true,
+  "use_cot_caption": false,
+  "use_cot_language": false,
+  "lm_negative_prompt": "vocals, choir, singing, EDM, rock, pop, comedy, victory jingle, trailer, sentimental strings, final cadence, fade"
+}
