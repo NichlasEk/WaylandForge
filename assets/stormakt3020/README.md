@@ -105,6 +105,8 @@ The Silverkroppen dungeon extension adds versioned transparent sheets for Karl o
 
 `dungeon-karl-moose-escape-v1.png` gives the temple escape its own Karl-specific mounted ready and charge poses instead of reusing the helmeted RTS Carolean. `dungeon-moose-dismounted-v1.png` supplies the empty saddle after Karl jumps down and walks aboard Karl CCLV.
 
+`dungeon-karl-moose-gallop-v2.png` replaces the single sliding charge pose with a three-frame landing, push-off and airborne stride. Its world-scroll stops before the ready pose, and the riderless dismount shot retains the exact same screen anchor so the moose never snaps backward.
+
 ## Resolution
 
 Stormakt defaults to a 400x280 logical framebuffer. Assets retain their native gameplay pixel size, providing 25 percent more field in both directions and making ships smaller relative to the world. WaylandForge scales the WFEX frame to its viewport. Set `WAYLANDFORGE_STORMAKT_LEGACY_320=1` to A/B test the original 320x224 field; the pack contains a correctly sized background for both modes.

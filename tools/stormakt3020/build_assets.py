@@ -405,6 +405,7 @@ def append_dungeon_ore_mother_ring(entries: list[tuple[str, Image.Image]], sourc
 def append_dungeon_karl_moose_escape(
     entries: list[tuple[str, Image.Image]],
     mounted: Image.Image,
+    gallop: Image.Image,
     riderless: Image.Image,
 ) -> None:
     half = mounted.width // 2
@@ -413,6 +414,12 @@ def append_dungeon_karl_moose_escape(
         ("epilogue_karl_moose_charge", mounted.crop((half, 0, mounted.width, mounted.height))),
         ("epilogue_moose_riderless", riderless),
     ]
+    gallop_cell = gallop.width // 3
+    frames.extend([
+        ("epilogue_karl_moose_gallop_a", gallop.crop((0, 0, gallop_cell, gallop.height))),
+        ("epilogue_karl_moose_gallop_b", gallop.crop((gallop_cell, 0, gallop_cell * 2, gallop.height))),
+        ("epilogue_karl_moose_gallop_c", gallop.crop((gallop_cell * 2, 0, gallop.width, gallop.height))),
+    ])
     for name, frame in frames:
         sprite = trim_alpha(frame.convert("RGBA"))
         sprite.thumbnail((94, 66), Image.Resampling.LANCZOS)
@@ -798,6 +805,7 @@ def build(
     dungeon_temple_seal_fog_input_path: Path,
     dungeon_ore_mother_ring_input_path: Path,
     dungeon_karl_moose_escape_input_path: Path,
+    dungeon_karl_moose_gallop_input_path: Path,
     dungeon_moose_dismounted_input_path: Path,
     louhi_portrait_input_path: Path,
     logo_input_path: Path,
@@ -859,6 +867,7 @@ def build(
     dungeon_temple_seal_fog_source = Image.open(dungeon_temple_seal_fog_input_path).convert("RGBA")
     dungeon_ore_mother_ring_source = Image.open(dungeon_ore_mother_ring_input_path).convert("RGBA")
     dungeon_karl_moose_escape_source = Image.open(dungeon_karl_moose_escape_input_path).convert("RGBA")
+    dungeon_karl_moose_gallop_source = Image.open(dungeon_karl_moose_gallop_input_path).convert("RGBA")
     dungeon_moose_dismounted_source = Image.open(dungeon_moose_dismounted_input_path).convert("RGBA")
     louhi_portrait_source = Image.open(louhi_portrait_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
@@ -959,7 +968,8 @@ def build(
     append_dungeon_louhi_ore_mother(entries, dungeon_louhi_ore_mother_source)
     append_dungeon_temple_seal_fog(entries, dungeon_temple_seal_fog_source)
     append_dungeon_ore_mother_ring(entries, dungeon_ore_mother_ring_source)
-    append_dungeon_karl_moose_escape(entries, dungeon_karl_moose_escape_source, dungeon_moose_dismounted_source)
+    append_dungeon_karl_moose_escape(entries, dungeon_karl_moose_escape_source,
+                                     dungeon_karl_moose_gallop_source, dungeon_moose_dismounted_source)
     append_louhi_portrait(entries, louhi_portrait_source)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
@@ -1119,6 +1129,7 @@ def main() -> None:
     parser.add_argument("--dungeon-temple-seal-fog-input", type=Path, default=Path("assets/stormakt3020/dungeon-temple-seal-fog-v1.png"))
     parser.add_argument("--dungeon-ore-mother-ring-input", type=Path, default=Path("assets/stormakt3020/dungeon-ore-mother-ring-v1.png"))
     parser.add_argument("--dungeon-karl-moose-escape-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-moose-escape-v1.png"))
+    parser.add_argument("--dungeon-karl-moose-gallop-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-moose-gallop-v2.png"))
     parser.add_argument("--dungeon-moose-dismounted-input", type=Path, default=Path("assets/stormakt3020/dungeon-moose-dismounted-v1.png"))
     parser.add_argument("--louhi-portrait-input", type=Path, default=Path("assets/stormakt3020/louhi-radio-v1.png"))
     parser.add_argument(
@@ -1185,6 +1196,7 @@ def main() -> None:
         args.dungeon_temple_seal_fog_input,
         args.dungeon_ore_mother_ring_input,
         args.dungeon_karl_moose_escape_input,
+        args.dungeon_karl_moose_gallop_input,
         args.dungeon_moose_dismounted_input,
         args.louhi_portrait_input,
         args.logo_input,
