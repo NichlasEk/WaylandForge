@@ -302,6 +302,7 @@ internal sealed class StormaktGame
     private int _lockedLevelNoticeFrames;
     private RadioCard? _bossRadioCard;
     private int _bossRadioAge;
+    private readonly Queue<RadioCard> _bossRadioQueue = new();
 
     public StormaktGame(int width, int height, SpritePack? sprites, StormaktMusicLoop? audio)
     {
@@ -617,8 +618,7 @@ internal sealed class StormaktGame
         _previousButtons = 0;
         _gameOver = false;
         _paused = false;
-        _bossRadioCard = null;
-        _bossRadioAge = 0;
+        ClearBossRadio();
         _audio?.SetPaused(false);
         if (_rtsEvacuationTestMode && _rts is RtsState evacuationTest)
         {
@@ -647,8 +647,7 @@ internal sealed class StormaktGame
         if (levelId == 3 && !fresh && TryLoadDungeonSave("autosave", out DungeonState? resumed))
         {
             _dungeon = resumed;
-            _bossRadioCard = null;
-            _bossRadioAge = 0;
+            ClearBossRadio();
             _audio?.SwitchMusic(StormaktMusicTrack.Dungeon);
         }
         _inLevelSelect = false;
@@ -776,11 +775,7 @@ internal sealed class StormaktGame
         rts.LandingAge = Math.Min(180, rts.LandingAge + 1);
         rts.PlacementPulse = Math.Max(0, rts.PlacementPulse - 1);
         _missionFrame++;
-        if (_bossRadioCard is RadioCard activeRtsRadio && ++_bossRadioAge >= activeRtsRadio.DurationFrames)
-        {
-            _bossRadioCard = null;
-            _bossRadioAge = 0;
-        }
+        StepBossRadioQueue();
         if (rts.EvacuationAge > 0)
         {
             StepRtsEvacuation(rts);
@@ -1456,8 +1451,8 @@ internal sealed class StormaktGame
     private void BeginDungeon()
     {
         _stageClear = false;
-        _bossRadioCard = DungeonDescentRadio;
-        _bossRadioAge = 0;
+        ClearBossRadio();
+        ActivateBossRadio(DungeonDescentRadio);
         _dungeon = new DungeonState
         {
             RoomWidth = 720,
@@ -1667,15 +1662,15 @@ internal sealed class StormaktGame
             _dungeon.KarlX = 4060; _dungeon.KarlY = 380;
             _dungeon.TargetX = 4060; _dungeon.TargetY = 380;
             _dungeon.CameraX = 3890; _dungeon.CameraY = 240;
-            _bossRadioCard = DungeonLouhiArrivalRadio;
-            _bossRadioAge = 0;
+            ClearBossRadio();
+            ActivateBossRadio(DungeonLouhiArrivalRadio);
             if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_LOUHI_CORRIDOR_TEST"), "1", StringComparison.Ordinal))
             {
                 _dungeon.LoreMask &= ~DungeonLouhiStartedMask;
                 _dungeon.Enemies.Remove(louhi);
                 _dungeon.KarlX = 3710; _dungeon.TargetX = 3710;
                 _dungeon.CameraX = 3510;
-                _bossRadioCard = null;
+                ClearBossRadio();
             }
             if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_LOUHI_RUNES_TEST"), "1", StringComparison.Ordinal))
             {
@@ -1686,7 +1681,8 @@ internal sealed class StormaktGame
             if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_LOUHI_GREED_TEST"), "1", StringComparison.Ordinal))
             {
                 louhi.SpecialKind = 4; louhi.State = DungeonEnemyState.Telegraph; louhi.StateAge = 1;
-                _bossRadioCard = DungeonLouhiGreedRadio;
+                ClearBossRadio();
+                ActivateBossRadio(DungeonLouhiGreedRadio);
             }
             if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_LOUHI_BREAK_TEST"), "1", StringComparison.Ordinal))
             {
@@ -1699,7 +1695,7 @@ internal sealed class StormaktGame
                 BeginDungeonLouhiIronBird(louhi, 0);
                 louhi.State = DungeonEnemyState.Approach;
                 _dungeon.KarlX = 4060; _dungeon.TargetX = 4060;
-                _bossRadioCard = null;
+                ClearBossRadio();
                 _audio?.SwitchMusic(StormaktMusicTrack.Boss);
                 if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_LOUHI_PHASE2_BREAK_TEST"), "1", StringComparison.Ordinal))
                 {
@@ -1716,7 +1712,7 @@ internal sealed class StormaktGame
                 louhi.State = DungeonEnemyState.Recover;
                 _dungeon.KarlX = 4070; _dungeon.KarlY = 380;
                 _dungeon.TargetX = 4070; _dungeon.TargetY = 380;
-                _bossRadioCard = null;
+                ClearBossRadio();
                 _audio?.SwitchMusic(StormaktMusicTrack.Boss);
             }
             if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_LOUHI_ESCAPE_TEST"), "1", StringComparison.Ordinal))
@@ -1732,8 +1728,8 @@ internal sealed class StormaktGame
                 _dungeon.CollapseAge = 1;
                 _dungeon.KarlX = 4120; _dungeon.KarlY = 430;
                 _dungeon.TargetX = 4120; _dungeon.TargetY = 430;
-                _bossRadioCard = DungeonLouhiFinalRadio;
-                _bossRadioAge = 0;
+                ClearBossRadio();
+                ActivateBossRadio(DungeonLouhiFinalRadio);
                 _audio?.SwitchMusic(StormaktMusicTrack.Boss);
             }
             if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_EPILOGUE_TEST"), "1", StringComparison.Ordinal))
@@ -1781,11 +1777,7 @@ internal sealed class StormaktGame
         dungeon.Age++;
         if (dungeon.PickupNoticeAge > 0) dungeon.PickupNoticeAge--;
         if (dungeon.DeveloperNoticeAge > 0) dungeon.DeveloperNoticeAge--;
-        if (_bossRadioCard is RadioCard active && ++_bossRadioAge >= active.DurationFrames)
-        {
-            _bossRadioCard = null;
-            _bossRadioAge = 0;
-        }
+        StepBossRadioQueue();
         if (dungeon.EpilogueAge > 0)
         {
             StepDungeonEpilogue(dungeon, buttons);
@@ -2428,8 +2420,7 @@ internal sealed class StormaktGame
         dungeon.TargetY = dungeon.KarlY;
         dungeon.AttackAge = 0;
         dungeon.InventoryOpen = false;
-        _bossRadioCard = null;
-        _bossRadioAge = 0;
+        ClearBossRadio();
         _audio?.Trigger(StormaktSound.Deploy);
         WriteDungeonSave(dungeon, "autosave");
     }
@@ -4514,15 +4505,7 @@ internal sealed class StormaktGame
 
     private void StepRadio()
     {
-        if (_bossRadioCard is RadioCard bossCard)
-        {
-            _bossRadioAge++;
-            if (_bossRadioAge >= bossCard.DurationFrames)
-            {
-                _bossRadioCard = null;
-                _bossRadioAge = 0;
-            }
-        }
+        StepBossRadioQueue();
         ReadOnlySpan<RadioCard> cards = _levelId == 1 ? SkanskaRadioCards : RadioCards;
         foreach (RadioCard card in cards)
         {
@@ -4539,12 +4522,39 @@ internal sealed class StormaktGame
 
     private void ActivateBossRadio(RadioCard card)
     {
+        if (_bossRadioCard is not null)
+        {
+            if (_bossRadioCard.Value.Equals(card) || _bossRadioQueue.Contains(card)) return;
+            _bossRadioQueue.Enqueue(card);
+            return;
+        }
+        StartBossRadio(card);
+    }
+
+    private void StartBossRadio(RadioCard card)
+    {
         _bossRadioCard = card;
         _bossRadioAge = 0;
         if (card.Voice is StormaktVoice voice)
         {
             _audio?.TriggerVoice(voice);
         }
+    }
+
+    private void StepBossRadioQueue()
+    {
+        if (_bossRadioCard is not RadioCard active) return;
+        if (++_bossRadioAge < active.DurationFrames) return;
+        _bossRadioCard = null;
+        _bossRadioAge = 0;
+        if (_bossRadioQueue.Count > 0) StartBossRadio(_bossRadioQueue.Dequeue());
+    }
+
+    private void ClearBossRadio()
+    {
+        _bossRadioCard = null;
+        _bossRadioAge = 0;
+        _bossRadioQueue.Clear();
     }
 
     private void StepLevelTimeline()
