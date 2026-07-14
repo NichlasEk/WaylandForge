@@ -3249,6 +3249,9 @@ internal sealed class StormaktGame
             if (louhi.SpecialAge == 0)
             {
                 louhi.SpecialSerial = (louhi.SpecialSerial + 1) % DungeonLouhiHearts.Length;
+                // Mark the newly selected heart as unannounced. Normal attack
+                // recovery keeps SpecialKind 8/9 and must not restart the card.
+                louhi.SpecialKind = 0;
                 louhi.SpecialCooldown = 48;
                 dungeon.PickupNotice = "MALMMODERN SLUTER SIG";
                 dungeon.PickupNoticeAge = 60;
@@ -3268,9 +3271,11 @@ internal sealed class StormaktGame
         if (louhi.State == DungeonEnemyState.Recover)
         {
             if (louhi.SpecialCooldown > 0) { louhi.SpecialCooldown--; return; }
+            bool announceHeart = louhi.SpecialKind == 0;
             louhi.State = DungeonEnemyState.Approach;
             louhi.StateAge = 0;
-            ActivateBossRadio(DungeonLouhiHeartCards[louhi.SpecialSerial % DungeonLouhiHeartCards.Length]);
+            if (announceHeart)
+                ActivateBossRadio(DungeonLouhiHeartCards[louhi.SpecialSerial % DungeonLouhiHeartCards.Length]);
             return;
         }
         if (louhi.State == DungeonEnemyState.Approach)
@@ -4038,7 +4043,8 @@ internal sealed class StormaktGame
             if ((dungeon.LoreMask & DungeonThirdSigilMask) == 0 && x is > 3130 and < 3170) return true;
             if ((dungeon.LoreMask & DungeonSwanDefeatedMask) == 0 && x is > 3535 and < 3575) return true;
             if ((dungeon.LoreMask & DungeonLouhiStartedMask) != 0 &&
-                (dungeon.LoreMask & DungeonLouhiPhaseThreeMask) == 0 && x is > 3950 and < 3990) return true;
+                (dungeon.LoreMask & DungeonLouhiPhaseThreeMask) == 0 && dungeon.KarlX >= 3990 &&
+                x is > 3950 and < 3990) return true;
             foreach ((int obstacleX, int obstacleY) in new[] { (455, 360), (810, 500), (1050, 275) })
                 if (Math.Abs(x - obstacleX) < 35 && Math.Abs(y - obstacleY) < 22) return true;
             foreach ((int obstacleX, int obstacleY) in new[] { (300, 650), (700, 110), (1110, 600) })
@@ -5594,6 +5600,7 @@ internal sealed class StormaktGame
             bool swanDefeated = (dungeon.LoreMask & DungeonSwanDefeatedMask) != 0;
             bool louhiStarted = (dungeon.LoreMask & DungeonLouhiStartedMask) != 0;
             bool louhiDefeated = (dungeon.LoreMask & DungeonLouhiPhaseThreeMask) != 0;
+            bool louhiGateSealed = louhiStarted && !louhiDefeated && dungeon.KarlX >= 3990;
             DrawDungeonSprite(frame, dungeon, swanDefeated ? "dungeon_temple_gate_open" : "dungeon_temple_gate_closed", 3550, 380);
             if (!firstSigilActive) DrawDungeonTempleSeal(frame, dungeon, 1705, "FÖRSTA SIGILLET");
             if (!secondSigilActive) DrawDungeonTempleSeal(frame, dungeon, 2385, "ANDRA SIGILLET");
@@ -5619,7 +5626,7 @@ internal sealed class StormaktGame
                 DrawDungeonSprite(frame, dungeon, "dungeon_temple_sarc_closed", x, y);
             DrawDungeonSprite(frame, dungeon, "dungeon_runic_arch", 3890, 380);
             DrawDungeonSprite(frame, dungeon,
-                louhiStarted && !louhiDefeated ? "dungeon_temple_gate_closed" : "dungeon_temple_gate_open", 3970, 380);
+                louhiGateSealed ? "dungeon_temple_gate_closed" : "dungeon_temple_gate_open", 3970, 380);
             DrawDungeonSprite(frame, dungeon, "louhi_silver_altar", 4170, 380);
             DrawDungeonLouhiEncounter(frame, dungeon);
             if (!shadowDefeated)
