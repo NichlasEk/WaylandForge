@@ -452,8 +452,12 @@ def append_dungeon_karl_hammer(entries: list[tuple[str, Image.Image]],
         "karl_hammer_e_windup", "karl_hammer_e_contact", "karl_hammer_e_recover",
     ]
     for source, names, target, canvas_size in [
-        (movement, movement_names, (62, 58), (68, 64)),
-        (attack, attack_names, (72, 64), (76, 70)),
+        # Karl's ordinary locomotion alpha is exactly 52 px tall. Match that
+        # body scale; only the hammer is allowed to widen the silhouette.
+        (movement, movement_names, (58, 52), (64, 58)),
+        # Combat needs a little vertical room for the raised hammer, but uses
+        # the same scale factor as the corrected movement sheet.
+        (attack, attack_names, (66, 58), (70, 64)),
     ]:
         for index, name in enumerate(names):
             column, row = index % 3, index // 3
@@ -466,7 +470,7 @@ def append_dungeon_karl_hammer(entries: list[tuple[str, Image.Image]],
             sprite.thumbnail(target, Image.Resampling.LANCZOS)
             canvas = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
             canvas.alpha_composite(sprite, ((canvas_size[0] - sprite.width) // 2,
-                                            canvas_size[1] - sprite.height - 2))
+                                            canvas_size[1] - sprite.height))
             entries.append((name, canvas))
 
 

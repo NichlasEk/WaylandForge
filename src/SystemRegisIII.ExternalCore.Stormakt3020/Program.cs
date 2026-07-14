@@ -5554,7 +5554,7 @@ internal sealed class StormaktGame
         };
         else if (dungeon.Age < 150) karlName = dungeon.Age < 95 ? "dungeon_karl_kneel" : "dungeon_karl_s_idle";
         else if (hammer && !dungeon.Moving) karlName = hammerIdle;
-        else if (hammer) karlName = gait is 1 or 2
+        else if (hammer) karlName = gait is 0 or 2 ? hammerIdle : gait == 1
             ? $"karl_hammer_{hammerDirection}_walk_a"
             : $"karl_hammer_{hammerDirection}_walk_b";
         else if (dungeon.Facing == DungeonFacing.North) karlName = dungeon.Moving && gait is 1 or 3 ? "dungeon_karl_n_walk" : "dungeon_karl_n_idle";
