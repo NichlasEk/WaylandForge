@@ -1680,6 +1680,7 @@ internal sealed class StormaktGame
             dungeon.ViewingStash = false;
             dungeon.SelectedItemId = 0;
             dungeon.InspectedItemId = 0;
+            if (dungeon.InventoryOpen) dungeon.PreviousInventoryMouseButtons = pointerButtons;
             if (!dungeon.InventoryOpen) WriteDungeonSave(dungeon, "autosave");
             return;
         }
@@ -1737,7 +1738,7 @@ internal sealed class StormaktGame
                 interacted = true;
             }
             else if (dungeon.Depth == 3 && dungeon.TempleOpen &&
-                DistanceSquared(1320, 450, dungeon.KarlX, dungeon.KarlY) < 54 * 54)
+                DistanceSquared(1320, 450, dungeon.KarlX, dungeon.KarlY) < 72 * 72)
             {
                 BeginDungeonDepthFour(dungeon);
                 interacted = true;
@@ -1796,7 +1797,7 @@ internal sealed class StormaktGame
             bool clickedDeepDoor = dungeon.Depth == 2 && dungeon.DepthThreeOpen &&
                 DistanceSquared(1190, 390, worldX, worldY) < 54 * 54;
             bool clickedDepthThreeReturn = dungeon.Depth == 3 && DistanceSquared(60, 240, worldX, worldY) < 48 * 48;
-            bool clickedTemple = dungeon.Depth == 3 && dungeon.TempleOpen && DistanceSquared(1320, 450, worldX, worldY) < 58 * 58;
+            bool clickedTemple = dungeon.Depth == 3 && dungeon.TempleOpen && DistanceSquared(1320, 450, worldX, worldY) < 74 * 74;
             bool clickedTempleReturn = dungeon.Depth == 4 && DistanceSquared(60, 250, worldX, worldY) < 48 * 48;
             bool clickedFogde = dungeon.Depth == 4 && (dungeon.LoreMask & DungeonFirstSigilMask) != 0 &&
                 (dungeon.LoreMask & DungeonFogdeRescuedMask) == 0 && DistanceSquared(1850, 150, worldX, worldY) < 68 * 68;
@@ -1939,8 +1940,8 @@ internal sealed class StormaktGame
         else if (dungeon.Depth == 3 && dungeon.PendingDepthThreeReturn &&
             DistanceSquared(60, 240, dungeon.KarlX, dungeon.KarlY) < 38 * 38)
             ReturnToDungeonDepthTwo(dungeon);
-        else if (dungeon.Depth == 3 && dungeon.PendingTempleEntry && dungeon.TempleOpen &&
-            DistanceSquared(1320, 450, dungeon.KarlX, dungeon.KarlY) < 44 * 44)
+        else if (dungeon.Depth == 3 && dungeon.TempleOpen &&
+            DistanceSquared(1320, 450, dungeon.KarlX, dungeon.KarlY) < 62 * 62)
             BeginDungeonDepthFour(dungeon);
         else if (dungeon.Depth == 4 && dungeon.PendingTempleReturn &&
             DistanceSquared(60, 250, dungeon.KarlX, dungeon.KarlY) < 38 * 38)
@@ -3227,7 +3228,7 @@ internal sealed class StormaktGame
             double attackRange = enemy.Type switch
             {
                 DungeonEnemyType.Pikeman => 54, DungeonEnemyType.SilverFogde => 48,
-                DungeonEnemyType.TuonelaGuard => 82, DungeonEnemyType.BlindShepherd => 92,
+                DungeonEnemyType.TuonelaGuard => 62, DungeonEnemyType.BlindShepherd => 92,
                 DungeonEnemyType.LemminkainenShadow => 74,
                 DungeonEnemyType.UndeadMiner => 38, _ => 35,
             };
@@ -3348,6 +3349,7 @@ internal sealed class StormaktGame
                 enemy.VelocityY *= 0.65;
             }
         }
+        SeparateDungeonEnemies(dungeon);
         List<DungeonEnemy> roomEnemies = dungeon.Enemies.Where(enemy => enemy.Depth == dungeon.Depth).ToList();
         dungeon.RoomClear = roomEnemies.Count > 0 && roomEnemies.All(enemy => enemy.State == DungeonEnemyState.Dead);
         if (dungeon.RoomClear && !dungeon.RoomClearSaved)
@@ -3477,6 +3479,37 @@ internal sealed class StormaktGame
         if (recoveringFromObstacle || !DungeonBlocked(dungeon, enemy.X + dx, enemy.Y)) enemy.X += dx;
         recoveringFromObstacle = DungeonBlocked(dungeon, enemy.X, enemy.Y);
         if (recoveringFromObstacle || !DungeonBlocked(dungeon, enemy.X, enemy.Y + dy)) enemy.Y += dy;
+    }
+
+    private static void SeparateDungeonEnemies(DungeonState dungeon)
+    {
+        List<DungeonEnemy> enemies = dungeon.Enemies.Where(enemy => enemy.Depth == dungeon.Depth &&
+            enemy.State != DungeonEnemyState.Dead &&
+            enemy.Type is not (DungeonEnemyType.TuonelaSwan or DungeonEnemyType.Louhi))
+            .OrderBy(enemy => enemy.Id).ToList();
+        const double minimumDistance = 34;
+        for (int left = 0; left < enemies.Count; left++)
+        for (int right = left + 1; right < enemies.Count; right++)
+        {
+            DungeonEnemy a = enemies[left];
+            DungeonEnemy b = enemies[right];
+            double dx = b.X - a.X;
+            double dy = b.Y - a.Y;
+            double distanceSquared = dx * dx + dy * dy;
+            if (distanceSquared >= minimumDistance * minimumDistance) continue;
+            if (distanceSquared < 0.01)
+            {
+                dx = (a.Id + b.Id) % 2 == 0 ? 1 : -1;
+                dy = (a.Id * 3 + b.Id) % 2 == 0 ? 0.5 : -0.5;
+                distanceSquared = dx * dx + dy * dy;
+            }
+            double distance = Math.Sqrt(distanceSquared);
+            double push = (minimumDistance - distance) * 0.5;
+            double pushX = dx / distance * push;
+            double pushY = dy / distance * push;
+            MoveDungeonEnemy(dungeon, a, -pushX, -pushY);
+            MoveDungeonEnemy(dungeon, b, pushX, pushY);
+        }
     }
 
     private static void MoveDungeonKarl(DungeonState dungeon, double dx, double dy)
@@ -5006,7 +5039,16 @@ internal sealed class StormaktGame
             foreach (DungeonChest chest in dungeon.Chests.Where(chest => chest.Depth == 3))
                 DrawDungeonSprite(frame, dungeon, chest.Open ? "dungeon_chest_open" : "dungeon_cursed_chest",
                     (int)chest.X, (int)chest.Y);
-            if (dungeon.TempleOpen) DrawDungeonSprite(frame, dungeon, "dungeon_temple_stairs", 1320, 450);
+            if (dungeon.TempleOpen)
+            {
+                DrawDungeonSprite(frame, dungeon, "dungeon_temple_stairs", 1320, 450);
+                int templeX = 1320 - dungeon.CameraX;
+                int templeY = 450 - dungeon.CameraY;
+                DrawCircleOutline(frame, templeX, templeY + 8, 42 + dungeon.Age / 10 % 3,
+                    dungeon.Age / 8 % 2 == 0 ? 0xff73b8d0 : 0xffffd66b);
+                DrawText(frame, Math.Clamp(templeX - 39, 4, _width - 82),
+                    Math.Max(52, templeY - 58), "TEMPELINGÅNG", 0xffffd66b);
+            }
         }
         else
         {
@@ -5075,6 +5117,10 @@ internal sealed class StormaktGame
             bool louhiStarted = (dungeon.LoreMask & DungeonLouhiStartedMask) != 0;
             bool louhiPhaseOne = (dungeon.LoreMask & DungeonLouhiPhaseOneMask) != 0;
             DrawDungeonSprite(frame, dungeon, swanDefeated ? "dungeon_temple_gate_open" : "dungeon_temple_gate_closed", 3550, 380);
+            if (!firstSigilActive) DrawDungeonTempleSeal(frame, dungeon, 1705, "FÖRSTA SIGILLET");
+            if (!secondSigilActive) DrawDungeonTempleSeal(frame, dungeon, 2385, "ANDRA SIGILLET");
+            if (!thirdSigilActive) DrawDungeonTempleSeal(frame, dungeon, 3150, "TREDJE SIGILLET");
+            if (!swanDefeated) DrawDungeonTempleSeal(frame, dungeon, 3550, "SVANENS SIGILL");
             int sigilX = 1580 - dungeon.CameraX;
             int sigilY = 380 - dungeon.CameraY;
             DrawCircleOutline(frame, sigilX, sigilY, firstSigilActive ? 34 : 27,
@@ -5293,7 +5339,7 @@ internal sealed class StormaktGame
                     ? _bossRadioCard is null ? "KLICKA PÅ GÅNGEN ELLER FIRE FÖR ATT GÅ NER" : "LYSSNA PÅ EBBA"
                     : "HUGG SÖNDER TRÄPORTEN I ÖSTER"
                 : "GRUVA II SÄKRAD  SÖK I KISTORNA";
-        if (dungeon.Depth == 3 && dungeon.TempleOpen) objective = "TEMPELTRAPPAN ÄR ÖPPEN I ÖSTER";
+        if (dungeon.Depth == 3 && dungeon.TempleOpen) objective = "GÅ IN I DEN LYSANDE STENPORTEN I ÖSTER";
         if (dungeon.Depth == 4)
         {
             bool shadowDefeated = dungeon.Enemies.Any(enemy => enemy.Depth == 4 &&
@@ -5434,6 +5480,8 @@ internal sealed class StormaktGame
 
     private void StepDungeonInventory(DungeonState dungeon, uint buttons, RtsPointer pointer)
     {
+        if (dungeon.InventoryNoticeAge > 0) dungeon.InventoryNoticeAge--;
+        else dungeon.InventoryNotice = "";
         if (Pressed(buttons, Left)) dungeon.InventoryCursorX = Math.Max(0, dungeon.InventoryCursorX - 1);
         if (Pressed(buttons, Right)) dungeon.InventoryCursorX = Math.Min(9, dungeon.InventoryCursorX + 1);
         if (Pressed(buttons, Up)) dungeon.InventoryCursorY = Math.Max(0, dungeon.InventoryCursorY - 1);
@@ -5445,6 +5493,9 @@ internal sealed class StormaktGame
             (dungeon.PreviousInventoryMouseButtons & mouseLeft) == 0;
         bool rightPressed = pointer.Inside && (pointer.Buttons & mouseRight) != 0 &&
             (dungeon.PreviousInventoryMouseButtons & mouseRight) == 0;
+        bool rightReleased = pointer.Inside && (pointer.Buttons & mouseRight) == 0 &&
+            (dungeon.PreviousInventoryMouseButtons & mouseRight) != 0;
+        bool rightActivated = rightPressed || rightReleased;
         int cell = _width <= 320 ? 14 : 18;
         int gridX = _width <= 320 ? 154 : 184;
         int gridY = 52;
@@ -5475,7 +5526,7 @@ internal sealed class StormaktGame
                 dungeon.SelectedItemId = 0;
                 dungeon.InspectedItemId = beltItem?.Id ?? 0;
             }
-            if (rightPressed && beltItem is not null) TryPlaceFirstFree(dungeon, beltItem);
+            if (rightActivated && beltItem is not null) TryPlaceFirstFree(dungeon, beltItem);
         }
         if (!dungeon.ViewingStash && leftPressed &&
             TryDungeonEquipmentSlotAt(pointer.X, pointer.Y, out DungeonEquipmentSlot equipmentSlot))
@@ -5497,7 +5548,7 @@ internal sealed class StormaktGame
                     dungeon.InspectedItemId = 0;
                     InventoryPickOrPlace(dungeon, x, y);
                 }
-                if (rightPressed)
+                if (rightActivated)
                 {
                     dungeon.InspectedItemId = 0;
                     DungeonItem? item = DungeonItemAt(dungeon, x, y);
@@ -5597,18 +5648,20 @@ internal sealed class StormaktGame
     {
         if (item.Definition == 14)
         {
-            TryPlaceFirstPotionBelt(dungeon, item);
+            if (!TryPlaceFirstPotionBelt(dungeon, item))
+                SetDungeonInventoryNotice(dungeon, "SNABBBÄLTET ÄR FULLT", 0xffff9c8f);
             dungeon.SelectedItemId = 0;
             dungeon.InspectedItemId = 0;
             return;
         }
         DungeonEquipmentSlot slot = DungeonItemDefinitions[item.Definition].Slot;
-        if (slot == DungeonEquipmentSlot.None || dungeon.Level < DungeonRequiredLevel(item)) return;
+        if (slot == DungeonEquipmentSlot.None) return;
+        if (dungeon.Level < DungeonRequiredLevel(item))
+        {
+            SetDungeonInventoryNotice(dungeon, $"KRÄVER NIVÅ {DungeonRequiredLevel(item):00}", 0xffff6b62);
+            return;
+        }
         DungeonItem? previous = dungeon.Items.FirstOrDefault(candidate => candidate.Equipped == slot);
-        int oldGridX = item.GridX;
-        int oldGridY = item.GridY;
-        int oldQuickSlot = item.QuickSlot;
-        bool oldInStash = item.InStash;
         // Free the candidate's footprint before finding room for the replaced
         // item. A full backpack can then always swap equal-sized gear, such as
         // one ring for another, instead of incorrectly rejecting the change.
@@ -5617,16 +5670,36 @@ internal sealed class StormaktGame
         item.QuickSlot = -1;
         if (previous is not null && !TryPlaceFirstFree(dungeon, previous))
         {
-            item.GridX = oldGridX;
-            item.GridY = oldGridY;
-            item.QuickSlot = oldQuickSlot;
-            item.InStash = oldInStash;
-            return;
+            // Never reject a valid equipment change just because the backpack
+            // is packed. The replaced item remains persistent loot at Karl's
+            // feet, where it can be collected again after making room.
+            (double facingX, double facingY) = DungeonFacingVector(dungeon.Facing);
+            double dropX = dungeon.KarlX + facingX * 34;
+            double dropY = dungeon.KarlY + facingY * 34;
+            if (DungeonBlocked(dungeon, dropX, dropY))
+                (dropX, dropY) = FindNearestDungeonFloor(dungeon, dungeon.KarlX, dungeon.KarlY);
+            previous.Equipped = DungeonEquipmentSlot.None;
+            previous.GridX = -1;
+            previous.GridY = -1;
+            previous.QuickSlot = -1;
+            previous.InStash = false;
+            previous.OnGround = true;
+            previous.WorldX = dropX;
+            previous.WorldY = dropY;
+            SetDungeonInventoryNotice(dungeon, "FULLT: GAMLA LADES PÅ MARKEN", 0xffffd66b);
         }
         item.Equipped = slot;
+        item.OnGround = false;
         item.InStash = false;
         dungeon.SelectedItemId = 0;
         dungeon.InspectedItemId = 0;
+    }
+
+    private static void SetDungeonInventoryNotice(DungeonState dungeon, string notice, uint color)
+    {
+        dungeon.InventoryNotice = notice;
+        dungeon.InventoryNoticeColor = color;
+        dungeon.InventoryNoticeAge = 210;
     }
 
     private static bool TryPlaceFirstFree(DungeonState dungeon, DungeonItem item)
@@ -5879,6 +5952,8 @@ internal sealed class StormaktGame
         DrawRect(frame, dropRect.X + 1, dropRect.Y + 1, dropRect.Width - 2, dropRect.Height - 2, 0xff171115);
         DrawText(frame, dropRect.X + 7, dropRect.Y + 5, "SLÄNG", 0xffff9c8f);
         DrawText(frame, _width <= 320 ? 154 : 184, 29, dungeon.ViewingStash ? "FÖRRÅD 10X6" : "RYGGSÄCK 10X6", 0xff9bd4dc);
+        if (dungeon.InventoryNoticeAge > 0 && dungeon.InventoryNotice.Length > 0)
+            DrawText(frame, _width <= 320 ? 154 : 184, 42, dungeon.InventoryNotice, dungeon.InventoryNoticeColor);
         int cell = _width <= 320 ? 14 : 18;
         int gridX = _width <= 320 ? 154 : 184;
         int gridY = 52;
@@ -6050,6 +6125,26 @@ internal sealed class StormaktGame
             DrawLine(frame, x - 7, y - 4, x - 2, y + 1, color);
             DrawLine(frame, x - 2, y + 1, x + 2, y - 5, color);
             DrawLine(frame, x + 2, y - 5, x + 7, y + 4, color);
+        }
+    }
+
+    private void DrawDungeonTempleSeal(uint[] frame, DungeonState dungeon, int worldX, string label)
+    {
+        int x = worldX - dungeon.CameraX;
+        if (x < -8 || x >= _width + 8) return;
+        for (int worldY = 58; worldY < dungeon.RoomHeight - 35; worldY += 18)
+        {
+            int y = worldY - dungeon.CameraY;
+            uint color = (dungeon.Age / 6 + worldY / 18) % 2 == 0 ? 0xff73b8d0 : 0xffffd66b;
+            DrawLine(frame, x, y, x, y + 10, color);
+            DrawLine(frame, x - 2, y + 4, x + 2, y + 6, color);
+        }
+        if (Math.Abs(dungeon.KarlX - worldX) < 260)
+        {
+            int labelX = Math.Clamp(x - label.Length * 3, 4, Math.Max(4, _width - label.Length * 6 - 4));
+            int labelY = Math.Clamp(380 - dungeon.CameraY - 62, 52, _height - 28);
+            DrawRect(frame, labelX - 3, labelY - 3, label.Length * 6 + 6, 13, 0xdd081019);
+            DrawText(frame, labelX, labelY, label, 0xffffd66b);
         }
     }
 
@@ -8807,6 +8902,9 @@ internal sealed class StormaktGame
         public ulong SelectedItemId { get; set; }
         public ulong InspectedItemId { get; set; }
         public uint PreviousInventoryMouseButtons { get; set; }
+        public string InventoryNotice { get; set; } = "";
+        public uint InventoryNoticeColor { get; set; } = 0xffffd66b;
+        public int InventoryNoticeAge { get; set; }
         public bool ViewingStash { get; set; }
         public List<DungeonEnemy> Enemies { get; } = [];
         public int NextEnemyId { get; set; } = 1;
