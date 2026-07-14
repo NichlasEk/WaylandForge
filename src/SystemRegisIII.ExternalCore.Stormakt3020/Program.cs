@@ -2267,7 +2267,7 @@ internal sealed class StormaktGame
         bool courtyardClear = dungeon.Enemies.Where(enemy => enemy.Depth == 4 && enemy.Zone == 44)
             .All(enemy => enemy.State == DungeonEnemyState.Dead);
         if (!shadowDefeated || !courtyardClear ||
-            DistanceSquared(1580, 380, dungeon.KarlX, dungeon.KarlY) >= 48 * 48) return;
+            DistanceSquared(1580, 380, dungeon.KarlX, dungeon.KarlY) >= 84 * 84) return;
         dungeon.LoreMask |= DungeonFirstSigilMask;
         dungeon.Curse = Math.Max(0, dungeon.Curse - 35);
         DungeonItem fragment = AddDungeonItem(dungeon, 11, -1, -1, DungeonEquipmentSlot.None,
@@ -2332,6 +2332,9 @@ internal sealed class StormaktGame
                 dungeon.KarlX, dungeon.KarlY) >= 82 * 82 || !DungeonSecondCourtyardClear(dungeon)) return false;
 
         int progress = DungeonSecondRuneProgress(dungeon);
+        // Touching an already completed rune again must not erase a valid
+        // partial sequence. Only a genuinely premature future rune resets it.
+        if (rune < progress) return true;
         if (rune != progress)
         {
             SetDungeonSecondRuneProgress(dungeon, 0);
@@ -2368,7 +2371,7 @@ internal sealed class StormaktGame
     {
         if (dungeon.Depth != 4 || (dungeon.LoreMask & DungeonSecondSigilMask) != 0 ||
             DungeonSecondRuneProgress(dungeon) < 3 || !DungeonSecondCourtyardClear(dungeon) ||
-            DistanceSquared(2280, 380, dungeon.KarlX, dungeon.KarlY) >= 48 * 48) return;
+            DistanceSquared(2280, 380, dungeon.KarlX, dungeon.KarlY) >= 84 * 84) return;
         dungeon.LoreMask |= DungeonSecondSigilMask;
         dungeon.Curse = Math.Max(0, dungeon.Curse - 35);
         DungeonItem fragment = AddDungeonItem(dungeon, 11, -1, -1, DungeonEquipmentSlot.None,
@@ -2427,7 +2430,7 @@ internal sealed class StormaktGame
     {
         if (dungeon.Depth != 4 || (dungeon.LoreMask & DungeonThirdSigilMask) != 0 ||
             DungeonThirdVerseProgress(dungeon) < 3 ||
-            DistanceSquared(3030, 380, dungeon.KarlX, dungeon.KarlY) >= 48 * 48) return;
+            DistanceSquared(3030, 380, dungeon.KarlX, dungeon.KarlY) >= 84 * 84) return;
         dungeon.LoreMask |= DungeonThirdSigilMask;
         dungeon.Curse = Math.Max(0, dungeon.Curse - 35);
         DungeonItem fragment = AddDungeonItem(dungeon, 11, -1, -1, DungeonEquipmentSlot.None,
@@ -5379,7 +5382,7 @@ internal sealed class StormaktGame
                 firstSigilActive && dungeon.KarlX < 1740 ? "ÖSTPORTEN ÄR ÖPPEN  SÖK FOGDEN" :
                 firstSigilActive && !fogdeRescued ? "FRIGÖR GRUVFOGDEN UR SARKOFAGEN" :
                 firstSigilActive && !fogdeSpoken ? "TALA MED GRUVFOGDEN" :
-                firstSigilActive && !secondCourtyardClear ? "VÄKTARNA RESER SIG KRING RUNORNA" :
+                firstSigilActive && !secondCourtyardClear ? "FÄLL VÄKTARNA FÖRE NÄSTA RUNA" :
                 firstSigilActive && secondRuneProgress < 3 ?
                     $"RUNOR SOL > SVAN > KRONA  {secondRuneProgress}/3" :
                 firstSigilActive ? "STIG IN I ANDRA SIGILLET" :

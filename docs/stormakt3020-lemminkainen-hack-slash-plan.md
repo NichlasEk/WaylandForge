@@ -408,7 +408,9 @@ före runorna. Därefter aktiveras ordningen
 `SOL → SVAN → KRONA`: varje rätt runa återuppväcker gårdens tre väktare, medan fel runa nollställer
 ordningen och reser dem igen utan nytt loot eller XP. Den fullbordade ordningen öppnar andra sigillet,
 renar förbannelse, lämnar nästa runfragment, autosparar och etablerar att ett sigill återstår. Nästa
-tempelslice börjar bakom den östra slutporten.
+tempelslice börjar bakom den östra slutporten. En redan tänd runa kan vidröras igen utan att nollställa
+följden, och sigillaltarnas aktiveringsradie ligger nu utanför deras fysiska sockel så att de faktiskt
+går att nå från det synliga golvet.
 
 Den tredje sigillgården är nu landad som en tystare berättelseritual utan ännu en vanlig fiendevåg.
 Tre stelar måste läsas i ordningen `SOL → SILVER → HJÄRTA`; deras verser berättar att Svanen bar solen,
