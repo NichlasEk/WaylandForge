@@ -2197,13 +2197,34 @@ internal sealed class StormaktGame
 
     private static void EnsureDungeonRecoveryChest(DungeonState dungeon)
     {
-        if (dungeon.Depth != 1 || !dungeon.DoorReady || dungeon.Chests.Any(chest => chest.Id == 10)) return;
-        bool hasSword = dungeon.Items.Any(item =>
-            DungeonItemDefinitions[item.Definition].Slot == DungeonEquipmentSlot.MainHand &&
-            item.Definition != 3 && !item.InStash &&
-            (!item.OnGround || item.WorldX is >= 0 and <= 720 && item.WorldY is >= 0 and <= 440));
+        if (dungeon.Depth is not (1 or 2) || dungeon.Depth == 1 && !dungeon.DoorReady) return;
+        DungeonChest? existing = dungeon.Chests.FirstOrDefault(chest => chest.Id == 10 && chest.Depth == dungeon.Depth);
+        if (existing is not null)
+        {
+            // Migrate the first version, which was placed below the initial
+            // camera. Move both the chest and any uncollected sword it spilled.
+            if (dungeon.Depth == 1 && existing.Y > 260)
+            {
+                dungeon.Chests.Remove(existing);
+                dungeon.Chests.Add(new DungeonChest(10, 180, 185)
+                    { Depth = 1, Open = existing.Open, OpenAge = existing.OpenAge });
+                foreach (DungeonItem item in dungeon.Items.Where(item => item.OnGround &&
+                    item.Definition == 0 && DistanceSquared(item.WorldX, item.WorldY, existing.X, existing.Y) < 70 * 70))
+                {
+                    item.WorldX = 180;
+                    item.WorldY = 205;
+                }
+                dungeon.PickupNotice = "FÖRRÅDSKISTAN STÅR VID HISSEN";
+                dungeon.PickupNoticeAge = 180;
+                WriteDungeonSave(dungeon, "autosave");
+            }
+            return;
+        }
+        bool hasSword = dungeon.Items.Any(item => !item.OnGround && !item.InStash &&
+            item.Definition is 0 or 1);
         if (hasSword) return;
-        dungeon.Chests.Add(new DungeonChest(10, 185, 305) { Depth = 1 });
+        (int chestX, int chestY) = dungeon.Depth == 1 ? (180, 185) : (180, 410);
+        dungeon.Chests.Add(new DungeonChest(10, chestX, chestY) { Depth = dungeon.Depth });
         dungeon.PickupNotice = "RESERVVÄRJA I FÖRRÅDSKISTAN";
         dungeon.PickupNoticeAge = 180;
         WriteDungeonSave(dungeon, "autosave");
