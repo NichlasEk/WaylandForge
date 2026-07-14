@@ -461,16 +461,25 @@ def append_dungeon_karl_hammer(entries: list[tuple[str, Image.Image]],
     ]:
         for index, name in enumerate(names):
             column, row = index % 3, index // 3
+            cell_target = target
+            cell_canvas = canvas_size
+            if source is movement and row == 1:
+                # In the north poses the hammer rises above Karl's shoulder.
+                # Scaling the combined silhouette to 52 px made his actual
+                # head-to-boots body only ~45 px. Give that row enough height
+                # for a 52 px Karl plus the weapon above him.
+                cell_target = (64, 60)
+                cell_canvas = (70, 66)
             bleed = 24
             left = max(0, column * source.width // 3 - bleed)
             top = max(0, row * source.height // 3 - bleed)
             right = min(source.width, (column + 1) * source.width // 3 + bleed)
             bottom = min(source.height, (row + 1) * source.height // 3 + bleed)
             sprite = trim_alpha(source.crop((left, top, right, bottom)).convert("RGBA"))
-            sprite.thumbnail(target, Image.Resampling.LANCZOS)
-            canvas = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
-            canvas.alpha_composite(sprite, ((canvas_size[0] - sprite.width) // 2,
-                                            canvas_size[1] - sprite.height))
+            sprite.thumbnail(cell_target, Image.Resampling.LANCZOS)
+            canvas = Image.new("RGBA", cell_canvas, (0, 0, 0, 0))
+            canvas.alpha_composite(sprite, ((cell_canvas[0] - sprite.width) // 2,
+                                            cell_canvas[1] - sprite.height))
             entries.append((name, canvas))
 
 
