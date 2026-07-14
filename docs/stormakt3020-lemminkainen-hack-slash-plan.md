@@ -438,9 +438,11 @@ När Karl passerar den sista runbågen stängs bossporten bakom honom och Louhi 
 silveraltare. Hennes första fas är komplett spelbar: stavhugget låser en tydlig linje som kan pareras,
 sex silverrunor tänds och briserar i läsbar ordning, svartvattenteleporten markerar både avfärd och
 landning och girighetsförbannelsen gör Karls nästa förhastade hugg långsamt. Väntan eller parad bryter
-förbannelsen. När fasen faller löses Louhi ned i altaret, autosparar och lovar att väcka järnfågeln;
-fas två startas inte förrän dess egen slice är byggd. En äldre sparfil från Svanens öppnade östport
-expanderar kartan och skapar exakt en Louhi utan att kampanjen behöver startas om.
+förbannelsen. När fasen faller slits järnfågeln upp ur altaret med en ny full livmätare. Fas två är
+spelbar med en parerbar cirkulär vingchock, en förvarnad solfjäder av järnfjädrar och ett markerat dyk
+som briserar i åtta silvervågor. Fasbrottet autosparar; när fågeln faller öppnas porten och Louhi antyder
+den ännu obygda Malmmodern. Äldre sparfiler som stannade i den gamla döda fas-två-stubben migreras till
+den spelbara Järnfågeln utan att kampanjen behöver startas om.
 
 Den första sigillgården har fått en egen tydligare tempelidentitet: två svarta väktarstatyer, ett lågt
 offeraltare och både slutna och öppnade svansarkofager ersätter återanvänd gruvrekvisita. Föremålen är
@@ -469,7 +471,7 @@ stenlik klump med en orimligt stor upplevd träffyta.
 - Ebba har nu röst på samtliga implementerade tempelkort och läser även de sex gruv- och tempelristningarna.
   Gruvfogden talar danska och kan talas med efter räddningen
   och ger den narrativa nyckeln till runordningen. Den blinde herdens sista varning samt Louhis entré,
-  girighetsförbannelse och fasbrott är röstlagda. Alla 47 spelrepliker använder en fast seed för var
+  girighetsförbannelse och båda fasbrotten är röstlagda. Alla 48 spelrepliker använder en fast seed för var
   och en av de åtta syntetiska skådespelarrollerna.
 - Svårighetskurva, droprates, affixpooler, setbonusar, smideskostnad, checkpointkostnad, musergonomi och båda upplösningarna.
 - Full direkt-WFEX-genomspelning och determinismkontroll.

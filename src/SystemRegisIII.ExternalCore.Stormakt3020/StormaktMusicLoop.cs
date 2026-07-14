@@ -624,6 +624,7 @@ internal sealed class StormaktMusicLoop : IDisposable
             (StormaktVoice.LouhiTempleArrival, "louhi-temple-arrival-sv-radio.wav", 0.90f),
             (StormaktVoice.LouhiGreedCurse, "louhi-greed-curse-sv-radio.wav", 0.90f),
             (StormaktVoice.LouhiPhaseOneBreak, "louhi-phase-one-break-sv-radio.wav", 0.92f),
+            (StormaktVoice.LouhiPhaseTwoBreak, "louhi-phase-two-break-sv-radio.wav", 0.92f),
         ];
         Dictionary<StormaktVoice, LoadedEffect> voices = [];
         foreach ((StormaktVoice voice, string file, float gain) in entries)
@@ -780,6 +781,7 @@ internal enum StormaktVoice
     LouhiTempleArrival,
     LouhiGreedCurse,
     LouhiPhaseOneBreak,
+    LouhiPhaseTwoBreak,
 }
 
 internal enum StormaktMusicTrack

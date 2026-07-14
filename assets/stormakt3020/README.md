@@ -93,6 +93,8 @@ The Silverkroppen dungeon extension adds versioned transparent sheets for Karl o
 
 `dungeon-louhi-phase1-v1.png` supplies Louhi's idle, staff-casting and black-water teleport poses plus the silver altar used in her first boss phase. It is reference-guided from Louhi's established radio portrait, the Tuonela Swan sheet and the temple prop sheet; the untouched chroma-key source and exact built-in prompt are versioned beside the production alpha PNG.
 
+`dungeon-louhi-iron-bird-v1.png` supplies Louhi's Järnfågel awakening, idle, wing-sweep and diving-strike poses for the second boss phase. Its crown, silver hair and black-iron body preserve Louhi's identity while the hooked beak and angular wings keep it distinct from Tuonela's swan. The untouched chroma-key source and exact reference-guided prompt are versioned beside the production alpha PNG.
+
 ## Resolution
 
 Stormakt defaults to a 400x280 logical framebuffer. Assets retain their native gameplay pixel size, providing 25 percent more field in both directions and making ships smaller relative to the world. WaylandForge scales the WFEX frame to its viewport. Set `WAYLANDFORGE_STORMAKT_LEGACY_320=1` to A/B test the original 320x224 field; the pack contains a correctly sized background for both modes.

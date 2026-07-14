@@ -597,6 +597,16 @@
       "sha256": "4e350ea66ff5484b0178eb9c33494e6409da1216da77afa738fab39c0dccc71e",
       "request": "assets/stormakt3020/radio/raw/ebba-temple-verse-heart-sv-request.json",
       "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "louhi-phase-two-break",
+      "role": "louhi",
+      "job_id": "82fabef8f58848e9b861d29f5fdb9d69",
+      "file": "assets/stormakt3020/radio/raw/louhi-phase-two-break-sv-raw.wav",
+      "sha256": "265f0e3afdb6edd4e157a091d4a4087a3f8f6947961a293073e500347b5b0c58",
+      "request": "assets/stormakt3020/radio/raw/louhi-phase-two-break-sv-request.json",
+      "reference_sha256": "e2ae3c1d549eaaca88894a12ef6c0708a783a270f13837be1166d2e64b1cbc7b"
     }
   ],
   "service": "http://127.0.0.1:8765",

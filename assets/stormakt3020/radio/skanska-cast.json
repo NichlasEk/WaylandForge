@@ -601,6 +601,17 @@
       "subtitle_lines": ["NI BRÖT KVINNAN", "VÄCK JÄRNFÅGELN"],
       "seed": 302203,
       "model_backend": "voxcpm2"
+    },
+    {
+      "id": "louhi-phase-two-break",
+      "role": "louhi",
+      "level": 3,
+      "frame": -1,
+      "cue": "louhi_phase_two_break",
+      "text": "Ni bröt också järnet. Då återstår bara det som fanns före både kvinna och fågel.",
+      "subtitle_lines": ["JÄRNET BRISTER", "DET ÄLDSTA ÅTERSTÅR"],
+      "seed": 302210,
+      "model_backend": "voxcpm2"
     }
   ]
 }
