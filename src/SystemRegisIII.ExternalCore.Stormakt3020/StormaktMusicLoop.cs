@@ -609,7 +609,7 @@ internal sealed class StormaktMusicLoop : IDisposable
             (StormaktVoice.EbbaDungeonDescent, "ebba-dungeon-descent-sv-radio.wav", 0.84f),
             (StormaktVoice.EbbaDungeonFirstSigil, "ebba-dungeon-first-sigil-sv-radio.wav", 0.84f),
             (StormaktVoice.EbbaDungeonFogdeRescue, "ebba-dungeon-fogde-rescue-sv-radio.wav", 0.84f),
-            (StormaktVoice.DungeonGruvfogde, "gruvfogde-dungeon-warning-sv-radio.wav", 0.86f),
+            (StormaktVoice.DungeonGruvfogde, "gruvfogde-dungeon-warning-da-radio.wav", 0.86f),
             (StormaktVoice.EbbaDungeonSecondSigil, "ebba-dungeon-second-sigil-sv-radio.wav", 0.84f),
             (StormaktVoice.EbbaDungeonThirdSigil, "ebba-dungeon-third-sigil-sv-radio.wav", 0.84f),
             (StormaktVoice.EbbaDungeonSwanReveal, "ebba-dungeon-swan-reveal-sv-radio.wav", 0.88f),

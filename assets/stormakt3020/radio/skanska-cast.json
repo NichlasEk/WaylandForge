@@ -52,9 +52,9 @@
     {
       "id": "gruvfogde",
       "speaker": "GRUVFOGDEN",
-      "language": "sv",
-      "voice_instruction": "An exhausted older Swedish mine bailiff, weathered low baritone, steady and grave after surviving underground, natural Swedish diction, intimate warning rather than theatrical narration, never comic or villainous.",
-      "reference_text": "Lyssna, Karl. Berget har talat genom silvret längre än någon av oss har levt. Jag såg männen öppna salar som aldrig borde ha fått luft. Där nere sjunger järnet, och något gammalt väntar bakom den sista porten.",
+      "language": "da",
+      "voice_instruction": "An exhausted older Danish mine bailiff, weathered low baritone, steady and grave after surviving underground, crisp natural Danish diction, intimate warning rather than theatrical narration, never Swedish, comic or villainous.",
+      "reference_text": "Hør efter, Karl. Bjerget har talt gennem sølvet længere, end nogen af os har levet. Jeg så mændene åbne sale, som aldrig burde have fået luft. Dernede synger jernet, og noget gammelt venter bag den sidste port.",
       "reference_seed": 302025,
       "dialogue_seed": 302125
     },
@@ -443,8 +443,8 @@
       "level": 3,
       "frame": -1,
       "cue": "dungeon_fogde_talk",
-      "text": "Svanen sov under våra fötter. Louhi band den med vårt silver. Bryt runorna i den gamla ordningen.",
-      "subtitle_lines": ["SVANEN SOV", "UNDER VÅRA FÖTTER"],
+      "text": "Svanen sov under vore fødder. Louhi bandt den med vort sølv. Bryd runerne i den gamle rækkefølge.",
+      "subtitle_lines": ["SVANEN SOV", "UNDER VORE FØDDER"],
       "seed": 302195,
       "model_backend": "voxcpm2"
     },

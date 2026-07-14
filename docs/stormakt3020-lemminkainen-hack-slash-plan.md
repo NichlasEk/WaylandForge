@@ -454,7 +454,7 @@ stenlik klump med en orimligt stor upplevd träffyta.
 
 ### Checkpoint 8 – Balans, lootkurva och casting
 
-- Ebba har nu röst på samtliga implementerade tempelkort. Gruvfogden kan talas med efter räddningen
+- Ebba har nu röst på samtliga implementerade tempelkort. Gruvfogden talar danska och kan talas med efter räddningen
   och ger den narrativa nyckeln till runordningen. Den blinde herdens sista varning samt Louhis entré,
   girighetsförbannelse och fasbrott är röstlagda. Alla 41 spelrepliker använder en fast seed för var
   och en av de åtta syntetiska skådespelarrollerna.

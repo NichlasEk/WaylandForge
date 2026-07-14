@@ -81,22 +81,6 @@
       }
     },
     {
-      "kind": "reference",
-      "role": "gruvfogde",
-      "job_id": "13d3b8f897514710bf7b26570bd88c45",
-      "file": "assets/stormakt3020/radio/references/gruvfogde-reference.wav",
-      "sha256": "05f3ce5b273bf8f6d50fde78a784579aaaba43316d483b56ce3fc98ffeae9e68",
-      "request": {
-        "text": "Lyssna, Karl. Berget har talat genom silvret längre än någon av oss har levt. Jag såg männen öppna salar som aldrig borde ha fått luft. Där nere sjunger järnet, och något gammalt väntar bakom den sista porten.",
-        "language": "sv",
-        "voice_instruction": "An exhausted older Swedish mine bailiff, weathered low baritone, steady and grave after surviving underground, natural Swedish diction, intimate warning rather than theatrical narration, never comic or villainous.",
-        "model_backend": "voxcpm2",
-        "output_format": "wav",
-        "normalize": false,
-        "seed": 302025
-      }
-    },
-    {
       "kind": "line",
       "line": "ebba-stora-balt",
       "role": "ebba-grip",
@@ -418,16 +402,6 @@
     },
     {
       "kind": "line",
-      "line": "gruvfogde-dungeon-warning",
-      "role": "gruvfogde",
-      "job_id": "c39c0ee992264ff6807ffeb68d5b961f",
-      "file": "assets/stormakt3020/radio/raw/gruvfogde-dungeon-warning-sv-raw.wav",
-      "sha256": "b97c6e880a815253cfab926cb8bf973de0ad900cc21c2b5b83f07e41398f44ed",
-      "request": "assets/stormakt3020/radio/raw/gruvfogde-dungeon-warning-sv-request.json",
-      "reference_sha256": "05f3ce5b273bf8f6d50fde78a784579aaaba43316d483b56ce3fc98ffeae9e68"
-    },
-    {
-      "kind": "line",
       "line": "ebba-dungeon-second-sigil",
       "role": "ebba-grip",
       "job_id": "5b5fbc45a35344a1a623aabf7b1da374",
@@ -537,6 +511,32 @@
       "sha256": "9760101e7046e964c6539e17539004fd164a0125e84571a7614563d40872e50c",
       "request": "assets/stormakt3020/radio/raw/louhi-phase-one-break-sv-request.json",
       "reference_sha256": "e2ae3c1d549eaaca88894a12ef6c0708a783a270f13837be1166d2e64b1cbc7b"
+    },
+    {
+      "kind": "reference",
+      "role": "gruvfogde",
+      "job_id": "eefcd5e32474458fb4cb83123d1080ea",
+      "file": "assets/stormakt3020/radio/references/gruvfogde-reference.wav",
+      "sha256": "8e72451911a82cc7b5e4efabf1aa16f6e6946554b654e9649992a3bb1100a3e8",
+      "request": {
+        "text": "Hør efter, Karl. Bjerget har talt gennem sølvet længere, end nogen af os har levet. Jeg så mændene åbne sale, som aldrig burde have fået luft. Dernede synger jernet, og noget gammelt venter bag den sidste port.",
+        "language": "da",
+        "voice_instruction": "An exhausted older Danish mine bailiff, weathered low baritone, steady and grave after surviving underground, crisp natural Danish diction, intimate warning rather than theatrical narration, never Swedish, comic or villainous.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302025
+      }
+    },
+    {
+      "kind": "line",
+      "line": "gruvfogde-dungeon-warning",
+      "role": "gruvfogde",
+      "job_id": "bac72486e66a4d3a9bc3bf45914b1c2c",
+      "file": "assets/stormakt3020/radio/raw/gruvfogde-dungeon-warning-da-raw.wav",
+      "sha256": "296307c76b4d58dc4f3b0ad0f7db36191d2933d28d0ff5533dcba2ff85b89c03",
+      "request": "assets/stormakt3020/radio/raw/gruvfogde-dungeon-warning-da-request.json",
+      "reference_sha256": "8e72451911a82cc7b5e4efabf1aa16f6e6946554b654e9649992a3bb1100a3e8"
     }
   ],
   "service": "http://127.0.0.1:8765",

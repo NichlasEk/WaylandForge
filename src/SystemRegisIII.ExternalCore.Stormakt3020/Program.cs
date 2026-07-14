@@ -211,7 +211,7 @@ internal sealed class StormaktGame
     private static readonly RadioCard DungeonFogdeRescueRadio =
         new(0, 600, false, "EBBA GRIP", "FOGDEN LEVER", "SILVRET VAR ETT LÅS", StormaktVoice.EbbaDungeonFogdeRescue, "portrait_ebba");
     private static readonly RadioCard DungeonFogdeTalkRadio =
-        new(0, 540, false, "GRUVFOGDEN", "SVANEN SOV", "UNDER VÅRA FÖTTER", StormaktVoice.DungeonGruvfogde, "portrait_rasmus");
+        new(0, 540, true, "GRUVFOGDEN", "SVANEN SOV", "UNDER VORE FØDDER", StormaktVoice.DungeonGruvfogde, "portrait_rasmus");
     private static readonly RadioCard DungeonSecondSigilRadio =
         new(0, 450, false, "EBBA GRIP", "ANDRA SIGILLET", "ETT ÅTERSTÅR", StormaktVoice.EbbaDungeonSecondSigil, "portrait_ebba");
     private static readonly RadioCard[] DungeonThirdVerseCards =
