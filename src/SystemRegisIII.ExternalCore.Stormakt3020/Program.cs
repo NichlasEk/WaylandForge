@@ -681,7 +681,7 @@ internal sealed class StormaktGame
                 _previousButtons = buttons;
                 return;
             }
-            if (_levelSelection == 0 || (_developerMode && _levelSelection is 1 or 3))
+            if (_levelSelection is 0 or 1 || (_developerMode && _levelSelection == 3))
             {
                 StartLevel(_levelSelection, fresh: (buttons & Slow) != 0);
             }
@@ -9165,7 +9165,7 @@ internal sealed class StormaktGame
         for (int index = 0; index < CampaignNames.Length; index++)
         {
             string status = index == 3 && File.Exists(DungeonSavePath("autosave")) ? "FORTSÄTT" :
-                index == 0 ? "STRID" : _developerMode ? "DEV" : "LÅST";
+                index is 0 or 1 ? "STRID" : _developerMode ? "DEV" : "LÅST";
             DrawLevelOption(frame, panelX + 12, listY + index * rowHeight, panelWidth - 24,
                 rowHeight - 2, index, $"{index + 1}  {CampaignNames[index]}", status);
         }
@@ -9206,7 +9206,9 @@ internal sealed class StormaktGame
         DrawText(frame, x + 14, y + 32, CampaignNames[_previewLevel], 0xffffd66b);
         DrawLine(frame, x + 14, y + 48, x + panelWidth - 15, y + 48, 0xff344d5c);
         DrawText(frame, x + 14, y + 61, "UTVECKLARPREVIEW", 0xff65c58a);
-        DrawText(frame, x + 14, y + 78, "TIDSLINJE OCH BOSS EJ BYGGDA", 0xffb7c7d6);
+        DrawText(frame, x + 14, y + 78, _previewLevel == 2
+            ? "RINGBRO  KRONTÅG  TVILLINGFÄSTE"
+            : "TIDSLINJE OCH BOSS EJ BYGGDA", 0xffb7c7d6);
         DrawText(frame, x + 14, y + 103, "START ELLER ELD  ÅTER", 0xffffffff);
     }
 

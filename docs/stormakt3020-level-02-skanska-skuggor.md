@@ -1,6 +1,6 @@
 # Bana 2 - Skånska skuggor
 
-Status: first complete deterministic gameplay pass is selectable in developer mode. The shared technical spine is maintained in `docs/stormakt3020-level-hook-map.md`; keep that map synchronized as level hooks land.
+Status: first complete deterministic gameplay pass is public and marked `STRID`. Remaining work is polish, not a campaign-progression blocker. The shared technical spine is maintained in `docs/stormakt3020-level-hook-map.md`; keep that map synchronized as level hooks land.
 
 The generated starless black-forest mining plate is active in both 400x280 and 320x224 paths. Code-drawn crystal-tree scenery now appears only as a missing-WFSA fallback.
 

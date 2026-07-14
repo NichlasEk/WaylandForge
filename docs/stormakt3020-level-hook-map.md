@@ -25,7 +25,7 @@ level select
        HUD / boss HUD / title / radio / result / pause
 ```
 
-`StartLevel`, `ResetLevelState`, `StepLevelTimeline` and `DrawLevelScenery` are the target hooks. At the start of Skånska skuggor they are not yet explicit: selection only starts level 0 and most gameplay methods are hard-wired to Stora Bält. The first refactor must introduce these seams without changing level 1 behavior.
+`StartLevel`, `ResetLevelState`, `StepLevelTimeline` and `DrawLevelScenery` are the stable campaign hooks. Stora Bält and Skånska skuggor are public `STRID` rows; Öresunds järnkrona is the active developer-frontier and keeps preview behavior until its first playable slice lands.
 
 ## Selection and state ownership
 
@@ -35,7 +35,7 @@ level select
 | Active campaign | missing | Add `_levelId`; never infer the running level from `_levelSelection`. |
 | Deterministic reset | `Reset()` uses seed `3020` | Rename/generalize to reset the active level and seed level 2 independently. |
 | Menu return | `StepLevelPreview` | Keep preview return; level clear/game over restart the same active level. |
-| Dev unlock | `WAYLANDFORGE_STORMAKT_DEVELOPER_MODE` | Level 2 is startable in dev mode from the first playable slice. |
+| Public unlock | campaign status in `DrawLevelSelect` and `StepLevelSelect` | Level 2 is startable without developer mode; level 3 remains `DEV`. |
 
 Invariant: selecting Skånska skuggor may never run Stora Bält with a changed title. `_levelId` owns every level-specific timeline, asset and result choice.
 
@@ -99,6 +99,7 @@ First asset batch:
 3. **World (polished 2026-07-11):** the generated starless Skåne background, transparent props, intact/damaged signal beacons, reveal-only mist drones and intact/damaged red/white fogde barges are packed and frame-verified with code fallbacks.
 4. **Rival duel (landed 2026-07-11):** Sören owns separate non-boss state with boost dashes, aimed copper salvos, two non-physical radar decoys, health/time interruption and a damaged escape that never awards a kill.
 5. **Glimminge Järn (polished 2026-07-11):** 720-health separate boss state with damage-blocking shield-braced, damaged, burning and connected-wreck sprites; complete content-aware crops; center-locked sprite crossfades and eased movement transitions; Birgitte Bille event radio; animated iron-raven escorts; iron-wall phase, drill-turret/crystal-spear phase, low-health escort/ember escalation and a level-specific result card.
+6. **Public battle status (landed 2026-07-14):** the completed gameplay spine is exposed as `STRID` in normal mode. Remaining detail work stays polish rather than blocking campaign progression; Öresunds järnkrona becomes the next `DEV` row.
 
 For every checkpoint: build, `git diff --check`, capture at least one direct WFEX frame, verify deterministic selection, commit and push narrowly.
 
