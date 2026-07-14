@@ -273,6 +273,13 @@ internal sealed class StormaktGame
         new(1_080, 2_220, 120, 4, 3),
         new(2_220, 3_420, 105, 5, 3),
     ];
+    private static readonly EnemyWave[] OresundEnemyWaves =
+    [
+        new(240, 1_080, 150, 7, 2),
+        new(1_080, 2_220, 120, 7, 3),
+        new(2_220, 3_480, 105, 7, 3),
+    ];
+    private static readonly RadioCard[] OresundRadioCards = [];
     private int _shipX;
     private int _shipY;
     private int _cooldown;
@@ -347,7 +354,18 @@ internal sealed class StormaktGame
         {
             if (Pressed(buttons, Start))
             {
-                Reset();
+                if (_levelId == 2)
+                {
+                    _inLevelSelect = true;
+                    _levelSelection = 2;
+                    _stageClear = false;
+                    _stageClearAge = 0;
+                    _audio?.SwitchMusic(StormaktMusicTrack.Menu);
+                }
+                else
+                {
+                    Reset();
+                }
                 _audio?.Trigger(StormaktSound.Deploy);
             }
             else
@@ -541,7 +559,7 @@ internal sealed class StormaktGame
         _groundTargets.Clear();
         _anchorHazards.Clear();
         _crystalSpears.Clear();
-        _random = new Random(_levelId switch { 1 => 3202, 3 => 3404, _ => 3020 });
+        _random = new Random(_levelId switch { 1 => 3202, 2 => 3303, 3 => 3404, _ => 3020 });
         for (int i = 0; i < _stars.Length; i++)
         {
             _stars[i] = new Star(_random.Next(_width), _random.Next(_height), 1 + _random.Next(3), _random.Next(50, 180));
@@ -635,6 +653,7 @@ internal sealed class StormaktGame
         _audio?.SwitchMusic(_levelId switch
         {
             1 => StormaktMusicTrack.Skanska,
+            2 => StormaktMusicTrack.Oresund,
             3 => StormaktMusicTrack.Rts,
             _ => StormaktMusicTrack.Combat,
         });
@@ -681,7 +700,7 @@ internal sealed class StormaktGame
                 _previousButtons = buttons;
                 return;
             }
-            if (_levelSelection is 0 or 1 || (_developerMode && _levelSelection == 3))
+            if (_levelSelection is 0 or 1 || (_developerMode && _levelSelection is 2 or 3))
             {
                 StartLevel(_levelSelection, fresh: (buttons & Slow) != 0);
             }
@@ -4519,7 +4538,12 @@ internal sealed class StormaktGame
     private void StepRadio()
     {
         StepBossRadioQueue();
-        ReadOnlySpan<RadioCard> cards = _levelId == 1 ? SkanskaRadioCards : RadioCards;
+        ReadOnlySpan<RadioCard> cards = _levelId switch
+        {
+            1 => SkanskaRadioCards,
+            2 => OresundRadioCards,
+            _ => RadioCards,
+        };
         foreach (RadioCard card in cards)
         {
             if (_missionFrame == card.StartFrame)
@@ -4572,6 +4596,16 @@ internal sealed class StormaktGame
 
     private void StepLevelTimeline()
     {
+        if (_levelId == 2 && _missionFrame >= FlythroughFrames)
+        {
+            _stageClear = true;
+            _stageClearAge = 0;
+            _enemies.Clear();
+            _enemyShots.Clear();
+            _shots.Clear();
+            _audio?.Trigger(StormaktSound.Deploy);
+            return;
+        }
         if (_levelId == 1 && _missionFrame == 2_700 && _sorenRival is null)
         {
             _sorenRival = new SorenRivalState
@@ -5488,15 +5522,15 @@ internal sealed class StormaktGame
                 enemy.X += wobble;
             }
 
-            if (enemy.Kind is 4 or 5 or 6 && enemy.Y > 24 && enemy.Y < _height - 64)
+            if (enemy.Kind is 4 or 5 or 6 or 7 && enemy.Y > 24 && enemy.Y < _height - 64)
             {
-                int attackPeriod = enemy.Kind switch { 4 => 150, 5 => 210, _ => 120 };
-                int fireFrame = enemy.Kind switch { 4 => 96, 5 => 132, _ => 64 };
+                int attackPeriod = enemy.Kind switch { 4 => 150, 5 => 210, 7 => 165, _ => 120 };
+                int fireFrame = enemy.Kind switch { 4 => 96, 5 => 132, 7 => 102, _ => 64 };
                 int attackCycle = (_missionFrame + enemy.BridgeGroup) % attackPeriod;
                 if (attackCycle == fireFrame)
                 {
-                    int shotKind = enemy.Kind switch { 4 => 5, 5 => 7, 6 => 6, _ => 0 };
-                    double shotSpeed = enemy.Kind switch { 4 => 2.35, 6 => 2.55, _ => 1.85 };
+                    int shotKind = enemy.Kind switch { 4 => 5, 5 => 7, 6 => 6, 7 => 2, _ => 0 };
+                    double shotSpeed = enemy.Kind switch { 4 => 2.35, 6 => 2.55, 7 => 2.15, _ => 1.85 };
                     FireEnemyShot(enemy.X, enemy.Y + enemy.Radius, shotKind, shotSpeed);
                 }
             }
@@ -5556,13 +5590,18 @@ internal sealed class StormaktGame
 
     private void SpawnEnemies()
     {
-        int endFrame = _levelId == 1 ? 2_700 : BossArrivalFrame;
+        int endFrame = _levelId switch { 1 => 2_700, 2 => FlythroughFrames, _ => BossArrivalFrame };
         if (_missionFrame >= endFrame)
         {
             return;
         }
         int timelineFrame = _missionFrame;
-        ReadOnlySpan<EnemyWave> waves = _levelId == 1 ? SkanskaEnemyWaves : EnemyWaves;
+        ReadOnlySpan<EnemyWave> waves = _levelId switch
+        {
+            1 => SkanskaEnemyWaves,
+            2 => OresundEnemyWaves,
+            _ => EnemyWaves,
+        };
         foreach (EnemyWave wave in waves)
         {
             if (timelineFrame < wave.StartFrame || timelineFrame >= wave.EndFrame ||
@@ -5580,15 +5619,16 @@ internal sealed class StormaktGame
     {
         int centerSpan = Math.Max(1, _width - 124);
         int center = 62 + ((volley * 71 + wave.Kind * 43) % centerSpan);
-        int radius = wave.Kind == 2 ? 12 : wave.Kind is 1 or 5 ? 10 : 8;
+        int radius = wave.Kind == 2 ? 12 : wave.Kind is 1 or 5 or 7 ? 10 : 8;
         int speed = wave.Kind is 2 or 5 ? 1 : 2;
-        int health = wave.Kind == 2 ? 8 : wave.Kind is 1 or 5 ? 6 : 4;
+        int health = wave.Kind == 2 ? 8 : wave.Kind is 1 or 5 or 7 ? 6 : 4;
         uint color = wave.Kind switch
         {
             0 => 0xffa71930,
             1 => 0xffc51f35,
             4 => 0xff2e4939,
             5 => 0xff6f4a32,
+            7 => 0xff8f2635,
             _ => 0xff7f1727,
         };
         for (int index = 0; index < wave.Count; index++)
@@ -5598,7 +5638,7 @@ internal sealed class StormaktGame
             double phase = ((volley * 17 + index * 29 + wave.Kind * 11) % 100) * Math.PI / 50.0;
             _enemies.Add(new Enemy(
                 Math.Clamp(center + offset, 20, _width - 20), y, speed, radius, health, color, wave.Kind, phase,
-                wave.Kind is 4 or 5 ? volley * 31 + index * 47 : 0, 0, false));
+                wave.Kind is 4 or 5 or 7 ? volley * 31 + index * 47 : 0, 0, false));
         }
     }
 
@@ -7772,6 +7812,11 @@ internal sealed class StormaktGame
 
     private void DrawSky(uint[] frame)
     {
+        if (_levelId == 2)
+        {
+            DrawOresundSky(frame);
+            return;
+        }
         string backgroundName = _levelId == 1
             ? (_width <= 320 ? "skanska_background" : "skanska_background_wide")
             : (_width <= 320 ? "stora_balt_background" : "stora_balt_background_wide");
@@ -7803,6 +7848,7 @@ internal sealed class StormaktGame
 
     private void DrawNebula(uint[] frame)
     {
+        if (_levelId == 2) return;
         string backgroundName = _levelId == 1
             ? (_width <= 320 ? "skanska_background" : "skanska_background_wide")
             : (_width <= 320 ? "stora_balt_background" : "stora_balt_background_wide");
@@ -7835,6 +7881,11 @@ internal sealed class StormaktGame
         if (_levelId == 1)
         {
             DrawSkanskaScenery(frame);
+            return;
+        }
+        if (_levelId == 2)
+        {
+            DrawOresundScenery(frame);
             return;
         }
         if (_sprites?.TryGet("belt_asteroids_generated", out Sprite asteroids) == true &&
@@ -7870,6 +7921,67 @@ internal sealed class StormaktGame
 
         int bridgeY = ((_missionFrame * 3 / 4 + 510) % 980) - 180;
         DrawBrokenBridge(frame, bridgeY);
+    }
+
+    private void DrawOresundSky(uint[] frame)
+    {
+        for (int y = 0; y < _height; y++)
+        {
+            uint r = (uint)(5 + y * 8 / Math.Max(1, _height));
+            uint g = (uint)(12 + y * 17 / Math.Max(1, _height));
+            uint b = (uint)(20 + y * 23 / Math.Max(1, _height));
+            uint color = 0xff000000u | (r << 16) | (g << 8) | b;
+            int row = y * _width;
+            for (int x = 0; x < _width; x++) frame[row + x] = color;
+        }
+        int horizon = 52 + (int)Math.Round(Math.Sin(_missionFrame * 0.003) * 3.0);
+        DrawLine(frame, 0, horizon, _width - 1, horizon, 0xff31546b);
+        DrawLine(frame, 0, horizon + 3, _width - 1, horizon + 3, 0xff172f43);
+        for (int light = 0; light < 13; light++)
+        {
+            int x = (light * 67 + 19) % _width;
+            int y = horizon + 9 + (light * 17 % 34);
+            PutPixel(frame, x, y, light % 3 == 0 ? 0xffffd66b : 0xff6c91a8);
+        }
+    }
+
+    private void DrawOresundScenery(uint[] frame)
+    {
+        int leftRail = _width <= 320 ? 34 : 46;
+        int rightRail = _width - leftRail;
+        uint distantIron = 0xff1b2a35;
+        uint rail = 0xff526474;
+        uint brass = 0xff8a6b38;
+        DrawLine(frame, leftRail - 13, 18, leftRail - 13, _height - 10, distantIron);
+        DrawLine(frame, leftRail, 18, leftRail, _height - 10, rail);
+        DrawLine(frame, rightRail, 18, rightRail, _height - 10, rail);
+        DrawLine(frame, rightRail + 13, 18, rightRail + 13, _height - 10, distantIron);
+        int tieOffset = (_missionFrame * 2) % 28;
+        for (int y = 18 - tieOffset; y < _height; y += 28)
+        {
+            DrawLine(frame, leftRail - 17, y, leftRail + 10, y + 2, 0xff344653);
+            DrawLine(frame, rightRail - 10, y + 2, rightRail + 17, y, 0xff344653);
+            PutPixel(frame, leftRail, y + 1, brass);
+            PutPixel(frame, rightRail, y + 1, brass);
+        }
+        int cablePulse = (_missionFrame / 8) & 1;
+        uint cable = cablePulse == 0 ? 0xff31546b : 0xff46758e;
+        DrawLine(frame, leftRail + 4, 18, leftRail + 4, _height - 10, cable);
+        DrawLine(frame, rightRail - 4, 18, rightRail - 4, _height - 10, cable);
+
+        int archY = ((_missionFrame / 2 + 180) % (_height + 260)) - 130;
+        DrawLine(frame, -12, archY + 45, _width / 2, archY - 24, 0xff263b49);
+        DrawLine(frame, _width + 12, archY + 45, _width / 2, archY - 24, 0xff263b49);
+        DrawLine(frame, 6, archY + 52, _width / 2, archY - 14, 0xff8a6b38);
+        DrawLine(frame, _width - 7, archY + 52, _width / 2, archY - 14, 0xff8a6b38);
+        DrawCrown(frame, _width / 2 - 5, archY - 22, 0xffb78a4e);
+
+        int trainY = ((_missionFrame * 3 / 4 + 420) % (_height + 340)) - 170;
+        int trainX = (_missionFrame / 600 & 1) == 0 ? leftRail - 7 : rightRail + 7;
+        DrawRect(frame, trainX - 12, trainY - 28, 24, 56, 0xff202a32);
+        DrawRect(frame, trainX - 9, trainY - 24, 18, 8, 0xff7f1727);
+        DrawRect(frame, trainX - 2, trainY - 25, 4, 48, 0xffe6e3dc);
+        PutPixel(frame, trainX, trainY + 21, 0xffffd66b);
     }
 
     private void DrawSkanskaScenery(uint[] frame)
@@ -8847,6 +8959,22 @@ internal sealed class StormaktGame
             DrawRect(frame, enemy.X - 11, enemy.Y + 3, 22, 4, danishRed);
             DrawRect(frame, enemy.X - 2, enemy.Y - 9, 4, 18, danishWhite);
         }
+        else if (enemy.Kind == 7)
+        {
+            int attackCycle = (_missionFrame + enemy.BridgeGroup) % 165;
+            bool aiming = attackCycle is >= 82 and <= 106;
+            FillTriangle(frame, enemy.X, enemy.Y - 13, enemy.X - 11, enemy.Y + 9,
+                enemy.X + 11, enemy.Y + 9, 0xff202a32);
+            DrawRect(frame, enemy.X - 10, enemy.Y + 1, 21, 5, danishRed);
+            DrawRect(frame, enemy.X - 2, enemy.Y - 10, 4, 17, danishWhite);
+            DrawLine(frame, enemy.X - 12, enemy.Y + 7, enemy.X - 5, enemy.Y + 12, 0xffb78a4e);
+            DrawLine(frame, enemy.X + 12, enemy.Y + 7, enemy.X + 5, enemy.Y + 12, 0xffb78a4e);
+            if (aiming)
+            {
+                DrawLine(frame, enemy.X, enemy.Y + 9, _shipX, _shipY, 0xff7f4a4f);
+                PutPixel(frame, enemy.X, enemy.Y + 8, 0xffffd6b0);
+            }
+        }
         else if (enemy.Kind == 3)
         {
             DrawFogdeSloop(frame, enemy, brass, danishRed, danishWhite, dark);
@@ -8995,6 +9123,10 @@ internal sealed class StormaktGame
         {
             DrawGlimmingeResultWreck(frame, panelX + 196, 67);
         }
+        else if (_levelId == 2)
+        {
+            DrawOresundResultCrown(frame, panelX + 196, 67);
+        }
         else if (_levelId == 3)
         {
             DrawRtsVictorySilver(frame, panelX + 196, 67);
@@ -9015,6 +9147,11 @@ internal sealed class StormaktGame
                 DrawText(frame, panelX + 39, 99, "SKUGGORNA SVARAR", 0xffffd66b);
                 DrawText(frame, panelX + 42, 116, "SIGNALEN FUNNEN", 0xff65c58a);
             }
+            else if (_levelId == 2)
+            {
+                DrawText(frame, panelX + 39, 99, "JÄRNKRONAN VÄNTAR", 0xffffd66b);
+                DrawText(frame, panelX + 45, 116, "BRON ÄR KARTLAGD", 0xff9bd4dc);
+            }
             else if (_levelId == 3)
             {
                 DrawText(frame, panelX + 42, 99, "UNDER SILVERÅDERN", 0xffffd66b);
@@ -9026,6 +9163,18 @@ internal sealed class StormaktGame
                 DrawText(frame, panelX + 39, 116, "KRONARKIV SÄKRAT", 0xff9bd4dc);
             }
         }
+    }
+
+    private void DrawOresundResultCrown(uint[] frame, int x, int y)
+    {
+        uint iron = 0xff344653;
+        uint glint = (_stageClearAge / 6 & 1) == 0 ? 0xff9bd4dc : 0xffd6b25e;
+        DrawLine(frame, x - 25, y + 15, x, y - 18, iron);
+        DrawLine(frame, x + 25, y + 15, x, y - 18, iron);
+        DrawLine(frame, x - 25, y + 15, x + 25, y + 15, 0xff8a6b38);
+        DrawCrown(frame, x - 5, y - 20, glint);
+        PutPixel(frame, x - 25, y + 15, glint);
+        PutPixel(frame, x + 25, y + 15, glint);
     }
 
     private void DrawRtsVictorySilver(uint[] frame, int x, int y)
@@ -9091,6 +9240,11 @@ internal sealed class StormaktGame
         {
             DrawText(frame, panelX + 92, y + 8, "DEN SVARTA SKOGEN", 0xffffd66b);
             DrawText(frame, panelX + 88, y + 22, "SKÅNSKA SKUGGOR", 0xff65c58a);
+        }
+        else if (_levelId == 2)
+        {
+            DrawText(frame, panelX + 83, y + 8, "KRONANS RINGBRO", 0xffffd66b);
+            DrawText(frame, panelX + 76, y + 22, "ÖRESUNDS JÄRNKRONA", 0xff9bd4dc);
         }
         else
         {
@@ -9247,7 +9401,12 @@ internal sealed class StormaktGame
             DrawRadioCard(frame, bossCard, _bossRadioAge);
             return;
         }
-        ReadOnlySpan<RadioCard> cards = _levelId == 1 ? SkanskaRadioCards : RadioCards;
+        ReadOnlySpan<RadioCard> cards = _levelId switch
+        {
+            1 => SkanskaRadioCards,
+            2 => OresundRadioCards,
+            _ => RadioCards,
+        };
         foreach (RadioCard card in cards)
         {
             int elapsed = _missionFrame - card.StartFrame;

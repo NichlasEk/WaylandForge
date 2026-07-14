@@ -1,6 +1,6 @@
 # Bana 3 - Öresunds järnkrona
 
-Status: pre-production plan revised and locked 2026-07-14 with readable systemic emergence as a core requirement. This is the active `DEV` campaign row after Skånska skuggor became a public `STRID`.
+Status: checkpoint 1 landed 2026-07-14. The active `DEV` row now starts a deterministic 60-second level-id 2 skeleton; readable systemic emergence remains the next core requirement.
 
 ## Dramatiskt löfte
 
@@ -162,27 +162,34 @@ Varje brosektion minns högst två spelarorsakade förändringar tills den lämn
 
 ## Byggskivor
 
-1. **Hook och 60-sekundersskelett:** DEV-start, egen seed, titel, kall brofallback, musikplats, broväktarvåg och resultatkort.
+1. **Hook och 60-sekundersskelett (landed 2026-07-14):** DEV-start, egen seed, titel, kall brofallback, Öresunds musikkanal med `oresund-i-brand-v1.wav` som prototyp, broväktarvåg och resultatkort.
 2. **Systemisk provsektion:** kodritad laserfyr, kontrollhus, växel och en kanonvagn. Verifiera minst tre olika slutbilder från tre inspelade inputspår innan slutgrafik genereras.
 3. **Ringbrovärlden:** genererad bakgrund, Kronspannet, rälsparallax och två säkra klaffsekvenser som använder samma täckningsstate som provsektionen.
 4. **Pansartåget:** lokpassage, flera kanonvagnar, spårbyte, kopplingsdöd, miljökrasch och LIST-poäng.
 5. **Sörens ingripande:** radiokö, bakgrundspassage och deterministiskt val av högsta kvarvarande hot.
 6. **Helsingör/Helsingborg:** två ankare, delad hälsa, korskopplad ström, tre faser, död och övergång mot Silverkroppen.
 
+## Landad checkpoint 1
+
+Nivå-id `2` har egen seed `3303`, tom egen radiotabell, egen fiendevåg, egen kodritad ringbro/räls/Kronspann, egen musikdispatch och eget resultatkort. DEV-rad 3 startar nivån direkt medan normalläget behåller den låst. Start från resultatet återgår till samma kampanjrad.
+
+Två upprepade direkta WFEX-spår matchade vid bild 60, 1200, 3590 och 3650:
+
+- 400x280: `69d10c592b7f492f`, `72e3272c46290227`, `0b31b57cdd259e3e`, `e3ad228ac8f8b656`.
+- 320x224: `36488dc5e898588c`, `ebb10f9c19160184`, `1468186cfe2cc108`, `2b94df7215946c78`.
+
 ## Nästa implementeringscheckpoint
 
-Nästa arbete är endast skiva 1 och ska lämna en ren, spelbar bas för provsektionen:
+Bygg skiva 2 som en kodritad systemisk provsektion innan bildgenerering:
 
-1. Låt DEV-rad 3 starta `StartLevel(2)` i stället för den generiska previewrutan; normalläge behåller raden låst.
-2. Ge nivå-id 2 en egen deterministisk reset-seed och nollställd framtida `BridgeSectionState`.
-3. Lägg in en 60-sekunderstidslinje med egen titel, kall kodritad ringbro, rälsparallax och enkel broväktarvåg.
-4. Lägg reserverade dispatchpunkter för Öresunds radio, musik, marktillstånd och boss utan att fylla dem med Bana 1-data.
-5. Avsluta skelettet med ett eget Öresund-resultatkort som återgår till samma kampanjrad.
-6. Kör två identiska direkta WFEX-inputspår och jämför bildhash vid introduktion, mittsektion och resultat.
-7. Fånga både 400x280 och 320x224 och kontrollera att spelarens körfält aldrig försvinner bakom kodfallbacken.
-8. Commit och push innan systemisk provsektion eller bildgenerering börjar.
+1. Introducera `BridgeSectionState` med ström, visad kommande växel, täckning och högst två lokala förändringar.
+2. Lägg in en laserfyr, ett kontrollhus och en enda kopplingsbar kanonvagn i samma sektion.
+3. Implementera endast tre explicita händelser: direkt förstörelse, `LaserHitCarriage` och `CarriageHitControl`.
+4. Visa följden med kabelglöd, växellampa och de korta HUD-orden `FYR ÖVERLASTAD`, `VÄXEL LÅST` och `LIST x2`.
+5. Spela in tre inputspår som slutar i direkt förstörelse, miljödöd respekt säker omledning.
+6. Upprepa varje spår tio gånger och jämför händelseordning, poäng, slutstate och checkpoint-hash.
 
-**Definition of done:** Öresund går att starta, spela och avsluta i utvecklarläge; använder aldrig Skånes bakgrund, musikval, radio, fiendevågor eller resultatkort; och ger identiska checkpoint-hashar vid upprepad input.
+**Definition of done:** samma minut kan lösas på tre synligt olika sätt utan slump, mer än tre kedjeled, mer än två samtidiga faror eller någon generated slutgrafik.
 
 ## Acceptanskriterier
 

@@ -17,6 +17,7 @@ internal sealed class StormaktMusicLoop : IDisposable
     private readonly float[]? _menuSamples;
     private readonly float[] _combatSamples;
     private readonly float[]? _skanskaSamples;
+    private readonly float[] _oresundSamples;
     private readonly float[]? _rtsSamples;
     private readonly float[]? _dungeonSamples;
     private readonly float[]? _bossSamples;
@@ -47,6 +48,7 @@ internal sealed class StormaktMusicLoop : IDisposable
         float[] samples,
         float[]? menuSamples,
         float[]? skanskaSamples,
+        float[] oresundSamples,
         float[]? rtsSamples,
         float[]? dungeonSamples,
         float[]? bossSamples,
@@ -60,6 +62,7 @@ internal sealed class StormaktMusicLoop : IDisposable
         _menuSamples = menuSamples;
         _combatSamples = samples;
         _skanskaSamples = skanskaSamples;
+        _oresundSamples = oresundSamples;
         _rtsSamples = rtsSamples;
         _dungeonSamples = dungeonSamples;
         _bossSamples = bossSamples;
@@ -114,6 +117,11 @@ internal sealed class StormaktMusicLoop : IDisposable
                 float[]? menuSamples = File.Exists(menuPath) ? LoadPcm16StereoWav(menuPath) : null;
                 string skanskaPath = Path.Combine(musicDirectory, "skanska-skuggor-loop-v1.wav");
                 float[]? skanskaSamples = File.Exists(skanskaPath) ? LoadPcm16StereoWav(skanskaPath) : null;
+                string finalOresundPath = Path.Combine(musicDirectory, "oresunds-jarnkrona-loop-v1.wav");
+                string prototypeOresundPath = Path.Combine(musicDirectory, "oresund-i-brand-v1.wav");
+                string oresundPath = File.Exists(finalOresundPath) ? finalOresundPath : prototypeOresundPath;
+                bool hasOresundScore = File.Exists(oresundPath);
+                float[] oresundSamples = hasOresundScore ? LoadPcm16StereoWav(oresundPath) : samples;
                 string rtsPath = Path.Combine(musicDirectory, "silverkroppen-faltmarsch-loop-v1.wav");
                 float[]? rtsSamples = File.Exists(rtsPath) ? LoadPcm16StereoWav(rtsPath) : null;
                 string dungeonPath = Path.Combine(musicDirectory, "lemminkainen-gruva1-v1.wav");
@@ -131,16 +139,20 @@ internal sealed class StormaktMusicLoop : IDisposable
                 string socketPath = Environment.GetEnvironmentVariable("WAYLANDFORGE_AUDIO_SOCKET") ?? DefaultSocketPath;
                 string menuDescription = menuSamples is null ? "missing" : $"ready ({menuSamples.Length / Channels / SampleRate}s)";
                 string skanskaDescription = skanskaSamples is null ? "missing" : $"ready ({skanskaSamples.Length / Channels / SampleRate}s)";
+                string oresundDescription = File.Exists(finalOresundPath)
+                    ? $"ready ({oresundSamples.Length / Channels / SampleRate}s)"
+                    : hasOresundScore ? $"prototype ({oresundSamples.Length / Channels / SampleRate}s)"
+                    : "combat prototype";
                 string rtsDescription = rtsSamples is null ? "missing" : $"ready ({rtsSamples.Length / Channels / SampleRate}s)";
                 string dungeonDescription = dungeonSamples is null ? "missing" : $"ready ({dungeonSamples.Length / Channels / SampleRate}s)";
                 string bossDescription = bossSamples is null ? "missing" : $"ready ({bossSamples.Length / Channels / SampleRate}s)";
                 string escapeDescription = escapeSamples is null ? "missing" : $"ready ({escapeSamples.Length / Channels / SampleRate}s)";
                 string reliefDescription = reliefSamples is null ? "missing" : $"ready ({reliefSamples.Length / Channels / SampleRate}s)";
                 Console.Error.WriteLine($"Stormakt audio: loaded {Path.GetFileName(path)} ({samples.Length / Channels / SampleRate}s), " +
-                    $"menu march={menuDescription}, Skanska score={skanskaDescription}, RTS score={rtsDescription}, dungeon score={dungeonDescription}, boss score={bossDescription}, " +
+                    $"menu march={menuDescription}, Skanska score={skanskaDescription}, Oresund score={oresundDescription}, RTS score={rtsDescription}, dungeon score={dungeonDescription}, boss score={bossDescription}, " +
                     $"escape score={escapeDescription}, relief score={reliefDescription}, " +
                     $"{effects.Count} effects and {voices.Count} radio voices.");
-                return new StormaktMusicLoop(samples, menuSamples, skanskaSamples, rtsSamples, dungeonSamples,
+                return new StormaktMusicLoop(samples, menuSamples, skanskaSamples, oresundSamples, rtsSamples, dungeonSamples,
                     bossSamples, escapeSamples, reliefSamples, effects, voices, socketPath);
             }
             catch (Exception exception)
@@ -281,6 +293,7 @@ internal sealed class StormaktMusicLoop : IDisposable
                 StormaktMusicTrack.Menu => _menuSamples,
                 StormaktMusicTrack.Combat => _combatSamples,
                 StormaktMusicTrack.Skanska => _skanskaSamples,
+                StormaktMusicTrack.Oresund => _oresundSamples,
                 StormaktMusicTrack.Rts => _rtsSamples,
                 StormaktMusicTrack.Dungeon => _dungeonSamples,
                 StormaktMusicTrack.Boss => _bossSamples,
@@ -815,6 +828,7 @@ internal enum StormaktMusicTrack
     Menu,
     Combat,
     Skanska,
+    Oresund,
     Rts,
     Dungeon,
     Boss,

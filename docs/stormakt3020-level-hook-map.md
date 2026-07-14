@@ -103,6 +103,12 @@ First asset batch:
 
 For every checkpoint: build, `git diff --check`, capture at least one direct WFEX frame, verify deterministic selection, commit and push narrowly.
 
+## Öresund dispatch
+
+Campaign row 3 owns level id `2` and is directly startable only in developer mode while under construction. Reset seed `3303`, `OresundEnemyWaves`, the empty `OresundRadioCards` reservation, `StormaktMusicTrack.Oresund`, the code-drawn ringbridge layer, mission title and result card are all separate dispatch branches. The 60-second skeleton clears at frame 3600 and Start returns to selected campaign row 3. It must not fall through to Stora Bält or Skånska tables when a future subsystem is absent.
+
+The first deterministic wide/legacy WFEX baseline landed 2026-07-14. Next work belongs in `BridgeSectionState` and the explicit cross-reaction event path documented in `docs/stormakt3020-level-03-oresunds-jarnkrona.md`; do not overload the generic Stora Bält `GroundTarget` bridge collapse behavior to simulate it.
+
 ## RTS dispatch - Silverkroppen
 
 Campaign row 4 owns level id `3` and branches before the shmup simulation/render spine. `StepRts` and `DrawRts` operate on a separate `RtsState`; no ship shots, enemy waves, scrolling sky or shmup boss state are stepped while it is active. Reset uses seed `3404` and reconstructs cursor, camera and landing state deterministically. Developer selection, touchdown, survey placement and camera follow are direct-WFEX verified in both supported resolutions.
