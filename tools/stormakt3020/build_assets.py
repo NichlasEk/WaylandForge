@@ -394,6 +394,14 @@ def append_dungeon_loot(entries: list[tuple[str, Image.Image]], source: Image.Im
         entries.append((name, canvas))
 
 
+def append_dungeon_ore_mother_ring(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    sprite = trim_alpha(source.convert("RGBA"))
+    sprite.thumbnail((19, 19), Image.Resampling.LANCZOS)
+    canvas = Image.new("RGBA", (22, 22), (0, 0, 0, 0))
+    canvas.alpha_composite(sprite, ((22 - sprite.width) // 2, (22 - sprite.height) // 2))
+    entries.append(("loot_ore_mother_ring", canvas))
+
+
 def append_dungeon_ui(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
     names = ["ui_health_orb", "ui_power_orb", "ui_inventory_corner", "ui_inventory_divider",
              "ui_item_slot", "ui_backpack_grid", "ui_carolean_silhouette", "ui_stash_crest"]
@@ -769,6 +777,7 @@ def build(
     dungeon_louhi_iron_bird_input_path: Path,
     dungeon_louhi_ore_mother_input_path: Path,
     dungeon_temple_seal_fog_input_path: Path,
+    dungeon_ore_mother_ring_input_path: Path,
     louhi_portrait_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
@@ -827,6 +836,7 @@ def build(
     dungeon_louhi_iron_bird_source = Image.open(dungeon_louhi_iron_bird_input_path).convert("RGBA")
     dungeon_louhi_ore_mother_source = Image.open(dungeon_louhi_ore_mother_input_path).convert("RGBA")
     dungeon_temple_seal_fog_source = Image.open(dungeon_temple_seal_fog_input_path).convert("RGBA")
+    dungeon_ore_mother_ring_source = Image.open(dungeon_ore_mother_ring_input_path).convert("RGBA")
     louhi_portrait_source = Image.open(louhi_portrait_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
@@ -925,6 +935,7 @@ def build(
     append_dungeon_louhi_iron_bird(entries, dungeon_louhi_iron_bird_source)
     append_dungeon_louhi_ore_mother(entries, dungeon_louhi_ore_mother_source)
     append_dungeon_temple_seal_fog(entries, dungeon_temple_seal_fog_source)
+    append_dungeon_ore_mother_ring(entries, dungeon_ore_mother_ring_source)
     append_louhi_portrait(entries, louhi_portrait_source)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
@@ -1082,6 +1093,7 @@ def main() -> None:
     parser.add_argument("--dungeon-louhi-iron-bird-input", type=Path, default=Path("assets/stormakt3020/dungeon-louhi-iron-bird-v1.png"))
     parser.add_argument("--dungeon-louhi-ore-mother-input", type=Path, default=Path("assets/stormakt3020/dungeon-louhi-ore-mother-v1.png"))
     parser.add_argument("--dungeon-temple-seal-fog-input", type=Path, default=Path("assets/stormakt3020/dungeon-temple-seal-fog-v1.png"))
+    parser.add_argument("--dungeon-ore-mother-ring-input", type=Path, default=Path("assets/stormakt3020/dungeon-ore-mother-ring-v1.png"))
     parser.add_argument("--louhi-portrait-input", type=Path, default=Path("assets/stormakt3020/louhi-radio-v1.png"))
     parser.add_argument(
         "--logo-input",
@@ -1145,6 +1157,7 @@ def main() -> None:
         args.dungeon_louhi_iron_bird_input,
         args.dungeon_louhi_ore_mother_input,
         args.dungeon_temple_seal_fog_input,
+        args.dungeon_ore_mother_ring_input,
         args.louhi_portrait_input,
         args.logo_input,
         args.output,

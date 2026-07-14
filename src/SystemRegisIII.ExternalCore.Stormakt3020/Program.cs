@@ -123,6 +123,8 @@ internal sealed class StormaktGame
     private const int DungeonLouhiPhaseOneMask = 1 << 22;
     private const int DungeonLouhiPhaseTwoMask = 1 << 23;
     private const int DungeonLouhiPhaseThreeMask = 1 << 24;
+    private const int DungeonLouhiRelicMask = 1 << 25;
+    private const int DungeonEpilogueCompleteMask = 1 << 26;
     private const int DungeonLouhiIronBirdHealth = 720;
     private const int DungeonLouhiOreMotherHealth = 840;
     private const uint Up = 1u << 1;
@@ -378,7 +380,9 @@ internal sealed class StormaktGame
                     _audio?.SetPaused(false);
                     bool bossActive = loaded.Enemies.Any(enemy => enemy.Depth == loaded.Depth &&
                         enemy.State != DungeonEnemyState.Dead &&
-                        enemy.Type is DungeonEnemyType.TuonelaSwan or DungeonEnemyType.Louhi);
+                        enemy.Type is DungeonEnemyType.TuonelaSwan or DungeonEnemyType.Louhi) ||
+                        (loaded.LoreMask & DungeonLouhiPhaseThreeMask) != 0 &&
+                        (loaded.LoreMask & DungeonEpilogueCompleteMask) == 0;
                     _audio?.SwitchMusic(bossActive ? StormaktMusicTrack.Boss : StormaktMusicTrack.Dungeon);
                     SetDungeonDeveloperNotice(loaded, "F2  DEVSTATE LADDAT");
                     _audio?.Trigger(StormaktSound.Deploy);
@@ -1715,6 +1719,32 @@ internal sealed class StormaktGame
                 _bossRadioCard = null;
                 _audio?.SwitchMusic(StormaktMusicTrack.Boss);
             }
+            if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_LOUHI_ESCAPE_TEST"), "1", StringComparison.Ordinal))
+            {
+                _dungeon.LoreMask |= DungeonLouhiPhaseOneMask | DungeonLouhiPhaseTwoMask |
+                    DungeonLouhiPhaseThreeMask;
+                louhi.Health = 0;
+                louhi.Phase = 4;
+                louhi.State = DungeonEnemyState.Dead;
+                DungeonItem ring = AddDungeonItem(_dungeon, 16, -1, -1,
+                    DungeonEquipmentSlot.None, DungeonItemRarity.Unique);
+                ring.OnGround = true; ring.WorldX = 4170; ring.WorldY = 415;
+                _dungeon.CollapseAge = 1;
+                _dungeon.KarlX = 4120; _dungeon.KarlY = 430;
+                _dungeon.TargetX = 4120; _dungeon.TargetY = 430;
+                _bossRadioCard = DungeonLouhiFinalRadio;
+                _bossRadioAge = 0;
+                _audio?.SwitchMusic(StormaktMusicTrack.Boss);
+            }
+            if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_EPILOGUE_TEST"), "1", StringComparison.Ordinal))
+            {
+                _dungeon.LoreMask |= DungeonLouhiPhaseOneMask | DungeonLouhiPhaseTwoMask |
+                    DungeonLouhiPhaseThreeMask | DungeonLouhiRelicMask;
+                DungeonItem ring = AddDungeonItem(_dungeon, 16, -1, -1,
+                    DungeonEquipmentSlot.None, DungeonItemRarity.Unique);
+                TryPlaceFirstFree(_dungeon, ring);
+                BeginDungeonEpilogue(_dungeon);
+            }
         }
         if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_DEATH_TEST"), "1", StringComparison.Ordinal))
             _dungeon.Health = 0;
@@ -1724,6 +1754,10 @@ internal sealed class StormaktGame
             Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_LOUHI_PHASE2_TEST"), "1",
             StringComparison.Ordinal) || string.Equals(
             Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_LOUHI_PHASE3_TEST"), "1",
+            StringComparison.Ordinal) || string.Equals(
+            Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_LOUHI_ESCAPE_TEST"), "1",
+            StringComparison.Ordinal) || string.Equals(
+            Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_EPILOGUE_TEST"), "1",
             StringComparison.Ordinal) ? StormaktMusicTrack.Boss : StormaktMusicTrack.Dungeon);
         WriteDungeonSave(_dungeon, "autosave");
     }
@@ -1751,6 +1785,11 @@ internal sealed class StormaktGame
         {
             _bossRadioCard = null;
             _bossRadioAge = 0;
+        }
+        if (dungeon.EpilogueAge > 0)
+        {
+            StepDungeonEpilogue(dungeon, buttons);
+            return;
         }
         if (dungeon.Health <= 0 && dungeon.DeathAge == 0)
         {
@@ -1895,6 +1934,9 @@ internal sealed class StormaktGame
             bool clickedDepthThreeReturn = dungeon.Depth == 3 && DistanceSquared(60, 240, worldX, worldY) < 48 * 48;
             bool clickedTemple = dungeon.Depth == 3 && dungeon.TempleOpen && DistanceSquared(1320, 450, worldX, worldY) < 74 * 74;
             bool clickedTempleReturn = dungeon.Depth == 4 && DistanceSquared(60, 250, worldX, worldY) < 48 * 48;
+            bool clickedFinalLift = dungeon.Depth == 4 &&
+                (dungeon.LoreMask & DungeonLouhiRelicMask) != 0 &&
+                DistanceSquared(4380, 380, worldX, worldY) < 58 * 58;
             bool clickedFogde = dungeon.Depth == 4 && (dungeon.LoreMask & DungeonFirstSigilMask) != 0 &&
                 (dungeon.LoreMask & DungeonFogdeRescuedMask) == 0 && DistanceSquared(1850, 150, worldX, worldY) < 68 * 68;
             bool clickedFogdeTalk = dungeon.Depth == 4 && (dungeon.LoreMask & DungeonFogdeRescuedMask) != 0 &&
@@ -1914,6 +1956,7 @@ internal sealed class StormaktGame
             dungeon.PendingDepthThreeReturn = clickedDepthThreeReturn;
             dungeon.PendingTempleEntry = clickedTemple;
             dungeon.PendingTempleReturn = clickedTempleReturn;
+            dungeon.PendingFinalLift = clickedFinalLift;
             dungeon.PendingFogdeRescue = clickedFogde;
             dungeon.PendingFogdeTalk = clickedFogdeTalk;
             dungeon.PendingTempleRune = clickedRune + 1;
@@ -1927,6 +1970,7 @@ internal sealed class StormaktGame
                 : clickedDepthThreeReturn ? (60, 240)
                 : clickedTemple ? (1320, 450)
                 : clickedTempleReturn ? (60, 250)
+                : clickedFinalLift ? (4380, 380)
                 : clickedFogde ? (1850, 215)
                 : clickedFogdeTalk ? (1905, 270)
                 : clickedRune >= 0 ? DungeonSecondTempleRunes[clickedRune]
@@ -1941,7 +1985,22 @@ internal sealed class StormaktGame
             if (pending is null) dungeon.PendingPickupItemId = 0;
             else if (DistanceSquared(pending.WorldX, pending.WorldY, dungeon.KarlX, dungeon.KarlY) < 38 * 38)
             {
-                StoreDungeonPickup(dungeon, pending);
+                bool stored = StoreDungeonPickup(dungeon, pending);
+                if (!stored && pending.Definition == 16)
+                {
+                    // The story relic must never make the timed escape fail
+                    // because the backpack happened to be full.
+                    EquipDungeonItem(dungeon, pending);
+                    stored = true;
+                }
+                if (stored && pending.Definition == 16)
+                {
+                    dungeon.LoreMask |= DungeonLouhiRelicMask;
+                    dungeon.PickupNotice = "MALMMODERNS RUNRING  HISSEN VAKNAR";
+                    dungeon.PickupNoticeAge = 240;
+                    _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+                    WriteDungeonSave(dungeon, "autosave");
+                }
                 dungeon.PendingPickupItemId = 0;
             }
         }
@@ -1979,6 +2038,7 @@ internal sealed class StormaktGame
         StepDungeonCombat(dungeon);
         StepDungeonSilverVents(dungeon);
         StepDungeonCurse(dungeon);
+        StepDungeonTempleCollapse(dungeon);
         if (dungeon.LouhiGreedAge > 0)
         {
             dungeon.LouhiGreedAge--;
@@ -2027,6 +2087,13 @@ internal sealed class StormaktGame
         }
         dungeon.CameraX = Math.Clamp((int)Math.Round(dungeon.KarlX - _width / 2.0), 0, dungeon.RoomWidth - _width);
         dungeon.CameraY = Math.Clamp((int)Math.Round(dungeon.KarlY - _height / 2.0), 0, dungeon.RoomHeight - _height);
+        if (dungeon.CollapseAge > 0)
+        {
+            int shakeX = dungeon.CollapseAge / 2 % 5 - 2;
+            int shakeY = dungeon.CollapseAge / 3 % 3 - 1;
+            dungeon.CameraX = Math.Clamp(dungeon.CameraX + shakeX, 0, dungeon.RoomWidth - _width);
+            dungeon.CameraY = Math.Clamp(dungeon.CameraY + shakeY, 0, dungeon.RoomHeight - _height);
+        }
         if (dungeon.Depth == 1 && dungeon.DoorReady && dungeon.PendingDoorEntry && dungeon.DescentWarningPlayed &&
             _bossRadioCard is null && DistanceSquared(650, 218, dungeon.KarlX, dungeon.KarlY) < 34 * 34)
             BeginDungeonDepthTwo(dungeon);
@@ -2045,6 +2112,10 @@ internal sealed class StormaktGame
         else if (dungeon.Depth == 4 && dungeon.PendingTempleReturn &&
             DistanceSquared(60, 250, dungeon.KarlX, dungeon.KarlY) < 38 * 38)
             ReturnToDungeonDepthThree(dungeon);
+        else if (dungeon.Depth == 4 && dungeon.PendingFinalLift &&
+            (dungeon.LoreMask & DungeonLouhiRelicMask) != 0 &&
+            DistanceSquared(4380, 380, dungeon.KarlX, dungeon.KarlY) < 42 * 42)
+            BeginDungeonEpilogue(dungeon);
     }
 
     private void ConsumeDungeonHealthTincture(DungeonState dungeon, DungeonItem tincture)
@@ -2161,6 +2232,22 @@ internal sealed class StormaktGame
 
     private void RestartDungeonAfterDeath(DungeonState fallen)
     {
+        if ((fallen.LoreMask & DungeonLouhiPhaseThreeMask) != 0 &&
+            (fallen.LoreMask & DungeonEpilogueCompleteMask) == 0 &&
+            TryLoadDungeonSave("autosave", out DungeonState? escapeRetry) && escapeRetry is not null)
+        {
+            escapeRetry.Health = escapeRetry.MaxHealth;
+            escapeRetry.DeathAge = 0;
+            escapeRetry.HurtAge = 60;
+            escapeRetry.CollapseAge = 1;
+            escapeRetry.TargetX = escapeRetry.KarlX;
+            escapeRetry.TargetY = escapeRetry.KarlY;
+            escapeRetry.PickupNotice = "TEMPLET RASAR  FÖRSÖK IGEN";
+            escapeRetry.PickupNoticeAge = 180;
+            _dungeon = escapeRetry;
+            _audio?.SwitchMusic(StormaktMusicTrack.Boss);
+            return;
+        }
         var restarted = new DungeonState
         {
             Age = 150,
@@ -2333,6 +2420,57 @@ internal sealed class StormaktGame
         WriteDungeonSave(dungeon, "autosave");
     }
 
+    private void BeginDungeonEpilogue(DungeonState dungeon)
+    {
+        dungeon.EpilogueAge = 1;
+        dungeon.PendingFinalLift = false;
+        dungeon.TargetX = dungeon.KarlX;
+        dungeon.TargetY = dungeon.KarlY;
+        dungeon.AttackAge = 0;
+        dungeon.InventoryOpen = false;
+        _bossRadioCard = null;
+        _bossRadioAge = 0;
+        _audio?.Trigger(StormaktSound.Deploy);
+        WriteDungeonSave(dungeon, "autosave");
+    }
+
+    private void StepDungeonTempleCollapse(DungeonState dungeon)
+    {
+        if (dungeon.Depth != 4 || (dungeon.LoreMask & DungeonLouhiPhaseThreeMask) == 0 ||
+            (dungeon.LoreMask & DungeonEpilogueCompleteMask) != 0) return;
+        if (dungeon.CollapseAge == 0) dungeon.CollapseAge = 1;
+        else dungeon.CollapseAge++;
+        if (dungeon.CollapseAge % 75 == 0)
+        {
+            dungeon.HitStop = Math.Max(dungeon.HitStop, 2);
+            _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+        }
+        if (dungeon.CollapseAge > 1500 && dungeon.Health > 0)
+        {
+            dungeon.PickupNotice = "TEMPLET SLUKAR ALLT";
+            dungeon.PickupNoticeAge = 120;
+            ApplyDungeonDamage(dungeon, dungeon.MaxHealth + 100);
+        }
+    }
+
+    private void StepDungeonEpilogue(DungeonState dungeon, uint buttons)
+    {
+        dungeon.EpilogueAge++;
+        if (dungeon.EpilogueAge == 150) _audio?.SwitchMusic(StormaktMusicTrack.Combat);
+        if (dungeon.EpilogueAge == 850)
+        {
+            dungeon.LoreMask |= DungeonEpilogueCompleteMask;
+            WriteDungeonSave(dungeon, "autosave");
+        }
+        if (dungeon.EpilogueAge < 920 || !Pressed(buttons, Fire)) return;
+        _dungeon = null;
+        _inLevelSelect = true;
+        _inSilverkroppenSelect = false;
+        _levelSelection = 3;
+        _audio?.SwitchMusic(StormaktMusicTrack.Menu);
+        _audio?.Trigger(StormaktSound.Deploy);
+    }
+
     private static DungeonEnemy EnsureDungeonLouhiEncounter(DungeonState dungeon)
     {
         DungeonEnemy? louhi = dungeon.Enemies.FirstOrDefault(enemy =>
@@ -2348,6 +2486,15 @@ internal sealed class StormaktGame
             louhi.Health = 0;
             louhi.Phase = 4;
             louhi.State = DungeonEnemyState.Dead;
+            if ((dungeon.LoreMask & DungeonLouhiRelicMask) == 0 &&
+                dungeon.Items.All(item => item.Definition != 16))
+            {
+                DungeonItem ring = AddDungeonItem(dungeon, 16, -1, -1,
+                    DungeonEquipmentSlot.None, DungeonItemRarity.Unique);
+                ring.OnGround = true;
+                ring.WorldX = 4170;
+                ring.WorldY = 415;
+            }
         }
         else if ((dungeon.LoreMask & DungeonLouhiPhaseTwoMask) != 0 &&
             (louhi.Phase != 3 || louhi.State == DungeonEnemyState.Dead))
@@ -3111,8 +3258,19 @@ internal sealed class StormaktGame
             louhi.SpecialAge = 0;
             dungeon.LoreMask |= DungeonLouhiPhaseThreeMask;
             dungeon.Curse = 0;
+            if (dungeon.Items.All(item => item.Definition != 16))
+            {
+                DungeonItem ring = AddDungeonItem(dungeon, 16, -1, -1,
+                    DungeonEquipmentSlot.None, DungeonItemRarity.Unique);
+                ring.OnGround = true;
+                ring.WorldX = 4170;
+                ring.WorldY = 415;
+            }
+            dungeon.PickupNotice = "MALMMODERN LÄMNAR EN RUNRING";
+            dungeon.PickupNoticeAge = 240;
             ActivateBossRadio(DungeonLouhiFinalRadio);
-            _audio?.SwitchMusic(StormaktMusicTrack.Dungeon);
+            louhi.SpecialCooldown = 0;
+            dungeon.CollapseAge = 1;
         }
         dungeon.LouhiRunes.Clear();
         dungeon.LouhiVeins.Clear();
@@ -5492,6 +5650,11 @@ internal sealed class StormaktGame
     private void DrawDungeon(uint[] frame)
     {
         DungeonState dungeon = _dungeon!;
+        if (dungeon.EpilogueAge > 0)
+        {
+            DrawDungeonEpilogue(frame, dungeon);
+            return;
+        }
         DrawRect(frame, 0, 0, _width, _height, 0xff080b0a);
         string floorName = dungeon.Depth == 4 ? "dungeon_temple_floor" :
             dungeon.Depth >= 3 ? "dungeon_cursed_floor" : "dungeon_floor_wet";
@@ -5672,6 +5835,14 @@ internal sealed class StormaktGame
             DrawDungeonSprite(frame, dungeon,
                 louhiGateSealed ? "dungeon_temple_gate_closed" : "dungeon_temple_gate_open", 3970, 380);
             DrawDungeonSprite(frame, dungeon, "louhi_silver_altar", 4170, 380);
+            if ((dungeon.LoreMask & DungeonLouhiPhaseThreeMask) != 0)
+            {
+                DrawDungeonSprite(frame, dungeon, "dungeon_chain_lift", 4380, 380);
+                int liftX = 4380 - dungeon.CameraX;
+                int liftY = 380 - dungeon.CameraY;
+                DrawCircleOutline(frame, liftX, liftY + 20, 30 + dungeon.Age / 10 % 3,
+                    dungeon.Age / 8 % 2 == 0 ? 0xff65c58a : 0xffb55c55);
+            }
             DrawDungeonLouhiEncounter(frame, dungeon);
             if (!shadowDefeated)
             {
@@ -5853,6 +6024,7 @@ internal sealed class StormaktGame
             else DrawSprite(frame, karl, drawX, drawY);
         }
 
+        if (dungeon.CollapseAge > 0) DrawDungeonCollapseOverlay(frame, dungeon.CollapseAge);
         DrawRect(frame, 0, 0, _width, 18, 0xee080d12);
         DrawText(frame, 6, 5, dungeon.Depth switch
         {
@@ -5909,12 +6081,15 @@ internal sealed class StormaktGame
             bool louhiPhaseOne = (dungeon.LoreMask & DungeonLouhiPhaseOneMask) != 0;
             bool louhiPhaseTwo = (dungeon.LoreMask & DungeonLouhiPhaseTwoMask) != 0;
             bool louhiPhaseThree = (dungeon.LoreMask & DungeonLouhiPhaseThreeMask) != 0;
+            bool louhiRelic = (dungeon.LoreMask & DungeonLouhiRelicMask) != 0;
+            int collapseSeconds = Math.Max(0, (1500 - dungeon.CollapseAge) / 60);
             DungeonEnemy? louhi = dungeon.Enemies.FirstOrDefault(enemy =>
                 enemy.Depth == 4 && enemy.Type == DungeonEnemyType.Louhi);
             DungeonEnemy? swan = dungeon.Enemies.FirstOrDefault(enemy =>
                 enemy.Depth == 4 && enemy.Type == DungeonEnemyType.TuonelaSwan);
             bool heartOpen = swan is not null && swan.Phase == 3 && DungeonSwanVulnerable(swan);
-            objective = louhiPhaseThree ? "MALMMODERN BRUTEN  SILVRET ÅTERVÄNDER" :
+            objective = louhiRelic ? $"TEMPLET RASAR  TILL HISSEN I ÖSTER  {collapseSeconds:00}" :
+                louhiPhaseThree ? $"TEMPLET RASAR  TA RUNRINGEN  {collapseSeconds:00}" :
                 louhiPhaseTwo && louhi?.SpecialAge > 0 ? "HJÄRTAT ÖPPET  BYT TILL VÄRJA" :
                 louhiPhaseTwo ? "LYSSNA PÅ GRUVFOGDEN  KROSSA RÄTT HJÄRTA MED HAMMAREN" :
                 louhiPhaseOne ? "JÄRNFÅGELN  PARERA VINGEN OCH DYKEN" :
@@ -5972,6 +6147,120 @@ internal sealed class StormaktGame
         }
     }
 
+    private void DrawDungeonCollapseOverlay(uint[] frame, int age)
+    {
+        for (int index = 0; index < 9; index++)
+        {
+            int x = (index * 73 + age * (2 + index % 3)) % (_width + 30) - 15;
+            int y = (index * 41 + age * (3 + index % 2)) % (_height + 50) - 25;
+            int size = 2 + (index + age / 18) % 5;
+            DrawRect(frame, x, y, size, size + 2, index % 3 == 0 ? 0xff8d4b43 : 0xff59635f);
+        }
+        for (int crack = 0; crack < 5; crack++)
+        {
+            int seed = age / 24 + crack * 37;
+            int x = (seed * 53) % Math.Max(1, _width - 20) + 10;
+            int y = (seed * 29) % Math.Max(1, _height - 70) + 34;
+            uint color = crack % 2 == 0 ? 0xff8d4b43 : 0xff65a77c;
+            DrawLine(frame, x, y, x + (crack % 2 == 0 ? 11 : -9), y + 13, color);
+            DrawLine(frame, x + (crack % 2 == 0 ? 11 : -9), y + 13,
+                x + (crack % 2 == 0 ? 4 : -15), y + 25, 0xff68736f);
+        }
+        if (age / 6 % 19 == 0) DrawRect(frame, 0, 18, _width, _height - 32, 0x552b1614);
+    }
+
+    private void DrawDungeonEpilogue(uint[] frame, DungeonState dungeon)
+    {
+        int age = dungeon.EpilogueAge;
+        DrawRect(frame, 0, 0, _width, _height, 0xff080b0a);
+        if (age < 150)
+        {
+            if (_sprites?.TryGet("dungeon_temple_floor", out Sprite stone) == true)
+            {
+                int drift = age * 2 % stone.Height;
+                for (int y = -stone.Height + drift; y < _height; y += stone.Height)
+                for (int x = 0; x < _width; x += stone.Width) DrawSprite(frame, stone, x, y);
+            }
+            DrawEpilogueSprite(frame, "dungeon_chain_lift", _width / 2, _height / 2 + 10);
+            DrawEpilogueSprite(frame, "dungeon_karl_s_idle", _width / 2, _height / 2 + 26);
+            DrawLine(frame, _width / 2 - 30, 18, _width / 2 - 30, _height - 18, 0xff6f7775);
+            DrawLine(frame, _width / 2 + 30, 18, _width / 2 + 30, _height - 18, 0xff6f7775);
+            DrawText(frame, Math.Max(6, (_width - 126) / 2), 24, "GRUVHISSEN STIGER", 0xff9fd6a4);
+            DrawDungeonCollapseOverlay(frame, age + 500);
+            return;
+        }
+
+        if (_sprites?.TryGet("rts_forest_floor", out Sprite forest) == true)
+        {
+            for (int y = 18; y < _height; y += forest.Height)
+            for (int x = 0; x < _width; x += forest.Width) DrawSprite(frame, forest, x, y);
+        }
+        DrawRect(frame, 0, 0, _width, 36, 0xff101923);
+        DrawText(frame, 8, 8, age < 430 ? "SILVERKROPPENS YTA" : "MOT KARL CCLV", 0xffffd66b);
+        int travel = Math.Max(0, age - 300) * 3;
+        string[] trees = ["rts_spruce_tall", "rts_spruce_bent", "rts_pine_dead"];
+        for (int index = 0; index < 7; index++)
+        {
+            int treeX = ((index * 79 - travel / 2) % (_width + 90) + _width + 90) % (_width + 90) - 45;
+            DrawEpilogueSprite(frame, trees[index % trees.Length], treeX, 82 + index % 2 * 13);
+        }
+
+        if (age < 330)
+        {
+            int mooseX = Math.Min(_width / 2 - 34, -35 + (age - 150) * 3);
+            DrawEpilogueSprite(frame, "rts_moose_charge", mooseX, _height - 68);
+            if (age < 270) DrawEpilogueSprite(frame, "dungeon_karl_e_idle", _width / 2 + 22, _height - 62);
+            DrawText(frame, 8, _height - 16, age < 270 ? "ÄLGEN MINNS VÄGEN" : "KARL SITTER UPP", 0xffdce8f2);
+            DrawDungeonCollapseOverlay(frame, age + 700);
+            return;
+        }
+
+        int shipX = Math.Min(_width / 2 + 90, _width + 70 - Math.Max(0, age - 440) * 2);
+        if (age < 650)
+        {
+            DrawEpilogueSprite(frame, "rts_moose_charge", _width / 2 - 45, _height - 67);
+            DrawEpilogueShip(frame, shipX, _height - 82, 0);
+            DrawText(frame, 8, _height - 16, "RASET FÖLJER EFTER", 0xffdce8f2);
+            DrawDungeonCollapseOverlay(frame, age + 900);
+            return;
+        }
+
+        int lift = Math.Max(0, age - 720);
+        DrawEpilogueSprite(frame, "rts_moose_ready", _width / 2 - 82, _height - 66);
+        DrawEpilogueShip(frame, _width / 2 + 25, _height - 82 - lift, lift);
+        if (age < 720)
+            DrawText(frame, 8, _height - 16, "OMBORD PÅ KARL CCLV", 0xffffd66b);
+        else if (age < 850)
+            DrawText(frame, 8, _height - 16, "KURS MOT NÄSTA STORM", 0xff9bd4dc);
+        else
+        {
+            DrawRect(frame, 20, _height / 2 - 37, _width - 40, 74, 0xe6080d12);
+            DrawText(frame, Math.Max(26, (_width - 168) / 2), _height / 2 - 24,
+                "LEMMINKÄINENS TEMPEL", 0xffffd66b);
+            DrawText(frame, Math.Max(26, (_width - 126) / 2), _height / 2 - 6,
+                "MALMMODERNS RING", 0xff9fd6a4);
+            DrawText(frame, Math.Max(26, (_width - 90) / 2), _height / 2 + 16,
+                "ELD FORTSÄTT", 0xffdce8f2);
+        }
+        if (age < 850) DrawDungeonCollapseOverlay(frame, age + 1100);
+    }
+
+    private void DrawEpilogueSprite(uint[] frame, string name, int centerX, int footY)
+    {
+        if (_sprites?.TryGet(name, out Sprite sprite) != true) return;
+        DrawSprite(frame, sprite, centerX - sprite.Width / 2, footY - sprite.Height);
+    }
+
+    private void DrawEpilogueShip(uint[] frame, int centerX, int centerY, int thrust)
+    {
+        if (_sprites?.TryGet("player", out Sprite ship) == true)
+            DrawSpriteScaled(frame, ship, centerX - 36, centerY - 44, 72, 88);
+        if (thrust <= 0) return;
+        int flame = 12 + thrust / 12 % 10;
+        DrawLine(frame, centerX - 12, centerY + 36, centerX - 12, centerY + 36 + flame, 0xff73b8d0);
+        DrawLine(frame, centerX + 12, centerY + 36, centerX + 12, centerY + 36 + flame, 0xffffd66b);
+    }
+
     private static readonly DungeonItemDefinition[] DungeonItemDefinitions =
     [
         new("rapier", "OFFICERSVÄRJA", "loot_rapier", 1, 3, DungeonEquipmentSlot.MainHand, 12, 0, 0, 1),
@@ -5990,6 +6279,8 @@ internal sealed class StormaktGame
         new("temple_key", "TUONELAS TEMPELNYCKEL", "loot_temple_key", 1, 2, DungeonEquipmentSlot.Relic, 5, 6, 25, 3),
         new("health_tincture", "KAROLINSK HÄLSOTINKTUR", "loot_health_tincture", 1, 1, DungeonEquipmentSlot.None, 0, 0, 0, 1),
         new("swan_heart", "SVANENS SILVERHJÄRTA", "loot_relic", 2, 2, DungeonEquipmentSlot.Relic, 12, 10, 45, 4),
+        new("ore_mother_ring", "MALMMODERNS RUNRING", "loot_ore_mother_ring", 1, 1,
+            DungeonEquipmentSlot.RingRight, 5, 9, 38, 1),
     ];
 
     private static void SeedDungeonInventory(DungeonState dungeon)
@@ -9619,6 +9910,9 @@ internal sealed class StormaktGame
         public bool TempleOpen { get; set; }
         public bool PendingTempleEntry { get; set; }
         public bool PendingTempleReturn { get; set; }
+        public bool PendingFinalLift { get; set; }
+        public int EpilogueAge { get; set; }
+        public int CollapseAge { get; set; }
         public bool PendingFogdeRescue { get; set; }
         public bool PendingFogdeTalk { get; set; }
         public int PendingTempleRune { get; set; }
