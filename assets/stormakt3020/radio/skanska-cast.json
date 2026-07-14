@@ -612,6 +612,61 @@
       "subtitle_lines": ["JÄRNET BRISTER", "DET ÄLDSTA ÅTERSTÅR"],
       "seed": 302210,
       "model_backend": "voxcpm2"
+    },
+    {
+      "id": "gruvfogde-heart-north",
+      "role": "gruvfogde",
+      "level": 3,
+      "frame": -1,
+      "cue": "louhi_heart_north",
+      "text": "Det sande hjerte slår mod nord. Knus det med hammeren, Karl.",
+      "subtitle_lines": ["HJERTET SLÅR NORD", "KNUSE DET KARL"],
+      "seed": 302211,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "gruvfogde-heart-east",
+      "role": "gruvfogde",
+      "level": 3,
+      "frame": -1,
+      "cue": "louhi_heart_east",
+      "text": "Det sande hjerte slår mod øst. Knus det med hammeren, Karl.",
+      "subtitle_lines": ["HJERTET SLÅR ØST", "KNUSE DET KARL"],
+      "seed": 302212,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "gruvfogde-heart-south",
+      "role": "gruvfogde",
+      "level": 3,
+      "frame": -1,
+      "cue": "louhi_heart_south",
+      "text": "Det sande hjerte slår mod syd. Knus det med hammeren, Karl.",
+      "subtitle_lines": ["HJERTET SLÅR SYD", "KNUSE DET KARL"],
+      "seed": 302213,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "gruvfogde-heart-west",
+      "role": "gruvfogde",
+      "level": 3,
+      "frame": -1,
+      "cue": "louhi_heart_west",
+      "text": "Det sande hjerte slår mod vest. Knus det med hammeren, Karl.",
+      "subtitle_lines": ["HJERTET SLÅR VEST", "KNUSE DET KARL"],
+      "seed": 302214,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "louhi-final-fall",
+      "role": "louhi",
+      "level": 3,
+      "frame": -1,
+      "cue": "louhi_final_fall",
+      "text": "Berget glömmer inte. Men i dag släpper det er, Karl.",
+      "subtitle_lines": ["BERGET GLÖMMER INTE", "MEN SLÄPPER ER"],
+      "seed": 302215,
+      "model_backend": "voxcpm2"
     }
   ]
 }

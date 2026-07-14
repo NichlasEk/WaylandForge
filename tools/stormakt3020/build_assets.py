@@ -680,6 +680,20 @@ def append_dungeon_louhi_iron_bird(entries: list[tuple[str, Image.Image]], sourc
         entries.append((name, sprite))
 
 
+def append_dungeon_louhi_ore_mother(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    names = ["louhi_ore_mother_awaken", "louhi_ore_mother_shielded",
+             "louhi_ore_mother_cast", "louhi_ore_mother_exposed"]
+    targets = [(148, 128), (148, 128), (158, 132), (148, 128)]
+    for index, (name, target) in enumerate(zip(names, targets)):
+        column, row = index % 2, index // 2
+        left, top = column * source.width // 2 + 4, row * source.height // 2 + 4
+        right = (column + 1) * source.width // 2 - 4
+        bottom = (row + 1) * source.height // 2 - 4
+        sprite = trim_alpha(source.crop((left, top, right, bottom)).convert("RGBA"))
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def mirrored_background(source: Image.Image, width: int, height: int) -> Image.Image:
     plate = source.copy()
     plate.thumbnail((width, height), Image.Resampling.LANCZOS)
@@ -742,6 +756,7 @@ def build(
     dungeon_tuonela_swan_input_path: Path,
     dungeon_louhi_phase1_input_path: Path,
     dungeon_louhi_iron_bird_input_path: Path,
+    dungeon_louhi_ore_mother_input_path: Path,
     louhi_portrait_input_path: Path,
     logo_input_path: Path,
     output_path: Path,
@@ -798,6 +813,7 @@ def build(
     dungeon_tuonela_swan_source = Image.open(dungeon_tuonela_swan_input_path).convert("RGBA")
     dungeon_louhi_phase1_source = Image.open(dungeon_louhi_phase1_input_path).convert("RGBA")
     dungeon_louhi_iron_bird_source = Image.open(dungeon_louhi_iron_bird_input_path).convert("RGBA")
+    dungeon_louhi_ore_mother_source = Image.open(dungeon_louhi_ore_mother_input_path).convert("RGBA")
     louhi_portrait_source = Image.open(louhi_portrait_input_path).convert("RGBA")
     logo_source = trim_alpha(Image.open(logo_input_path).convert("RGBA"))
     entries: list[tuple[str, Image.Image]] = []
@@ -894,6 +910,7 @@ def build(
     append_dungeon_tuonela_swan(entries, dungeon_tuonela_swan_source)
     append_dungeon_louhi_phase1(entries, dungeon_louhi_phase1_source)
     append_dungeon_louhi_iron_bird(entries, dungeon_louhi_iron_bird_source)
+    append_dungeon_louhi_ore_mother(entries, dungeon_louhi_ore_mother_source)
     append_louhi_portrait(entries, louhi_portrait_source)
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
@@ -1049,6 +1066,7 @@ def main() -> None:
     parser.add_argument("--dungeon-tuonela-swan-input", type=Path, default=Path("assets/stormakt3020/dungeon-tuonela-swan-v1.png"))
     parser.add_argument("--dungeon-louhi-phase1-input", type=Path, default=Path("assets/stormakt3020/dungeon-louhi-phase1-v1.png"))
     parser.add_argument("--dungeon-louhi-iron-bird-input", type=Path, default=Path("assets/stormakt3020/dungeon-louhi-iron-bird-v1.png"))
+    parser.add_argument("--dungeon-louhi-ore-mother-input", type=Path, default=Path("assets/stormakt3020/dungeon-louhi-ore-mother-v1.png"))
     parser.add_argument("--louhi-portrait-input", type=Path, default=Path("assets/stormakt3020/louhi-radio-v1.png"))
     parser.add_argument(
         "--logo-input",
@@ -1110,6 +1128,7 @@ def main() -> None:
         args.dungeon_tuonela_swan_input,
         args.dungeon_louhi_phase1_input,
         args.dungeon_louhi_iron_bird_input,
+        args.dungeon_louhi_ore_mother_input,
         args.louhi_portrait_input,
         args.logo_input,
         args.output,
