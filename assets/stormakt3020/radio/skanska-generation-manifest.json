@@ -537,6 +537,66 @@
       "sha256": "296307c76b4d58dc4f3b0ad0f7db36191d2933d28d0ff5533dcba2ff85b89c03",
       "request": "assets/stormakt3020/radio/raw/gruvfogde-dungeon-warning-da-request.json",
       "reference_sha256": "8e72451911a82cc7b5e4efabf1aa16f6e6946554b654e9649992a3bb1100a3e8"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-dungeon-lore-swan",
+      "role": "ebba-grip",
+      "job_id": "c50a988f400945b7855c05699307b3e1",
+      "file": "assets/stormakt3020/radio/raw/ebba-dungeon-lore-swan-sv-raw.wav",
+      "sha256": "4184f6ad1fbfabf6d278e1751e1b25e36936f27a2248d90598b9e7a999664d4a",
+      "request": "assets/stormakt3020/radio/raw/ebba-dungeon-lore-swan-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-dungeon-lore-sun",
+      "role": "ebba-grip",
+      "job_id": "257c9c3c8c844d418c67021c6bd916c1",
+      "file": "assets/stormakt3020/radio/raw/ebba-dungeon-lore-sun-sv-raw.wav",
+      "sha256": "ed2bccdff572a4ce01ab90a9deef2677b73ba32fb89f4a1f919554367253f15a",
+      "request": "assets/stormakt3020/radio/raw/ebba-dungeon-lore-sun-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-dungeon-lore-shepherd",
+      "role": "ebba-grip",
+      "job_id": "2a4327130473420a9d663cac658af2fd",
+      "file": "assets/stormakt3020/radio/raw/ebba-dungeon-lore-shepherd-sv-raw.wav",
+      "sha256": "5ed1fde6bbce31d9327392ec37fbaa77128e1645f35e68c5b571d1a182d38674",
+      "request": "assets/stormakt3020/radio/raw/ebba-dungeon-lore-shepherd-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-temple-verse-sun",
+      "role": "ebba-grip",
+      "job_id": "42fddf95687740f9a68ef19a3d4bd0ec",
+      "file": "assets/stormakt3020/radio/raw/ebba-temple-verse-sun-sv-raw.wav",
+      "sha256": "a307951b75911831391e678f2258d5db149056029a2ee2c67a9cffbbda4f59cb",
+      "request": "assets/stormakt3020/radio/raw/ebba-temple-verse-sun-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-temple-verse-silver",
+      "role": "ebba-grip",
+      "job_id": "aee4892381e641a09474036aa706dc0e",
+      "file": "assets/stormakt3020/radio/raw/ebba-temple-verse-silver-sv-raw.wav",
+      "sha256": "b93f91edb7d9d92740412d1a557ebd536e6e5f835492ce46d7811cfe653c7f67",
+      "request": "assets/stormakt3020/radio/raw/ebba-temple-verse-silver-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-temple-verse-heart",
+      "role": "ebba-grip",
+      "job_id": "a493e4b5e34b4fd0a4864b5045d7efda",
+      "file": "assets/stormakt3020/radio/raw/ebba-temple-verse-heart-sv-raw.wav",
+      "sha256": "4e350ea66ff5484b0178eb9c33494e6409da1216da77afa738fab39c0dccc71e",
+      "request": "assets/stormakt3020/radio/raw/ebba-temple-verse-heart-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
     }
   ],
   "service": "http://127.0.0.1:8765",

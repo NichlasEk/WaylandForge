@@ -424,6 +424,8 @@ enda sårbara mål. Svanen sjunker utan vanlig explosion, lämnar den unika reli
 öppnar östporten och utlöser Louhis första röstlagda anrop. Hela dödsövergången autosparas.
 Stelarna och den breda svankroppen blockerar nu bara sin faktiska fot mot golvet, så Karl kan gå tätt
 intill ristningarna och in under vingarnas visuella siluett utan att stoppas av osynliga rektanglar.
+Redan lästa stelar kan aktiveras igen utan att versföljden förstörs; då upprepar Ebba sin röstlagda
+tolkning. Klickytan följer samma generösa radie som närinteraktionen.
 
 Östporten fortsätter nu in i en tyst processionsgång med parställda väktarstatyer och svansarkofager.
 När Karl passerar den sista runbågen stängs bossporten bakom honom och Louhi väntar synlig framför sitt
@@ -456,9 +458,10 @@ stenlik klump med en orimligt stor upplevd träffyta.
 
 ### Checkpoint 8 – Balans, lootkurva och casting
 
-- Ebba har nu röst på samtliga implementerade tempelkort. Gruvfogden talar danska och kan talas med efter räddningen
+- Ebba har nu röst på samtliga implementerade tempelkort och läser även de sex gruv- och tempelristningarna.
+  Gruvfogden talar danska och kan talas med efter räddningen
   och ger den narrativa nyckeln till runordningen. Den blinde herdens sista varning samt Louhis entré,
-  girighetsförbannelse och fasbrott är röstlagda. Alla 41 spelrepliker använder en fast seed för var
+  girighetsförbannelse och fasbrott är röstlagda. Alla 47 spelrepliker använder en fast seed för var
   och en av de åtta syntetiska skådespelarrollerna.
 - Svårighetskurva, droprates, affixpooler, setbonusar, smideskostnad, checkpointkostnad, musergonomi och båda upplösningarna.
 - Full direkt-WFEX-genomspelning och determinismkontroll.

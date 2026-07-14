@@ -216,9 +216,9 @@ internal sealed class StormaktGame
         new(0, 450, false, "EBBA GRIP", "ANDRA SIGILLET", "ETT ÅTERSTÅR", StormaktVoice.EbbaDungeonSecondSigil, "portrait_ebba");
     private static readonly RadioCard[] DungeonThirdVerseCards =
     [
-        new(0, 390, false, "RISTNING", "I BEGYNNELSEN", "BAR SVANEN SOLEN", null, "portrait_ebba"),
-        new(0, 390, false, "RISTNING", "MÄNNEN BRÖT", "SILVER UR VINGEN", null, "portrait_ebba"),
-        new(0, 420, false, "RISTNING", "LOUHI GÖMDE", "HJÄRTAT I DJUPET", null, "portrait_ebba"),
+        new(0, 390, false, "EBBA GRIP", "I BEGYNNELSEN", "BAR SVANEN SOLEN", StormaktVoice.EbbaTempleVerseSun, "portrait_ebba"),
+        new(0, 390, false, "EBBA GRIP", "MÄNNEN BRÖT", "SILVER UR VINGEN", StormaktVoice.EbbaTempleVerseSilver, "portrait_ebba"),
+        new(0, 420, false, "EBBA GRIP", "LOUHI GÖMDE", "HJÄRTAT I DJUPET", StormaktVoice.EbbaTempleVerseHeart, "portrait_ebba"),
     ];
     private static readonly RadioCard DungeonThirdSigilRadio =
         new(0, 450, false, "EBBA GRIP", "ALLA TRE LYSER", "TEMPLET ÖPPNAR SIG", StormaktVoice.EbbaDungeonThirdSigil, "portrait_ebba");
@@ -236,9 +236,9 @@ internal sealed class StormaktGame
         new(0, 630, true, "LOUHI", "NI BRÖT KVINNAN", "VÄCK JÄRNFÅGELN", StormaktVoice.LouhiPhaseOneBreak, "portrait_louhi");
     private static readonly RadioCard[] DungeonLoreCards =
     [
-        new(0, 330, false, "RISTNING", "SVANEN SJUNGER", "UNDER SVART VATTEN", null, "portrait_ebba"),
-        new(0, 330, false, "RISTNING", "SOLEN BRÖTS", "NYCKELN MINNS", null, "portrait_ebba"),
-        new(0, 360, false, "RISTNING", "HERDEN SER EJ", "MEN FÅREN VET", null, "portrait_ebba"),
+        new(0, 330, false, "EBBA GRIP", "SVANEN SJUNGER", "UNDER SVART VATTEN", StormaktVoice.EbbaDungeonLoreSwan, "portrait_ebba"),
+        new(0, 330, false, "EBBA GRIP", "SOLEN BRÖTS", "NYCKELN MINNS", StormaktVoice.EbbaDungeonLoreSun, "portrait_ebba"),
+        new(0, 360, false, "EBBA GRIP", "HERDEN SER EJ", "MEN FÅREN VET", StormaktVoice.EbbaDungeonLoreShepherd, "portrait_ebba"),
     ];
     private static readonly EnemyWave[] EnemyWaves =
     [
@@ -1805,10 +1805,10 @@ internal sealed class StormaktGame
                 (dungeon.LoreMask & DungeonFogdeSpokenMask) == 0 &&
                 DistanceSquared(1905, 220, worldX, worldY) < 62 * 62;
             int clickedRune = dungeon.Depth == 4 && (dungeon.LoreMask & DungeonFogdeSpokenMask) != 0
-                ? Array.FindIndex(DungeonSecondTempleRunes, rune => DistanceSquared(rune.X, rune.Y, worldX, worldY) < 62 * 62)
+                ? Array.FindIndex(DungeonSecondTempleRunes, rune => DistanceSquared(rune.X, rune.Y, worldX, worldY) < 82 * 82)
                 : -1;
             int clickedVerse = dungeon.Depth == 4 && (dungeon.LoreMask & DungeonSecondSigilMask) != 0
-                ? Array.FindIndex(DungeonThirdTempleSteles, stele => DistanceSquared(stele.X, stele.Y, worldX, worldY) < 58 * 58)
+                ? Array.FindIndex(DungeonThirdTempleSteles, stele => DistanceSquared(stele.X, stele.Y, worldX, worldY) < 76 * 76)
                 : -1;
             dungeon.PendingPickupItemId = clickedLoot?.Id ?? 0;
             dungeon.PendingChestId = clickedChest?.Id ?? 0;
@@ -2409,6 +2409,13 @@ internal sealed class StormaktGame
                 dungeon.KarlX, dungeon.KarlY) >= 76 * 76) return false;
 
         int progress = DungeonThirdVerseProgress(dungeon);
+        if (verse < progress)
+        {
+            // A completed inscription can be read again without destroying
+            // the valid sequence. Replay Ebba's interpretation as feedback.
+            ActivateBossRadio(DungeonThirdVerseCards[verse]);
+            return true;
+        }
         if (verse != progress)
         {
             SetDungeonThirdVerseProgress(dungeon, 0);

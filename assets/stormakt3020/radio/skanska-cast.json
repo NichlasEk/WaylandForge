@@ -482,6 +482,72 @@
       "model_backend": "voxcpm2"
     },
     {
+      "id": "ebba-dungeon-lore-swan",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": -1,
+      "cue": "dungeon_lore_swan",
+      "text": "Ristningen säger att Svanen sjunger under svart vatten.",
+      "subtitle_lines": ["SVANEN SJUNGER", "UNDER SVART VATTEN"],
+      "seed": 302204,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-dungeon-lore-sun",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": -1,
+      "cue": "dungeon_lore_sun",
+      "text": "Solen bröts. Nyckeln minns.",
+      "subtitle_lines": ["SOLEN BRÖTS", "NYCKELN MINNS"],
+      "seed": 302205,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-dungeon-lore-shepherd",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": -1,
+      "cue": "dungeon_lore_shepherd",
+      "text": "Herden ser inte, men fåren vet.",
+      "subtitle_lines": ["HERDEN SER EJ", "MEN FÅREN VET"],
+      "seed": 302206,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-temple-verse-sun",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": -1,
+      "cue": "temple_verse_sun",
+      "text": "I begynnelsen bar Svanen solen.",
+      "subtitle_lines": ["I BEGYNNELSEN", "BAR SVANEN SOLEN"],
+      "seed": 302207,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-temple-verse-silver",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": -1,
+      "cue": "temple_verse_silver",
+      "text": "Männen bröt silver ur vingen.",
+      "subtitle_lines": ["MÄNNEN BRÖT", "SILVER UR VINGEN"],
+      "seed": 302208,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-temple-verse-heart",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": -1,
+      "cue": "temple_verse_heart",
+      "text": "Louhi gömde hjärtat i djupet.",
+      "subtitle_lines": ["LOUHI GÖMDE", "HJÄRTAT I DJUPET"],
+      "seed": 302209,
+      "model_backend": "voxcpm2"
+    },
+    {
       "id": "louhi-temple-invitation",
       "role": "louhi",
       "level": 3,
