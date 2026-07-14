@@ -1,0 +1,13 @@
+{
+  "text": "Det sande hjerte slår mod syd. Knus det med hammeren, Karl.",
+  "language": "da",
+  "model_backend": "voxcpm2",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Hør efter, Karl. Bjerget har talt gennem sølvet længere, end nogen af os har levet. Jeg så mændene åbne sale, som aldrig burde have fået luft. Dernede synger jernet, og noget gammelt venter bag den sidste port.",
+  "voice_instruction": "An exhausted older Danish mine bailiff, weathered low baritone, steady and grave after surviving underground, crisp natural Danish diction, intimate warning rather than theatrical narration, never Swedish, comic or villainous.",
+  "seed": 302125,
+  "dots_num_steps": 4,
+  "dots_guidance_scale": 1.2,
+  "dots_speaker_scale": 1.5
+}

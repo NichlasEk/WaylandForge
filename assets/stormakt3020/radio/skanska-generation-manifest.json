@@ -607,6 +607,56 @@
       "sha256": "265f0e3afdb6edd4e157a091d4a4087a3f8f6947961a293073e500347b5b0c58",
       "request": "assets/stormakt3020/radio/raw/louhi-phase-two-break-sv-request.json",
       "reference_sha256": "e2ae3c1d549eaaca88894a12ef6c0708a783a270f13837be1166d2e64b1cbc7b"
+    },
+    {
+      "kind": "line",
+      "line": "gruvfogde-heart-north",
+      "role": "gruvfogde",
+      "job_id": "3f6368a9829e47f9bb4ccc2de5a7fa44",
+      "file": "assets/stormakt3020/radio/raw/gruvfogde-heart-north-da-raw.wav",
+      "sha256": "eca23154dbdd780b117d91735780f87ae7234f7d0f3b3139f26996276268fe86",
+      "request": "assets/stormakt3020/radio/raw/gruvfogde-heart-north-da-request.json",
+      "reference_sha256": "8e72451911a82cc7b5e4efabf1aa16f6e6946554b654e9649992a3bb1100a3e8"
+    },
+    {
+      "kind": "line",
+      "line": "gruvfogde-heart-east",
+      "role": "gruvfogde",
+      "job_id": "80e63cdf06ef4b9eb1f524c07a948c64",
+      "file": "assets/stormakt3020/radio/raw/gruvfogde-heart-east-da-raw.wav",
+      "sha256": "d29cb64514a5703e9963789cc813aaa4a380eca5358e7a80e78f95f1620429c6",
+      "request": "assets/stormakt3020/radio/raw/gruvfogde-heart-east-da-request.json",
+      "reference_sha256": "8e72451911a82cc7b5e4efabf1aa16f6e6946554b654e9649992a3bb1100a3e8"
+    },
+    {
+      "kind": "line",
+      "line": "gruvfogde-heart-south",
+      "role": "gruvfogde",
+      "job_id": "c4fbad0a1b6042459ee4880ffd3967b3",
+      "file": "assets/stormakt3020/radio/raw/gruvfogde-heart-south-da-raw.wav",
+      "sha256": "de3a88765b46a16733f5f607fdccb30f474cfe051bd4f9019a9e5ea6b32ffea3",
+      "request": "assets/stormakt3020/radio/raw/gruvfogde-heart-south-da-request.json",
+      "reference_sha256": "8e72451911a82cc7b5e4efabf1aa16f6e6946554b654e9649992a3bb1100a3e8"
+    },
+    {
+      "kind": "line",
+      "line": "gruvfogde-heart-west",
+      "role": "gruvfogde",
+      "job_id": "982242c4ac434b70a90854cb34ea2dc5",
+      "file": "assets/stormakt3020/radio/raw/gruvfogde-heart-west-da-raw.wav",
+      "sha256": "3443ad21e8d58748ad93392903d707e5a1064c147f7222365d62210b0e883411",
+      "request": "assets/stormakt3020/radio/raw/gruvfogde-heart-west-da-request.json",
+      "reference_sha256": "8e72451911a82cc7b5e4efabf1aa16f6e6946554b654e9649992a3bb1100a3e8"
+    },
+    {
+      "kind": "line",
+      "line": "louhi-final-fall",
+      "role": "louhi",
+      "job_id": "329b5d9e36934bca90044dd8c9f5fb4f",
+      "file": "assets/stormakt3020/radio/raw/louhi-final-fall-sv-raw.wav",
+      "sha256": "4bd5da579b64cf340ad2cf66be7c7a61f91f85995190340071b502fa45e107fe",
+      "request": "assets/stormakt3020/radio/raw/louhi-final-fall-sv-request.json",
+      "reference_sha256": "e2ae3c1d549eaaca88894a12ef6c0708a783a270f13837be1166d2e64b1cbc7b"
     }
   ],
   "service": "http://127.0.0.1:8765",
