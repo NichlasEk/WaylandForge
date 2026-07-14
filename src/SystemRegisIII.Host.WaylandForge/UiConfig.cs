@@ -512,6 +512,8 @@ internal sealed class UiInputConfig
         ["x"] = "a",
         ["y"] = "s",
         ["z"] = "d",
+        ["developer_save"] = "f1",
+        ["developer_load"] = "f2",
         ["scale_fit"] = "1",
         ["scale_integer"] = "2",
         ["scale_stretch"] = "3",

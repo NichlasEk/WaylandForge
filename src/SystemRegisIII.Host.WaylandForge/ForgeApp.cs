@@ -3073,6 +3073,8 @@ internal sealed unsafe class ForgeApp : IDisposable
         new("x", "X", ForgeInput.X),
         new("y", "Y", ForgeInput.Y),
         new("z", "Z", ForgeInput.Z),
+        new("developer_save", "DEV SAVE", ForgeInput.DeveloperSave),
+        new("developer_load", "DEV LOAD", ForgeInput.DeveloperLoad),
         new("scale_fit", "SCALE FIT", ForgeInput.ScaleFit),
         new("scale_integer", "SCALE INT", ForgeInput.ScaleInteger),
         new("scale_stretch", "SCALE STR", ForgeInput.ScaleStretch),

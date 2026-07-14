@@ -23,4 +23,6 @@ internal enum ForgeInput : uint
     Shift = 1 << 16,
     Super = 1 << 17,
     TileFullscreen = 1 << 18,
+    DeveloperSave = 1 << 19,
+    DeveloperLoad = 1 << 20,
 }

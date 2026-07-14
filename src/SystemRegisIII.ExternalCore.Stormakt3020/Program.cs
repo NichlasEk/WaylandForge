@@ -131,6 +131,8 @@ internal sealed class StormaktGame
     private const uint Slow = 1u << 8;
     private const uint QuickPotion = 1u << 9;
     private const uint DropItem = 1u << 10;
+    private const uint DeveloperSave = 1u << 19;
+    private const uint DeveloperLoad = 1u << 20;
 
     private readonly int _width;
     private readonly int _height;
@@ -337,6 +339,42 @@ internal sealed class StormaktGame
             }
             _previousButtons = buttons;
             return;
+        }
+
+        if (_developerMode && _levelId == 3 && _dungeon is not null)
+        {
+            if (Pressed(buttons, DeveloperSave))
+            {
+                if (_dungeon.Health > 0 && _dungeon.DeathAge == 0)
+                {
+                    WriteDungeonSave(_dungeon, "developer");
+                    SetDungeonDeveloperNotice(_dungeon, "F1  DEVSTATE SPARAT");
+                    _audio?.Trigger(StormaktSound.Deploy);
+                }
+                _previousButtons = buttons;
+                return;
+            }
+            if (Pressed(buttons, DeveloperLoad))
+            {
+                if (TryLoadDungeonSave("developer", out DungeonState? loaded) && loaded is not null)
+                {
+                    _dungeon = loaded;
+                    _paused = false;
+                    _audio?.SetPaused(false);
+                    bool bossActive = loaded.Enemies.Any(enemy => enemy.Depth == loaded.Depth &&
+                        enemy.State != DungeonEnemyState.Dead &&
+                        enemy.Type is DungeonEnemyType.TuonelaSwan or DungeonEnemyType.Louhi);
+                    _audio?.SwitchMusic(bossActive ? StormaktMusicTrack.Boss : StormaktMusicTrack.Dungeon);
+                    SetDungeonDeveloperNotice(loaded, "F2  DEVSTATE LADDAT");
+                    _audio?.Trigger(StormaktSound.Deploy);
+                }
+                else
+                {
+                    SetDungeonDeveloperNotice(_dungeon, "F2  INGET DEVSTATE");
+                }
+                _previousButtons = buttons;
+                return;
+            }
         }
 
         if (Pressed(buttons, Start))
@@ -1653,6 +1691,7 @@ internal sealed class StormaktGame
         dungeon.PreviousMouseButtons = pointerButtons;
         dungeon.Age++;
         if (dungeon.PickupNoticeAge > 0) dungeon.PickupNoticeAge--;
+        if (dungeon.DeveloperNoticeAge > 0) dungeon.DeveloperNoticeAge--;
         if (_bossRadioCard is RadioCard active && ++_bossRadioAge >= active.DurationFrames)
         {
             _bossRadioCard = null;
@@ -1983,6 +2022,12 @@ internal sealed class StormaktGame
         dungeon.PickupNotice = "KAN INTE PLOCKA UPP  INVENTORIET ÄR FULLT";
         dungeon.PickupNoticeAge = 150;
         return false;
+    }
+
+    private static void SetDungeonDeveloperNotice(DungeonState dungeon, string notice)
+    {
+        dungeon.DeveloperNotice = notice;
+        dungeon.DeveloperNoticeAge = 150;
     }
 
     private static bool TryPlaceFirstPotionBelt(DungeonState dungeon, DungeonItem item)
@@ -5417,6 +5462,13 @@ internal sealed class StormaktGame
             DrawRadioCard(frame, radio, _bossRadioAge);
         }
         if (dungeon.InventoryOpen) DrawDungeonInventory(frame, dungeon);
+        if (dungeon.DeveloperNoticeAge > 0)
+        {
+            int noticeWidth = dungeon.DeveloperNotice.Length * 6 + 10;
+            int noticeX = Math.Max(4, (_width - noticeWidth) / 2);
+            DrawRect(frame, noticeX, 43, Math.Min(noticeWidth, _width - noticeX - 4), 13, 0xee0a1b24);
+            DrawText(frame, noticeX + 5, 46, dungeon.DeveloperNotice, 0xff73b8d0);
+        }
         if (dungeon.LevelPulse > 0 && dungeon.LevelPulse / 8 % 2 == 0)
             DrawText(frame, (_width - 72) / 2, 48, "NY NIVÅ!", 0xffffd66b);
         if (dungeon.DeathAge > 0)
@@ -8944,6 +8996,8 @@ internal sealed class StormaktGame
         public ulong PendingPickupItemId { get; set; }
         public string PickupNotice { get; set; } = "";
         public int PickupNoticeAge { get; set; }
+        public string DeveloperNotice { get; set; } = "";
+        public int DeveloperNoticeAge { get; set; }
         public int PendingChestId { get; set; }
         public int Depth { get; set; } = 1;
         public int DoorHealth { get; set; } = 3;

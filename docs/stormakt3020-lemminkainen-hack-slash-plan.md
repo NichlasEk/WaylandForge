@@ -329,6 +329,10 @@ Ett manuellt läge innehåller:
 
 Manuella savestates får tas i vanliga rum och under bossar. Sparkommandot köas till slutet av den aktuella simuleringsrutan så snapshoten aldrig hamnar mitt i en listmutation. Laddning återställer exakt speltillstånd men startar ljud på en ren takt/toning i stället för mitt i en WAV-sample.
 
+**Utvecklarverktyg implementerat:** när developer mode är aktivt skriver `F1` en separat `developer.json`
+och `F2` laddar den utan att skriva över autosaven. En kort skärmbekräftelse visar sparat, laddat eller
+saknad fil. Laddning väljer boss- eller gruvmusik från det återställda mötet.
+
 #### Robust filformat
 
 - Sökväg: XDG state-katalog, exempelvis `~/.local/state/waylandforge/stormakt3020/saves/`.

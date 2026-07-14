@@ -20,7 +20,9 @@ internal sealed class ForgeInputSource : IInputSource
             ForgeInput.C |
             ForgeInput.X |
             ForgeInput.Y |
-            ForgeInput.Z;
+            ForgeInput.Z |
+            ForgeInput.DeveloperSave |
+            ForgeInput.DeveloperLoad;
 
         _state = new SaturnInputState((SaturnButtons)(uint)(input & coreMask));
     }
