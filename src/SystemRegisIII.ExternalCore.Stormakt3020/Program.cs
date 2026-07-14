@@ -6782,20 +6782,24 @@ internal sealed class StormaktGame
     private void DrawDungeonTempleSeal(uint[] frame, DungeonState dungeon, int worldX, string label)
     {
         int x = worldX - dungeon.CameraX;
-        if (x < -8 || x >= _width + 8) return;
-        for (int worldY = 58; worldY < dungeon.RoomHeight - 35; worldY += 18)
+        if (x < -36 || x >= _width + 36) return;
+        int segment = 0;
+        for (int worldY = 68; worldY < dungeon.RoomHeight - 25; worldY += 106, segment++)
         {
             int y = worldY - dungeon.CameraY;
-            uint color = (dungeon.Age / 6 + worldY / 18) % 2 == 0 ? 0xff73b8d0 : 0xffffd66b;
-            DrawLine(frame, x, y, x, y + 10, color);
-            DrawLine(frame, x - 2, y + 4, x + 2, y + 6, color);
+            int fogFrame = (dungeon.Age / 12 + segment) & 3;
+            if (_sprites?.TryGet($"dungeon_temple_seal_fog_{fogFrame}", out Sprite fog) != true) continue;
+            int sway = ((dungeon.Age / 9 + segment * 2) % 5) - 2;
+            uint opacity = (uint)(165 + (dungeon.Age / 7 + segment * 17) % 46);
+            DrawSpriteAlpha(frame, fog, x - fog.Width / 2 + sway, y - fog.Height / 2, opacity);
         }
         if (Math.Abs(dungeon.KarlX - worldX) < 260)
         {
             int labelX = Math.Clamp(x - label.Length * 3, 4, Math.Max(4, _width - label.Length * 6 - 4));
             int labelY = Math.Clamp(380 - dungeon.CameraY - 62, 52, _height - 28);
             DrawRect(frame, labelX - 3, labelY - 3, label.Length * 6 + 6, 13, 0xdd081019);
-            DrawText(frame, labelX, labelY, label, 0xffffd66b);
+            DrawText(frame, labelX, labelY, label,
+                dungeon.Age / 18 % 2 == 0 ? 0xff9fd6a4 : 0xffb56a65);
         }
     }
 

@@ -99,6 +99,8 @@ The Silverkroppen dungeon extension adds versioned transparent sheets for Karl o
 
 `dungeon-louhi-ore-mother-v1.png` supplies Louhi's final altar-bound Malmmoder form: awakening, shielded, ore-vein casting and exposed-heart vulnerability. Its broad rooted base remains stationary while four interactive altar hearts are rendered by gameplay. The chroma-key source and exact reference-guided prompt are versioned beside the production alpha PNG.
 
+`dungeon-temple-seal-fog-v1.png` replaces the old cyan/gold cross-line room dividers with four softly animated green-and-blood-red fog plumes. Runtime overlaps the alpha sprites into a continuous but porous magical seal; collision and progression remain unchanged.
+
 ## Resolution
 
 Stormakt defaults to a 400x280 logical framebuffer. Assets retain their native gameplay pixel size, providing 25 percent more field in both directions and making ships smaller relative to the world. WaylandForge scales the WFEX frame to its viewport. Set `WAYLANDFORGE_STORMAKT_LEGACY_320=1` to A/B test the original 320x224 field; the pack contains a correctly sized background for both modes.
