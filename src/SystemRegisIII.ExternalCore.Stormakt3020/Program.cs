@@ -1652,6 +1652,7 @@ internal sealed class StormaktGame
         // early-return. Otherwise one interrupted click can latch forever.
         dungeon.PreviousMouseButtons = pointerButtons;
         dungeon.Age++;
+        if (dungeon.PickupNoticeAge > 0) dungeon.PickupNoticeAge--;
         if (_bossRadioCard is RadioCard active && ++_bossRadioAge >= active.DurationFrames)
         {
             _bossRadioCard = null;
@@ -1845,7 +1846,8 @@ internal sealed class StormaktGame
             if (pending is null) dungeon.PendingPickupItemId = 0;
             else if (DistanceSquared(pending.WorldX, pending.WorldY, dungeon.KarlX, dungeon.KarlY) < 38 * 38)
             {
-                if (StoreDungeonPickup(dungeon, pending)) dungeon.PendingPickupItemId = 0;
+                StoreDungeonPickup(dungeon, pending);
+                dungeon.PendingPickupItemId = 0;
             }
         }
         if (dungeon.PendingChestId != 0)
@@ -1972,11 +1974,14 @@ internal sealed class StormaktGame
         bool stored = item.Definition == 14 && TryPlaceFirstPotionBelt(dungeon, item) || TryPlaceFirstFree(dungeon, item);
         if (stored)
         {
+            dungeon.PickupNoticeAge = 0;
             WriteDungeonSave(dungeon, "autosave");
             return true;
         }
         item.OnGround = true;
         item.QuickSlot = -1;
+        dungeon.PickupNotice = "KAN INTE PLOCKA UPP  INVENTORIET ÄR FULLT";
+        dungeon.PickupNoticeAge = 150;
         return false;
     }
 
@@ -2082,6 +2087,7 @@ internal sealed class StormaktGame
         if (restarted.Items.Count == 0) SeedDungeonInventory(restarted);
         SeedDungeonEncounter(restarted);
         _dungeon = restarted;
+        _audio?.SwitchMusic(StormaktMusicTrack.Dungeon);
         ActivateBossRadio(DungeonNearDeathRadio);
         WriteDungeonSave(restarted, "autosave");
     }
@@ -5399,6 +5405,13 @@ internal sealed class StormaktGame
                 shadowAwake ? "ÖVERLEV LEMMINKÄINENS SKUGGA" : "FÖLJ RUNORNA MOT DEN FÖRSEGLADE PORTEN";
         }
         DrawText(frame, 7, _height - 10, objective, 0xffdce8f2);
+        if (dungeon.PickupNoticeAge > 0)
+        {
+            int noticeWidth = dungeon.PickupNotice.Length * 6 + 10;
+            int noticeX = Math.Max(4, (_width - noticeWidth) / 2);
+            DrawRect(frame, noticeX, _height - 29, Math.Min(noticeWidth, _width - noticeX - 4), 13, 0xee201319);
+            DrawText(frame, noticeX + 5, _height - 26, dungeon.PickupNotice, 0xffff9c8f);
+        }
         if (_bossRadioCard is RadioCard radio && _bossRadioAge < radio.DurationFrames)
         {
             DrawRadioCard(frame, radio, _bossRadioAge);
@@ -8929,6 +8942,8 @@ internal sealed class StormaktGame
         public bool RoomClearSaved { get; set; }
         public bool DoorReady { get; set; }
         public ulong PendingPickupItemId { get; set; }
+        public string PickupNotice { get; set; } = "";
+        public int PickupNoticeAge { get; set; }
         public int PendingChestId { get; set; }
         public int Depth { get; set; } = 1;
         public int DoorHealth { get; set; } = 3;

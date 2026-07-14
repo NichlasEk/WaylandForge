@@ -422,6 +422,8 @@ svartvattensektorer med säkra mellanrum, halsen låser en flyktlinje som även 
 läget skickar tre expanderande dödsvågor genom salen. Under återhämtningen öppnas silverhjärtat som
 enda sårbara mål. Svanen sjunker utan vanlig explosion, lämnar den unika reliken `SVANENS SILVERHJÄRTA`,
 öppnar östporten och utlöser Louhis första röstlagda anrop. Hela dödsövergången autosparas.
+Död under Svanen eller en senare boss återställer gruvmusiken när Karl återvänder till Gruva I, så
+bossmusiken inte följer med genom återstarten.
 Stelarna och den breda svankroppen blockerar nu bara sin faktiska fot mot golvet, så Karl kan gå tätt
 intill ristningarna och in under vingarnas visuella siluett utan att stoppas av osynliga rektanglar.
 Redan lästa stelar kan aktiveras igen utan att versföljden förstörs; då upprepar Ebba sin röstlagda
@@ -442,6 +444,8 @@ fysiska hinder men står längs rummets kanter så att strid och vägen till sig
 
 Inventoryföremål kan slängas med `D` eller den klickbara `SLÄNG`-knappen. Föremålet placeras på en
 giltig golvpunkt framför Karl, får marken som enda ägare och ligger kvar i samma position genom autosave.
+Om ryggsäcken är full vid ett upplockningsförsök ligger föremålet kvar och en kort tydlig varning visas
+ovanför målraden; ett klickförsök avbryts i stället för att fortsätta dra Karl mot föremålet.
 Utrustningsrutorna går nu också att klicka för att granska det burna föremålet. Ett klick på utrustningsbar
 loot i ryggsäcken visar dess verkliga byte mot nuvarande plats med gröna plus, röda minus och grå nollor
 för skada, rustning, kraft och förbannelsevärn. Ett andra klick på samma föremål utrustar det; byteskoden
