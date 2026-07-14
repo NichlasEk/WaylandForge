@@ -1766,6 +1766,7 @@ internal sealed class StormaktGame
             if (dungeon.DeathAge >= 90) RestartDungeonAfterDeath(dungeon);
             return;
         }
+        EnsureDungeonRecoveryChest(dungeon);
         if (dungeon.LevelPulse > 0) dungeon.LevelPulse--;
         if (dungeon.Age < 150) return;
         if (dungeon.Age == 150) WriteDungeonSave(dungeon, "autosave");
@@ -2192,6 +2193,20 @@ internal sealed class StormaktGame
         _audio?.SwitchMusic(StormaktMusicTrack.Dungeon);
         ActivateBossRadio(DungeonNearDeathRadio);
         WriteDungeonSave(restarted, "autosave");
+    }
+
+    private static void EnsureDungeonRecoveryChest(DungeonState dungeon)
+    {
+        if (dungeon.Depth != 1 || !dungeon.DoorReady || dungeon.Chests.Any(chest => chest.Id == 10)) return;
+        bool hasSword = dungeon.Items.Any(item =>
+            DungeonItemDefinitions[item.Definition].Slot == DungeonEquipmentSlot.MainHand &&
+            item.Definition != 3 && !item.InStash &&
+            (!item.OnGround || item.WorldX is >= 0 and <= 720 && item.WorldY is >= 0 and <= 440));
+        if (hasSword) return;
+        dungeon.Chests.Add(new DungeonChest(10, 185, 305) { Depth = 1 });
+        dungeon.PickupNotice = "RESERVVÄRJA I FÖRRÅDSKISTAN";
+        dungeon.PickupNoticeAge = 180;
+        WriteDungeonSave(dungeon, "autosave");
     }
 
     private static void ReturnToDungeonDepthOne(DungeonState dungeon)
@@ -2654,6 +2669,7 @@ internal sealed class StormaktGame
         int[] definitions = chest.Id switch
         {
             1 => [5, 10], 2 => [2, 9], 3 => [6, 11],
+            10 => [0],
             31 => [10, 11], 32 => [6, 10], 41 => [10, 11], 42 => [4, 12], _ => [11, 9],
         };
         for (int index = 0; index < definitions.Length; index++)
@@ -2769,10 +2785,10 @@ internal sealed class StormaktGame
         }
         dungeon.SilverWaves.RemoveAll(wave => wave.Age > 95 ||
             wave.X < 20 || wave.X > dungeon.RoomWidth - 20 || wave.Y < 40 || wave.Y > dungeon.RoomHeight - 20);
-        if (dungeon.Depth != 2) return;
-        if (dungeon.ForcedVentAge > 0) dungeon.ForcedVentAge--;
         foreach (DungeonChest chest in dungeon.Chests)
             if (chest.OpenAge > 0 && chest.OpenAge < 45) chest.OpenAge++;
+        if (dungeon.Depth != 2) return;
+        if (dungeon.ForcedVentAge > 0) dungeon.ForcedVentAge--;
         int zone = DungeonZone(dungeon);
         if (zone > dungeon.MaxZoneReached)
         {
@@ -5477,6 +5493,12 @@ internal sealed class StormaktGame
             DrawDungeonSprite(frame, dungeon, "dungeon_chain_lift", 88, 228);
             DrawDungeonSprite(frame, dungeon, "dungeon_supply", 470, 300);
             DrawDungeonSprite(frame, dungeon, "dungeon_descent_pit", 598, 126);
+            foreach (DungeonChest chest in dungeon.Chests.Where(chest => chest.Depth == 1))
+            {
+                int chestY = (int)Math.Round(chest.Y) - (chest.OpenAge is > 0 and < 12 ? chest.OpenAge % 3 : 0);
+                DrawDungeonSprite(frame, dungeon, chest.Open ? "dungeon_chest_open" : "dungeon_chest_closed",
+                    (int)Math.Round(chest.X), chestY);
+            }
         }
         else if (dungeon.Depth == 2)
         {
