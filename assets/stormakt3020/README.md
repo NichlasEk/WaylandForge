@@ -105,7 +105,7 @@ The Silverkroppen dungeon extension adds versioned transparent sheets for Karl o
 
 `dungeon-karl-moose-escape-v1.png` gives the temple escape its own Karl-specific mounted ready and charge poses instead of reusing the helmeted RTS Carolean. `dungeon-moose-dismounted-v1.png` supplies the empty saddle after Karl jumps down and walks aboard Karl CCLV.
 
-`dungeon-karl-moose-gallop-v2.png` replaces the single sliding charge pose with a three-frame landing, push-off and airborne stride. Its world-scroll stops before the ready pose, and the riderless dismount shot retains the exact same screen anchor so the moose never snaps backward.
+`dungeon-karl-moose-gallop-v2.png` replaces the single sliding charge pose with a three-frame landing, push-off and airborne stride. The packer identifies the three alpha-connected riders instead of cutting mathematical thirds, preventing legs from adjacent poses becoming loose debris. The ship remains parked while the moose visibly approaches and stops; the riderless dismount shot retains that exact screen anchor.
 
 ## Resolution
 

@@ -6242,27 +6242,34 @@ internal sealed class StormaktGame
             return;
         }
 
-        int shipX = Math.Min(_width / 2 + 62, _width + 70 - Math.Max(0, age - 430) * 2);
+        // The ship is already parked at the clearing. The moose crosses the
+        // remaining ground to it; the ship must never slide over the rider.
+        int shipX = _width - 50;
+        int cruisingMooseX = _width / 2 - 35;
+        int parkedMooseX = _width - 125;
         if (age < 620)
         {
             string rideSprite = age < 590 ? DungeonEpilogueGallopFrame(age) : "epilogue_karl_moose_ready";
             int rideBob = age < 590 ? DungeonEpilogueGallopBob(age) : 0;
-            DrawEpilogueSprite(frame, rideSprite, _width / 2 - 35, _height - 56 + rideBob);
-            DrawEpilogueShip(frame, shipX, _height - 82, 0);
+            double approach = Math.Clamp((age - 430) / 160.0, 0.0, 1.0);
+            approach = approach * approach * (3.0 - 2.0 * approach);
+            int rideX = cruisingMooseX + (int)Math.Round((parkedMooseX - cruisingMooseX) * approach);
+            if (age >= 430) DrawEpilogueShip(frame, shipX, _height - 82, 0);
+            DrawEpilogueSprite(frame, rideSprite, rideX, _height - 56 + rideBob);
             DrawText(frame, 8, _height - 16, "RASET FÖLJER EFTER", 0xffdce8f2);
             if (age < 470) DrawDungeonCollapseOverlay(frame, age + 900);
             return;
         }
 
-        int mooseX = _width / 2 - 35;
+        int mooseX = parkedMooseX;
         int groundY = _height - 56;
         int lift = Math.Max(0, age - 790);
-        string mooseSprite = age < 675 ? "epilogue_karl_moose_ready" : "epilogue_moose_riderless";
+        string mooseSprite = age < 630 ? "epilogue_karl_moose_ready" : "epilogue_moose_riderless";
+        DrawEpilogueShip(frame, shipX, _height - 82 - lift, lift);
         DrawEpilogueSprite(frame, mooseSprite, mooseX, groundY);
-        DrawEpilogueShip(frame, _width / 2 + 62, _height - 82 - lift, lift);
-        if (age >= 675 && age < 790)
+        if (age >= 630 && age < 790)
         {
-            int dismountAge = age - 675;
+            int dismountAge = age - 630;
             int karlX;
             int karlFootY;
             string karlSprite;
@@ -6276,16 +6283,16 @@ internal sealed class StormaktGame
             else
             {
                 int walkAge = dismountAge - 24;
-                karlX = Math.Min(_width / 2 + 44, mooseX + 33 + walkAge * 2);
+                karlX = Math.Min(shipX - 30, mooseX + 33 + walkAge * 2);
                 karlFootY = groundY;
                 karlSprite = walkAge / 8 % 2 == 0 ? "dungeon_karl_e_idle" : "dungeon_karl_e_walk";
             }
-            if (karlX < _width / 2 + 42)
+            if (karlX < shipX - 32)
                 DrawEpilogueSprite(frame, karlSprite, karlX, karlFootY);
         }
-        if (age < 675)
+        if (age < 630)
             DrawText(frame, 8, _height - 16, "SKEPPET VÄNTAR", 0xffffd66b);
-        else if (age < 715)
+        else if (age < 670)
             DrawText(frame, 8, _height - 16, "KARL HOPPAR AV", 0xffffd66b);
         else if (age < 790)
             DrawText(frame, 8, _height - 16, "OMBORD PÅ KARL CCLV", 0xffffd66b);

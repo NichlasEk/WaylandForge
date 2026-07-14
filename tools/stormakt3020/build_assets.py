@@ -91,6 +91,53 @@ def trim_alpha(image: Image.Image) -> Image.Image:
     return image.crop(bbox)
 
 
+def split_alpha_components(image: Image.Image, count: int, padding: int = 6) -> list[Image.Image]:
+    """Split a loose sprite row by subjects, not by equal-width cells.
+
+    Generated animation poses are not always centered inside mathematical
+    thirds. Cropping those thirds can therefore attach a hoof from the next
+    pose to the current frame. The large opaque subjects are disconnected, so
+    use their alpha components as the authoritative frame boundaries.
+    """
+    rgba = image.convert("RGBA")
+    alpha = rgba.getchannel("A").tobytes()
+    width, height = rgba.size
+    visited = bytearray(width * height)
+    components: list[tuple[int, tuple[int, int, int, int]]] = []
+
+    for start, opacity in enumerate(alpha):
+        if opacity < 16 or visited[start]:
+            continue
+        visited[start] = 1
+        stack = [start]
+        size = 0
+        min_x = max_x = start % width
+        min_y = max_y = start // width
+        while stack:
+            index = stack.pop()
+            x, y = index % width, index // width
+            size += 1
+            min_x, max_x = min(min_x, x), max(max_x, x)
+            min_y, max_y = min(min_y, y), max(max_y, y)
+            for neighbor in (index - 1, index + 1, index - width, index + width):
+                if neighbor < 0 or neighbor >= width * height or visited[neighbor]:
+                    continue
+                nx, ny = neighbor % width, neighbor // width
+                if abs(nx - x) + abs(ny - y) != 1 or alpha[neighbor] < 16:
+                    continue
+                visited[neighbor] = 1
+                stack.append(neighbor)
+        components.append((size, (min_x, min_y, max_x + 1, max_y + 1)))
+
+    if len(components) < count:
+        raise ValueError(f"expected {count} alpha subjects, found {len(components)}")
+    boxes = [box for _, box in sorted(components, reverse=True)[:count]]
+    boxes.sort(key=lambda box: box[0])
+    return [rgba.crop((max(0, left - padding), max(0, top - padding),
+                       min(width, right + padding), min(height, bottom + padding)))
+            for left, top, right, bottom in boxes]
+
+
 def argb_pixels(image: Image.Image) -> bytes:
     data = bytearray()
     raw = image.tobytes()
@@ -414,11 +461,11 @@ def append_dungeon_karl_moose_escape(
         ("epilogue_karl_moose_charge", mounted.crop((half, 0, mounted.width, mounted.height))),
         ("epilogue_moose_riderless", riderless),
     ]
-    gallop_cell = gallop.width // 3
+    gallop_frames = split_alpha_components(gallop, 3)
     frames.extend([
-        ("epilogue_karl_moose_gallop_a", gallop.crop((0, 0, gallop_cell, gallop.height))),
-        ("epilogue_karl_moose_gallop_b", gallop.crop((gallop_cell, 0, gallop_cell * 2, gallop.height))),
-        ("epilogue_karl_moose_gallop_c", gallop.crop((gallop_cell * 2, 0, gallop.width, gallop.height))),
+        ("epilogue_karl_moose_gallop_a", gallop_frames[0]),
+        ("epilogue_karl_moose_gallop_b", gallop_frames[1]),
+        ("epilogue_karl_moose_gallop_c", gallop_frames[2]),
     ])
     for name, frame in frames:
         sprite = trim_alpha(frame.convert("RGBA"))
