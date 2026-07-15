@@ -4604,6 +4604,10 @@ internal sealed class StormaktGame
         {
             BeginOresundBridgeSection(section);
         }
+        if (_levelId == 2 && _missionFrame == 1_800 && _bridgeSection is BridgeSectionState flapSection)
+        {
+            BeginOresundFlapSection(flapSection);
+        }
         if (_levelId == 2 && _missionFrame >= FlythroughFrames)
         {
             _stageClear = true;
@@ -4629,6 +4633,7 @@ internal sealed class StormaktGame
 
     private void BeginOresundBridgeSection(BridgeSectionState section)
     {
+        section.Mode = BridgeSectionMode.Carriage;
         section.Active = true;
         section.Age = 0;
         section.Powered = true;
@@ -4650,11 +4655,35 @@ internal sealed class StormaktGame
         section.LocalChanges = 0;
     }
 
+    private void BeginOresundFlapSection(BridgeSectionState section)
+    {
+        section.Mode = BridgeSectionMode.Flaps;
+        section.Active = true;
+        section.Age = 0;
+        section.Powered = true;
+        section.FlapInset = 0;
+        section.FlapY = _height <= 700 ? 150 : 188;
+        section.FlapHealth = 3;
+        section.FirstFlapOpened = false;
+        section.SecondFlapOpened = false;
+        section.FlapCoverScored = false;
+        section.Outcome = BridgeSectionOutcome.None;
+        section.LastEvent = "FLAPS ARMED";
+        section.Notice = "BROKLAFFAR";
+        section.NoticeAge = 90;
+    }
+
     private void StepOresundBridgeSection()
     {
         if (_levelId != 2 || _bridgeSection is not BridgeSectionState section) return;
         section.NoticeAge = Math.Max(0, section.NoticeAge - 1);
         if (!section.Active) return;
+
+        if (section.Mode == BridgeSectionMode.Flaps)
+        {
+            StepOresundFlaps(section);
+            return;
+        }
 
         section.Age++;
         int entry = Math.Min(0, section.Age - 126);
@@ -4695,6 +4724,124 @@ internal sealed class StormaktGame
                 "BRON PASSERAD", "SECTION PASSED", 0);
         }
         if (section.Age >= 720) section.Active = false;
+    }
+
+    private void StepOresundFlaps(BridgeSectionState section)
+    {
+        section.Age++;
+        int firstTarget = _width - (_width <= 320 ? 72 : 88);
+        int pairTarget = (_width - (_width <= 320 ? 64 : 78)) / 2;
+        bool firstSequence = section.Age is >= 60 and < 360;
+        bool secondSequence = section.Age is >= 400 and < 700;
+        section.FlapPair = secondSequence;
+
+        if (section.Age == 60)
+        {
+            section.Notice = "KLAFF VÄNSTER";
+            section.NoticeAge = 80;
+            section.LastEvent = "FIRST TELEGRAPH";
+        }
+        if (section.Age == 400)
+        {
+            section.FlapHealth = 6;
+            section.Notice = "DUBBELKLAFF + LASER";
+            section.NoticeAge = 100;
+            section.LastEvent = "SECOND TELEGRAPH";
+        }
+
+        if (firstSequence)
+        {
+            section.FlapInset = section.FirstFlapOpened ? Math.Max(0, section.FlapInset - 8) :
+                section.Age switch
+                {
+                    < 120 => 0,
+                    < 150 => firstTarget * (section.Age - 120) / 30,
+                    < 300 => firstTarget,
+                    _ => Math.Max(0, firstTarget * (360 - section.Age) / 60),
+                };
+        }
+        else if (secondSequence)
+        {
+            section.FlapInset = section.SecondFlapOpened ? Math.Max(0, section.FlapInset - 8) :
+                section.Age switch
+                {
+                    < 460 => 0,
+                    < 490 => pairTarget * (section.Age - 460) / 30,
+                    < 650 => pairTarget,
+                    _ => Math.Max(0, pairTarget * (700 - section.Age) / 50),
+                };
+        }
+        else
+        {
+            section.FlapInset = Math.Max(0, section.FlapInset - 8);
+        }
+
+        ResolveOresundFlapShots(section);
+
+        if (section.FlapInset > 8 && ShipTouchesOresundFlap(section)) DamageShip();
+
+        if (section.Age is 205 or 235 or 525 or 585)
+        {
+            _enemyShots.Add(new EnemyShot(_shipX, section.FlapY - 32, 0, 2.6, 0));
+        }
+
+        bool laserWarning = section.Age is >= 490 and < 550;
+        bool laserFiring = section.Age is >= 550 and < 610;
+        section.FlapLaserActive = laserWarning || laserFiring;
+        if (laserFiring && Math.Abs(_shipX - _width / 2) < 7 && _shipY > section.FlapY - 30)
+        {
+            DamageShip();
+        }
+
+        if (section.Age >= 720)
+        {
+            section.Active = false;
+            section.Notice = section.FlapCoverScored ? "KLAFFSEKTION KLAR" : "BRON PASSERAD";
+            section.NoticeAge = 100;
+        }
+    }
+
+    private void ResolveOresundFlapShots(BridgeSectionState section)
+    {
+        if (section.FlapInset <= 4) return;
+        int nodeY = section.FlapY;
+        int leftNodeX = section.FlapInset - 8;
+        int rightNodeX = _width - section.FlapInset + 8;
+        for (int index = _shots.Count - 1; index >= 0; index--)
+        {
+            Shot shot = _shots[index];
+            bool nodeHit = Math.Abs(shot.Y - nodeY) <= 10 &&
+                (Math.Abs(shot.X - leftNodeX) <= 9 ||
+                 (section.FlapPair && Math.Abs(shot.X - rightNodeX) <= 9));
+            if (nodeHit)
+            {
+                section.FlapHealth -= shot.Power;
+                _shots.RemoveAt(index);
+                if (section.FlapHealth <= 0)
+                {
+                    if (section.FlapPair) section.SecondFlapOpened = true;
+                    else section.FirstFlapOpened = true;
+                    section.LastEvent = "EARLY OPEN";
+                    section.Notice = "KLAFF ÖPPNAD";
+                    section.NoticeAge = 90;
+                    _score += 200;
+                    _audio?.Trigger(StormaktSound.Deploy);
+                    return;
+                }
+                continue;
+            }
+            if (PointInsideOresundFlap(section, shot.X, shot.Y)) _shots.RemoveAt(index);
+        }
+    }
+
+    private bool ShipTouchesOresundFlap(BridgeSectionState section) =>
+        PointInsideOresundFlap(section, _shipX - 6, _shipY) ||
+        PointInsideOresundFlap(section, _shipX + 6, _shipY);
+
+    private bool PointInsideOresundFlap(BridgeSectionState section, double x, double y)
+    {
+        if (Math.Abs(y - section.FlapY) > 18 || section.FlapInset <= 0) return false;
+        return x <= section.FlapInset || (section.FlapPair && x >= _width - section.FlapInset);
     }
 
     private void ResolveOresundBridgeShots(BridgeSectionState section)
@@ -4794,6 +4941,20 @@ internal sealed class StormaktGame
             if (shot.Y < -10 || shot.Y > _height + 10 || shot.X < -10 || shot.X > _width + 10)
             {
                 _enemyShots.RemoveAt(index);
+                continue;
+            }
+            if (_bridgeSection is BridgeSectionState { Active: true, Mode: BridgeSectionMode.Flaps } section &&
+                PointInsideOresundFlap(section, shot.X, shot.Y))
+            {
+                _enemyShots.RemoveAt(index);
+                if (!section.FlapCoverScored)
+                {
+                    section.FlapCoverScored = true;
+                    section.LastEvent = "FLAP COVER";
+                    section.Notice = "KLAFFSKYDD";
+                    section.NoticeAge = 75;
+                    _score += 150;
+                }
                 continue;
             }
             if (Math.Abs(_shipX - shot.X) < 7 && Math.Abs(_shipY - shot.Y) < 7)
@@ -8072,6 +8233,14 @@ internal sealed class StormaktGame
 
     private void DrawOresundSky(uint[] frame)
     {
+        string backgroundName = _width <= 320 ? "oresund_background" : "oresund_background_wide";
+        if (_sprites?.TryGet(backgroundName, out Sprite background) == true)
+        {
+            int scroll = (_missionFrame / 3) % background.Height;
+            DrawSprite(frame, background, 0, scroll - background.Height);
+            DrawSprite(frame, background, 0, scroll);
+            return;
+        }
         for (int y = 0; y < _height; y++)
         {
             uint r = (uint)(5 + y * 8 / Math.Max(1, _height));
@@ -8094,6 +8263,19 @@ internal sealed class StormaktGame
 
     private void DrawOresundScenery(uint[] frame)
     {
+        if (_sprites?.TryGet("oresund_kronspann", out Sprite kronspann) == true &&
+            _sprites.TryGet("oresund_rail_machine", out Sprite railMachine))
+        {
+            int generatedArchY = ((_missionFrame / 2 + 180) % (_height + 280)) - 140;
+            DrawSpriteScaled(frame, kronspann, 0, generatedArchY - kronspann.Height / 2, _width, kronspann.Height);
+            int machineY = ((_missionFrame * 3 / 4 + 420) % (_height + 320)) - 160;
+            int machineWidth = _width <= 320 ? 120 : 148;
+            int machineHeight = Math.Max(28, railMachine.Height * machineWidth / Math.Max(1, railMachine.Width));
+            DrawSpriteScaled(frame, railMachine, -machineWidth / 2, machineY, machineWidth, machineHeight);
+            DrawSpriteScaled(frame, railMachine, _width - machineWidth / 2, machineY + 86,
+                machineWidth, machineHeight);
+            return;
+        }
         int leftRail = _width <= 320 ? 34 : 46;
         int rightRail = _width - leftRail;
         uint distantIron = 0xff1b2a35;
@@ -8139,6 +8321,12 @@ internal sealed class StormaktGame
         uint cable = section.Powered ? 0xff46758e : 0xff27343d;
         if (section.Active)
         {
+            if (section.Mode == BridgeSectionMode.Flaps)
+            {
+                DrawOresundFlaps(frame, section);
+            }
+            else
+            {
             DrawLine(frame, section.ControlX + 12, section.ControlY, section.LaserX - 12, section.LaserY, cable);
             for (int x = section.ControlX + 18; x < section.LaserX - 16; x += 24)
                 PutPixel(frame, x, section.ControlY, section.Powered ? 0xff9bd4dc : 0xff344653);
@@ -8201,6 +8389,7 @@ internal sealed class StormaktGame
                 FillCircle(frame, section.CarriageX, section.CarriageY, blast, 0xffb33b2e);
                 FillCircle(frame, section.CarriageX, section.CarriageY, Math.Max(2, blast - 4), 0xffff8a34);
             }
+            }
         }
 
         if (section.NoticeAge > 0)
@@ -8213,8 +8402,56 @@ internal sealed class StormaktGame
         }
         if (_developerMode && section.Active)
         {
-            string debug = $"SEC1 STRÖM {(section.Powered ? "PÅ" : "AV")}  VÄXEL {(section.TrackLockedLeft ? "V" : "RAK")}  {section.LastEvent}";
+            string debug = section.Mode == BridgeSectionMode.Flaps
+                ? $"SEC2 KLAFF {section.FlapInset:000}  HP {section.FlapHealth:00}  {(section.FlapPair ? "PAR" : "VÄNSTER")}  {section.LastEvent}"
+                : $"SEC1 STRÖM {(section.Powered ? "PÅ" : "AV")}  VÄXEL {(section.TrackLockedLeft ? "V" : "RAK")}  {section.LastEvent}";
             DrawText(frame, 6, _height - 20, debug, 0xff65c58a);
+        }
+    }
+
+    private void DrawOresundFlaps(uint[] frame, BridgeSectionState section)
+    {
+        bool warning = section.Age is >= 60 and < 120 or >= 400 and < 460;
+        if (warning)
+        {
+            uint warn = (section.Age / 5 & 1) == 0 ? 0xffffd66b : 0xff8f2635;
+            DrawLine(frame, 0, section.FlapY - 20, section.FlapPair ? _width - 1 : _width - 72,
+                section.FlapY - 20, warn);
+        }
+
+        if (section.FlapInset > 0)
+        {
+            int top = section.FlapY - 18;
+            if (_sprites?.TryGet("oresund_flap_left", out Sprite leftFlap) == true &&
+                _sprites.TryGet("oresund_flap_right", out Sprite rightFlap))
+            {
+                DrawSpriteScaled(frame, leftFlap, 0, top, section.FlapInset, 36);
+                if (section.FlapPair)
+                    DrawSpriteScaled(frame, rightFlap, _width - section.FlapInset, top, section.FlapInset, 36);
+            }
+            else
+            {
+                DrawRect(frame, 0, top, section.FlapInset, 36, 0xff273139);
+                DrawRect(frame, 0, top + 5, section.FlapInset, 4, 0xff8a6b38);
+                if (section.FlapPair)
+                {
+                    DrawRect(frame, _width - section.FlapInset, top, section.FlapInset, 36, 0xff273139);
+                    DrawRect(frame, _width - section.FlapInset, top + 5, section.FlapInset, 4, 0xff8a6b38);
+                }
+            }
+            int pulse = (section.Age / 5 & 1) == 0 ? 5 : 7;
+            FillCircle(frame, section.FlapInset - 8, section.FlapY, pulse, 0xff65c5ca);
+            if (section.FlapPair) FillCircle(frame, _width - section.FlapInset + 8, section.FlapY, pulse, 0xff65c5ca);
+        }
+
+        if (section.FlapLaserActive)
+        {
+            int laserX = _width / 2;
+            bool firing = section.Age >= 550;
+            uint beam = firing ? 0xfff2eee4 : ((section.Age / 4 & 1) == 0 ? 0xffff6b62 : 0xff7f2632);
+            int beamWidth = firing ? 5 : 1;
+            DrawRect(frame, laserX - beamWidth / 2, 18, beamWidth, _height - 36, beam);
+            FillCircle(frame, laserX, section.FlapY - 28, firing ? 8 : 5, 0xff8f2635);
         }
     }
 
@@ -10099,6 +10336,7 @@ internal sealed class StormaktGame
     private record struct CrystalSpear(int X, int Age);
     private sealed class BridgeSectionState
     {
+        public BridgeSectionMode Mode { get; set; }
         public bool Active { get; set; }
         public int Age { get; set; }
         public bool Powered { get; set; }
@@ -10114,6 +10352,14 @@ internal sealed class StormaktGame
         public int CarriageX { get; set; }
         public int CarriageY { get; set; }
         public int LocalChanges { get; set; }
+        public int FlapInset { get; set; }
+        public int FlapY { get; set; }
+        public int FlapHealth { get; set; }
+        public bool FlapPair { get; set; }
+        public bool FirstFlapOpened { get; set; }
+        public bool SecondFlapOpened { get; set; }
+        public bool FlapCoverScored { get; set; }
+        public bool FlapLaserActive { get; set; }
         public int NoticeAge { get; set; }
         public string Notice { get; set; } = "";
         public string LastEvent { get; set; } = "IDLE";
@@ -10173,6 +10419,12 @@ internal sealed class StormaktGame
         LaserDestroyedCarriage,
         SafeReroute,
         Passed,
+    }
+
+    private enum BridgeSectionMode
+    {
+        Carriage,
+        Flaps,
     }
 
     private enum RtsBuildingType

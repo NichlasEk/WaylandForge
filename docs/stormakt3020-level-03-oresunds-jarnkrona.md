@@ -1,6 +1,6 @@
 # Bana 3 - Öresunds järnkrona
 
-Status: checkpoints 1-2 landed 2026-07-15. The active `DEV` row starts a deterministic 60-second level-id 2 skeleton containing the first three-way systemic bridge section.
+Status: checkpoints 1-3 landed 2026-07-15. The active `DEV` row starts a deterministic 60-second level-id 2 skeleton containing the first three-way systemic bridge section and its first physical flap pair.
 
 ## Dramatiskt löfte
 
@@ -164,7 +164,7 @@ Varje brosektion minns högst två spelarorsakade förändringar tills den lämn
 
 1. **Hook och 60-sekundersskelett (landed 2026-07-14):** DEV-start, egen seed, titel, kall brofallback, Öresunds musikkanal med `oresund-i-brand-v1.wav` som prototyp, broväktarvåg och resultatkort.
 2. **Systemisk provsektion (landed 2026-07-15):** kodritad laserfyr, kontrollhus, växel och en kanonvagn med tre verifierade slutbilder från tre inspelade inputspår.
-3. **Ringbrovärlden:** genererad bakgrund, Kronspannet, rälsparallax och två säkra klaffsekvenser som använder samma täckningsstate som provsektionen.
+3. **Ringbrovärlden (landed 2026-07-15):** genererad bakgrund, Kronspannet, rälsparallax och två säkra klaffsekvenser som använder samma täckningsstate som provsektionen.
 4. **Pansartåget:** lokpassage, flera kanonvagnar, spårbyte, kopplingsdöd, miljökrasch och LIST-poäng.
 5. **Sörens ingripande:** radiokö, bakgrundspassage och deterministiskt val av högsta kvarvarande hot.
 6. **Helsingör/Helsingborg:** två ankare, delad hälsa, korskopplad ström, tre faser, död och övergång mot Silverkroppen.
@@ -193,17 +193,27 @@ Varje spår upprepades tio gånger med identisk slutbild:
 
 Utvecklarläget visar sektionens ström, växel och senaste explicita event. Normalläget visar endast kabelglöd, växellampa och korta HUD-kvitton.
 
+## Landad checkpoint 3
+
+Den kodritade kalla bron har ersatts av en packad, upplösningsanpassad Öresundsplåt med transparent Kronspann och rälsmaskineri ovanpå. Dessa lager är uttryckligen icke-fysiska. Om någon asset saknas används den tidigare kodfallbacken.
+
+Vid bild 1800 återanvänds `BridgeSectionState` i klaffläge:
+
+1. Vänsterklaffen blinkar i 60 bildsteg, går in i körfältet och stoppar vanliga projektiler från båda håll.
+2. Ett synligt cyan kontrollnav kan skjutas för 200 poäng och tidig öppning.
+3. Därefter går båda klaffarna in samtidigt. En central laser varnar i 60 bildsteg och skär sedan igenom klaffskyddet.
+4. Spelaren får ett engångskvitto `KLAFFSKYDD` och 150 poäng när vanlig fientlig eld faktiskt fångas av plåten.
+
+De tre gamla inputspåren ger fortfarande direkt förstörelse 400, laserdöd 900 och säker omledning 250. Nya skydds- och tidig-öppningsspår upprepades tio gånger vardera med identisk slutbild:
+
+- 400x280: skydd `56da2080bb979b70`, tidig öppning `b48cfbaa5b5144d2`.
+- 320x224: skydd `21893ef9a74c37f4`, tidig öppning `78c1b66db97ece53`.
+
 ## Nästa implementeringscheckpoint
 
-Bygg skiva 3, Ringbrovärlden, ovanpå det bevisade statet:
+Bygg skiva 4, Pansartåget: förläng den bevisade kanonvagnen till en synlig lokpassage med flera vagnar, spårbyte och en begränsad miljökrasch. Behåll klaffarna som fristående stateägd geometri och låt tåget reagera på explicita events i stället för spriteöverlapp.
 
-1. Generera en läsbar Öresundsbakgrund och separata transparenta Kronspann/rälsdelar utan fysisk kollisionsgeometri.
-2. Lägg till två klaffar vars render och kollision läser samma täckningsstate.
-3. Introducera klaff 1 ensam, därefter klaff 2 tillsammans med laserfyrens långa varning.
-4. Låt vanlig eld stoppas av stängd klaff från båda håll medan aktiv laser skär igenom efter minst 60 bildsteg varning.
-5. Behåll provsektionens tre inputspår som regressionstester och lägg två nya spår för klaffskydd respekt tidig öppning.
-
-**Definition of done:** generated miljö och fysisk klaff använder samma state utan att ändra de tre landade utfallen eller skapa mer än två samtidiga faror.
+**Definition of done:** minst två reproducerbara tåglösningar, samma input ger samma vagnsordning och poäng i båda upplösningarna, och ingen kedja överstiger tre eventled eller två samtidiga faror.
 
 ## Acceptanskriterier
 

@@ -30,6 +30,8 @@
 
 `skanska-combat-details-v1.png` supplies Sören's radar decoy/copper shot and Glimminge's crystal spear, leaving only safety telegraphs and HUD markers code-drawn.
 
+`stormakt-oresund-background-v1.png` is the opaque Öresund ringbridge flight corridor. `stormakt-oresund-props-v1.png` supplies a transparent Kronspann, rail machinery and matched left/right armored bridge flaps; its untouched magenta generation is retained as the `-source.png` sibling. Their exact built-in generation prompts are versioned beside the PNGs. Kronspann and rail pieces are non-physical parallax; flap sprites are scaled to rectangles owned by `BridgeSectionState`, so rendering, ship collision and projectile cover all use the same dimensions. Missing assets retain the code-drawn fallback.
+
 `rts-swedish-buildings-v1.png`, `rts-swedish-units-v1.png` and `rts-danish-army-v1.png` supply Silverkroppen's complete first production-art pass. Their packed states cover working steam/crusher machinery, tower fire, Carolean volley/reload, moose charge/carbine, and ready/attack pairs for all five Danish troop families. Equal atlas cells are cropped independently before alpha trimming, so animation effects and neighboring units cannot leak into another sprite.
 
 `rts-silver-miner-v1.png` supplies two empty and two silver-loaded walking phases for the visible crusher-to-Karl economy convoy. The four cells share one reference scale and fixed runtime canvas; delivered crates, rather than a hidden income timer, advance both spendable and salvaged silver.
@@ -59,7 +61,7 @@ Rebuild the pack after editing/replacing the concept sheet:
 python tools/stormakt3020/build_assets.py
 ```
 
-The builder currently packs 42 named sprites, including normal/hot player states, environment parts, combat-detail assets and separate 320- and 400-pixel-wide scrolling backgrounds. Smaller derived cannon/wreck sizes polish the boss attachments without duplicating source art. Each background is followed by its vertical mirror, making both wrap boundaries exact instead of exposing a hard seam. Active radio cards alternate their neutral and speaking frames every eight simulation frames. All former code-drawn backgrounds, faces, player ship, bridge pieces, cannons and projectiles remain missing-asset fallbacks. The builder trims alpha and downsamples with high-quality filtering; gameplay keeps separate deterministic hitboxes.
+The builder packs named sprites including normal/hot player states, environment parts, combat-detail assets and separate 320- and 400-pixel-wide scrolling backgrounds. Smaller derived cannon/wreck sizes polish the boss attachments without duplicating source art. Each background is followed by its vertical mirror, making both wrap boundaries exact instead of exposing a hard seam. Active radio cards alternate their neutral and speaking frames every eight simulation frames. All former code-drawn backgrounds, faces, player ship, bridge pieces, cannons and projectiles remain missing-asset fallbacks. The builder trims alpha and downsamples with high-quality filtering; gameplay keeps separate deterministic hitboxes.
 
 To rebuild the transparent generated sheet from its chroma-key source:
 

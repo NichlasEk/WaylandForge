@@ -795,6 +795,24 @@ def mirrored_background(source: Image.Image, width: int, height: int) -> Image.I
     return seamless
 
 
+def append_oresund_props(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    definitions = [
+        ("oresund_kronspann", 0, 0, (220, 112)),
+        ("oresund_rail_machine", 1, 0, (188, 62)),
+        ("oresund_flap_left", 0, 1, (176, 70)),
+        ("oresund_flap_right", 1, 1, (176, 70)),
+    ]
+    for name, column, row, target in definitions:
+        left = column * source.width // 2
+        top = row * source.height // 2
+        right = (column + 1) * source.width // 2
+        bottom = (row + 1) * source.height // 2
+        cell = source.crop((left, top, right, bottom)).convert("RGBA")
+        sprite = split_alpha_components(cell, 1)[0]
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def build(
     input_path: Path,
     danish_input_path: Path,
@@ -806,6 +824,8 @@ def build(
     combat_detail_input_path: Path,
     background_input_path: Path,
     skanska_background_input_path: Path,
+    oresund_background_input_path: Path,
+    oresund_props_input_path: Path,
     skanska_props_input_path: Path,
     glimminge_input_path: Path,
     skanska_enemies_input_path: Path,
@@ -868,6 +888,8 @@ def build(
     combat_detail_source = Image.open(combat_detail_input_path)
     background_source = Image.open(background_input_path).convert("RGBA")
     skanska_background_source = Image.open(skanska_background_input_path).convert("RGBA")
+    oresund_background_source = Image.open(oresund_background_input_path).convert("RGBA")
+    oresund_props_source = Image.open(oresund_props_input_path).convert("RGBA")
     skanska_props_source = Image.open(skanska_props_input_path).convert("RGBA")
     glimminge_source = Image.open(glimminge_input_path).convert("RGBA")
     skanska_enemies_source = Image.open(skanska_enemies_input_path).convert("RGBA")
@@ -1021,10 +1043,13 @@ def build(
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
+    append_oresund_props(entries, oresund_props_source)
     entries.append(("stora_balt_background", mirrored_background(background_source, 320, 700)))
     entries.append(("stora_balt_background_wide", mirrored_background(background_source, 400, 875)))
     entries.append(("skanska_background", mirrored_background(skanska_background_source, 320, 700)))
     entries.append(("skanska_background_wide", mirrored_background(skanska_background_source, 400, 875)))
+    entries.append(("oresund_background", mirrored_background(oresund_background_source, 320, 700)))
+    entries.append(("oresund_background_wide", mirrored_background(oresund_background_source, 400, 875)))
     logo_wide = logo_source.copy()
     logo_wide.thumbnail((210, 105), Image.Resampling.LANCZOS)
     entries.append(("stormakt_logo_wide", logo_wide))
@@ -1088,6 +1113,16 @@ def main() -> None:
         "--skanska-background-input",
         type=Path,
         default=Path("assets/stormakt3020/stormakt-skanska-background-v1.png"),
+    )
+    parser.add_argument(
+        "--oresund-background-input",
+        type=Path,
+        default=Path("assets/stormakt3020/stormakt-oresund-background-v1.png"),
+    )
+    parser.add_argument(
+        "--oresund-props-input",
+        type=Path,
+        default=Path("assets/stormakt3020/stormakt-oresund-props-v1.png"),
     )
     parser.add_argument(
         "--skanska-props-input",
@@ -1197,6 +1232,8 @@ def main() -> None:
         args.combat_detail_input,
         args.background_input,
         args.skanska_background_input,
+        args.oresund_background_input,
+        args.oresund_props_input,
         args.skanska_props_input,
         args.glimminge_input,
         args.skanska_enemies_input,
