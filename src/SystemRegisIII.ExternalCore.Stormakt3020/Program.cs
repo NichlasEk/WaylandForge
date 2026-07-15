@@ -197,6 +197,11 @@ internal sealed class StormaktGame
         new(0, 300, true, "FOGDE RASMUS", "DENNE GANG KARL", "HVER GANG!", StormaktVoice.RasmusBossEfterspel, "portrait_rasmus");
     private static readonly RadioCard RtsSilverRadio =
         new(0, 390, false, "EBBA GRIP", "MASSIVT SILVER", "LANDA KARL", StormaktVoice.EbbaSilverBody, "portrait_ebba");
+    private static readonly RadioCard RtsKarlSmellRadio =
+        new(0, 220, false, "KARL CCLV", "JAG KÄNNER SILVER", "NEDANFÖR OSS", null, "portrait_karl");
+    private static readonly RadioCard RtsVacuumRadio =
+        new(0, 540, false, "EBBA GRIP", "DET ÄR VAKUUM KARL", "MEN JAG SER ÅDERN",
+            StormaktVoice.EbbaVacuumReply, "portrait_ebba");
     private static readonly RadioCard RtsSteamRadio =
         new(0, 330, false, "EBBA GRIP", "ÅNGAN HÅLLER", "RES KROSSEN", StormaktVoice.EbbaSteamOnline, "portrait_ebba");
     private static readonly RadioCard RtsClaimRadio =
@@ -823,7 +828,7 @@ internal sealed class StormaktGame
         }
         rts.Age++;
         rts.TowerPlacementMode = rts.BuildStage >= 4 && (buttons & Slow) != 0;
-        rts.LandingAge = Math.Min(180, rts.LandingAge + 1);
+        rts.LandingAge = Math.Clamp(rts.Age - 340, 0, 180);
         rts.PlacementPulse = Math.Max(0, rts.PlacementPulse - 1);
         _missionFrame++;
         StepBossRadioQueue();
@@ -834,9 +839,12 @@ internal sealed class StormaktGame
         }
         if (rts.Age == 20)
         {
-            ActivateBossRadio(RtsSilverRadio);
+            ActivateBossRadio(RtsKarlSmellRadio);
         }
-
+        if (rts.Age == 250)
+        {
+            ActivateBossRadio(RtsVacuumRadio);
+        }
         rts.SilverPulse = Math.Max(0, rts.SilverPulse - 1);
         StepRtsMiners(rts);
         StepRtsProduction(rts);
@@ -848,7 +856,7 @@ internal sealed class StormaktGame
             StepRtsCombat(rts);
         }
 
-        if (rts.LandingAge < 120)
+        if (rts.Age < 740)
         {
             return;
         }
@@ -8088,10 +8096,49 @@ internal sealed class StormaktGame
             worldY - dungeon.CameraY - sprite.Height / 2);
     }
 
+    private void DrawRtsOrbitalInsertion(uint[] frame, RtsState rts)
+    {
+        DrawRect(frame, 0, 0, _width, _height, 0xff05090f);
+        foreach (Star star in _stars)
+        {
+            int y = (star.Y + rts.Age / Math.Max(1, 5 - star.Speed)) % _height;
+            uint color = star.Brightness > 120 ? 0xff9bd4dc : 0xff526477;
+            PutPixel(frame, star.X, y, color);
+        }
+        int horizonY = _height + 112 - rts.Age / 12;
+        FillCircle(frame, _width / 2, horizonY, _width / 2 + 74, 0xff14231f);
+        DrawCircleOutline(frame, _width / 2, horizonY, _width / 2 + 72, 0xff3d6d62);
+        int shipY = 72 + rts.Age / 8;
+        if (_sprites?.TryGet("player", out Sprite ship) == true)
+            DrawSprite(frame, ship, _width / 2 - ship.Width / 2, shipY - ship.Height / 2);
+        else
+            FillTriangle(frame, _width / 2, shipY - 25, _width / 2 - 20, shipY + 23,
+                _width / 2 + 20, shipY + 23, 0xff244f91);
+        DrawRect(frame, 0, 0, _width, 18, 0xff080d12);
+        DrawText(frame, 6, 5, "SILVERKROPPENS OMLÖPPSBANA", 0xffffd66b);
+        DrawRect(frame, 0, _height - 14, _width, 14, 0xff080d12);
+        DrawText(frame, 7, _height - 10,
+            rts.Age < 230 ? "KARL FÅR VITTRING I VAKUUM" : "EBBA SÖKER EFTER EN ÅDER",
+            rts.Age < 230 ? 0xffffd66b : 0xff9bd4dc);
+        if (rts.Age >= 300)
+        {
+            int shutter = Math.Min(_height / 2, (rts.Age - 300) * 4);
+            DrawRect(frame, 0, 18, _width, shutter, 0xff030605);
+            DrawRect(frame, 0, _height - 14 - shutter, _width, shutter, 0xff030605);
+        }
+        if (_bossRadioCard is RadioCard radio && _bossRadioAge < radio.DurationFrames)
+            DrawRadioCard(frame, radio, _bossRadioAge);
+    }
+
     private void DrawRts(uint[] frame)
     {
         if (_rts is not RtsState rts)
         {
+            return;
+        }
+        if (rts.Age < 340)
+        {
+            DrawRtsOrbitalInsertion(frame, rts);
             return;
         }
         DrawRect(frame, 0, 0, _width, _height, 0xff08110e);
@@ -8174,7 +8221,7 @@ internal sealed class StormaktGame
             RtsBuilding? crusher = rts.Buildings.FirstOrDefault(building => building.Type == RtsBuildingType.SilverCrusher);
             if (crusher is not null) DrawRtsTempleCrack(frame, rts, crusher.X, crusher.Y + 17);
         }
-        if (rts.EvacuationAge == 0 && rts.LandingAge >= 120 && (rts.BuildStage < 4 || rts.TowerPlacementMode))
+        if (rts.EvacuationAge == 0 && rts.Age >= 740 && (rts.BuildStage < 4 || rts.TowerPlacementMode))
         {
             int buildX = (rts.CursorX / 12) * 12;
             int buildY = (rts.CursorY / 12) * 12;
@@ -8203,7 +8250,7 @@ internal sealed class StormaktGame
             DrawLine(frame, screenX + halfWidth, buildY - halfHeight, screenX + halfWidth, buildY + halfHeight, ghost);
         }
 
-        if (rts.EvacuationAge == 0 && rts.LandingAge >= 120)
+        if (rts.EvacuationAge == 0 && rts.Age >= 740)
         {
             int cursorX = rts.CursorX - rts.CameraX;
             uint cursor = (rts.Age / 5 & 1) == 0 ? 0xffffd66b : 0xff7fc7ff;
@@ -8260,7 +8307,12 @@ internal sealed class StormaktGame
             >= 4 => "Z VÄLJ / PRODUCERA  SLOW+Z TORN",
             _ => objective,
         };
-        DrawText(frame, 7, _height - 10, objective, rts.LandingAge < 120 ? 0xff9bd4dc : 0xffffd66b);
+        if (rts.EvacuationAge == 0 && rts.Age < 740)
+        {
+            objective = rts.Age < 500 ? "KARL CCLV LANDAR" :
+                rts.Age < 675 ? "KARL OCH ÄLGEN SÖKER ÅDERN" : "SILVERÅDER FUNNEN";
+        }
+        DrawText(frame, 7, _height - 10, objective, rts.Age < 740 ? 0xff9bd4dc : 0xffffd66b);
         if (_gameOver)
         {
             int panelX = (_width - 190) / 2;
@@ -8652,6 +8704,32 @@ internal sealed class StormaktGame
             FillTriangle(frame, x - 8, y + 22, x - 4, y + 22, x - 6, y + 22 + flame, 0xffffd66b);
             FillTriangle(frame, x + 4, y + 22, x + 8, y + 22, x + 6, y + 22 + flame, 0xffff8a4a);
             DrawCircleOutline(frame, x, rts.LandingY + 20, 18 + rts.EvacuationAge % 18, 0xff6f7775);
+        }
+        DrawRtsInsertionRider(frame, rts);
+    }
+
+    private void DrawRtsInsertionRider(uint[] frame, RtsState rts)
+    {
+        if (rts.EvacuationAge > 0 || rts.Age < 500 || rts.Age >= 740) return;
+        double t = Math.Clamp((rts.Age - 500) / 175.0, 0.0, 1.0);
+        double eased = t * t * (3.0 - 2.0 * t);
+        int targetY = rts.LandingY - 58;
+        int startX = rts.LandingX + 25;
+        int targetX = SilverVeinWorldX(targetY) - 10;
+        int riderX = (int)Math.Round(startX + (targetX - startX) * eased) - rts.CameraX;
+        int riderY = (int)Math.Round(rts.LandingY - 7 + (targetY - (rts.LandingY - 7)) * eased);
+        string name = t < 0.82 ? "rts_moose_charge" : "rts_moose_ready";
+        if (_sprites?.TryGet(name, out Sprite moose) == true)
+        {
+            int step = t < 0.82 ? ((rts.Age / 5) & 1) : 0;
+            DrawSprite(frame, moose, riderX - moose.Width / 2, riderY - moose.Height / 2 - step);
+        }
+        if (t >= 0.82)
+        {
+            uint scent = (rts.Age / 5 & 1) == 0 ? 0xff9bd4dc : 0xffffd66b;
+            DrawLine(frame, riderX + 15, riderY - 7, riderX + 22, riderY - 12, scent);
+            PutPixel(frame, riderX + 25, riderY - 14, scent);
+            PutPixel(frame, riderX + 28, riderY - 17, scent);
         }
     }
 

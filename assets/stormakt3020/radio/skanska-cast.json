@@ -295,6 +295,20 @@
       "model_backend": "voxcpm2"
     },
     {
+      "id": "ebba-silver-vacuum",
+      "role": "ebba-grip",
+      "level": 3,
+      "frame": 250,
+      "cue": "rts_orbit_reply",
+      "text": "Det finns ingen lukt i vakuum, Karl. Men instrumenten visar faktiskt en massiv silveråder under skogen. Jag sätter ner er.",
+      "subtitle_lines": [
+        "DET ÄR VAKUUM KARL",
+        "MEN JAG SER ÅDERN"
+      ],
+      "seed": 302121,
+      "model_backend": "voxcpm2"
+    },
+    {
       "id": "ebba-steam-online",
       "role": "ebba-grip",
       "level": 3,

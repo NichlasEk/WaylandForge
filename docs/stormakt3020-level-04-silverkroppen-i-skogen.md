@@ -4,11 +4,13 @@ Status: implementation underway. The deterministic RTS skeleton is startable as 
 
 ## Dramatiskt löfte
 
-Efter slaget vid Öresunds järnkrona går Karl CCLV lågt över en skogsmåne för att undvika fogdens spaning. Ebba Grip upptäcker en enorm sammanhängande silverkropp under kristallskogen. Kronarkivet kan inte nå Köpenhamn utan bränsle, ammunition och löner; spelaren måste landa flaggskeppet, upprätta ett ångdrivet fältläger och säkra en krigskassa innan danska mätpatruller hinner göra anspråk på fyndigheten.
+Efter slaget vid Öresunds järnkrona går Karl CCLV in över en skogsmåne för att undvika fogdens spaning. I vakuum hävdar Karl att han känner lukten av silver. Ebba Grip invänder att det är omöjligt, kontrollerar motvilligt instrumenten och hittar en enorm sammanhängande silverkropp under kristallskogen. Kronarkivet kan inte nå Köpenhamn utan bränsle, ammunition och löner; spelaren måste landa flaggskeppet, upprätta ett ångdrivet fältläger och säkra en krigskassa innan danska mätpatruller hinner göra anspråk på fyndigheten.
 
-Ebbas öppningsradio:
+Öppningsutbytet:
 
-> Instrumenten visar en massiv kropp av silver under skogen. Landa, Karl. Vi säkrar krigskassan innan dansken hinner före.
+> Karl: Jag känner silver nedanför oss.
+>
+> Ebba: Det finns ingen lukt i vakuum, Karl. Men instrumenten visar faktiskt en massiv silveråder under skogen. Jag sätter ner er.
 
 Speltid: cirka 7–9 minuter. Tempot ska kännas som ett koncentrerat `Command & Conquer`-uppdrag, inte som en menysekvens mellan två shmup-banor.
 
@@ -101,7 +103,9 @@ De ska vara absurda i koncept men spelas med samma allvar som resten av världen
 
 ### 0:00–1:20 - Landstigningen
 
-- Ebbas silverreplik spelas över en kort automatisk landningssekvens.
+- Omloppsbilden låser styrningen medan Karl påstår sig känna silver och Ebba svarar med en ny seedlåst replik.
+- Karl CCLV går ner över skogen och fäller ut landningsplattan.
+- Karl rider själv från skeppet på en blågul älg, följer ådern och stannar för att få vittring innan RTS-styrningen öppnas.
 - Karl CCLV fäller ut landställ och byggnadsradie.
 - Spelaren placerar ångkraftverk och silverkross på två tydligt markerade platser.
 - Inga fiender innan båda byggnaderna är giltigt placerade.
@@ -174,6 +178,7 @@ Gamepad använder gruppval per typ inom en liten radie. Musläget skickas genom 
 5. **Danska vågor:** fem fiendetyper, stabil målsökning och försvarstorn. **Landed 2026-07-11.**
 6. **Toldhuset:** kartan sträcks till drygt två skärmbredder; den mobila markbossen, två sigillmaster, öppnad port, kärnhälsa, dansk förstärkningsproduktion och det kombinerade segervillkoret är spelbara. Karl CCLV:s särskilda markbredsida och slutligt resultatkort återstår. **Major boss slice landed 2026-07-12.**
 7. **Presentation:** genererade byggnads- och truppassets, arbets-/anfallsanimationer, nio lokala stridsljud, sex svenska/danska händelseradior samt egen 84 BPM ångdriven karolinsk RTS-fältmarsch. 400x280 och 320x224 headless-verifieras. **Landed 2026-07-11.**
+8. **Berättande insertion:** egen omloppsbild, Karls textkort, Ebbas vakuuminvändning med rollseed `302121`, landning och automatisk älgritt till den synliga silverådern före första byggordern. **Landed 2026-07-15.**
 
 ## Icke-mål för första spelbara versionen
 

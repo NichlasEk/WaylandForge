@@ -717,6 +717,16 @@
       "sha256": "aa3508aca84903f0308413f8d74bea860cc8be64c7075f5b445105caebec653a",
       "request": "assets/stormakt3020/radio/raw/rasmus-oresund-fall-da-request.json",
       "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-silver-vacuum",
+      "role": "ebba-grip",
+      "job_id": "ed045b6976124563a3a8b4d58844eb50",
+      "file": "assets/stormakt3020/radio/raw/ebba-silver-vacuum-sv-raw.wav",
+      "sha256": "fc373054ba1aff50118cad902c5e9579fbfbb1d1fc64cea98cf1594ab541f2e2",
+      "request": "assets/stormakt3020/radio/raw/ebba-silver-vacuum-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
     }
   ],
   "service": "http://127.0.0.1:8765",

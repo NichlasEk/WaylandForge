@@ -56,6 +56,8 @@
 
 `rts-forest-floor-v1.png` is the opaque repeating needle/moss/root ground plate. `rts-silver-vein-v1.png` supplies glowing straight, curved, branch and node overlays along the deterministic ore curve. `rts-karl-landing-pad-v1.png` replaces the provisional rectangle beneath the landed command frigate. Large trees, boulders, ore outcrops, crates, carts and barricades now contribute deterministic movement/build blockers; small foliage and ground marks remain passable.
 
+Silverkroppen now opens in orbit before the existing RTS state: Karl claims he can smell silver in vacuum, Ebba answers in a newly generated seed-locked line, the frigate lands and the established `rts_moose_charge`/`rts_moose_ready` family carries Karl to the visible vein. Building input remains locked until the short deterministic insertion completes.
+
 `stormakt-bridge-cannons-projectiles-v1.png` adds three bridge-collapse pieces, intact/destroyed Danish bridge cannon states, a detachable boss broadside cannon and red/white/gold enemy projectile families. Runtime uses the wreck pieces during the existing 45-frame collapse and mirrors the broadside module for the boss's right side.
 
 Prompt summary:
