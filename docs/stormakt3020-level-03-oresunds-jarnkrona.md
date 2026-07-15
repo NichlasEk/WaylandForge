@@ -265,6 +265,22 @@ Broväktar-/växelpolishen upprepades tio gånger per lösning och upplösning v
 - 400x280: direkt `0e45b01567b28b2e`, säker omledning `cf01b34807b1ef03`.
 - 320x224: direkt `8fda97b42dccd397`, säker omledning `f768ba2bd93d7f32`.
 
+## Landad maskin- och ljudpolish
+
+De sista synliga systemplatshållarna är ersatta utan att flytta ett enda spelankare eller träffområde:
+
+- Provsektionen använder en intakt/skadad servicevagn och ett idle/laddat laserrelä.
+- Dubbelklafflasern återanvänder samma fysiska reläfamilj; bara den tunna telegraphstrålen förblir kodritad.
+- Tågsektionen använder det etablerade kontrollhuset som spårväxel och visar inte längre en orange cirkel ovanpå förstörda kanonvagnar.
+- Järnkronans kärna har fyra sammanhängande states: förseglad, öppen, skadad och bruten.
+
+Öresund har nu nio egna Stable Audio 3-effekter: väktarskott, växelbrott, laserrelä, klaffmotor, tågrullning, tågkrasch, fästningslåsning samt kronkärnans öppning och brott. Kärnöppningen återanvänder uttryckligen inte laserljudet. Samtidiga generiska explosioner togs bort från tågkrasch och bossfasövergångar så de nya maskinljuden förblir läsbara.
+
+Fyra representativa presentationsbilder kördes två gånger per upplösning med identiska hashvärden:
+
+- 400x280: service/laser `7ae97c06c60d50f3`, dubbelklaff `55d0de4d88ba449a`, tåg `b52ce1bfd2eb7667`, öppen kronkärna `c3ec09df86c774f3`.
+- 320x224: service/laser `5fc1aefc4952da17`, dubbelklaff `ee7d15b7c0285d1a`, tåg `18c23fdb3134a5a2`, öppen kronkärna `7b5b4fad0963fdb4`.
+
 ## Acceptanskriterier
 
 - Öresunds järnkrona kan startas som offentlig `STRID`, nivå-id `2`, utan att återanvända Bana 1 eller Bana 2:s tidslinje.

@@ -575,6 +575,13 @@ internal sealed class StormaktMusicLoop : IDisposable
             (StormaktSound.DungeonSilverShatter, "dungeon-silver-shatter.wav", 0.62f),
             (StormaktSound.OresundGuardShot, "oresund-guard-shot.wav", 0.42f),
             (StormaktSound.OresundSwitchBreak, "oresund-switch-break.wav", 0.52f),
+            (StormaktSound.OresundLaserRelay, "oresund-laser-relay.wav", 0.48f),
+            (StormaktSound.OresundFlapMotor, "oresund-flap-motor.wav", 0.46f),
+            (StormaktSound.OresundTrainCrash, "oresund-train-crash.wav", 0.58f),
+            (StormaktSound.OresundCrownCoreBreak, "oresund-crown-core-break.wav", 0.58f),
+            (StormaktSound.OresundCrownCoreOpen, "oresund-crown-core-open.wav", 0.50f),
+            (StormaktSound.OresundTrainRumble, "oresund-train-rumble.wav", 0.38f),
+            (StormaktSound.OresundFortressLock, "oresund-fortress-lock.wav", 0.54f),
         ];
 
         Dictionary<StormaktSound, LoadedEffect> effects = [];
@@ -774,6 +781,13 @@ internal enum StormaktSound
     DungeonSilverShatter,
     OresundGuardShot,
     OresundSwitchBreak,
+    OresundLaserRelay,
+    OresundFlapMotor,
+    OresundTrainCrash,
+    OresundCrownCoreBreak,
+    OresundCrownCoreOpen,
+    OresundTrainRumble,
+    OresundFortressLock,
 }
 
 internal enum StormaktVoice

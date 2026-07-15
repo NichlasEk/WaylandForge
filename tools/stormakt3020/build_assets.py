@@ -867,6 +867,35 @@ def append_oresund_guard_control(entries: list[tuple[str, Image.Image]], source:
         entries.append((name, sprite))
 
 
+def append_oresund_section_machinery(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    definitions = [
+        ("oresund_service_car", 0, 0, (44, 32)),
+        ("oresund_service_car_damaged", 1, 0, (44, 32)),
+        ("oresund_laser_relay", 0, 1, (34, 38)),
+        ("oresund_laser_relay_charged", 1, 1, (34, 38)),
+    ]
+    for name, column, row, target in definitions:
+        cell = source.crop((column * source.width // 2, row * source.height // 2,
+                            (column + 1) * source.width // 2,
+                            (row + 1) * source.height // 2)).convert("RGBA")
+        sprite = split_alpha_components(cell, 1)[0]
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
+def append_oresund_crown_core(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    names = ["oresund_crown_core_sealed", "oresund_crown_core_active",
+             "oresund_crown_core_damaged", "oresund_crown_core_broken"]
+    for index, name in enumerate(names):
+        column, row = index % 2, index // 2
+        cell = source.crop((column * source.width // 2, row * source.height // 2,
+                            (column + 1) * source.width // 2,
+                            (row + 1) * source.height // 2)).convert("RGBA")
+        sprite = split_alpha_components(cell, 1)[0]
+        sprite.thumbnail((48, 48), Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def build(
     input_path: Path,
     danish_input_path: Path,
@@ -883,6 +912,8 @@ def build(
     oresund_armored_train_input_path: Path,
     oresund_twin_fortress_input_path: Path,
     oresund_guard_control_input_path: Path,
+    oresund_section_machinery_input_path: Path,
+    oresund_crown_core_input_path: Path,
     skanska_props_input_path: Path,
     glimminge_input_path: Path,
     skanska_enemies_input_path: Path,
@@ -950,6 +981,8 @@ def build(
     oresund_armored_train_source = Image.open(oresund_armored_train_input_path).convert("RGBA")
     oresund_twin_fortress_source = Image.open(oresund_twin_fortress_input_path).convert("RGBA")
     oresund_guard_control_source = Image.open(oresund_guard_control_input_path).convert("RGBA")
+    oresund_section_machinery_source = Image.open(oresund_section_machinery_input_path).convert("RGBA")
+    oresund_crown_core_source = Image.open(oresund_crown_core_input_path).convert("RGBA")
     skanska_props_source = Image.open(skanska_props_input_path).convert("RGBA")
     glimminge_source = Image.open(glimminge_input_path).convert("RGBA")
     skanska_enemies_source = Image.open(skanska_enemies_input_path).convert("RGBA")
@@ -1107,6 +1140,8 @@ def build(
     append_oresund_armored_train(entries, oresund_armored_train_source)
     append_oresund_twin_fortress(entries, oresund_twin_fortress_source)
     append_oresund_guard_control(entries, oresund_guard_control_source)
+    append_oresund_section_machinery(entries, oresund_section_machinery_source)
+    append_oresund_crown_core(entries, oresund_crown_core_source)
     entries.append(("stora_balt_background", mirrored_background(background_source, 320, 700)))
     entries.append(("stora_balt_background_wide", mirrored_background(background_source, 400, 875)))
     entries.append(("skanska_background", mirrored_background(skanska_background_source, 320, 700)))
@@ -1201,6 +1236,16 @@ def main() -> None:
         "--oresund-guard-control-input",
         type=Path,
         default=Path("assets/stormakt3020/stormakt-oresund-guard-control-v1.png"),
+    )
+    parser.add_argument(
+        "--oresund-section-machinery-input",
+        type=Path,
+        default=Path("assets/stormakt3020/stormakt-oresund-section-machinery-v1.png"),
+    )
+    parser.add_argument(
+        "--oresund-crown-core-input",
+        type=Path,
+        default=Path("assets/stormakt3020/stormakt-oresund-crown-core-v1.png"),
     )
     parser.add_argument(
         "--skanska-props-input",
@@ -1315,6 +1360,8 @@ def main() -> None:
         args.oresund_armored_train_input,
         args.oresund_twin_fortress_input,
         args.oresund_guard_control_input,
+        args.oresund_section_machinery_input,
+        args.oresund_crown_core_input,
         args.skanska_props_input,
         args.glimminge_input,
         args.skanska_enemies_input,
