@@ -896,6 +896,45 @@ def append_oresund_crown_core(entries: list[tuple[str, Image.Image]], source: Im
         entries.append((name, sprite))
 
 
+def append_oresund_train_coupling(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    for name, column in [("oresund_train_coupling", 0), ("oresund_train_coupling_broken", 1)]:
+        cell = source.crop((column * source.width // 2, 0,
+                            (column + 1) * source.width // 2, source.height)).convert("RGBA")
+        sprite = split_alpha_components(cell, 1)[0]
+        sprite.thumbnail((40, 20), Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
+def append_oresund_boss_effects(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    definitions = [
+        ("oresund_shield_a", 0, 0, (138, 122)),
+        ("oresund_shield_b", 1, 0, (138, 122)),
+        ("oresund_fortress_breach", 0, 1, (68, 58)),
+        ("oresund_fortress_collapse", 1, 1, (84, 68)),
+    ]
+    for name, column, row, target in definitions:
+        cell = source.crop((column * source.width // 2, row * source.height // 2,
+                            (column + 1) * source.width // 2,
+                            (row + 1) * source.height // 2)).convert("RGBA")
+        sprite = split_alpha_components(cell, 1)[0]
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
+def append_oresund_laser_beams(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    definitions = [
+        ("oresund_laser_warning", 0, (7, 180)),
+        ("oresund_laser_beam_a", 1, (16, 180)),
+        ("oresund_laser_beam_b", 2, (16, 180)),
+    ]
+    for name, column, target in definitions:
+        cell = source.crop((column * source.width // 3, 0,
+                            (column + 1) * source.width // 3, source.height)).convert("RGBA")
+        sprite = split_alpha_components(cell, 1)[0]
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def build(
     input_path: Path,
     danish_input_path: Path,
@@ -914,6 +953,9 @@ def build(
     oresund_guard_control_input_path: Path,
     oresund_section_machinery_input_path: Path,
     oresund_crown_core_input_path: Path,
+    oresund_train_coupling_input_path: Path,
+    oresund_boss_effects_input_path: Path,
+    oresund_laser_beams_input_path: Path,
     skanska_props_input_path: Path,
     glimminge_input_path: Path,
     skanska_enemies_input_path: Path,
@@ -983,6 +1025,9 @@ def build(
     oresund_guard_control_source = Image.open(oresund_guard_control_input_path).convert("RGBA")
     oresund_section_machinery_source = Image.open(oresund_section_machinery_input_path).convert("RGBA")
     oresund_crown_core_source = Image.open(oresund_crown_core_input_path).convert("RGBA")
+    oresund_train_coupling_source = Image.open(oresund_train_coupling_input_path).convert("RGBA")
+    oresund_boss_effects_source = Image.open(oresund_boss_effects_input_path).convert("RGBA")
+    oresund_laser_beams_source = Image.open(oresund_laser_beams_input_path).convert("RGBA")
     skanska_props_source = Image.open(skanska_props_input_path).convert("RGBA")
     glimminge_source = Image.open(glimminge_input_path).convert("RGBA")
     skanska_enemies_source = Image.open(skanska_enemies_input_path).convert("RGBA")
@@ -1142,6 +1187,9 @@ def build(
     append_oresund_guard_control(entries, oresund_guard_control_source)
     append_oresund_section_machinery(entries, oresund_section_machinery_source)
     append_oresund_crown_core(entries, oresund_crown_core_source)
+    append_oresund_train_coupling(entries, oresund_train_coupling_source)
+    append_oresund_boss_effects(entries, oresund_boss_effects_source)
+    append_oresund_laser_beams(entries, oresund_laser_beams_source)
     entries.append(("stora_balt_background", mirrored_background(background_source, 320, 700)))
     entries.append(("stora_balt_background_wide", mirrored_background(background_source, 400, 875)))
     entries.append(("skanska_background", mirrored_background(skanska_background_source, 320, 700)))
@@ -1246,6 +1294,21 @@ def main() -> None:
         "--oresund-crown-core-input",
         type=Path,
         default=Path("assets/stormakt3020/stormakt-oresund-crown-core-v1.png"),
+    )
+    parser.add_argument(
+        "--oresund-train-coupling-input",
+        type=Path,
+        default=Path("assets/stormakt3020/stormakt-oresund-train-coupling-v1.png"),
+    )
+    parser.add_argument(
+        "--oresund-boss-effects-input",
+        type=Path,
+        default=Path("assets/stormakt3020/stormakt-oresund-boss-effects-v1.png"),
+    )
+    parser.add_argument(
+        "--oresund-laser-beams-input",
+        type=Path,
+        default=Path("assets/stormakt3020/stormakt-oresund-laser-beams-v1.png"),
     )
     parser.add_argument(
         "--skanska-props-input",
@@ -1362,6 +1425,9 @@ def main() -> None:
         args.oresund_guard_control_input,
         args.oresund_section_machinery_input,
         args.oresund_crown_core_input,
+        args.oresund_train_coupling_input,
+        args.oresund_boss_effects_input,
+        args.oresund_laser_beams_input,
         args.skanska_props_input,
         args.glimminge_input,
         args.skanska_enemies_input,

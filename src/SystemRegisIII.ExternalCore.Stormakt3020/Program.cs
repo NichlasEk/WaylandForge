@@ -105,9 +105,11 @@ internal sealed class StormaktGame
     private const int GlimmingeMaxHealth = 720;
     private const int GlimmingePhaseTwoHealth = 420;
     private const int GlimmingeBurningHealth = 210;
-    private const int OresundBossMaxHealth = 720;
-    private const int OresundBossPhaseTwoHealth = 480;
-    private const int OresundBossCoreHealth = 240;
+    private const int OresundBossMaxHealth = 1_080;
+    private const int OresundBossPhaseTwoHealth = 720;
+    private const int OresundBossCoreHealth = 360;
+    private const int OresundServiceCarriageHealth = 144;
+    private const int OresundTrainCannonHealth = 72;
     private const int RtsSalvagedSilverGoal = 1_200;
     private const int DungeonFirstSigilMask = 1 << 8;
     private const int DungeonFogdeRescuedMask = 1 << 9;
@@ -4677,7 +4679,8 @@ internal sealed class StormaktGame
         section.Powered = true;
         section.TrackLockedLeft = false;
         section.ControlHealth = 12;
-        section.CarriageHealth = 24;
+        section.CarriageHealth = OresundServiceCarriageHealth;
+        section.CarriageHitAge = 0;
         section.CouplingHealth = 6;
         section.CouplingBroken = false;
         section.ControlX = _width <= 320 ? 48 : 62;
@@ -4718,8 +4721,8 @@ internal sealed class StormaktGame
         section.Age = 0;
         section.TrainX = _width / 2;
         section.TrainY = -96;
-        section.TrainCannonFrontHealth = 18;
-        section.TrainCannonRearHealth = 18;
+        section.TrainCannonFrontHealth = OresundTrainCannonHealth;
+        section.TrainCannonRearHealth = OresundTrainCannonHealth;
         section.TrainCouplingHealth = 6;
         section.TrainSwitchHealth = 9;
         section.TrainCouplingBroken = false;
@@ -4761,8 +4764,8 @@ internal sealed class StormaktGame
         _oresundBoss = new OresundFortressBossState
         {
             Health = OresundBossMaxHealth,
-            LeftIntegrity = 360,
-            RightIntegrity = 360,
+            LeftIntegrity = 540,
+            RightIntegrity = 540,
             Phase = 1,
             LeftX = -74,
             RightX = _width + 74,
@@ -4794,6 +4797,7 @@ internal sealed class StormaktGame
         }
 
         section.Age++;
+        section.CarriageHitAge = Math.Max(0, section.CarriageHitAge - 1);
         int entry = Math.Min(0, section.Age - 126);
         section.ControlY = 82 + entry;
         section.LaserY = 82 + entry;
@@ -4984,9 +4988,9 @@ internal sealed class StormaktGame
 
         if (!section.TrainTrackDiverted && section.Age is >= 170 and < 650)
         {
-            if (section.TrainCannonRearHealth > 0 && section.Age % 96 == 18)
+            if (section.TrainCannonRearHealth > 0 && section.Age % 72 == 18)
                 FireEnemyShot(section.TrainX, section.TrainY + 165, 3, 2.35);
-            if (section.TrainCannonFrontHealth > 0 && section.Age % 108 == 42)
+            if (section.TrainCannonFrontHealth > 0 && section.Age % 84 == 42)
                 FireEnemyShot(section.TrainX, section.TrainY + 105, 3, 2.2);
         }
 
@@ -5135,11 +5139,14 @@ internal sealed class StormaktGame
                 continue;
             }
 
-            if (Math.Abs(shot.X - section.CarriageX) <= 15 &&
-                Math.Abs(shot.Y - section.CarriageY) <= 11)
+            if (Math.Abs(shot.X - section.CarriageX) <= 20 &&
+                Math.Abs(shot.Y - section.CarriageY) <= 14)
             {
                 section.CarriageHealth -= shot.Power;
+                section.CarriageHitAge = 8;
                 _shots.RemoveAt(index);
+                if (section.Age % 12 < 6)
+                    _audio?.Trigger(StormaktSound.HullHit);
                 if (section.CarriageHealth <= 0)
                 {
                     CompleteOresundBridgeSection(section, BridgeSectionOutcome.DirectDestroyed,
@@ -5893,9 +5900,10 @@ internal sealed class StormaktGame
 
         if (boss.Phase == 4)
         {
-            boss.LeftX -= 1.15;
-            boss.RightX += 1.15;
-            boss.Y += 0.16;
+            double separationSpeed = boss.PhaseAge < 120 ? 0.18 : 0.78;
+            boss.LeftX -= separationSpeed;
+            boss.RightX += separationSpeed;
+            boss.Y += boss.PhaseAge < 120 ? 0.04 : 0.12;
             if (boss.PhaseAge % 38 == 1) _audio?.Trigger(StormaktSound.EnemyExplosion);
             if (boss.PhaseAge >= 330)
             {
@@ -5933,8 +5941,11 @@ internal sealed class StormaktGame
         else
         {
             double pulse = Math.Sin(boss.PhaseAge * 0.025) * (_width <= 320 ? 8 : 12);
-            boss.LeftX = baseInset + pulse;
-            boss.RightX = _width - baseInset - pulse;
+            int closedInset = _width <= 320 ? 86 : 112;
+            double t = Math.Min(1.0, boss.PhaseAge / 90.0);
+            double eased = t * t * (3.0 - 2.0 * t);
+            boss.LeftX = closedInset + (baseInset + pulse - closedInset) * eased;
+            boss.RightX = _width - boss.LeftX;
             if (boss.PhaseAge == 120) boss.SorenStrikeAge = 1;
             if (boss.SorenStrikeAge > 0)
             {
@@ -6050,7 +6061,7 @@ internal sealed class StormaktGame
     {
         int cycle = boss.PhaseAge % 180;
         bool attackLeft = (boss.PhaseAge / 180 & 1) == 0;
-        if (cycle == 70)
+        if (cycle is 52 or 126)
         {
             double x = attackLeft ? boss.LeftX : boss.RightX;
             int integrity = attackLeft ? boss.LeftIntegrity : boss.RightIntegrity;
@@ -6069,12 +6080,12 @@ internal sealed class StormaktGame
 
     private void StepOresundBossPhaseTwo(OresundFortressBossState boss)
     {
-        int cycle = boss.PhaseAge % 180;
-        bool leftBeam = (boss.PhaseAge / 180 & 1) == 0;
+        int cycle = boss.PhaseAge % 150;
+        bool leftBeam = (boss.PhaseAge / 150 & 1) == 0;
         double beamX = leftBeam ? boss.LeftX : boss.RightX;
-        if (cycle is >= 60 and < 96 && Math.Abs(_shipX - beamX) < 8 && _shipY > boss.Y)
+        if (cycle is >= 50 and < 88 && Math.Abs(_shipX - beamX) < 8 && _shipY > boss.Y)
             DamageShip();
-        if (cycle == 126)
+        if (cycle == 108)
         {
             double x = leftBeam ? boss.RightX : boss.LeftX;
             int integrity = leftBeam ? boss.RightIntegrity : boss.LeftIntegrity;
@@ -6084,14 +6095,15 @@ internal sealed class StormaktGame
 
     private void StepOresundBossPhaseThree(OresundFortressBossState boss)
     {
-        if (boss.PhaseAge % 72 != 36) return;
+        if (boss.PhaseAge < 105 || boss.PhaseAge % 60 != 45) return;
         int coreX = _width / 2;
         int coreY = 96;
-        for (int index = 0; index < 8; index++)
+        double offset = (boss.PhaseAge / 60 & 1) == 0 ? 0.0 : Math.PI / 10.0;
+        for (int index = 0; index < 10; index++)
         {
-            double angle = Math.PI / 8.0 + index * Math.PI / 4.0;
+            double angle = offset + index * Math.PI / 5.0;
             _enemyShots.Add(new EnemyShot(coreX, coreY,
-                Math.Cos(angle) * 1.65, Math.Sin(angle) * 1.65, 4));
+                Math.Cos(angle) * 1.82, Math.Sin(angle) * 1.82, 4));
         }
         _audio?.Trigger(StormaktSound.Broadside);
     }
@@ -8910,24 +8922,22 @@ internal sealed class StormaktGame
                 section.Outcome != BridgeSectionOutcome.LaserDestroyedCarriage;
             if (warning)
             {
-                uint warn = (section.Age / 4 & 1) == 0 ? 0xffff6b62 : 0xff7f2632;
-                DrawLine(frame, section.LaserX, section.LaserY + 13, section.LaserX, _height - 14, warn);
+                DrawOresundLaserBeam(frame, section.LaserX, section.LaserY + 13,
+                    _height - 14, true, section.Age);
             }
             if (firing)
             {
-                DrawRect(frame, section.LaserX - 2, section.LaserY + 13, 5,
-                    _height - section.LaserY - 27, 0xfff2eee4);
-                DrawLine(frame, section.LaserX - 5, section.LaserY + 13,
-                    section.LaserX - 5, _height - 14, 0xffff6b62);
-                DrawLine(frame, section.LaserX + 5, section.LaserY + 13,
-                    section.LaserX + 5, _height - 14, 0xffff6b62);
+                DrawOresundLaserBeam(frame, section.LaserX, section.LaserY + 13,
+                    _height - 14, false, section.Age);
             }
 
             bool carriageDestroyed = section.Outcome is BridgeSectionOutcome.DirectDestroyed or
                 BridgeSectionOutcome.LaserDestroyedCarriage;
             if (!carriageDestroyed && section.CarriageX > -25)
             {
-                if (_sprites?.TryGet("oresund_service_car", out Sprite carriage) == true)
+                string carriageName = section.CarriageHealth <= OresundServiceCarriageHealth / 2
+                    ? "oresund_service_car_damaged" : "oresund_service_car";
+                if (_sprites?.TryGet(carriageName, out Sprite carriage) == true)
                     DrawSprite(frame, carriage, section.CarriageX - carriage.Width / 2,
                         section.CarriageY - carriage.Height / 2);
                 else
@@ -8941,6 +8951,27 @@ internal sealed class StormaktGame
                     DrawLine(frame, section.CarriageX + 15, section.CarriageY,
                         section.CarriageX + 20, section.CarriageY, 0xffd6b25e);
                     FillCircle(frame, section.CarriageX + 20, section.CarriageY, 3, 0xffffd66b);
+                }
+                if (section.CarriageHealth < OresundServiceCarriageHealth)
+                {
+                    int armorWidth = 38;
+                    int armorX = section.CarriageX - armorWidth / 2;
+                    int armorY = section.CarriageY - 22;
+                    int remaining = Math.Max(0,
+                        armorWidth * section.CarriageHealth / OresundServiceCarriageHealth);
+                    DrawRect(frame, armorX - 1, armorY - 1, armorWidth + 2, 5, 0xff11171b);
+                    DrawRect(frame, armorX, armorY, armorWidth, 3, 0xff303b43);
+                    DrawRect(frame, armorX, armorY, remaining, 3,
+                        section.CarriageHealth <= OresundServiceCarriageHealth / 2
+                            ? 0xffff8a34 : 0xffffd66b);
+                }
+                if (section.CarriageHitAge > 0)
+                {
+                    uint spark = (section.CarriageHitAge & 1) == 0 ? 0xffffd66b : 0xfff2eee4;
+                    PutPixel(frame, section.CarriageX - 17, section.CarriageY - 10, spark);
+                    PutPixel(frame, section.CarriageX + 15, section.CarriageY + 9, spark);
+                    DrawLine(frame, section.CarriageX - 23, section.CarriageY - 2,
+                        section.CarriageX - 20, section.CarriageY - 6, spark);
                 }
             }
             else if (section.Age < 540)
@@ -9015,15 +9046,29 @@ internal sealed class StormaktGame
         {
             int laserX = _width / 2;
             bool firing = section.Age >= 550;
-            uint beam = firing ? 0xfff2eee4 : ((section.Age / 4 & 1) == 0 ? 0xffff6b62 : 0xff7f2632);
-            int beamWidth = firing ? 5 : 1;
-            DrawRect(frame, laserX - beamWidth / 2, 18, beamWidth, _height - 36, beam);
+            DrawOresundLaserBeam(frame, laserX, 18, _height - 18, !firing, section.Age);
             string relayName = firing ? "oresund_laser_relay_charged" : "oresund_laser_relay";
             if (_sprites?.TryGet(relayName, out Sprite relay) == true)
                 DrawSprite(frame, relay, laserX - relay.Width / 2, section.FlapY - 28 - relay.Height / 2);
             else
                 FillCircle(frame, laserX, section.FlapY - 28, firing ? 8 : 5, 0xff8f2635);
         }
+    }
+
+    private void DrawOresundLaserBeam(uint[] frame, int x, int top, int bottom,
+        bool warning, int animationAge)
+    {
+        int height = Math.Max(1, bottom - top);
+        string name = warning ? "oresund_laser_warning"
+            : (animationAge / 4 & 1) == 0 ? "oresund_laser_beam_a" : "oresund_laser_beam_b";
+        int width = warning ? 7 : 16;
+        if (_sprites?.TryGet(name, out Sprite beam) == true)
+        {
+            DrawSpriteScaled(frame, beam, x - width / 2, top, width, height);
+            return;
+        }
+        uint color = warning ? 0xffff6b62 : 0xfff2eee4;
+        DrawRect(frame, x - (warning ? 0 : 2), top, warning ? 1 : 5, height, color);
     }
 
     private void DrawOresundTrain(uint[] frame, BridgeSectionState section)
@@ -9071,19 +9116,30 @@ internal sealed class StormaktGame
             0xff29343b);
         DrawLine(frame, section.TrainX, commandY + 28, section.TrainX, frontY - 35, 0xff8a6b38);
         if (section.TrainCannonFrontHealth > 0)
+        {
             DrawOresundTrainSprite(frame, "oresund_train_cannon", section.TrainX, frontY, 54, 72, 0xff30383d);
+            DrawOresundTrainArmorBar(frame, section.TrainX, frontY - 30, section.TrainCannonFrontHealth);
+        }
         else
             DrawOresundTrainWreck(frame, section.TrainX, frontY);
         DrawLine(frame, section.TrainX, frontY + 35, section.TrainX, rearY - 34, 0xff8a6b38);
         if (section.TrainCannonRearHealth > 0)
+        {
             DrawOresundTrainSprite(frame, "oresund_train_cannon", section.TrainX, rearY, 52, 70, 0xff30383d);
+            DrawOresundTrainArmorBar(frame, section.TrainX, rearY - 29, section.TrainCannonRearHealth);
+        }
         else
             DrawOresundTrainWreck(frame, section.TrainX, rearY);
 
-        if (!section.TrainCouplingBroken)
+        int couplingX = section.TrainX + 30;
+        int couplingY = section.TrainY + 136;
+        string couplingName = section.TrainCouplingBroken
+            ? "oresund_train_coupling_broken" : "oresund_train_coupling";
+        if (_sprites?.TryGet(couplingName, out Sprite trainCoupling) == true)
+            DrawSprite(frame, trainCoupling, couplingX - trainCoupling.Width / 2,
+                couplingY - trainCoupling.Height / 2);
+        else if (!section.TrainCouplingBroken)
         {
-            int couplingX = section.TrainX + 30;
-            int couplingY = section.TrainY + 136;
             DrawLine(frame, section.TrainX + 18, couplingY, couplingX, couplingY, 0xffd6b25e);
             FillCircle(frame, couplingX, couplingY, 4, 0xffffd66b);
         }
@@ -9115,6 +9171,17 @@ internal sealed class StormaktGame
             DrawRect(frame, x - 22, y - 25, 44, 50, 0xff201d1d);
             DrawLine(frame, x - 18, y + 20, x + 18, y - 18, 0xff8f3929);
         }
+    }
+
+    private void DrawOresundTrainArmorBar(uint[] frame, int x, int y, int health)
+    {
+        if (health >= OresundTrainCannonHealth) return;
+        const int width = 30;
+        int remaining = Math.Max(0, width * health / OresundTrainCannonHealth);
+        DrawRect(frame, x - width / 2 - 1, y - 1, width + 2, 5, 0xff11171b);
+        DrawRect(frame, x - width / 2, y, width, 3, 0xff303b43);
+        DrawRect(frame, x - width / 2, y, remaining, 3,
+            health <= OresundTrainCannonHealth / 2 ? 0xffff8a34 : 0xffffd66b);
     }
 
     private void DrawSkanskaScenery(uint[] frame)
@@ -9190,7 +9257,13 @@ internal sealed class StormaktGame
         int targetY = intervention.TargetY;
         if (intervention.TargetDestroyed)
         {
-            if (intervention.Age < 270)
+            if (intervention.Target == OresundSorenTarget.LaserRelay &&
+                _sprites?.TryGet("oresund_laser_relay_charged", out Sprite brokenRelay) == true)
+            {
+                DrawSprite(frame, brokenRelay, targetX - brokenRelay.Width / 2,
+                    targetY - brokenRelay.Height / 2);
+            }
+            else if (intervention.Age < 270)
             {
                 int blast = 8 + (intervention.Age / 4 & 5);
                 FillCircle(frame, targetX, targetY, blast, 0xffb33b2e);
@@ -9230,10 +9303,10 @@ internal sealed class StormaktGame
                     }
                     break;
                 case OresundSorenTarget.LaserRelay:
-                    FillCircle(frame, targetX, targetY, 13, 0xff26343e);
-                    FillCircle(frame, targetX, targetY, 7, 0xff8f2635);
-                    DrawCircleOutline(frame, targetX, targetY, 14, 0xff6c91a8);
-                    DrawRect(frame, targetX - 3, targetY + 11, 6, 17, 0xff8a6b38);
+                    if (_sprites?.TryGet("oresund_laser_relay", out Sprite relay) == true)
+                        DrawSprite(frame, relay, targetX - relay.Width / 2, targetY - relay.Height / 2);
+                    else
+                        FillCircle(frame, targetX, targetY, 13, 0xff26343e);
                     break;
                 default:
                     DrawOresundTrainSprite(frame, "oresund_train_cannon", targetX, targetY, 52, 70,
@@ -9688,36 +9761,39 @@ internal sealed class StormaktGame
         {
             bool attackLeft = (boss.PhaseAge / 180 & 1) == 0;
             int shieldX = attackLeft ? rightX : leftX;
-            uint shield = (boss.PhaseAge / 5 & 1) == 0 ? 0xff65c5ca : 0xff31546b;
-            DrawCircleOutline(frame, shieldX, y, fortressWidth / 2 + 4, shield);
-            DrawText(frame, shieldX - 14, y + fortressHeight / 2 - 7, "SKÖLD", 0xff9bd4dc);
+            string shieldName = (boss.PhaseAge / 6 & 1) == 0 ? "oresund_shield_a" : "oresund_shield_b";
+            if (_sprites?.TryGet(shieldName, out Sprite shieldSprite) == true)
+                DrawSpriteScaled(frame, shieldSprite, shieldX - (fortressWidth + 18) / 2,
+                    y - (fortressHeight + 18) / 2, fortressWidth + 18, fortressHeight + 18);
+            else
+                DrawCircleOutline(frame, shieldX, y, fortressWidth / 2 + 4, 0xff65c5ca);
         }
         else if (boss.Phase == 2)
         {
-            int cycle = boss.PhaseAge % 180;
-            bool leftBeam = (boss.PhaseAge / 180 & 1) == 0;
+            int cycle = boss.PhaseAge % 150;
+            bool leftBeam = (boss.PhaseAge / 150 & 1) == 0;
             int beamX = leftBeam ? leftX : rightX;
             uint link = (boss.PhaseAge / 5 & 1) == 0 ? 0xff65c5ca : 0xff46758e;
             DrawLine(frame, leftX + fortressWidth / 3, y, rightX - fortressWidth / 3, y, link);
-            if (cycle < 60)
+            if (cycle < 50)
             {
-                uint warning = (cycle / 5 & 1) == 0 ? 0xffff6b62 : 0xff7f2632;
-                DrawLine(frame, beamX, y + 20, beamX, _height - 14, warning);
+                DrawOresundLaserBeam(frame, beamX, y + 20, _height - 14, true, boss.PhaseAge);
             }
-            else if (cycle < 96)
+            else if (cycle < 88)
             {
-                DrawRect(frame, beamX - 2, y + 20, 5, _height - y - 34, 0xfff2eee4);
-                DrawLine(frame, beamX - 5, y + 20, beamX - 5, _height - 14, 0xffff6b62);
-                DrawLine(frame, beamX + 5, y + 20, beamX + 5, _height - 14, 0xffff6b62);
+                DrawOresundLaserBeam(frame, beamX, y + 20, _height - 14, false, boss.PhaseAge);
             }
         }
         else if (boss.Phase >= 3)
         {
             int coreX = _width / 2;
             int coreY = 96;
-            uint cable = boss.CrossLockBroken ? 0xff3b3430 : 0xff65c5ca;
-            DrawLine(frame, leftX + fortressWidth / 3, y, coreX - 15, coreY, cable);
-            DrawLine(frame, rightX - fortressWidth / 3, y, coreX + 15, coreY, cable);
+            if (boss.Phase == 3)
+            {
+                uint cable = boss.CrossLockBroken ? 0xff3b3430 : 0xff65c5ca;
+                DrawLine(frame, leftX + fortressWidth / 3, y, coreX - 15, coreY, cable);
+                DrawLine(frame, rightX - fortressWidth / 3, y, coreX + 15, coreY, cable);
+            }
             string coreName = boss.Phase == 4 ? "oresund_crown_core_broken"
                 : boss.Health <= OresundBossCoreHealth / 3 ? "oresund_crown_core_damaged"
                 : boss.CrossLockBroken ? "oresund_crown_core_active"
@@ -9743,14 +9819,23 @@ internal sealed class StormaktGame
 
         if (boss.Phase == 4)
         {
-            int blast = 7 + (boss.PhaseAge / 4 & 7);
-            FillCircle(frame, leftX + 18, y - 12 + boss.PhaseAge / 18, blast, 0xffff8a34);
-            FillCircle(frame, rightX - 18, y + 10 + boss.PhaseAge / 22, blast, 0xffb33b2e);
+            DrawOresundFortressDeathEffect(frame, leftX + 16, y - 10, boss.PhaseAge);
+            DrawOresundFortressDeathEffect(frame, rightX - 16, y + 8, boss.PhaseAge - 42);
         }
         if (_developerMode)
             DrawText(frame, 6, _height - 28,
                 $"BOSS F{boss.Phase} V{boss.LeftIntegrity:000} H{boss.RightIntegrity:000} {boss.LastEvent}",
                 0xff65c58a);
+    }
+
+    private void DrawOresundFortressDeathEffect(uint[] frame, int x, int y, int age)
+    {
+        if (age < 0) return;
+        string name = age < 105 ? "oresund_fortress_breach" : "oresund_fortress_collapse";
+        if (_sprites?.TryGet(name, out Sprite effect) == true)
+            DrawSprite(frame, effect, x - effect.Width / 2, y - effect.Height / 2);
+        else
+            FillCircle(frame, x, y, 10, age < 105 ? 0xffff8a34 : 0xffb33b2e);
     }
 
     private void DrawOresundFortressHalf(uint[] frame, string name, int x, int y, int width, int height,
@@ -10037,8 +10122,6 @@ internal sealed class StormaktGame
                 int generatedCycle = target.Age % 180;
                 if (target.Enabled && generatedCycle is >= 40 and < 88 && target.Y > 24 && target.Y < _height - 50)
                 {
-                    uint lockColor = (generatedCycle & 7) < 4 ? 0xffc51f35 : 0xff6f2631;
-                    DrawLine(frame, target.X, target.Y + 16, _shipX, _shipY, lockColor);
                     DrawRect(frame, target.X - 2, target.Y - 19, 5, 3, 0xffff6b62);
                 }
                 continue;
@@ -10053,8 +10136,6 @@ internal sealed class StormaktGame
                 int generatedCycle = target.Age % 180;
                 if (target.Enabled && generatedCycle is >= 40 and < 88 && target.Y > 24 && target.Y < _height - 50)
                 {
-                    uint lockColor = (generatedCycle & 7) < 4 ? 0xffc51f35 : 0xff6f2631;
-                    DrawLine(frame, target.X, target.Y + 12, _shipX, _shipY, lockColor);
                     DrawRect(frame, target.X - 2, target.Y - 15, 5, 3, 0xffff6b62);
                 }
                 continue;
@@ -10065,8 +10146,6 @@ internal sealed class StormaktGame
             int cycle = target.Age % 180;
             if (target.Enabled && cycle is >= 40 and < 88 && target.Y > 24 && target.Y < _height - 50)
             {
-                uint lockColor = (cycle & 7) < 4 ? 0xffc51f35 : 0xff6f2631;
-                DrawLine(frame, target.X, target.Y + 8, _shipX, _shipY, lockColor);
                 DrawRect(frame, target.X - 2, target.Y - 11, 5, 3, 0xffff6b62);
             }
         }
@@ -10291,10 +10370,6 @@ internal sealed class StormaktGame
             if (_sprites?.TryGet(guardName, out Sprite guard) == true)
             {
                 DrawSprite(frame, guard, enemy.X - guard.Width / 2, enemy.Y - guard.Height / 2);
-                if (aiming)
-                {
-                    DrawLine(frame, enemy.X, enemy.Y + guard.Height / 2 - 2, _shipX, _shipY, 0xff7f4a4f);
-                }
                 return;
             }
             FillTriangle(frame, enemy.X, enemy.Y - 13, enemy.X - 11, enemy.Y + 9,
@@ -10303,11 +10378,7 @@ internal sealed class StormaktGame
             DrawRect(frame, enemy.X - 2, enemy.Y - 10, 4, 17, danishWhite);
             DrawLine(frame, enemy.X - 12, enemy.Y + 7, enemy.X - 5, enemy.Y + 12, 0xffb78a4e);
             DrawLine(frame, enemy.X + 12, enemy.Y + 7, enemy.X + 5, enemy.Y + 12, 0xffb78a4e);
-            if (aiming)
-            {
-                DrawLine(frame, enemy.X, enemy.Y + 9, _shipX, _shipY, 0xff7f4a4f);
-                PutPixel(frame, enemy.X, enemy.Y + 8, 0xffffd6b0);
-            }
+            if (aiming) PutPixel(frame, enemy.X, enemy.Y + 8, 0xffffd6b0);
         }
         else if (enemy.Kind == 3)
         {
@@ -10481,7 +10552,7 @@ internal sealed class StormaktGame
         {
             DrawGlimmingeResultWreck(frame, panelX + 196, 67);
         }
-        else if (_levelId == 2)
+        else if (_levelId == 2 && _bossRadioCard is null)
         {
             DrawOresundResultCrown(frame, panelX + 196, 67);
         }
@@ -10525,14 +10596,15 @@ internal sealed class StormaktGame
 
     private void DrawOresundResultCrown(uint[] frame, int x, int y)
     {
-        uint iron = 0xff344653;
         uint glint = (_stageClearAge / 6 & 1) == 0 ? 0xff9bd4dc : 0xffd6b25e;
-        DrawLine(frame, x - 25, y + 15, x, y - 18, iron);
-        DrawLine(frame, x + 25, y + 15, x, y - 18, iron);
-        DrawLine(frame, x - 25, y + 15, x + 25, y + 15, 0xff8a6b38);
-        DrawCrown(frame, x - 5, y - 20, glint);
-        PutPixel(frame, x - 25, y + 15, glint);
-        PutPixel(frame, x + 25, y + 15, glint);
+        if (_sprites?.TryGet("oresund_crown_core_broken", out Sprite brokenCore) == true)
+        {
+            DrawSpriteScaled(frame, brokenCore, x - 22, y - 22, 44, 44);
+            PutPixel(frame, x - 16, y + 9, glint);
+            PutPixel(frame, x + 13, y - 7, glint);
+            return;
+        }
+        DrawCrown(frame, x - 5, y - 5, glint);
     }
 
     private void DrawRtsVictorySilver(uint[] frame, int x, int y)
@@ -11231,6 +11303,7 @@ internal sealed class StormaktGame
         public bool CouplingBroken { get; set; }
         public int ControlHealth { get; set; }
         public int CarriageHealth { get; set; }
+        public int CarriageHitAge { get; set; }
         public int CouplingHealth { get; set; }
         public int ControlX { get; set; }
         public int ControlY { get; set; }

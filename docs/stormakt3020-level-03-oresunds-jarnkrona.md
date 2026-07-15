@@ -281,6 +281,18 @@ Fyra representativa presentationsbilder kördes två gånger per upplösning med
 - 400x280: service/laser `7ae97c06c60d50f3`, dubbelklaff `55d0de4d88ba449a`, tåg `b52ce1bfd2eb7667`, öppen kronkärna `c3ec09df86c774f3`.
 - 320x224: service/laser `5fc1aefc4952da17`, dubbelklaff `ee7d15b7c0285d1a`, tåg `18c23fdb3134a5a2`, öppen kronkärna `7b5b4fad0963fdb4`.
 
+## Landad strids- och effektpolish
+
+Den sista provspelspoleringen gör maskinerna till riktiga stridsmoment i stället för engångsmål. Servicevagnen har 144 hälsa, skadestate och tydlig rustningsrad. Tågkanonerna har 72 hälsa vardera, tätare salvor och en egen intakt/bruten kronkoppling i stället för den gula markören.
+
+Helsingör och Helsingborg delar nu 1080 hälsa, 540 lokal integritet vardera och en kronkärna på 360. Faserna behåller samma deterministiska gränser men växlar med inbromsning och upptakt: fästningshalvorna glider samman, kärnfasens eld fördröjs tills förflyttningen är läsbar och kollapsen håller vraken kvar innan de lämnar bilden. Sköldpulser, första brott och slutkollaps är egna transparenta effektassets.
+
+Alla Öresunds farliga strålar använder nu en sammanhängande trebildsfamilj för varningsfilament och två aktiva pulser. Fiendernas tunna målsökningsvektorer är borttagna; spelaren läser riktning ur mynning, laddning och stråle. Sörens slutmål använder det fysiska laserreläet även i förstört state.
+
+Resultatkortets gamla kodritade triangel är ersatt av den brutna kronkärnan och ritas inte under en pågående radioreplik. Representativa spår upprepades två gånger med identisk slutbild i båda upplösningarna, inklusive bossens sköldfas, kollaps och resultatkort.
+
+Musiken är Öresundsspecifik: normaldelen använder för närvarande `oresund-i-brand-v1.wav` som nivåns prototyploop och bossen byter till `kronans-sista-salva-loop-v2.wav`.
+
 ## Acceptanskriterier
 
 - Öresunds järnkrona kan startas som offentlig `STRID`, nivå-id `2`, utan att återanvända Bana 1 eller Bana 2:s tidslinje.
