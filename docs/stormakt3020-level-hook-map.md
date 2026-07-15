@@ -107,7 +107,7 @@ For every checkpoint: build, `git diff --check`, capture at least one direct WFE
 
 Campaign row 3 owns level id `2` and is directly startable only in developer mode while under construction. Reset seed `3303`, `OresundEnemyWaves`, the empty `OresundRadioCards` reservation, `StormaktMusicTrack.Oresund`, the code-drawn ringbridge layer, mission title and result card are all separate dispatch branches. The 60-second skeleton clears at frame 3600 and Start returns to selected campaign row 3. It must not fall through to Stora Bält or Skånska tables when a future subsystem is absent.
 
-The first deterministic wide/legacy WFEX baseline landed 2026-07-14. Next work belongs in `BridgeSectionState` and the explicit cross-reaction event path documented in `docs/stormakt3020-level-03-oresunds-jarnkrona.md`; do not overload the generic Stora Bält `GroundTarget` bridge collapse behavior to simulate it.
+The first deterministic wide/legacy WFEX baseline landed 2026-07-14. `BridgeSectionState` and its direct-destruction, coupling-to-laser and control-house reroute paths landed 2026-07-15; all three were repeated ten times in both resolutions with stable hashes. Next work adds generated non-physical ringbridge layers and physical flap cover to this state. Do not overload the generic Stora Bält `GroundTarget` bridge collapse behavior to simulate it.
 
 ## RTS dispatch - Silverkroppen
 

@@ -292,6 +292,7 @@ internal sealed class StormaktGame
     private BossState? _boss;
     private SorenRivalState? _sorenRival;
     private GlimmingeState? _glimminge;
+    private BridgeSectionState? _bridgeSection;
     private RtsState? _rts;
     private DungeonState? _dungeon;
     private bool _stageClear;
@@ -468,6 +469,7 @@ internal sealed class StormaktGame
         }
 
         StepShots();
+        StepOresundBridgeSection();
         StepEnemyShots();
         StepEnemies();
         StepGroundTargets();
@@ -524,6 +526,7 @@ internal sealed class StormaktGame
         DrawBeltRuins(frame);
         DrawSorenBackgroundPass(frame);
         DrawGroundTargets(frame);
+        DrawOresundBridgeSection(frame);
         DrawSorenRival(frame);
         DrawGlimminge(frame);
         DrawBoss(frame);
@@ -576,6 +579,7 @@ internal sealed class StormaktGame
         _boss = null;
         _sorenRival = null;
         _glimminge = null;
+        _bridgeSection = _levelId == 2 ? new BridgeSectionState() : null;
         _rts = _levelId == 3
             ? new RtsState
             {
@@ -4596,6 +4600,10 @@ internal sealed class StormaktGame
 
     private void StepLevelTimeline()
     {
+        if (_levelId == 2 && _missionFrame == 600 && _bridgeSection is BridgeSectionState section)
+        {
+            BeginOresundBridgeSection(section);
+        }
         if (_levelId == 2 && _missionFrame >= FlythroughFrames)
         {
             _stageClear = true;
@@ -4617,6 +4625,145 @@ internal sealed class StormaktGame
             _enemies.Clear();
             _audio?.Trigger(StormaktSound.Deploy);
         }
+    }
+
+    private void BeginOresundBridgeSection(BridgeSectionState section)
+    {
+        section.Active = true;
+        section.Age = 0;
+        section.Powered = true;
+        section.TrackLockedLeft = false;
+        section.ControlHealth = 12;
+        section.CarriageHealth = 24;
+        section.CouplingHealth = 6;
+        section.CouplingBroken = false;
+        section.ControlX = _width <= 320 ? 48 : 62;
+        section.LaserX = _width - section.ControlX;
+        section.CarriageX = _width / 2;
+        section.ControlY = -34;
+        section.LaserY = -34;
+        section.CarriageY = -18;
+        section.Outcome = BridgeSectionOutcome.None;
+        section.LastEvent = "SECTION START";
+        section.Notice = "BROSEKTION 01";
+        section.NoticeAge = 90;
+        section.LocalChanges = 0;
+    }
+
+    private void StepOresundBridgeSection()
+    {
+        if (_levelId != 2 || _bridgeSection is not BridgeSectionState section) return;
+        section.NoticeAge = Math.Max(0, section.NoticeAge - 1);
+        if (!section.Active) return;
+
+        section.Age++;
+        int entry = Math.Min(0, section.Age - 126);
+        section.ControlY = 82 + entry;
+        section.LaserY = 82 + entry;
+        section.CarriageY = 112 + entry;
+
+        if (section.Outcome == BridgeSectionOutcome.None)
+        {
+            ResolveOresundBridgeShots(section);
+        }
+
+        if (section.TrackLockedLeft)
+        {
+            section.CarriageX = Math.Max(-30, section.CarriageX - 3);
+        }
+        else if (section.CouplingBroken)
+        {
+            section.CarriageX = Math.Min(section.LaserX, section.CarriageX + 2);
+        }
+
+        bool laserFiring = section.Age is >= 420 and < 480 && section.Powered;
+        if (laserFiring && section.Outcome == BridgeSectionOutcome.None && section.CouplingBroken &&
+            Math.Abs(section.CarriageX - section.LaserX) <= 5)
+        {
+            CompleteOresundBridgeSection(section, BridgeSectionOutcome.LaserDestroyedCarriage,
+                "LIST x2", "LASER HIT CARRIAGE", 800);
+        }
+        else if (laserFiring && section.Outcome == BridgeSectionOutcome.None &&
+            Math.Abs(_shipX - section.LaserX) < 7 && _shipY > section.LaserY)
+        {
+            DamageShip();
+        }
+
+        if (section.Age == 650 && section.Outcome == BridgeSectionOutcome.None)
+        {
+            CompleteOresundBridgeSection(section, BridgeSectionOutcome.Passed,
+                "BRON PASSERAD", "SECTION PASSED", 0);
+        }
+        if (section.Age >= 720) section.Active = false;
+    }
+
+    private void ResolveOresundBridgeShots(BridgeSectionState section)
+    {
+        if (section.Age < 110 || section.Age >= 560) return;
+        for (int index = _shots.Count - 1; index >= 0; index--)
+        {
+            Shot shot = _shots[index];
+            if (!section.TrackLockedLeft && Math.Abs(shot.X - section.ControlX) <= 13 &&
+                Math.Abs(shot.Y - section.ControlY) <= 12)
+            {
+                section.ControlHealth -= shot.Power;
+                _shots.RemoveAt(index);
+                if (section.ControlHealth <= 0)
+                {
+                    section.TrackLockedLeft = true;
+                    section.LocalChanges = Math.Min(2, section.LocalChanges + 1);
+                    CompleteOresundBridgeSection(section, BridgeSectionOutcome.SafeReroute,
+                        "VÄXEL LÅST", "CONTROL DESTROYED", 250);
+                    return;
+                }
+                continue;
+            }
+
+            int couplingX = section.CarriageX + 18;
+            if (!section.CouplingBroken && Math.Abs(shot.X - couplingX) <= 5 &&
+                Math.Abs(shot.Y - section.CarriageY) <= 7)
+            {
+                section.CouplingHealth -= shot.Power;
+                _shots.RemoveAt(index);
+                if (section.CouplingHealth <= 0)
+                {
+                    section.CouplingBroken = true;
+                    section.LocalChanges = Math.Min(2, section.LocalChanges + 1);
+                    section.LastEvent = "COUPLING BROKEN";
+                    section.Notice = "KOPPLING BRUTEN";
+                    section.NoticeAge = 90;
+                    _score += 100;
+                    _audio?.Trigger(StormaktSound.Broadside);
+                }
+                continue;
+            }
+
+            if (Math.Abs(shot.X - section.CarriageX) <= 15 &&
+                Math.Abs(shot.Y - section.CarriageY) <= 11)
+            {
+                section.CarriageHealth -= shot.Power;
+                _shots.RemoveAt(index);
+                if (section.CarriageHealth <= 0)
+                {
+                    CompleteOresundBridgeSection(section, BridgeSectionOutcome.DirectDestroyed,
+                        "VAGN FÖRSTÖRD", "CARRIAGE DESTROYED", 400);
+                    return;
+                }
+            }
+        }
+    }
+
+    private void CompleteOresundBridgeSection(BridgeSectionState section, BridgeSectionOutcome outcome,
+        string notice, string eventName, int score)
+    {
+        if (section.Outcome != BridgeSectionOutcome.None) return;
+        section.Outcome = outcome;
+        section.LastEvent = eventName;
+        section.Notice = notice;
+        section.NoticeAge = 120;
+        _score += score;
+        _audio?.Trigger(outcome == BridgeSectionOutcome.SafeReroute
+            ? StormaktSound.Deploy : StormaktSound.EnemyExplosion);
     }
 
     private void StepShots()
@@ -7984,6 +8131,93 @@ internal sealed class StormaktGame
         PutPixel(frame, trainX, trainY + 21, 0xffffd66b);
     }
 
+    private void DrawOresundBridgeSection(uint[] frame)
+    {
+        if (_levelId != 2 || _bridgeSection is not BridgeSectionState section ||
+            (!section.Active && section.NoticeAge == 0)) return;
+
+        uint cable = section.Powered ? 0xff46758e : 0xff27343d;
+        if (section.Active)
+        {
+            DrawLine(frame, section.ControlX + 12, section.ControlY, section.LaserX - 12, section.LaserY, cable);
+            for (int x = section.ControlX + 18; x < section.LaserX - 16; x += 24)
+                PutPixel(frame, x, section.ControlY, section.Powered ? 0xff9bd4dc : 0xff344653);
+
+            DrawRect(frame, section.ControlX - 13, section.ControlY - 12, 27, 24,
+                section.TrackLockedLeft ? 0xff20282b : 0xff283944);
+            DrawRect(frame, section.ControlX - 10, section.ControlY - 9, 21, 6,
+                section.TrackLockedLeft ? 0xff5b3032 : 0xff8a6b38);
+            DrawLine(frame, section.ControlX - 7, section.ControlY + 6,
+                section.ControlX + 7, section.ControlY - 1, 0xffd6b25e);
+            DrawLine(frame, section.ControlX - 7, section.ControlY + 6,
+                section.ControlX + 5, section.ControlY + 9, 0xffd6b25e);
+
+            int charge = section.Age is >= 360 and < 420 ? (section.Age - 360) / 10 : 0;
+            FillCircle(frame, section.LaserX, section.LaserY, 12, 0xff26343e);
+            FillCircle(frame, section.LaserX, section.LaserY, 7,
+                charge > 0 ? 0xff8f2635 : 0xff31546b);
+            DrawCircleOutline(frame, section.LaserX, section.LaserY, 13 + charge % 3,
+                charge > 0 ? 0xffff6b62 : 0xff6c91a8);
+            DrawRect(frame, section.LaserX - 3, section.LaserY + 10, 6, 16, 0xff8a6b38);
+
+            bool warning = section.Age is >= 360 and < 420 && section.Powered;
+            bool firing = section.Age is >= 420 and < 480 && section.Powered &&
+                section.Outcome != BridgeSectionOutcome.LaserDestroyedCarriage;
+            if (warning)
+            {
+                uint warn = (section.Age / 4 & 1) == 0 ? 0xffff6b62 : 0xff7f2632;
+                DrawLine(frame, section.LaserX, section.LaserY + 13, section.LaserX, _height - 14, warn);
+            }
+            if (firing)
+            {
+                DrawRect(frame, section.LaserX - 2, section.LaserY + 13, 5,
+                    _height - section.LaserY - 27, 0xfff2eee4);
+                DrawLine(frame, section.LaserX - 5, section.LaserY + 13,
+                    section.LaserX - 5, _height - 14, 0xffff6b62);
+                DrawLine(frame, section.LaserX + 5, section.LaserY + 13,
+                    section.LaserX + 5, _height - 14, 0xffff6b62);
+            }
+
+            bool carriageDestroyed = section.Outcome is BridgeSectionOutcome.DirectDestroyed or
+                BridgeSectionOutcome.LaserDestroyedCarriage;
+            if (!carriageDestroyed && section.CarriageX > -25)
+            {
+                DrawRect(frame, section.CarriageX - 15, section.CarriageY - 10, 31, 21, 0xff252f36);
+                DrawRect(frame, section.CarriageX - 12, section.CarriageY - 7, 25, 6, 0xff8f2635);
+                DrawRect(frame, section.CarriageX - 2, section.CarriageY - 9, 4, 18, 0xfff2eee4);
+                DrawRect(frame, section.CarriageX - 7, section.CarriageY + 3, 14, 5, 0xff171d22);
+                FillCircle(frame, section.CarriageX - 9, section.CarriageY + 12, 3, 0xff11171b);
+                FillCircle(frame, section.CarriageX + 9, section.CarriageY + 12, 3, 0xff11171b);
+                if (!section.CouplingBroken)
+                {
+                    DrawLine(frame, section.CarriageX + 15, section.CarriageY,
+                        section.CarriageX + 20, section.CarriageY, 0xffd6b25e);
+                    FillCircle(frame, section.CarriageX + 20, section.CarriageY, 3, 0xffffd66b);
+                }
+            }
+            else if (section.Age < 540)
+            {
+                int blast = 7 + (section.Age / 3 & 7);
+                FillCircle(frame, section.CarriageX, section.CarriageY, blast, 0xffb33b2e);
+                FillCircle(frame, section.CarriageX, section.CarriageY, Math.Max(2, blast - 4), 0xffff8a34);
+            }
+        }
+
+        if (section.NoticeAge > 0)
+        {
+            int width = section.Notice.Length * 6 + 16;
+            int x = (_width - width) / 2;
+            DrawRect(frame, x, 37, width, 15, 0xe6080d12);
+            DrawText(frame, x + 8, 41, section.Notice,
+                section.Outcome == BridgeSectionOutcome.LaserDestroyedCarriage ? 0xff65c58a : 0xffffd66b);
+        }
+        if (_developerMode && section.Active)
+        {
+            string debug = $"SEC1 STRÖM {(section.Powered ? "PÅ" : "AV")}  VÄXEL {(section.TrackLockedLeft ? "V" : "RAK")}  {section.LastEvent}";
+            DrawText(frame, 6, _height - 20, debug, 0xff65c58a);
+        }
+    }
+
     private void DrawSkanskaScenery(uint[] frame)
     {
         string backgroundName = _width <= 320 ? "skanska_background" : "skanska_background_wide";
@@ -9863,6 +10097,28 @@ internal sealed class StormaktGame
     private record struct EnemyShot(double X, double Y, double Vx, double Vy, int Kind);
     private record struct AnchorHazard(int X, int Age);
     private record struct CrystalSpear(int X, int Age);
+    private sealed class BridgeSectionState
+    {
+        public bool Active { get; set; }
+        public int Age { get; set; }
+        public bool Powered { get; set; }
+        public bool TrackLockedLeft { get; set; }
+        public bool CouplingBroken { get; set; }
+        public int ControlHealth { get; set; }
+        public int CarriageHealth { get; set; }
+        public int CouplingHealth { get; set; }
+        public int ControlX { get; set; }
+        public int ControlY { get; set; }
+        public int LaserX { get; set; }
+        public int LaserY { get; set; }
+        public int CarriageX { get; set; }
+        public int CarriageY { get; set; }
+        public int LocalChanges { get; set; }
+        public int NoticeAge { get; set; }
+        public string Notice { get; set; } = "";
+        public string LastEvent { get; set; } = "IDLE";
+        public BridgeSectionOutcome Outcome { get; set; }
+    }
     private record struct Enemy(
         int X,
         int Y,
@@ -9908,6 +10164,15 @@ internal sealed class StormaktGame
         Turret,
         EnergyNode,
         SignalBeacon,
+    }
+
+    private enum BridgeSectionOutcome
+    {
+        None,
+        DirectDestroyed,
+        LaserDestroyedCarriage,
+        SafeReroute,
+        Passed,
     }
 
     private enum RtsBuildingType

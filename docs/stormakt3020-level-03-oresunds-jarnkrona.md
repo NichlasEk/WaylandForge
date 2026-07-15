@@ -1,6 +1,6 @@
 # Bana 3 - Öresunds järnkrona
 
-Status: checkpoint 1 landed 2026-07-14. The active `DEV` row now starts a deterministic 60-second level-id 2 skeleton; readable systemic emergence remains the next core requirement.
+Status: checkpoints 1-2 landed 2026-07-15. The active `DEV` row starts a deterministic 60-second level-id 2 skeleton containing the first three-way systemic bridge section.
 
 ## Dramatiskt löfte
 
@@ -163,7 +163,7 @@ Varje brosektion minns högst två spelarorsakade förändringar tills den lämn
 ## Byggskivor
 
 1. **Hook och 60-sekundersskelett (landed 2026-07-14):** DEV-start, egen seed, titel, kall brofallback, Öresunds musikkanal med `oresund-i-brand-v1.wav` som prototyp, broväktarvåg och resultatkort.
-2. **Systemisk provsektion:** kodritad laserfyr, kontrollhus, växel och en kanonvagn. Verifiera minst tre olika slutbilder från tre inspelade inputspår innan slutgrafik genereras.
+2. **Systemisk provsektion (landed 2026-07-15):** kodritad laserfyr, kontrollhus, växel och en kanonvagn med tre verifierade slutbilder från tre inspelade inputspår.
 3. **Ringbrovärlden:** genererad bakgrund, Kronspannet, rälsparallax och två säkra klaffsekvenser som använder samma täckningsstate som provsektionen.
 4. **Pansartåget:** lokpassage, flera kanonvagnar, spårbyte, kopplingsdöd, miljökrasch och LIST-poäng.
 5. **Sörens ingripande:** radiokö, bakgrundspassage och deterministiskt val av högsta kvarvarande hot.
@@ -178,18 +178,32 @@ Två upprepade direkta WFEX-spår matchade vid bild 60, 1200, 3590 och 3650:
 - 400x280: `69d10c592b7f492f`, `72e3272c46290227`, `0b31b57cdd259e3e`, `e3ad228ac8f8b656`.
 - 320x224: `36488dc5e898588c`, `ebb10f9c19160184`, `1468186cfe2cc108`, `2b94df7215946c78`.
 
+## Landad checkpoint 2
+
+`BridgeSectionState` äger den första lokala sektionens ström, växelläge, kontrollhus, kanonvagn och separat gul koppling. Tre explicita händelsevägar är spelbara:
+
+1. Mittläge och direkt eld förstör vagnen för 400 poäng.
+2. Två riktade salvor bryter kopplingen; vagnen glider in i den varnade lasern och ger totalt 900 poäng samt `LIST x2`.
+3. Vänsterläge och eld förstör kontrollhuset; `VÄXEL LÅST` leder vagnen säkert ur körfältet för 250 poäng.
+
+Varje spår upprepades tio gånger med identisk slutbild:
+
+- 400x280: direkt `18ae56ccc9b86b8d`, laser `18743e8de190b03d`, omledning `38e9d320ae09f385`.
+- 320x224: direkt `6c2c54be1cf969ab`, laser `b2d30d3dd120c6fa`, omledning `88240bddedef2fc9`.
+
+Utvecklarläget visar sektionens ström, växel och senaste explicita event. Normalläget visar endast kabelglöd, växellampa och korta HUD-kvitton.
+
 ## Nästa implementeringscheckpoint
 
-Bygg skiva 2 som en kodritad systemisk provsektion innan bildgenerering:
+Bygg skiva 3, Ringbrovärlden, ovanpå det bevisade statet:
 
-1. Introducera `BridgeSectionState` med ström, visad kommande växel, täckning och högst två lokala förändringar.
-2. Lägg in en laserfyr, ett kontrollhus och en enda kopplingsbar kanonvagn i samma sektion.
-3. Implementera endast tre explicita händelser: direkt förstörelse, `LaserHitCarriage` och `CarriageHitControl`.
-4. Visa följden med kabelglöd, växellampa och de korta HUD-orden `FYR ÖVERLASTAD`, `VÄXEL LÅST` och `LIST x2`.
-5. Spela in tre inputspår som slutar i direkt förstörelse, miljödöd respekt säker omledning.
-6. Upprepa varje spår tio gånger och jämför händelseordning, poäng, slutstate och checkpoint-hash.
+1. Generera en läsbar Öresundsbakgrund och separata transparenta Kronspann/rälsdelar utan fysisk kollisionsgeometri.
+2. Lägg till två klaffar vars render och kollision läser samma täckningsstate.
+3. Introducera klaff 1 ensam, därefter klaff 2 tillsammans med laserfyrens långa varning.
+4. Låt vanlig eld stoppas av stängd klaff från båda håll medan aktiv laser skär igenom efter minst 60 bildsteg varning.
+5. Behåll provsektionens tre inputspår som regressionstester och lägg två nya spår för klaffskydd respekt tidig öppning.
 
-**Definition of done:** samma minut kan lösas på tre synligt olika sätt utan slump, mer än tre kedjeled, mer än två samtidiga faror eller någon generated slutgrafik.
+**Definition of done:** generated miljö och fysisk klaff använder samma state utan att ändra de tre landade utfallen eller skapa mer än två samtidiga faror.
 
 ## Acceptanskriterier
 
