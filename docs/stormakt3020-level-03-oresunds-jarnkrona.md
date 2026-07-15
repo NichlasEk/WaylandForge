@@ -235,6 +235,8 @@ Båda inputspåren upprepades tio gånger med identisk slutbild:
 
 Sörens korsarskepp, boostläge och etablerade porträtt återanvänds. Hans befintliga `FOGDEKONVOJ / FÖRÖVER`-replik startar först när tågets resultatskylt är borta. Ebbas befintliga `SÖREN SVARTKRUT / KAPARE OCH VÄG` köas bakom den och börjar efter Sörens träffkvitto. Träffen ändrar endast det lokala interventionsstatet; inget bossfält skrivs.
 
+Polishpasset 2026-07-15 ersätter båda återanvända replikerna: Sören säger `BRON HAR NERVER / JAG SKÄR EN NU`, varefter Ebba svarar `KORSSTRÖM GLAPP / FÖLJ KOPPARSPÅR`. Båda har nya VoxCPM2-renderingar med respektive skådespelares fasta seed.
+
 Avväpnings- och kraschslutstaten upprepades tio gånger vardera vid den synliga salvan med identisk slutbild:
 
 - 400x280: växelmål `eae6213d31cc92bb`, fyrmål `d8c68a9e1120aa95`.
@@ -249,12 +251,19 @@ Helsingör och Helsingborg kommer in som två självständiga fästningsankare m
 3. Vid 240 gemensam hälsa exponeras en central kronkärna. Sörens kopparskott bryter den synliga korslåsningen som upptakt men skriver aldrig bossens hälsa.
 4. När kärnan faller kollapsar halvorna utåt, bossradion avslutas före resultatkortet och nivån leder vidare med `JÄRNKRONAN BRUTEN / MOT SILVERKROPPEN`.
 
+Rasmus återanvänder inte längre Stora Bälts bossljud. Intro, korsström, exponerad kärna och nederlag har fyra nya danska textrutor och fyra egna VoxCPM2-filer. Broväktarna och den första sektionens växelhus har samtidigt fått egna sprites och Stable Audio 3-effekter; befintliga träffytor och simuleringsstate är oförändrade.
+
 Slutläget upprepades tio gånger per inputspår och upplösning med identisk bild vid bild 6000:
 
 - 400x280: vänsterfokus `e71fe379bd3d2039`, högerfokus `057568231648f8a3`.
 - 320x224: vänsterfokus `9ebdf56401411591`, högerfokus `bf0e7a8574a5307a`.
 
-Efter dödssekvensen sammanfaller båda lösningarna deterministiskt: 400x280 `524975a441f7f80b`, 320x224 `a9ae86e836fc0608`.
+Efter dödssekvensen sammanfaller båda lösningarna deterministiskt. Den nya, längre Öresundsspecifika radiokön och Sörens fullständiga målasset ändrade presentationsbilden men inte simuleringen: 400x280 `3d0d08af6c5d6f9f`, 320x224 `858b271b201631dc`.
+
+Broväktar-/växelpolishen upprepades tio gånger per lösning och upplösning vid bild 1120:
+
+- 400x280: direkt `0e45b01567b28b2e`, säker omledning `cf01b34807b1ef03`.
+- 320x224: direkt `8fda97b42dccd397`, säker omledning `f768ba2bd93d7f32`.
 
 ## Acceptanskriterier
 

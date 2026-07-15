@@ -573,6 +573,8 @@ internal sealed class StormaktMusicLoop : IDisposable
             (StormaktSound.DungeonHammerImpact, "dungeon-hammer-impact.wav", 0.58f),
             (StormaktSound.DungeonSilverWave, "dungeon-silver-wave.wav", 0.52f),
             (StormaktSound.DungeonSilverShatter, "dungeon-silver-shatter.wav", 0.62f),
+            (StormaktSound.OresundGuardShot, "oresund-guard-shot.wav", 0.42f),
+            (StormaktSound.OresundSwitchBreak, "oresund-switch-break.wav", 0.52f),
         ];
 
         Dictionary<StormaktSound, LoadedEffect> effects = [];
@@ -659,6 +661,12 @@ internal sealed class StormaktMusicLoop : IDisposable
             (StormaktVoice.GruvfogdeHeartSouth, "gruvfogde-heart-south-da-radio.wav", 0.86f),
             (StormaktVoice.GruvfogdeHeartWest, "gruvfogde-heart-west-da-radio.wav", 0.86f),
             (StormaktVoice.LouhiFinalFall, "louhi-final-fall-sv-radio.wav", 0.92f),
+            (StormaktVoice.SorenOresundNerve, "soren-oresund-nerve-sv-radio.wav", 0.76f),
+            (StormaktVoice.EbbaOresundCrosscurrent, "ebba-oresund-crosscurrent-sv-radio.wav", 0.80f),
+            (StormaktVoice.RasmusOresundGate, "rasmus-oresund-gate-da-radio.wav", 0.88f),
+            (StormaktVoice.RasmusOresundCrossfire, "rasmus-oresund-crossfire-da-radio.wav", 0.92f),
+            (StormaktVoice.RasmusOresundCore, "rasmus-oresund-core-da-radio.wav", 0.94f),
+            (StormaktVoice.RasmusOresundFall, "rasmus-oresund-fall-da-radio.wav", 0.96f),
         ];
         Dictionary<StormaktVoice, LoadedEffect> voices = [];
         foreach ((StormaktVoice voice, string file, float gain) in entries)
@@ -764,6 +772,8 @@ internal enum StormaktSound
     DungeonHammerImpact,
     DungeonSilverWave,
     DungeonSilverShatter,
+    OresundGuardShot,
+    OresundSwitchBreak,
 }
 
 internal enum StormaktVoice
@@ -821,6 +831,12 @@ internal enum StormaktVoice
     GruvfogdeHeartSouth,
     GruvfogdeHeartWest,
     LouhiFinalFall,
+    SorenOresundNerve,
+    EbbaOresundCrosscurrent,
+    RasmusOresundGate,
+    RasmusOresundCrossfire,
+    RasmusOresundCore,
+    RasmusOresundFall,
 }
 
 internal enum StormaktMusicTrack

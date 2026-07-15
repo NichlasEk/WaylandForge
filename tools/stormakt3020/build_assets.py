@@ -849,6 +849,24 @@ def append_oresund_twin_fortress(entries: list[tuple[str, Image.Image]], source:
         entries.append((name, sprite))
 
 
+def append_oresund_guard_control(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    definitions = [
+        ("oresund_bridge_guard", 0, 0, (30, 34)),
+        ("oresund_bridge_guard_aim", 1, 0, (30, 36)),
+        ("oresund_control_house", 0, 1, (38, 34)),
+        ("oresund_control_house_disabled", 1, 1, (38, 34)),
+    ]
+    for name, column, row, target in definitions:
+        left = column * source.width // 2
+        top = row * source.height // 2
+        right = (column + 1) * source.width // 2
+        bottom = (row + 1) * source.height // 2
+        cell = source.crop((left, top, right, bottom)).convert("RGBA")
+        sprite = split_alpha_components(cell, 1)[0]
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def build(
     input_path: Path,
     danish_input_path: Path,
@@ -864,6 +882,7 @@ def build(
     oresund_props_input_path: Path,
     oresund_armored_train_input_path: Path,
     oresund_twin_fortress_input_path: Path,
+    oresund_guard_control_input_path: Path,
     skanska_props_input_path: Path,
     glimminge_input_path: Path,
     skanska_enemies_input_path: Path,
@@ -930,6 +949,7 @@ def build(
     oresund_props_source = Image.open(oresund_props_input_path).convert("RGBA")
     oresund_armored_train_source = Image.open(oresund_armored_train_input_path).convert("RGBA")
     oresund_twin_fortress_source = Image.open(oresund_twin_fortress_input_path).convert("RGBA")
+    oresund_guard_control_source = Image.open(oresund_guard_control_input_path).convert("RGBA")
     skanska_props_source = Image.open(skanska_props_input_path).convert("RGBA")
     glimminge_source = Image.open(glimminge_input_path).convert("RGBA")
     skanska_enemies_source = Image.open(skanska_enemies_input_path).convert("RGBA")
@@ -1086,6 +1106,7 @@ def build(
     append_oresund_props(entries, oresund_props_source)
     append_oresund_armored_train(entries, oresund_armored_train_source)
     append_oresund_twin_fortress(entries, oresund_twin_fortress_source)
+    append_oresund_guard_control(entries, oresund_guard_control_source)
     entries.append(("stora_balt_background", mirrored_background(background_source, 320, 700)))
     entries.append(("stora_balt_background_wide", mirrored_background(background_source, 400, 875)))
     entries.append(("skanska_background", mirrored_background(skanska_background_source, 320, 700)))
@@ -1175,6 +1196,11 @@ def main() -> None:
         "--oresund-twin-fortress-input",
         type=Path,
         default=Path("assets/stormakt3020/stormakt-oresund-twin-fortress-v1.png"),
+    )
+    parser.add_argument(
+        "--oresund-guard-control-input",
+        type=Path,
+        default=Path("assets/stormakt3020/stormakt-oresund-guard-control-v1.png"),
     )
     parser.add_argument(
         "--skanska-props-input",
@@ -1288,6 +1314,7 @@ def main() -> None:
         args.oresund_props_input,
         args.oresund_armored_train_input,
         args.oresund_twin_fortress_input,
+        args.oresund_guard_control_input,
         args.skanska_props_input,
         args.glimminge_input,
         args.skanska_enemies_input,

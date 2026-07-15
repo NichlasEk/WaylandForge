@@ -36,6 +36,10 @@
 
 `stormakt-oresund-twin-fortress-v1.png` supplies intact and damaged Helsingör/Helsingborg halves for Öresunds Järnkrona. The two halves remain independent render and attack anchors while one shared health pool drives their three boss phases. The untouched magenta source and exact built-in generation prompt are retained beside the production alpha PNG; missing sprites retain the code-drawn fortress fallback.
 
+`stormakt-oresund-guard-control-v1.png` replaces Öresund's last conspicuous combat placeholders with intact/aiming bridge-guard craft and intact/disabled railway control houses. The guard's existing radius remains authoritative for hits; the sprite only changes presentation. The control-house sprite is centered on the same `BridgeSectionState` coordinates used by shot resolution. Its untouched magenta source and exact built-in generation prompt are retained beside the production alpha PNG, with the previous code primitives preserved as fallbacks.
+
+`sfx/oresund-guard-shot.wav` and `sfx/oresund-switch-break.wav` are fixed-seed Stable Audio 3 Small-SFX generations, trimmed and converted to the runtime's 48 kHz stereo PCM16 format. Full raw generations, prompts, seeds and conversion commands are retained under `sfx/raw/` and in `sfx/oresund-sfx-v1.prompt.md`. Deterministic procedural alternatives use the `-procedural.wav` suffix and are not loaded while the generated masters exist.
+
 `rts-swedish-buildings-v1.png`, `rts-swedish-units-v1.png` and `rts-danish-army-v1.png` supply Silverkroppen's complete first production-art pass. Their packed states cover working steam/crusher machinery, tower fire, Carolean volley/reload, moose charge/carbine, and ready/attack pairs for all five Danish troop families. Equal atlas cells are cropped independently before alpha trimming, so animation effects and neighboring units cannot leak into another sprite.
 
 `rts-silver-miner-v1.png` supplies two empty and two silver-loaded walking phases for the visible crusher-to-Karl economy convoy. The four cells share one reference scale and fixed runtime canvas; delivered crates, rather than a hidden income timer, advance both spendable and salvaged silver.

@@ -284,14 +284,23 @@ internal sealed class StormaktGame
     ];
     private static readonly RadioCard[] OresundRadioCards = [];
     private static readonly RadioCard OresundSorenStrikeRadio =
-        new(0, 330, true, "SÖREN SVARTKRUT", "FOGDEKONVOJ", "FÖRÖVER", StormaktVoice.SorenFogdekonvoj,
+        new(0, 390, true, "SÖREN SVARTKRUT", "BRON HAR NERVER", "JAG SKÄR EN NU", StormaktVoice.SorenOresundNerve,
             "portrait_soren", true);
     private static readonly RadioCard OresundEbbaSorenRadio =
-        new(0, 330, false, "EBBA GRIP", "SÖREN SVARTKRUT", "KAPARE OCH VÄG",
-            StormaktVoice.EbbaIdentifierarSoren, "portrait_ebba");
+        new(0, 390, false, "EBBA GRIP", "KORSSTRÖM GLAPP", "FÖLJ KOPPARSPÅR",
+            StormaktVoice.EbbaOresundCrosscurrent, "portrait_ebba");
     private static readonly RadioCard OresundBossIntroRadio =
-        new(0, 300, true, "FOGDE RASMUS", "KRONENS TIENDE", "TAGER ALT",
-            StormaktVoice.RasmusKronensTiende, "portrait_rasmus");
+        new(0, 390, true, "FOGDE RASMUS", "HELSINGØR SVAR", "SUNDET LUKKER",
+            StormaktVoice.RasmusOresundGate, "portrait_rasmus");
+    private static readonly RadioCard OresundBossCrossfireRadio =
+        new(0, 390, true, "FOGDE RASMUS", "KOBL TÅRNENE", "BRÆND MELLEM",
+            StormaktVoice.RasmusOresundCrossfire, "portrait_rasmus");
+    private static readonly RadioCard OresundBossCoreRadio =
+        new(0, 390, true, "FOGDE RASMUS", "KERNEN ER BLOT", "LUK KORSLÅSEN",
+            StormaktVoice.RasmusOresundCore, "portrait_rasmus");
+    private static readonly RadioCard OresundBossFallRadio =
+        new(0, 390, true, "FOGDE RASMUS", "SLOTTENE FALDER", "SUNDET ER FRIT",
+            StormaktVoice.RasmusOresundFall, "portrait_rasmus");
     private int _shipX;
     private int _shipY;
     private int _cooldown;
@@ -5140,7 +5149,7 @@ internal sealed class StormaktGame
         section.NoticeAge = 120;
         _score += score;
         _audio?.Trigger(outcome == BridgeSectionOutcome.SafeReroute
-            ? StormaktSound.Deploy : StormaktSound.EnemyExplosion);
+            ? StormaktSound.OresundSwitchBreak : StormaktSound.EnemyExplosion);
     }
 
     private void StepShots()
@@ -6008,7 +6017,7 @@ internal sealed class StormaktGame
                 boss.PhaseAge = 0;
                 boss.LastEvent = "CROSS POWER";
                 _enemyShots.Clear();
-                ActivateBossRadio(RasmusPhaseTwoRadio);
+                ActivateBossRadio(OresundBossCrossfireRadio);
                 _audio?.Trigger(StormaktSound.Broadside);
                 return;
             }
@@ -6019,7 +6028,7 @@ internal sealed class StormaktGame
                 boss.PhaseAge = 0;
                 boss.LastEvent = "CROWN CORE EXPOSED";
                 _enemyShots.Clear();
-                ActivateBossRadio(RasmusPhaseThreeRadio);
+                ActivateBossRadio(OresundBossCoreRadio);
                 _audio?.Trigger(StormaktSound.Broadside);
                 return;
             }
@@ -6087,7 +6096,7 @@ internal sealed class StormaktGame
         _shots.Clear();
         _enemyShots.Clear();
         _enemies.Clear();
-        ActivateBossRadio(RasmusDeathRadio);
+        ActivateBossRadio(OresundBossFallRadio);
         _audio?.Trigger(StormaktSound.Broadside);
     }
 
@@ -6471,7 +6480,9 @@ internal sealed class StormaktGame
         double dy = _shipY - y;
         double length = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
         _enemyShots.Add(new EnemyShot(x, y, dx / length * speed, dy / length * speed, kind));
-        _audio?.Trigger(StormaktSound.TwinCannon);
+        _audio?.Trigger(_levelId == 2 && kind == 2
+            ? StormaktSound.OresundGuardShot
+            : StormaktSound.TwinCannon);
     }
 
     private void SpawnGroundEncounters()
@@ -8850,14 +8861,25 @@ internal sealed class StormaktGame
             for (int x = section.ControlX + 18; x < section.LaserX - 16; x += 24)
                 PutPixel(frame, x, section.ControlY, section.Powered ? 0xff9bd4dc : 0xff344653);
 
-            DrawRect(frame, section.ControlX - 13, section.ControlY - 12, 27, 24,
-                section.TrackLockedLeft ? 0xff20282b : 0xff283944);
-            DrawRect(frame, section.ControlX - 10, section.ControlY - 9, 21, 6,
-                section.TrackLockedLeft ? 0xff5b3032 : 0xff8a6b38);
-            DrawLine(frame, section.ControlX - 7, section.ControlY + 6,
-                section.ControlX + 7, section.ControlY - 1, 0xffd6b25e);
-            DrawLine(frame, section.ControlX - 7, section.ControlY + 6,
-                section.ControlX + 5, section.ControlY + 9, 0xffd6b25e);
+            string controlName = section.TrackLockedLeft
+                ? "oresund_control_house_disabled"
+                : "oresund_control_house";
+            if (_sprites?.TryGet(controlName, out Sprite controlHouse) == true)
+            {
+                DrawSprite(frame, controlHouse, section.ControlX - controlHouse.Width / 2,
+                    section.ControlY - controlHouse.Height / 2);
+            }
+            else
+            {
+                DrawRect(frame, section.ControlX - 13, section.ControlY - 12, 27, 24,
+                    section.TrackLockedLeft ? 0xff20282b : 0xff283944);
+                DrawRect(frame, section.ControlX - 10, section.ControlY - 9, 21, 6,
+                    section.TrackLockedLeft ? 0xff5b3032 : 0xff8a6b38);
+                DrawLine(frame, section.ControlX - 7, section.ControlY + 6,
+                    section.ControlX + 7, section.ControlY - 1, 0xffd6b25e);
+                DrawLine(frame, section.ControlX - 7, section.ControlY + 6,
+                    section.ControlX + 5, section.ControlY + 9, 0xffd6b25e);
+            }
 
             int charge = section.Age is >= 360 and < 420 ? (section.Age - 360) / 10 : 0;
             FillCircle(frame, section.LaserX, section.LaserY, 12, 0xff26343e);
@@ -9147,8 +9169,17 @@ internal sealed class StormaktGame
             }
             else
             {
-                DrawRect(frame, targetX - 13, targetY - 8, 27, 16, 0xff201d1d);
-                FillCircle(frame, targetX + 4, targetY - 2, 3, 0xff8f3929);
+                if (intervention.Target == OresundSorenTarget.TrackSwitch &&
+                    _sprites?.TryGet("oresund_control_house_disabled", out Sprite disabledControl) == true)
+                {
+                    DrawSprite(frame, disabledControl, targetX - disabledControl.Width / 2,
+                        targetY - disabledControl.Height / 2);
+                }
+                else
+                {
+                    DrawRect(frame, targetX - 13, targetY - 8, 27, 16, 0xff201d1d);
+                    FillCircle(frame, targetX + 4, targetY - 2, 3, 0xff8f3929);
+                }
             }
             DrawLine(frame, targetX - 14, targetY + 10, targetX + 13, targetY - 9, 0xff3b2928);
         }
@@ -9157,9 +9188,17 @@ internal sealed class StormaktGame
             switch (intervention.Target)
             {
                 case OresundSorenTarget.TrackSwitch:
-                    DrawRect(frame, targetX - 13, targetY - 12, 27, 24, 0xff283944);
-                    DrawLine(frame, targetX - 7, targetY + 6, targetX + 7, targetY - 2, 0xffd6b25e);
-                    FillCircle(frame, targetX + 7, targetY - 3, 3, 0xffffd66b);
+                    if (_sprites?.TryGet("oresund_control_house", out Sprite controlHouse) == true)
+                    {
+                        DrawSprite(frame, controlHouse, targetX - controlHouse.Width / 2,
+                            targetY - controlHouse.Height / 2);
+                    }
+                    else
+                    {
+                        DrawRect(frame, targetX - 13, targetY - 12, 27, 24, 0xff283944);
+                        DrawLine(frame, targetX - 7, targetY + 6, targetX + 7, targetY - 2, 0xffd6b25e);
+                        FillCircle(frame, targetX + 7, targetY - 3, 3, 0xffffd66b);
+                    }
                     break;
                 case OresundSorenTarget.LaserRelay:
                     FillCircle(frame, targetX, targetY, 13, 0xff26343e);
@@ -10211,6 +10250,16 @@ internal sealed class StormaktGame
         {
             int attackCycle = (_missionFrame + enemy.BridgeGroup) % 165;
             bool aiming = attackCycle is >= 82 and <= 106;
+            string guardName = aiming ? "oresund_bridge_guard_aim" : "oresund_bridge_guard";
+            if (_sprites?.TryGet(guardName, out Sprite guard) == true)
+            {
+                DrawSprite(frame, guard, enemy.X - guard.Width / 2, enemy.Y - guard.Height / 2);
+                if (aiming)
+                {
+                    DrawLine(frame, enemy.X, enemy.Y + guard.Height / 2 - 2, _shipX, _shipY, 0xff7f4a4f);
+                }
+                return;
+            }
             FillTriangle(frame, enemy.X, enemy.Y - 13, enemy.X - 11, enemy.Y + 9,
                 enemy.X + 11, enemy.Y + 9, 0xff202a32);
             DrawRect(frame, enemy.X - 10, enemy.Y + 1, 21, 5, danishRed);

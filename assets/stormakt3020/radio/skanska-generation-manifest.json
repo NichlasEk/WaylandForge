@@ -657,6 +657,66 @@
       "sha256": "4bd5da579b64cf340ad2cf66be7c7a61f91f85995190340071b502fa45e107fe",
       "request": "assets/stormakt3020/radio/raw/louhi-final-fall-sv-request.json",
       "reference_sha256": "e2ae3c1d549eaaca88894a12ef6c0708a783a270f13837be1166d2e64b1cbc7b"
+    },
+    {
+      "kind": "line",
+      "line": "soren-oresund-nerve",
+      "role": "soren-svartkrut",
+      "job_id": "43465977be06403b82389d8d08fc9c54",
+      "file": "assets/stormakt3020/radio/raw/soren-oresund-nerve-sv-raw.wav",
+      "sha256": "719f7764fa029d62dbfe695e4b3a0950840780ef584b25d8dd6dfb78554f19b7",
+      "request": "assets/stormakt3020/radio/raw/soren-oresund-nerve-sv-request.json",
+      "reference_sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-oresund-crosscurrent",
+      "role": "ebba-grip",
+      "job_id": "81aa0d264c1a4a6f9a383f61f3b6d5cf",
+      "file": "assets/stormakt3020/radio/raw/ebba-oresund-crosscurrent-sv-raw.wav",
+      "sha256": "af62d55b273576b552031df87835fc7e41ffcc86a55b25e93004d9fd0606fa53",
+      "request": "assets/stormakt3020/radio/raw/ebba-oresund-crosscurrent-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "rasmus-oresund-gate",
+      "role": "rasmus-gyldentold",
+      "job_id": "66249cd0993248f29098a53978e43cdf",
+      "file": "assets/stormakt3020/radio/raw/rasmus-oresund-gate-da-raw.wav",
+      "sha256": "73ee711d80b4aee8a62ebaaadbb768522512612e0f8c3c927ad73bb114b0ae92",
+      "request": "assets/stormakt3020/radio/raw/rasmus-oresund-gate-da-request.json",
+      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
+    },
+    {
+      "kind": "line",
+      "line": "rasmus-oresund-crossfire",
+      "role": "rasmus-gyldentold",
+      "job_id": "8d3c11e2c5834cca9f3c00f112e053e0",
+      "file": "assets/stormakt3020/radio/raw/rasmus-oresund-crossfire-da-raw.wav",
+      "sha256": "9f00fcbdc3a8bd4aed6989f6e1c7134752f1243058733705bf26ea40491a5868",
+      "request": "assets/stormakt3020/radio/raw/rasmus-oresund-crossfire-da-request.json",
+      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
+    },
+    {
+      "kind": "line",
+      "line": "rasmus-oresund-core",
+      "role": "rasmus-gyldentold",
+      "job_id": "0f4712b7cb81429a8aeb43ddfe9143de",
+      "file": "assets/stormakt3020/radio/raw/rasmus-oresund-core-da-raw.wav",
+      "sha256": "d3b73a57a2e26cd6d3d953ffd50023385c0dc691e868f462daae2c05e05868ce",
+      "request": "assets/stormakt3020/radio/raw/rasmus-oresund-core-da-request.json",
+      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
+    },
+    {
+      "kind": "line",
+      "line": "rasmus-oresund-fall",
+      "role": "rasmus-gyldentold",
+      "job_id": "5f48bd93952a4e1e96dddf7f7dfa69a5",
+      "file": "assets/stormakt3020/radio/raw/rasmus-oresund-fall-da-raw.wav",
+      "sha256": "aa3508aca84903f0308413f8d74bea860cc8be64c7075f5b445105caebec653a",
+      "request": "assets/stormakt3020/radio/raw/rasmus-oresund-fall-da-request.json",
+      "reference_sha256": "1999863cbe5cc3a961d56d83786fd55b9b606fad8508eceb615ec189b22eae51"
     }
   ],
   "service": "http://127.0.0.1:8765",

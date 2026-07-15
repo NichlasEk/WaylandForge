@@ -667,6 +667,72 @@
       "subtitle_lines": ["BERGET GLÖMMER INTE", "MEN SLÄPPER ER"],
       "seed": 302215,
       "model_backend": "voxcpm2"
+    },
+    {
+      "id": "soren-oresund-nerve",
+      "role": "soren-svartkrut",
+      "level": 2,
+      "frame": 3540,
+      "cue": "oresund_soren_intervention",
+      "text": "Bron har fler nerver än fogden räknat. Jag skär en nu.",
+      "subtitle_lines": ["BRON HAR NERVER", "JAG SKÄR EN NU"],
+      "seed": 330311,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-oresund-crosscurrent",
+      "role": "ebba-grip",
+      "level": 2,
+      "frame": 3540,
+      "cue": "oresund_soren_followup",
+      "text": "Korsströmmen glappar. Följ kopparspåret, Karl.",
+      "subtitle_lines": ["KORSSTRÖM GLAPP", "FÖLJ KOPPARSPÅR"],
+      "seed": 330312,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "rasmus-oresund-gate",
+      "role": "rasmus-gyldentold",
+      "level": 2,
+      "frame": 4670,
+      "cue": "oresund_boss_intro",
+      "text": "Helsingør svarer Helsingborg. Jernkronen lukker sundet.",
+      "subtitle_lines": ["HELSINGØR SVAR", "SUNDET LUKKER"],
+      "seed": 330313,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "rasmus-oresund-crossfire",
+      "role": "rasmus-gyldentold",
+      "level": 2,
+      "frame": -1,
+      "cue": "oresund_boss_phase_two",
+      "text": "Kobl fæstningerne sammen. Brænd svensken mellem tårnene.",
+      "subtitle_lines": ["KOBL TÅRNENE", "BRÆND MELLEM"],
+      "seed": 330314,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "rasmus-oresund-core",
+      "role": "rasmus-gyldentold",
+      "level": 2,
+      "frame": -1,
+      "cue": "oresund_boss_phase_three",
+      "text": "Kronkernen er blotlagt. Luk korslåsen, før han rammer den!",
+      "subtitle_lines": ["KERNEN ER BLOT", "LUK KORSLÅSEN"],
+      "seed": 330315,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "rasmus-oresund-fall",
+      "role": "rasmus-gyldentold",
+      "level": 2,
+      "frame": -1,
+      "cue": "oresund_boss_death",
+      "text": "Begge slotte falder. Sundet adlyder ingen.",
+      "subtitle_lines": ["SLOTTENE FALDER", "SUNDET ER FRIT"],
+      "seed": 330316,
+      "model_backend": "voxcpm2"
     }
   ]
 }

@@ -125,13 +125,48 @@ def deploy_chime() -> list[tuple[float, float]]:
     return result
 
 
+def oresund_guard_shot() -> list[tuple[float, float]]:
+    duration = 0.24
+    result = []
+    rng = random.Random(330_301)
+    for index in range(round(duration * RATE)):
+        t = index / RATE
+        sweep = 2.0 * math.pi * (2_100.0 * t - 5_800.0 * t * t)
+        brass = math.sin(sweep) * math.exp(-22.0 * t)
+        relay = math.sin(2.0 * math.pi * 680.0 * t) * math.exp(-13.0 * t)
+        crack = rng.uniform(-1.0, 1.0) * math.exp(-48.0 * t)
+        sample = 0.54 * brass + 0.24 * relay + 0.22 * crack
+        result.append((sample * 0.86, sample))
+    return result
+
+
+def oresund_switch_break() -> list[tuple[float, float]]:
+    duration = 0.46
+    result = []
+    rng = random.Random(330_302)
+    for index in range(round(duration * RATE)):
+        t = index / RATE
+        clank = 0.0
+        for delay, frequency in ((0.0, 310.0), (0.075, 227.0), (0.14, 166.0)):
+            local = t - delay
+            if local >= 0.0:
+                clank += math.sin(2.0 * math.pi * frequency * local) * math.exp(-16.0 * local)
+        arc = rng.uniform(-1.0, 1.0) * math.exp(-9.0 * t) * (0.35 + 0.65 * abs(math.sin(2.0 * math.pi * 31.0 * t)))
+        servo = math.sin(2.0 * math.pi * (920.0 * t - 340.0 * t * t)) * math.exp(-7.0 * t)
+        result.append((0.48 * clank + 0.18 * arc + 0.16 * servo,
+                       0.44 * clank - 0.18 * arc + 0.16 * servo))
+    return result
+
+
 def main() -> None:
     write_wav("twin-cannon.wav", twin_cannon())
     write_wav("broadside.wav", broadside())
     write_wav("enemy-explosion.wav", enemy_explosion())
     write_wav("hull-hit.wav", hull_hit())
     write_wav("deploy-chime.wav", deploy_chime())
-    print(f"Wrote 5 Stormakt 3020 effects to {OUTPUT}")
+    write_wav("oresund-guard-shot-procedural.wav", oresund_guard_shot())
+    write_wav("oresund-switch-break-procedural.wav", oresund_switch_break())
+    print(f"Wrote 5 core and 2 Öresund fallback effects to {OUTPUT}")
 
 
 if __name__ == "__main__":
