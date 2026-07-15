@@ -4608,6 +4608,10 @@ internal sealed class StormaktGame
         {
             BeginOresundFlapSection(flapSection);
         }
+        if (_levelId == 2 && _missionFrame == 2_700 && _bridgeSection is BridgeSectionState trainSection)
+        {
+            BeginOresundTrainSection(trainSection);
+        }
         if (_levelId == 2 && _missionFrame >= FlythroughFrames)
         {
             _stageClear = true;
@@ -4673,6 +4677,26 @@ internal sealed class StormaktGame
         section.NoticeAge = 90;
     }
 
+    private void BeginOresundTrainSection(BridgeSectionState section)
+    {
+        section.Mode = BridgeSectionMode.Train;
+        section.Active = true;
+        section.Age = 0;
+        section.TrainX = _width / 2;
+        section.TrainY = -96;
+        section.TrainCannonFrontHealth = 18;
+        section.TrainCannonRearHealth = 18;
+        section.TrainCouplingHealth = 6;
+        section.TrainSwitchHealth = 9;
+        section.TrainCouplingBroken = false;
+        section.TrainTrackDiverted = false;
+        section.TrainCrashAge = 0;
+        section.Outcome = BridgeSectionOutcome.None;
+        section.LastEvent = "ARMORED TRAIN IN";
+        section.Notice = "PANSARTÅG";
+        section.NoticeAge = 100;
+    }
+
     private void StepOresundBridgeSection()
     {
         if (_levelId != 2 || _bridgeSection is not BridgeSectionState section) return;
@@ -4682,6 +4706,11 @@ internal sealed class StormaktGame
         if (section.Mode == BridgeSectionMode.Flaps)
         {
             StepOresundFlaps(section);
+            return;
+        }
+        if (section.Mode == BridgeSectionMode.Train)
+        {
+            StepOresundTrain(section);
             return;
         }
 
@@ -4842,6 +4871,137 @@ internal sealed class StormaktGame
     {
         if (Math.Abs(y - section.FlapY) > 18 || section.FlapInset <= 0) return false;
         return x <= section.FlapInset || (section.FlapPair && x >= _width - section.FlapInset);
+    }
+
+    private void StepOresundTrain(BridgeSectionState section)
+    {
+        section.Age++;
+        int settledTrainY = _width <= 320 ? -12 : 26;
+        section.TrainY = -96 + Math.Min(settledTrainY + 96, section.Age * 2);
+        ResolveOresundTrainShots(section);
+
+        if (section.TrainTrackDiverted && section.Outcome == BridgeSectionOutcome.None)
+        {
+            section.TrainX = Math.Max(_width <= 320 ? 58 : 70, section.TrainX - 3);
+            if (section.TrainX <= (_width <= 320 ? 58 : 70))
+            {
+                CompleteOresundTrain(section, BridgeSectionOutcome.TrainCrashed,
+                    "LIST x3", "TRAIN BUFFER CRASH", 750);
+                section.TrainCrashAge = 1;
+                if (_shipX < 105 && Math.Abs(_shipY - (section.TrainY + 135)) < 70) DamageShip();
+            }
+        }
+        if (section.TrainCrashAge > 0) section.TrainCrashAge++;
+
+        if (!section.TrainTrackDiverted && section.Age is >= 170 and < 650)
+        {
+            if (section.TrainCannonRearHealth > 0 && section.Age % 96 == 18)
+                FireEnemyShot(section.TrainX, section.TrainY + 165, 3, 2.35);
+            if (section.TrainCannonFrontHealth > 0 && section.Age % 108 == 42)
+                FireEnemyShot(section.TrainX, section.TrainY + 105, 3, 2.2);
+        }
+
+        if (section.Age >= 820)
+        {
+            if (section.Outcome == BridgeSectionOutcome.None)
+            {
+                section.Notice = "TÅGET PASSERADE";
+                section.NoticeAge = 90;
+                section.LastEvent = "TRAIN PASSED";
+            }
+            section.Active = false;
+        }
+    }
+
+    private void ResolveOresundTrainShots(BridgeSectionState section)
+    {
+        if (section.Age < 100 || section.Age >= 700 || section.Outcome != BridgeSectionOutcome.None) return;
+        int frontY = section.TrainY + 105;
+        int rearY = section.TrainY + 165;
+        int couplingX = section.TrainX + 30;
+        int couplingY = section.TrainY + 136;
+        int switchX = _width <= 320 ? 52 : 64;
+        int switchY = 104;
+
+        for (int index = _shots.Count - 1; index >= 0; index--)
+        {
+            Shot shot = _shots[index];
+            if (!section.TrainCouplingBroken && Math.Abs(shot.X - couplingX) <= 7 &&
+                Math.Abs(shot.Y - couplingY) <= 9)
+            {
+                section.TrainCouplingHealth -= shot.Power;
+                _shots.RemoveAt(index);
+                if (section.TrainCouplingHealth <= 0)
+                {
+                    section.TrainCouplingBroken = true;
+                    section.LastEvent = "MASTER COUPLING BROKEN";
+                    section.Notice = "HUVUDKOPPLING BRUTEN";
+                    section.NoticeAge = 90;
+                    _score += 100;
+                    _audio?.Trigger(StormaktSound.Broadside);
+                }
+                continue;
+            }
+            if (section.TrainCouplingBroken && !section.TrainTrackDiverted &&
+                Math.Abs(shot.X - switchX) <= 13 && Math.Abs(shot.Y - switchY) <= 13)
+            {
+                section.TrainSwitchHealth -= shot.Power;
+                _shots.RemoveAt(index);
+                if (section.TrainSwitchHealth <= 0)
+                {
+                    section.TrainTrackDiverted = true;
+                    section.LastEvent = "TRACK DIVERTED";
+                    section.Notice = "VÄXEL MOT BUFFERT";
+                    section.NoticeAge = 100;
+                    _score += 150;
+                    _audio?.Trigger(StormaktSound.Deploy);
+                }
+                continue;
+            }
+            if (section.TrainCannonRearHealth > 0 && Math.Abs(shot.X - section.TrainX) <= 22 &&
+                Math.Abs(shot.Y - rearY) <= 27)
+            {
+                section.TrainCannonRearHealth -= shot.Power;
+                _shots.RemoveAt(index);
+                if (section.TrainCannonRearHealth <= 0)
+                {
+                    section.LastEvent = "REAR CANNON DESTROYED";
+                    section.Notice = "BAKRE KANON TYST";
+                    section.NoticeAge = 70;
+                    _score += 300;
+                }
+                continue;
+            }
+            if (section.TrainCannonFrontHealth > 0 && Math.Abs(shot.X - section.TrainX) <= 22 &&
+                Math.Abs(shot.Y - frontY) <= 27)
+            {
+                section.TrainCannonFrontHealth -= shot.Power;
+                _shots.RemoveAt(index);
+                if (section.TrainCannonFrontHealth <= 0)
+                {
+                    section.LastEvent = "FRONT CANNON DESTROYED";
+                    section.Notice = "FRÄMRE KANON TYST";
+                    section.NoticeAge = 70;
+                    _score += 300;
+                }
+            }
+        }
+
+        if (section.TrainCannonFrontHealth <= 0 && section.TrainCannonRearHealth <= 0)
+            CompleteOresundTrain(section, BridgeSectionOutcome.TrainDisarmed,
+                "TÅGET AVVÄPNAT", "TRAIN DISARMED", 0);
+    }
+
+    private void CompleteOresundTrain(BridgeSectionState section, BridgeSectionOutcome outcome,
+        string notice, string eventName, int score)
+    {
+        if (section.Outcome != BridgeSectionOutcome.None) return;
+        section.Outcome = outcome;
+        section.Notice = notice;
+        section.NoticeAge = 120;
+        section.LastEvent = eventName;
+        _score += score;
+        _audio?.Trigger(StormaktSound.EnemyExplosion);
     }
 
     private void ResolveOresundBridgeShots(BridgeSectionState section)
@@ -8321,7 +8481,11 @@ internal sealed class StormaktGame
         uint cable = section.Powered ? 0xff46758e : 0xff27343d;
         if (section.Active)
         {
-            if (section.Mode == BridgeSectionMode.Flaps)
+            if (section.Mode == BridgeSectionMode.Train)
+            {
+                DrawOresundTrain(frame, section);
+            }
+            else if (section.Mode == BridgeSectionMode.Flaps)
             {
                 DrawOresundFlaps(frame, section);
             }
@@ -8398,13 +8562,18 @@ internal sealed class StormaktGame
             int x = (_width - width) / 2;
             DrawRect(frame, x, 37, width, 15, 0xe6080d12);
             DrawText(frame, x + 8, 41, section.Notice,
-                section.Outcome == BridgeSectionOutcome.LaserDestroyedCarriage ? 0xff65c58a : 0xffffd66b);
+                section.Outcome is BridgeSectionOutcome.LaserDestroyedCarriage or
+                    BridgeSectionOutcome.TrainDisarmed or BridgeSectionOutcome.TrainCrashed
+                    ? 0xff65c58a : 0xffffd66b);
         }
         if (_developerMode && section.Active)
         {
-            string debug = section.Mode == BridgeSectionMode.Flaps
-                ? $"SEC2 KLAFF {section.FlapInset:000}  HP {section.FlapHealth:00}  {(section.FlapPair ? "PAR" : "VÄNSTER")}  {section.LastEvent}"
-                : $"SEC1 STRÖM {(section.Powered ? "PÅ" : "AV")}  VÄXEL {(section.TrackLockedLeft ? "V" : "RAK")}  {section.LastEvent}";
+            string debug = section.Mode switch
+            {
+                BridgeSectionMode.Flaps => $"SEC2 KLAFF {section.FlapInset:000}  HP {section.FlapHealth:00}  {(section.FlapPair ? "PAR" : "VÄNSTER")}  {section.LastEvent}",
+                BridgeSectionMode.Train => $"SEC3 TÅG {section.TrainX:000}  K {section.TrainCouplingHealth:00}  V {section.TrainSwitchHealth:00}  {section.LastEvent}",
+                _ => $"SEC1 STRÖM {(section.Powered ? "PÅ" : "AV")}  VÄXEL {(section.TrackLockedLeft ? "V" : "RAK")}  {section.LastEvent}",
+            };
             DrawText(frame, 6, _height - 20, debug, 0xff65c58a);
         }
     }
@@ -8453,6 +8622,93 @@ internal sealed class StormaktGame
             DrawRect(frame, laserX - beamWidth / 2, 18, beamWidth, _height - 36, beam);
             FillCircle(frame, laserX, section.FlapY - 28, firing ? 8 : 5, 0xff8f2635);
         }
+    }
+
+    private void DrawOresundTrain(uint[] frame, BridgeSectionState section)
+    {
+        int switchX = _width <= 320 ? 52 : 64;
+        int switchY = 104;
+        int trackTop = 18;
+        uint track = section.TrainTrackDiverted ? 0xffd6b25e : 0xff526474;
+        DrawLine(frame, _width / 2 - 17, trackTop, _width / 2 - 17, _height - 20, 0xff344653);
+        DrawLine(frame, _width / 2 + 17, trackTop, _width / 2 + 17, _height - 20, 0xff344653);
+        DrawLine(frame, _width / 2, 52, switchX, 154, track);
+        DrawRect(frame, switchX - 13, switchY - 12, 27, 24,
+            section.TrainTrackDiverted ? 0xff3f3024 : 0xff283944);
+        DrawLine(frame, switchX - 7, switchY + 6, switchX + 7, switchY - 2, 0xffd6b25e);
+        FillCircle(frame, switchX + 7, switchY - 3, 3,
+            section.TrainCouplingBroken ? 0xffffd66b : 0xff526474);
+
+        int locomotiveY = section.TrainY;
+        int commandY = section.TrainY + 50;
+        int frontY = section.TrainY + 105;
+        int rearY = section.TrainY + 165;
+        if (section.Outcome == BridgeSectionOutcome.TrainCrashed)
+        {
+            if (_sprites?.TryGet("oresund_train_wreck", out Sprite wreck) == true)
+                DrawSprite(frame, wreck, section.TrainX - wreck.Width / 2, frontY - wreck.Height / 2);
+            else
+            {
+                DrawRect(frame, section.TrainX - 35, frontY - 24, 70, 48, 0xff282326);
+                DrawLine(frame, section.TrainX - 35, frontY + 20, section.TrainX + 34, frontY - 18, 0xffff8a34);
+            }
+            int sparks = Math.Min(28, 6 + section.TrainCrashAge / 2);
+            DrawCircleOutline(frame, section.TrainX, frontY, sparks, 0xffff8a34);
+            return;
+        }
+
+        DrawOresundTrainSprite(frame, "oresund_train_locomotive", section.TrainX, locomotiveY, 50, 82,
+            0xff26343e);
+        DrawLine(frame, section.TrainX, locomotiveY + 38, section.TrainX, commandY - 28, 0xff8a6b38);
+        DrawOresundTrainSprite(frame, "oresund_train_command", section.TrainX, commandY, 48, 58,
+            0xff29343b);
+        DrawLine(frame, section.TrainX, commandY + 28, section.TrainX, frontY - 35, 0xff8a6b38);
+        if (section.TrainCannonFrontHealth > 0)
+            DrawOresundTrainSprite(frame, "oresund_train_cannon", section.TrainX, frontY, 54, 72, 0xff30383d);
+        else
+            DrawOresundTrainWreck(frame, section.TrainX, frontY);
+        DrawLine(frame, section.TrainX, frontY + 35, section.TrainX, rearY - 34, 0xff8a6b38);
+        if (section.TrainCannonRearHealth > 0)
+            DrawOresundTrainSprite(frame, "oresund_train_cannon", section.TrainX, rearY, 52, 70, 0xff30383d);
+        else
+            DrawOresundTrainWreck(frame, section.TrainX, rearY);
+
+        if (!section.TrainCouplingBroken)
+        {
+            int couplingX = section.TrainX + 30;
+            int couplingY = section.TrainY + 136;
+            DrawLine(frame, section.TrainX + 18, couplingY, couplingX, couplingY, 0xffd6b25e);
+            FillCircle(frame, couplingX, couplingY, 4, 0xffffd66b);
+        }
+        if (section.TrainTrackDiverted && section.Outcome == BridgeSectionOutcome.None)
+        {
+            uint warning = (section.Age / 4 & 1) == 0 ? 0xffffd66b : 0xff8f2635;
+            DrawLine(frame, switchX - 22, 154, switchX + 24, 154, warning);
+        }
+    }
+
+    private void DrawOresundTrainSprite(uint[] frame, string name, int x, int y, int width, int height,
+        uint fallback)
+    {
+        if (_sprites?.TryGet(name, out Sprite sprite) == true)
+            DrawSpriteScaled(frame, sprite, x - width / 2, y - height / 2, width, height);
+        else
+        {
+            DrawRect(frame, x - width / 2, y - height / 2, width, height, fallback);
+            DrawRect(frame, x - width / 2 + 5, y - height / 2 + 7, width - 10, 7, 0xff8f2635);
+        }
+    }
+
+    private void DrawOresundTrainWreck(uint[] frame, int x, int y)
+    {
+        if (_sprites?.TryGet("oresund_train_wreck", out Sprite wreck) == true)
+            DrawSpriteScaled(frame, wreck, x - 27, y - 24, 54, 48);
+        else
+        {
+            DrawRect(frame, x - 22, y - 25, 44, 50, 0xff201d1d);
+            DrawLine(frame, x - 18, y + 20, x + 18, y - 18, 0xff8f3929);
+        }
+        FillCircle(frame, x, y, 7 + (y / 3 & 3), 0xffff8a34);
     }
 
     private void DrawSkanskaScenery(uint[] frame)
@@ -10360,6 +10616,15 @@ internal sealed class StormaktGame
         public bool SecondFlapOpened { get; set; }
         public bool FlapCoverScored { get; set; }
         public bool FlapLaserActive { get; set; }
+        public int TrainX { get; set; }
+        public int TrainY { get; set; }
+        public int TrainCannonFrontHealth { get; set; }
+        public int TrainCannonRearHealth { get; set; }
+        public int TrainCouplingHealth { get; set; }
+        public int TrainSwitchHealth { get; set; }
+        public bool TrainCouplingBroken { get; set; }
+        public bool TrainTrackDiverted { get; set; }
+        public int TrainCrashAge { get; set; }
         public int NoticeAge { get; set; }
         public string Notice { get; set; } = "";
         public string LastEvent { get; set; } = "IDLE";
@@ -10419,12 +10684,15 @@ internal sealed class StormaktGame
         LaserDestroyedCarriage,
         SafeReroute,
         Passed,
+        TrainDisarmed,
+        TrainCrashed,
     }
 
     private enum BridgeSectionMode
     {
         Carriage,
         Flaps,
+        Train,
     }
 
     private enum RtsBuildingType

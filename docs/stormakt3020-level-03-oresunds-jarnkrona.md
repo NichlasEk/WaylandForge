@@ -1,6 +1,6 @@
 # Bana 3 - Öresunds järnkrona
 
-Status: checkpoints 1-3 landed 2026-07-15. The active `DEV` row starts a deterministic 60-second level-id 2 skeleton containing the first three-way systemic bridge section and its first physical flap pair.
+Status: checkpoints 1-4 landed 2026-07-15. The active `DEV` row starts a deterministic 60-second level-id 2 skeleton containing the first systemic bridge section, physical flap pair and armored-train pass.
 
 ## Dramatiskt löfte
 
@@ -165,7 +165,7 @@ Varje brosektion minns högst två spelarorsakade förändringar tills den lämn
 1. **Hook och 60-sekundersskelett (landed 2026-07-14):** DEV-start, egen seed, titel, kall brofallback, Öresunds musikkanal med `oresund-i-brand-v1.wav` som prototyp, broväktarvåg och resultatkort.
 2. **Systemisk provsektion (landed 2026-07-15):** kodritad laserfyr, kontrollhus, växel och en kanonvagn med tre verifierade slutbilder från tre inspelade inputspår.
 3. **Ringbrovärlden (landed 2026-07-15):** genererad bakgrund, Kronspannet, rälsparallax och två säkra klaffsekvenser som använder samma täckningsstate som provsektionen.
-4. **Pansartåget:** lokpassage, flera kanonvagnar, spårbyte, kopplingsdöd, miljökrasch och LIST-poäng.
+4. **Pansartåget (landed 2026-07-15):** lokpassage, flera kanonvagnar, spårbyte, kopplingsdöd, miljökrasch och LIST-poäng.
 5. **Sörens ingripande:** radiokö, bakgrundspassage och deterministiskt val av högsta kvarvarande hot.
 6. **Helsingör/Helsingborg:** två ankare, delad hälsa, korskopplad ström, tre faser, död och övergång mot Silverkroppen.
 
@@ -209,11 +209,27 @@ De tre gamla inputspåren ger fortfarande direkt förstörelse 400, laserdöd 90
 - 400x280: skydd `56da2080bb979b70`, tidig öppning `b48cfbaa5b5144d2`.
 - 320x224: skydd `21893ef9a74c37f4`, tidig öppning `78c1b66db97ece53`.
 
+## Landad checkpoint 4
+
+Vid bild 2700 går samma sektionsstate över i tågläge och bygger ett sammanhängande tågsätt av ett kronformat lok, en kommandovagn och två kanonvagnar. Genererade sprites är presentation; hälsa, koppling, växel, skottankare och krasch ägs av stabila statefält.
+
+Två explicita lösningar är spelbara:
+
+1. Mittläge och ihållande eld förstör båda kanonvagnarna för totalt 600 poäng och `TÅGET AVVÄPNAT`.
+2. Ett sidoläge bryter den gula huvudkopplingen för 100 poäng. Därefter kan vänsterväxeln skjutas för 150 poäng, vilket leder hela återstående tågsättet mot bufferten och ger 750 poäng samt `LIST x3`.
+
+Miljövägen är exakt tre eventled: `MasterCouplingBroken → TrackDiverted → TrainBufferCrash`. Kanoneld upphör när tåget går in på sidospåret; buffertkraschen är då den enda nya faran. Ingen lösning använder spriteöverlapp för följdlogik.
+
+Båda inputspåren upprepades tio gånger med identisk slutbild:
+
+- 400x280: avväpning `de972f9a8ba702bf`, buffertkrasch `e581944782886770`.
+- 320x224: avväpning `be2a69f8e879d753`, buffertkrasch `dc7075b742626965`.
+
 ## Nästa implementeringscheckpoint
 
-Bygg skiva 4, Pansartåget: förläng den bevisade kanonvagnen till en synlig lokpassage med flera vagnar, spårbyte och en begränsad miljökrasch. Behåll klaffarna som fristående stateägd geometri och låt tåget reagera på explicita events i stället för spriteöverlapp.
+Bygg skiva 5, Sörens ingripande: ge honom en läsbar bakgrundspassage, lägg replikerna i befintlig radiokö och välj deterministiskt mål efter vilket tåghot spelaren lämnade kvar. Ingripandet ska ändra en lokal situation utan att i hemlighet skriva om bossen.
 
-**Definition of done:** minst två reproducerbara tåglösningar, samma input ger samma vagnsordning och poäng i båda upplösningarna, och ingen kedja överstiger tre eventled eller två samtidiga faror.
+**Definition of done:** minst två kvarvarande hotstate ger olika synlig Sören-aktion, samma slutstate ger samma mål i båda upplösningarna och radio överlappar aldrig sektionens resultatskylt.
 
 ## Acceptanskriterier
 
