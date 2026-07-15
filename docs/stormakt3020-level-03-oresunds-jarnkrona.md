@@ -1,6 +1,6 @@
 # Bana 3 - Öresunds järnkrona
 
-Status: checkpoints 1-5 landed 2026-07-15. The active `DEV` row starts a deterministic 75-second level-id 2 slice containing the first systemic bridge section, physical flap pair, armored-train pass and Sören's state-reactive intervention.
+Status: checkpoints 1-6 landed 2026-07-15. The public `STRID` row starts a deterministic level-id 2 battle containing the systemic bridge section, physical flap pair, armored-train pass, Sören's state-reactive intervention and the complete Helsingör/Helsingborg boss.
 
 ## Dramatiskt löfte
 
@@ -167,7 +167,7 @@ Varje brosektion minns högst två spelarorsakade förändringar tills den lämn
 3. **Ringbrovärlden (landed 2026-07-15):** genererad bakgrund, Kronspannet, rälsparallax och två säkra klaffsekvenser som använder samma täckningsstate som provsektionen.
 4. **Pansartåget (landed 2026-07-15):** lokpassage, flera kanonvagnar, spårbyte, kopplingsdöd, miljökrasch och LIST-poäng.
 5. **Sörens ingripande (landed 2026-07-15):** radiokö, bakgrundspassage och deterministiskt val av högsta kvarvarande hot.
-6. **Helsingör/Helsingborg:** två ankare, delad hälsa, korskopplad ström, tre faser, död och övergång mot Silverkroppen.
+6. **Helsingör/Helsingborg (landed 2026-07-15):** två ankare, delad hälsa, korskopplad ström, tre faser, död och övergång mot Silverkroppen.
 
 ## Landad checkpoint 1
 
@@ -240,15 +240,25 @@ Avväpnings- och kraschslutstaten upprepades tio gånger vardera vid den synliga
 - 400x280: växelmål `eae6213d31cc92bb`, fyrmål `d8c68a9e1120aa95`.
 - 320x224: växelmål `dcc4017ce35d02ba`, fyrmål `49ba3894cc5db276`.
 
-## Nästa implementeringscheckpoint
+## Landad checkpoint 6
 
-Bygg skiva 6, Helsingör/Helsingborg: två självständiga fästningsankare, en delad livsmätare, korskopplad ström och tre tydliga faser. Den landade Sören-träffen får vara visuell upptakt men får inte välja eller försvaga en bossfas.
+Helsingör och Helsingborg kommer in som två självständiga fästningsankare med separata positioner, attackturer och lokal integritet, men exakt en gemensam livsmätare på 720. Den intakta och skadade grafiken kommer från samma packade fyrbildsark med kodritad fallback.
 
-**Definition of done:** båda halvorna kan angripas och avaktiveras utan desynk, samma hälsopool driver båda renderankarna, tre faser är reproducerbara i båda upplösningarna och döden leder rent mot Silverkroppen.
+1. Fas 1 växlar var 180:e bild mellan skjutande och sköldad halva. Sköldringen blockerar spelarskott utan att flytta den andra halvan.
+2. Vid 480 gemensam hälsa dras fästningarna samman. Korsströmmen varnar i 60 bilder innan en alternerande genomskärande stråle aktiveras.
+3. Vid 240 gemensam hälsa exponeras en central kronkärna. Sörens kopparskott bryter den synliga korslåsningen som upptakt men skriver aldrig bossens hälsa.
+4. När kärnan faller kollapsar halvorna utåt, bossradion avslutas före resultatkortet och nivån leder vidare med `JÄRNKRONAN BRUTEN / MOT SILVERKROPPEN`.
+
+Slutläget upprepades tio gånger per inputspår och upplösning med identisk bild vid bild 6000:
+
+- 400x280: vänsterfokus `e71fe379bd3d2039`, högerfokus `057568231648f8a3`.
+- 320x224: vänsterfokus `9ebdf56401411591`, högerfokus `bf0e7a8574a5307a`.
+
+Efter dödssekvensen sammanfaller båda lösningarna deterministiskt: 400x280 `524975a441f7f80b`, 320x224 `a9ae86e836fc0608`.
 
 ## Acceptanskriterier
 
-- Öresunds järnkrona kan startas som nivå-id `2` i utvecklarläge utan att återanvända Bana 1 eller Bana 2:s tidslinje.
+- Öresunds järnkrona kan startas som offentlig `STRID`, nivå-id `2`, utan att återanvända Bana 1 eller Bana 2:s tidslinje.
 - Samma seed och input ger samma tågspår, klafföppningar, fyrsalvor och radio.
 - Varje fysisk klaff visar minst 45 bildsteg varning före körfältsintrång.
 - Bakgrundståg, bågar och hav kan aldrig skada spelaren.

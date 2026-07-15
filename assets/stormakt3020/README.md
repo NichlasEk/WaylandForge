@@ -34,6 +34,8 @@
 
 `stormakt-oresund-armored-train-v1.png` supplies the vertical crown-prowed locomotive, command wagon, reusable cannon wagon and compact buffer-crash wreck for the Pansartåg section. Runtime composes one locomotive, one command wagon and two cannon wagons from shared state anchors. Direct kills reuse the wreck at wagon scale; the environmental route uses it as the larger final crash. The untouched magenta source and exact built-in generation prompt are retained beside the production alpha PNG.
 
+`stormakt-oresund-twin-fortress-v1.png` supplies intact and damaged Helsingör/Helsingborg halves for Öresunds Järnkrona. The two halves remain independent render and attack anchors while one shared health pool drives their three boss phases. The untouched magenta source and exact built-in generation prompt are retained beside the production alpha PNG; missing sprites retain the code-drawn fortress fallback.
+
 `rts-swedish-buildings-v1.png`, `rts-swedish-units-v1.png` and `rts-danish-army-v1.png` supply Silverkroppen's complete first production-art pass. Their packed states cover working steam/crusher machinery, tower fire, Carolean volley/reload, moose charge/carbine, and ready/attack pairs for all five Danish troop families. Equal atlas cells are cropped independently before alpha trimming, so animation effects and neighboring units cannot leak into another sprite.
 
 `rts-silver-miner-v1.png` supplies two empty and two silver-loaded walking phases for the visible crusher-to-Karl economy convoy. The four cells share one reference scale and fixed runtime canvas; delivered crates, rather than a hidden income timer, advance both spendable and salvaged silver.

@@ -25,7 +25,7 @@ level select
        HUD / boss HUD / title / radio / result / pause
 ```
 
-`StartLevel`, `ResetLevelState`, `StepLevelTimeline` and `DrawLevelScenery` are the stable campaign hooks. Stora Bält and Skånska skuggor are public `STRID` rows; Öresunds järnkrona is the active developer-frontier and keeps preview behavior until its first playable slice lands.
+`StartLevel`, `ResetLevelState`, `StepLevelTimeline` and `DrawLevelScenery` are the stable campaign hooks. Stora Bält, Skånska skuggor and Öresunds järnkrona are public `STRID` rows; Silverkroppen remains the active developer frontier.
 
 ## Selection and state ownership
 
@@ -35,7 +35,7 @@ level select
 | Active campaign | missing | Add `_levelId`; never infer the running level from `_levelSelection`. |
 | Deterministic reset | `Reset()` uses seed `3020` | Rename/generalize to reset the active level and seed level 2 independently. |
 | Menu return | `StepLevelPreview` | Keep preview return; level clear/game over restart the same active level. |
-| Public unlock | campaign status in `DrawLevelSelect` and `StepLevelSelect` | Level 2 is startable without developer mode; level 3 remains `DEV`. |
+| Public unlock | campaign status in `DrawLevelSelect` and `StepLevelSelect` | Level ids 0-2 are startable without developer mode; level id 3 remains `DEV`. |
 
 Invariant: selecting Skånska skuggor may never run Stora Bält with a changed title. `_levelId` owns every level-specific timeline, asset and result choice.
 
@@ -105,9 +105,9 @@ For every checkpoint: build, `git diff --check`, capture at least one direct WFE
 
 ## Öresund dispatch
 
-Campaign row 3 owns level id `2` and is directly startable only in developer mode while under construction. Reset seed `3303`, `OresundEnemyWaves`, the empty timed `OresundRadioCards` reservation, `StormaktMusicTrack.Oresund`, ringbridge layers, mission title and result card are all separate dispatch branches. The slice now clears at frame 4500 after Sören's queued intervention and Start returns to selected campaign row 3. It must not fall through to Stora Bält or Skånska tables when a future subsystem is absent.
+Campaign row 3 owns level id `2` and is publicly startable as `STRID`. Reset seed `3303`, `OresundEnemyWaves`, the empty timed `OresundRadioCards` reservation, `StormaktMusicTrack.Oresund`, ringbridge layers, mission title and result card are all separate dispatch branches. The timeline begins the twin-fortress boss at frame 4500 and retains frame 9000 only as a defensive clear failsafe. Start returns to selected campaign row 3. It must not fall through to Stora Bält or Skånska tables when a future subsystem is absent.
 
-The first deterministic wide/legacy WFEX baseline landed 2026-07-14. `BridgeSectionState` and its direct-destruction, coupling-to-laser and control-house reroute paths landed 2026-07-15. Checkpoint 3 adds generated non-physical ringbridge layers plus two state-owned physical flap passages; ordinary shots stop on the shared flap rectangles while the second passage's laser ignores cover after a 60-frame warning. Checkpoint 4 composes the generated locomotive, command wagon, two cannon wagons and wreck from the same state. Its direct-disarm and explicit `MasterCouplingBroken → TrackDiverted → TrainBufferCrash` paths each repeated ten times in wide and legacy fields. Checkpoint 5 maps `TrainDisarmed`, `TrainCrashed` or a passed train to three explicit Sören targets, queues his and Ebba's existing voiced cards after the train result, and never mutates future boss state. Next work adds the dual Helsingör/Helsingborg boss anchors.
+The first deterministic wide/legacy WFEX baseline landed 2026-07-14. `BridgeSectionState` and its direct-destruction, coupling-to-laser and control-house reroute paths landed 2026-07-15. Checkpoint 3 adds generated non-physical ringbridge layers plus two state-owned physical flap passages; ordinary shots stop on the shared flap rectangles while the second passage's laser ignores cover after a 60-frame warning. Checkpoint 4 composes the generated locomotive, command wagon, two cannon wagons and wreck from the same state. Its direct-disarm and explicit `MasterCouplingBroken → TrackDiverted → TrainBufferCrash` paths each repeated ten times in wide and legacy fields. Checkpoint 5 maps `TrainDisarmed`, `TrainCrashed` or a passed train to three explicit Sören targets, queues his and Ebba's existing voiced cards after the train result, and never mutates future boss state. Checkpoint 6 adds independent Helsingör/Helsingborg anchors, one shared 720-health pool, alternating shield/fire turns, warned cross-current beams, a central crown core and a clean collapse/result transition. Both focus solutions repeated ten times in wide and legacy fields, and the row is now public `STRID`.
 
 ## RTS dispatch - Silverkroppen
 

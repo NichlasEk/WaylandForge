@@ -95,7 +95,7 @@ internal sealed class StormaktGame
         "SNAPPHANENS ED",
         "KÖPENHAMNS RING",
     ];
-    private const int FlythroughFrames = 75 * 60;
+    private const int FlythroughFrames = 150 * 60;
     private const int BossArrivalFrame = 3_300;
     private const int BossPhaseOneHealth = 450;
     private const int BossPhaseTwoThreshold = 293;
@@ -105,6 +105,9 @@ internal sealed class StormaktGame
     private const int GlimmingeMaxHealth = 720;
     private const int GlimmingePhaseTwoHealth = 420;
     private const int GlimmingeBurningHealth = 210;
+    private const int OresundBossMaxHealth = 720;
+    private const int OresundBossPhaseTwoHealth = 480;
+    private const int OresundBossCoreHealth = 240;
     private const int RtsSalvagedSilverGoal = 1_200;
     private const int DungeonFirstSigilMask = 1 << 8;
     private const int DungeonFogdeRescuedMask = 1 << 9;
@@ -286,6 +289,9 @@ internal sealed class StormaktGame
     private static readonly RadioCard OresundEbbaSorenRadio =
         new(0, 330, false, "EBBA GRIP", "SÖREN SVARTKRUT", "KAPARE OCH VÄG",
             StormaktVoice.EbbaIdentifierarSoren, "portrait_ebba");
+    private static readonly RadioCard OresundBossIntroRadio =
+        new(0, 300, true, "FOGDE RASMUS", "KRONENS TIENDE", "TAGER ALT",
+            StormaktVoice.RasmusKronensTiende, "portrait_rasmus");
     private int _shipX;
     private int _shipY;
     private int _cooldown;
@@ -298,6 +304,7 @@ internal sealed class StormaktGame
     private BossState? _boss;
     private SorenRivalState? _sorenRival;
     private OresundSorenState? _oresundSoren;
+    private OresundFortressBossState? _oresundBoss;
     private GlimmingeState? _glimminge;
     private BridgeSectionState? _bridgeSection;
     private RtsState? _rts;
@@ -587,6 +594,7 @@ internal sealed class StormaktGame
         _boss = null;
         _sorenRival = null;
         _oresundSoren = null;
+        _oresundBoss = null;
         _glimminge = null;
         _bridgeSection = _levelId == 2 ? new BridgeSectionState() : null;
         _rts = _levelId == 3
@@ -713,7 +721,7 @@ internal sealed class StormaktGame
                 _previousButtons = buttons;
                 return;
             }
-            if (_levelSelection is 0 or 1 || (_developerMode && _levelSelection is 2 or 3))
+            if (_levelSelection is 0 or 1 or 2 || (_developerMode && _levelSelection == 3))
             {
                 StartLevel(_levelSelection, fresh: (buttons & Slow) != 0);
             }
@@ -4625,7 +4633,11 @@ internal sealed class StormaktGame
         {
             BeginOresundSoren(resolvedSection);
         }
-        if (_levelId == 2 && _missionFrame >= FlythroughFrames)
+        if (_levelId == 2 && _missionFrame == 4_500 && _oresundBoss is null)
+        {
+            BeginOresundFortressBoss();
+        }
+        if (_levelId == 2 && _missionFrame >= FlythroughFrames && _oresundBoss is null && !_stageClear)
         {
             _stageClear = true;
             _stageClearAge = 0;
@@ -4733,6 +4745,26 @@ internal sealed class StormaktGame
             Y = 58,
             FromRight = targetX < _width / 2,
         };
+    }
+
+    private void BeginOresundFortressBoss()
+    {
+        _oresundBoss = new OresundFortressBossState
+        {
+            Health = OresundBossMaxHealth,
+            LeftIntegrity = 360,
+            RightIntegrity = 360,
+            Phase = 1,
+            LeftX = -74,
+            RightX = _width + 74,
+            Y = 78,
+            LastEvent = "TWIN FORTRESS IN",
+        };
+        _enemies.Clear();
+        _enemyShots.Clear();
+        _shots.Clear();
+        _audio?.SwitchMusic(StormaktMusicTrack.Boss);
+        _audio?.Trigger(StormaktSound.Deploy);
     }
 
     private void StepOresundBridgeSection()
@@ -5663,6 +5695,11 @@ internal sealed class StormaktGame
 
     private void StepBoss()
     {
+        if (_levelId == 2)
+        {
+            StepOresundFortressBoss();
+            return;
+        }
         BossState? boss = _boss;
         if (boss is null)
         {
@@ -5826,6 +5863,232 @@ internal sealed class StormaktGame
         {
             StepBossDeath(boss);
         }
+    }
+
+    private void StepOresundFortressBoss()
+    {
+        if (_oresundBoss is not OresundFortressBossState boss) return;
+        boss.Age++;
+        boss.PhaseAge++;
+
+        if (boss.Phase == 4)
+        {
+            boss.LeftX -= 1.15;
+            boss.RightX += 1.15;
+            boss.Y += 0.16;
+            if (boss.PhaseAge % 38 == 1) _audio?.Trigger(StormaktSound.EnemyExplosion);
+            if (boss.PhaseAge >= 330)
+            {
+                _oresundBoss = null;
+                _stageClear = true;
+                _stageClearAge = 0;
+                _enemyShots.Clear();
+                _shots.Clear();
+                _audio?.SwitchMusic(StormaktMusicTrack.Oresund);
+            }
+            return;
+        }
+
+        int baseInset = _width <= 320 ? 58 : 72;
+        if (boss.Age <= 150)
+        {
+            double t = boss.Age / 150.0;
+            double eased = t * t * (3.0 - 2.0 * t);
+            boss.LeftX = -74 + (baseInset + 74) * eased;
+            boss.RightX = _width + 74 - (baseInset + 74) * eased;
+        }
+        else if (boss.Phase == 1)
+        {
+            boss.LeftX = baseInset;
+            boss.RightX = _width - baseInset;
+        }
+        else if (boss.Phase == 2)
+        {
+            int closedInset = _width <= 320 ? 86 : 112;
+            double t = Math.Min(1.0, boss.PhaseAge / 90.0);
+            double eased = t * t * (3.0 - 2.0 * t);
+            boss.LeftX = baseInset + (closedInset - baseInset) * eased;
+            boss.RightX = _width - boss.LeftX;
+        }
+        else
+        {
+            double pulse = Math.Sin(boss.PhaseAge * 0.025) * (_width <= 320 ? 8 : 12);
+            boss.LeftX = baseInset + pulse;
+            boss.RightX = _width - baseInset - pulse;
+            if (boss.PhaseAge == 120) boss.SorenStrikeAge = 1;
+            if (boss.SorenStrikeAge > 0)
+            {
+                boss.SorenStrikeAge++;
+                if (boss.SorenStrikeAge == 45)
+                {
+                    boss.CrossLockBroken = true;
+                    boss.LastEvent = "SOREN BREAKS CROSSLOCK";
+                    _audio?.Trigger(StormaktSound.Broadside);
+                }
+            }
+        }
+
+        if (boss.Age == 170 && !boss.IntroRadioStarted)
+        {
+            boss.IntroRadioStarted = true;
+            ActivateBossRadio(OresundBossIntroRadio);
+        }
+        if (boss.Age < 320) return;
+
+        ResolveOresundFortressShots(boss);
+        if (boss.Phase == 4) return;
+        if (boss.Phase == 1) StepOresundBossPhaseOne(boss);
+        else if (boss.Phase == 2) StepOresundBossPhaseTwo(boss);
+        else StepOresundBossPhaseThree(boss);
+    }
+
+    private void ResolveOresundFortressShots(OresundFortressBossState boss)
+    {
+        bool attackLeft = (boss.PhaseAge / 180 & 1) == 0;
+        for (int index = _shots.Count - 1; index >= 0; index--)
+        {
+            Shot shot = _shots[index];
+            if (boss.Phase == 3)
+            {
+                int coreY = 96;
+                if (Math.Abs(shot.X - _width / 2) <= 24 && Math.Abs(shot.Y - coreY) <= 24)
+                {
+                    boss.Health -= shot.Power;
+                    _shots.RemoveAt(index);
+                    if (boss.Health <= 0)
+                    {
+                        BeginOresundBossDeath(boss);
+                        return;
+                    }
+                }
+                continue;
+            }
+
+            bool hitLeft = boss.LeftIntegrity > 0 && Math.Abs(shot.X - boss.LeftX) <= 50 &&
+                Math.Abs(shot.Y - boss.Y) <= 46;
+            bool hitRight = boss.RightIntegrity > 0 && Math.Abs(shot.X - boss.RightX) <= 50 &&
+                Math.Abs(shot.Y - boss.Y) <= 46;
+            if (!hitLeft && !hitRight) continue;
+
+            bool shielded = boss.Phase == 1 && (hitLeft ? !attackLeft : attackLeft);
+            _shots.RemoveAt(index);
+            if (shielded)
+            {
+                boss.LastEvent = hitLeft ? "HELSINGOR SHIELD" : "HELSINGBORG SHIELD";
+                continue;
+            }
+
+            if (hitLeft)
+            {
+                boss.LeftIntegrity -= shot.Power;
+                if (boss.LeftIntegrity <= 0)
+                {
+                    boss.LeftIntegrity = 0;
+                    boss.LastEvent = "HELSINGOR DISABLED";
+                    _score += 1_500;
+                    _audio?.Trigger(StormaktSound.EnemyExplosion);
+                }
+            }
+            else
+            {
+                boss.RightIntegrity -= shot.Power;
+                if (boss.RightIntegrity <= 0)
+                {
+                    boss.RightIntegrity = 0;
+                    boss.LastEvent = "HELSINGBORG DISABLED";
+                    _score += 1_500;
+                    _audio?.Trigger(StormaktSound.EnemyExplosion);
+                }
+            }
+            boss.Health -= shot.Power;
+            if (boss.Phase == 1 && boss.Health <= OresundBossPhaseTwoHealth)
+            {
+                boss.Health = OresundBossPhaseTwoHealth;
+                boss.Phase = 2;
+                boss.PhaseAge = 0;
+                boss.LastEvent = "CROSS POWER";
+                _enemyShots.Clear();
+                ActivateBossRadio(RasmusPhaseTwoRadio);
+                _audio?.Trigger(StormaktSound.Broadside);
+                return;
+            }
+            if (boss.Phase == 2 && boss.Health <= OresundBossCoreHealth)
+            {
+                boss.Health = OresundBossCoreHealth;
+                boss.Phase = 3;
+                boss.PhaseAge = 0;
+                boss.LastEvent = "CROWN CORE EXPOSED";
+                _enemyShots.Clear();
+                ActivateBossRadio(RasmusPhaseThreeRadio);
+                _audio?.Trigger(StormaktSound.Broadside);
+                return;
+            }
+        }
+    }
+
+    private void StepOresundBossPhaseOne(OresundFortressBossState boss)
+    {
+        int cycle = boss.PhaseAge % 180;
+        bool attackLeft = (boss.PhaseAge / 180 & 1) == 0;
+        if (cycle == 70)
+        {
+            double x = attackLeft ? boss.LeftX : boss.RightX;
+            int integrity = attackLeft ? boss.LeftIntegrity : boss.RightIntegrity;
+            if (integrity <= 0)
+            {
+                x = attackLeft ? boss.RightX : boss.LeftX;
+                integrity = attackLeft ? boss.RightIntegrity : boss.LeftIntegrity;
+            }
+            if (integrity > 0)
+            {
+                FireEnemyShot((int)x - 12, (int)boss.Y + 28, 3, 2.25);
+                FireEnemyShot((int)x + 12, (int)boss.Y + 28, 3, 2.25);
+            }
+        }
+    }
+
+    private void StepOresundBossPhaseTwo(OresundFortressBossState boss)
+    {
+        int cycle = boss.PhaseAge % 180;
+        bool leftBeam = (boss.PhaseAge / 180 & 1) == 0;
+        double beamX = leftBeam ? boss.LeftX : boss.RightX;
+        if (cycle is >= 60 and < 96 && Math.Abs(_shipX - beamX) < 8 && _shipY > boss.Y)
+            DamageShip();
+        if (cycle == 126)
+        {
+            double x = leftBeam ? boss.RightX : boss.LeftX;
+            int integrity = leftBeam ? boss.RightIntegrity : boss.LeftIntegrity;
+            if (integrity > 0) FireEnemyShot((int)x, (int)boss.Y + 30, 4, 2.45);
+        }
+    }
+
+    private void StepOresundBossPhaseThree(OresundFortressBossState boss)
+    {
+        if (boss.PhaseAge % 72 != 36) return;
+        int coreX = _width / 2;
+        int coreY = 96;
+        for (int index = 0; index < 8; index++)
+        {
+            double angle = Math.PI / 8.0 + index * Math.PI / 4.0;
+            _enemyShots.Add(new EnemyShot(coreX, coreY,
+                Math.Cos(angle) * 1.65, Math.Sin(angle) * 1.65, 4));
+        }
+        _audio?.Trigger(StormaktSound.Broadside);
+    }
+
+    private void BeginOresundBossDeath(OresundFortressBossState boss)
+    {
+        if (boss.Phase == 4) return;
+        boss.Health = 0;
+        boss.Phase = 4;
+        boss.PhaseAge = 0;
+        boss.LastEvent = "IRON CROWN BROKEN";
+        _score += 10_000;
+        _shots.Clear();
+        _enemyShots.Clear();
+        _enemies.Clear();
+        ActivateBossRadio(RasmusDeathRadio);
+        _audio?.Trigger(StormaktSound.Broadside);
     }
 
     private static bool IsBossCoreVulnerable(BossState boss)
@@ -9267,6 +9530,11 @@ internal sealed class StormaktGame
 
     private void DrawBoss(uint[] frame)
     {
+        if (_levelId == 2)
+        {
+            DrawOresundFortressBoss(frame);
+            return;
+        }
         BossState? boss = _boss;
         if (boss is null)
         {
@@ -9331,6 +9599,96 @@ internal sealed class StormaktGame
         }
         DrawBossPhaseAttachments(frame, boss, x, y);
         DrawBossFinalEffects(frame, boss, x, y);
+    }
+
+    private void DrawOresundFortressBoss(uint[] frame)
+    {
+        if (_oresundBoss is not OresundFortressBossState boss) return;
+        int leftX = (int)Math.Round(boss.LeftX);
+        int rightX = (int)Math.Round(boss.RightX);
+        int y = (int)Math.Round(boss.Y);
+        int fortressWidth = _width <= 320 ? 104 : 120;
+        int fortressHeight = _width <= 320 ? 90 : 104;
+        bool leftDamaged = boss.LeftIntegrity <= 0 || boss.Phase >= 3;
+        bool rightDamaged = boss.RightIntegrity <= 0 || boss.Phase >= 3;
+        DrawOresundFortressHalf(frame, leftDamaged ? "oresund_helsingor_damaged" : "oresund_helsingor",
+            leftX, y, fortressWidth, fortressHeight, true);
+        DrawOresundFortressHalf(frame, rightDamaged ? "oresund_helsingborg_damaged" : "oresund_helsingborg",
+            rightX, y, fortressWidth, fortressHeight, false);
+
+        if (boss.Phase == 1 && boss.Age >= 320)
+        {
+            bool attackLeft = (boss.PhaseAge / 180 & 1) == 0;
+            int shieldX = attackLeft ? rightX : leftX;
+            uint shield = (boss.PhaseAge / 5 & 1) == 0 ? 0xff65c5ca : 0xff31546b;
+            DrawCircleOutline(frame, shieldX, y, fortressWidth / 2 + 4, shield);
+            DrawText(frame, shieldX - 14, y + fortressHeight / 2 - 7, "SKÖLD", 0xff9bd4dc);
+        }
+        else if (boss.Phase == 2)
+        {
+            int cycle = boss.PhaseAge % 180;
+            bool leftBeam = (boss.PhaseAge / 180 & 1) == 0;
+            int beamX = leftBeam ? leftX : rightX;
+            uint link = (boss.PhaseAge / 5 & 1) == 0 ? 0xff65c5ca : 0xff46758e;
+            DrawLine(frame, leftX + fortressWidth / 3, y, rightX - fortressWidth / 3, y, link);
+            if (cycle < 60)
+            {
+                uint warning = (cycle / 5 & 1) == 0 ? 0xffff6b62 : 0xff7f2632;
+                DrawLine(frame, beamX, y + 20, beamX, _height - 14, warning);
+            }
+            else if (cycle < 96)
+            {
+                DrawRect(frame, beamX - 2, y + 20, 5, _height - y - 34, 0xfff2eee4);
+                DrawLine(frame, beamX - 5, y + 20, beamX - 5, _height - 14, 0xffff6b62);
+                DrawLine(frame, beamX + 5, y + 20, beamX + 5, _height - 14, 0xffff6b62);
+            }
+        }
+        else if (boss.Phase >= 3)
+        {
+            int coreX = _width / 2;
+            int coreY = 96;
+            uint cable = boss.CrossLockBroken ? 0xff3b3430 : 0xff65c5ca;
+            DrawLine(frame, leftX + fortressWidth / 3, y, coreX - 15, coreY, cable);
+            DrawLine(frame, rightX - fortressWidth / 3, y, coreX + 15, coreY, cable);
+            FillCircle(frame, coreX, coreY, 18, 0xff252f36);
+            FillCircle(frame, coreX, coreY, 11, boss.Phase == 4 ? 0xff8f2635 : 0xff65c5ca);
+            DrawCircleOutline(frame, coreX, coreY, 21 + (boss.PhaseAge / 5 & 2), 0xffffd66b);
+            DrawCrown(frame, coreX - 5, coreY - 4, 0xffffd66b);
+
+            if (boss.SorenStrikeAge is > 0 and < 70)
+            {
+                double t = Math.Min(1.0, boss.SorenStrikeAge / 45.0);
+                int shotX = (int)Math.Round(-18 + (coreX + 18) * t);
+                int shotY = 61 + (int)Math.Round((coreY - 61) * t);
+                DrawLine(frame, -4, 61, shotX, shotY, 0xff87583a);
+                FillCircle(frame, shotX, shotY, 3, 0xffffd66b);
+            }
+        }
+
+        if (boss.Phase == 4)
+        {
+            int blast = 7 + (boss.PhaseAge / 4 & 7);
+            FillCircle(frame, leftX + 18, y - 12 + boss.PhaseAge / 18, blast, 0xffff8a34);
+            FillCircle(frame, rightX - 18, y + 10 + boss.PhaseAge / 22, blast, 0xffb33b2e);
+        }
+        if (_developerMode)
+            DrawText(frame, 6, _height - 28,
+                $"BOSS F{boss.Phase} V{boss.LeftIntegrity:000} H{boss.RightIntegrity:000} {boss.LastEvent}",
+                0xff65c58a);
+    }
+
+    private void DrawOresundFortressHalf(uint[] frame, string name, int x, int y, int width, int height,
+        bool left)
+    {
+        if (_sprites?.TryGet(name, out Sprite sprite) == true)
+        {
+            DrawSpriteScaled(frame, sprite, x - width / 2, y - height / 2, width, height);
+            return;
+        }
+        uint armor = left ? 0xff51252c : 0xff263d57;
+        DrawRect(frame, x - width / 2, y - height / 2, width, height, 0xff20272c);
+        DrawRect(frame, x - width / 2 + 8, y - 12, width - 16, 24, armor);
+        FillCircle(frame, x + (left ? width / 3 : -width / 3), y, 9, 0xff65c5ca);
     }
 
     private void DrawBossFinalEffects(uint[] frame, BossState boss, int x, int y)
@@ -9932,6 +10290,20 @@ internal sealed class StormaktGame
 
     private void DrawBossHud(uint[] frame)
     {
+        if (_oresundBoss is OresundFortressBossState oresund && oresund.Age >= 320 && oresund.Phase < 4)
+        {
+            int oresundHudX = (_width - 244) / 2;
+            int oresundHudY = _bossRadioCard is null ? 18 : 68;
+            DrawRect(frame, oresundHudX, oresundHudY, 244, 16, 0xff080f18);
+            DrawText(frame, oresundHudX + 8, oresundHudY + 3, "ÖRESUNDS JÄRNKRONA", 0xffd8e6f0);
+            DrawRect(frame, oresundHudX + 132, oresundHudY + 5, 103, 5, 0xff2a3036);
+            DrawRect(frame, oresundHudX + 132, oresundHudY + 5,
+                Math.Clamp(oresund.Health, 0, OresundBossMaxHealth) * 103 / OresundBossMaxHealth, 5,
+                oresund.Phase switch { 1 => 0xffc51f35, 2 => 0xff65c5ca, _ => 0xffffd66b });
+            if (oresund.LeftIntegrity <= 0) DrawText(frame, oresundHudX + 3, oresundHudY + 10, "V", 0xff62696c);
+            if (oresund.RightIntegrity <= 0) DrawText(frame, oresundHudX + 235, oresundHudY + 10, "H", 0xff62696c);
+            return;
+        }
         if (_glimminge is GlimmingeState glimminge && glimminge.Age >= 150 && glimminge.Phase < 3)
         {
             int glimmingeHudX = (_width - 214) / 2;
@@ -9964,6 +10336,16 @@ internal sealed class StormaktGame
 
     private void DrawBossIntroduction(uint[] frame)
     {
+        if (_oresundBoss is OresundFortressBossState oresund && oresund.Age is >= 55 and < 165)
+        {
+            int oresundPanelX = (_width - 246) / 2;
+            DrawRect(frame, oresundPanelX, 76, 246, 42, 0xff090d12);
+            DrawLine(frame, oresundPanelX, 76, oresundPanelX + 245, 76, 0xff65c5ca);
+            DrawLine(frame, oresundPanelX, 117, oresundPanelX + 245, 117, 0xffc51f35);
+            DrawText(frame, oresundPanelX + 54, 87, "HELSINGÖR / HELSINGBORG", 0xffd8e6f0);
+            DrawText(frame, oresundPanelX + 66, 103, "ÖRESUNDS JÄRNKRONA", 0xffffd66b);
+            return;
+        }
         if (_glimminge is GlimmingeState glimminge && glimminge.Age is >= 55 and < 150)
         {
             int glimmingePanelX = (_width - 230) / 2;
@@ -10039,8 +10421,8 @@ internal sealed class StormaktGame
             }
             else if (_levelId == 2)
             {
-                DrawText(frame, panelX + 39, 99, "JÄRNKRONAN VÄNTAR", 0xffffd66b);
-                DrawText(frame, panelX + 45, 116, "BRON ÄR KARTLAGD", 0xff9bd4dc);
+                DrawText(frame, panelX + 37, 99, "JÄRNKRONAN BRUTEN", 0xffffd66b);
+                DrawText(frame, panelX + 38, 116, "MOT SILVERKROPPEN", 0xff65c58a);
             }
             else if (_levelId == 3)
             {
@@ -10209,7 +10591,7 @@ internal sealed class StormaktGame
         for (int index = 0; index < CampaignNames.Length; index++)
         {
             string status = index == 3 && File.Exists(DungeonSavePath("autosave")) ? "FORTSÄTT" :
-                index is 0 or 1 ? "STRID" : _developerMode ? "DEV" : "LÅST";
+                index is 0 or 1 or 2 ? "STRID" : _developerMode ? "DEV" : "LÅST";
             DrawLevelOption(frame, panelX + 12, listY + index * rowHeight, panelWidth - 24,
                 rowHeight - 2, index, $"{index + 1}  {CampaignNames[index]}", status);
         }
@@ -11150,6 +11532,23 @@ internal sealed class StormaktGame
         public bool ShotFired { get; set; }
         public bool TargetDestroyed { get; set; }
         public OresundSorenTarget Target { get; set; }
+    }
+
+    private sealed class OresundFortressBossState
+    {
+        public int Health { get; set; }
+        public int LeftIntegrity { get; set; }
+        public int RightIntegrity { get; set; }
+        public int Age { get; set; }
+        public int Phase { get; set; }
+        public int PhaseAge { get; set; }
+        public double LeftX { get; set; }
+        public double RightX { get; set; }
+        public double Y { get; set; }
+        public bool IntroRadioStarted { get; set; }
+        public bool CrossLockBroken { get; set; }
+        public int SorenStrikeAge { get; set; }
+        public string LastEvent { get; set; } = "IDLE";
     }
 
     private sealed class GlimmingeState
