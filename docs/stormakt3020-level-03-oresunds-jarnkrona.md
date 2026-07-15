@@ -1,6 +1,6 @@
 # Bana 3 - Öresunds järnkrona
 
-Status: checkpoints 1-4 landed 2026-07-15. The active `DEV` row starts a deterministic 60-second level-id 2 skeleton containing the first systemic bridge section, physical flap pair and armored-train pass.
+Status: checkpoints 1-5 landed 2026-07-15. The active `DEV` row starts a deterministic 75-second level-id 2 slice containing the first systemic bridge section, physical flap pair, armored-train pass and Sören's state-reactive intervention.
 
 ## Dramatiskt löfte
 
@@ -166,7 +166,7 @@ Varje brosektion minns högst två spelarorsakade förändringar tills den lämn
 2. **Systemisk provsektion (landed 2026-07-15):** kodritad laserfyr, kontrollhus, växel och en kanonvagn med tre verifierade slutbilder från tre inspelade inputspår.
 3. **Ringbrovärlden (landed 2026-07-15):** genererad bakgrund, Kronspannet, rälsparallax och två säkra klaffsekvenser som använder samma täckningsstate som provsektionen.
 4. **Pansartåget (landed 2026-07-15):** lokpassage, flera kanonvagnar, spårbyte, kopplingsdöd, miljökrasch och LIST-poäng.
-5. **Sörens ingripande:** radiokö, bakgrundspassage och deterministiskt val av högsta kvarvarande hot.
+5. **Sörens ingripande (landed 2026-07-15):** radiokö, bakgrundspassage och deterministiskt val av högsta kvarvarande hot.
 6. **Helsingör/Helsingborg:** två ankare, delad hälsa, korskopplad ström, tre faser, död och övergång mot Silverkroppen.
 
 ## Landad checkpoint 1
@@ -225,11 +225,26 @@ Båda inputspåren upprepades tio gånger med identisk slutbild:
 - 400x280: avväpning `de972f9a8ba702bf`, buffertkrasch `e581944782886770`.
 - 320x224: avväpning `be2a69f8e879d753`, buffertkrasch `dc7075b742626965`.
 
+## Landad checkpoint 5
+
+Öresundsslicen är förlängd till 75 sekunder för ett avslutat ingripande mellan tåget och resultatkortet. Vid bild 3540 väljer en ren targetfunktion Sörens mål från tågets synliga slutstate:
+
+- `TrainDisarmed` lämnar vänsterväxeln intakt; Sören kommer från höger och slår ut den.
+- `TrainCrashed` har redan förstört växeln; Sören kommer från vänster och slår ut högerfyrens relä.
+- Ett passerat tåg lämnar en kanonvagn; den blir reservmålet i mittspåret.
+
+Sörens korsarskepp, boostläge och etablerade porträtt återanvänds. Hans befintliga `FOGDEKONVOJ / FÖRÖVER`-replik startar först när tågets resultatskylt är borta. Ebbas befintliga `SÖREN SVARTKRUT / KAPARE OCH VÄG` köas bakom den och börjar efter Sörens träffkvitto. Träffen ändrar endast det lokala interventionsstatet; inget bossfält skrivs.
+
+Avväpnings- och kraschslutstaten upprepades tio gånger vardera vid den synliga salvan med identisk slutbild:
+
+- 400x280: växelmål `eae6213d31cc92bb`, fyrmål `d8c68a9e1120aa95`.
+- 320x224: växelmål `dcc4017ce35d02ba`, fyrmål `49ba3894cc5db276`.
+
 ## Nästa implementeringscheckpoint
 
-Bygg skiva 5, Sörens ingripande: ge honom en läsbar bakgrundspassage, lägg replikerna i befintlig radiokö och välj deterministiskt mål efter vilket tåghot spelaren lämnade kvar. Ingripandet ska ändra en lokal situation utan att i hemlighet skriva om bossen.
+Bygg skiva 6, Helsingör/Helsingborg: två självständiga fästningsankare, en delad livsmätare, korskopplad ström och tre tydliga faser. Den landade Sören-träffen får vara visuell upptakt men får inte välja eller försvaga en bossfas.
 
-**Definition of done:** minst två kvarvarande hotstate ger olika synlig Sören-aktion, samma slutstate ger samma mål i båda upplösningarna och radio överlappar aldrig sektionens resultatskylt.
+**Definition of done:** båda halvorna kan angripas och avaktiveras utan desynk, samma hälsopool driver båda renderankarna, tre faser är reproducerbara i båda upplösningarna och döden leder rent mot Silverkroppen.
 
 ## Acceptanskriterier
 

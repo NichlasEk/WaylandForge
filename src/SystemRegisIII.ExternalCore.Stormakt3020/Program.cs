@@ -95,7 +95,7 @@ internal sealed class StormaktGame
         "SNAPPHANENS ED",
         "KÖPENHAMNS RING",
     ];
-    private const int FlythroughFrames = 60 * 60;
+    private const int FlythroughFrames = 75 * 60;
     private const int BossArrivalFrame = 3_300;
     private const int BossPhaseOneHealth = 450;
     private const int BossPhaseTwoThreshold = 293;
@@ -280,6 +280,12 @@ internal sealed class StormaktGame
         new(2_220, 3_480, 105, 7, 3),
     ];
     private static readonly RadioCard[] OresundRadioCards = [];
+    private static readonly RadioCard OresundSorenStrikeRadio =
+        new(0, 330, true, "SÖREN SVARTKRUT", "FOGDEKONVOJ", "FÖRÖVER", StormaktVoice.SorenFogdekonvoj,
+            "portrait_soren", true);
+    private static readonly RadioCard OresundEbbaSorenRadio =
+        new(0, 330, false, "EBBA GRIP", "SÖREN SVARTKRUT", "KAPARE OCH VÄG",
+            StormaktVoice.EbbaIdentifierarSoren, "portrait_ebba");
     private int _shipX;
     private int _shipY;
     private int _cooldown;
@@ -291,6 +297,7 @@ internal sealed class StormaktGame
     private int _invulnerabilityFrames;
     private BossState? _boss;
     private SorenRivalState? _sorenRival;
+    private OresundSorenState? _oresundSoren;
     private GlimmingeState? _glimminge;
     private BridgeSectionState? _bridgeSection;
     private RtsState? _rts;
@@ -474,6 +481,7 @@ internal sealed class StormaktGame
         StepEnemies();
         StepGroundTargets();
         StepSorenRival();
+        StepOresundSoren();
         StepGlimminge();
         StepBoss();
         StepAnchorHazards();
@@ -578,6 +586,7 @@ internal sealed class StormaktGame
         _invulnerabilityFrames = 0;
         _boss = null;
         _sorenRival = null;
+        _oresundSoren = null;
         _glimminge = null;
         _bridgeSection = _levelId == 2 ? new BridgeSectionState() : null;
         _rts = _levelId == 3
@@ -4612,6 +4621,10 @@ internal sealed class StormaktGame
         {
             BeginOresundTrainSection(trainSection);
         }
+        if (_levelId == 2 && _missionFrame == 3_540 && _bridgeSection is BridgeSectionState resolvedSection)
+        {
+            BeginOresundSoren(resolvedSection);
+        }
         if (_levelId == 2 && _missionFrame >= FlythroughFrames)
         {
             _stageClear = true;
@@ -4695,6 +4708,31 @@ internal sealed class StormaktGame
         section.LastEvent = "ARMORED TRAIN IN";
         section.Notice = "PANSARTÅG";
         section.NoticeAge = 100;
+    }
+
+    private void BeginOresundSoren(BridgeSectionState section)
+    {
+        OresundSorenTarget target = section.Outcome switch
+        {
+            BridgeSectionOutcome.TrainDisarmed => OresundSorenTarget.TrackSwitch,
+            BridgeSectionOutcome.TrainCrashed => OresundSorenTarget.LaserRelay,
+            _ => OresundSorenTarget.RearCannon,
+        };
+        int targetX = target switch
+        {
+            OresundSorenTarget.TrackSwitch => _width <= 320 ? 52 : 64,
+            OresundSorenTarget.LaserRelay => _width - (_width <= 320 ? 52 : 64),
+            _ => _width / 2,
+        };
+        _oresundSoren = new OresundSorenState
+        {
+            Target = target,
+            TargetX = targetX,
+            TargetY = target == OresundSorenTarget.RearCannon ? 124 : 102,
+            X = targetX < _width / 2 ? _width + 48 : -48,
+            Y = 58,
+            FromRight = targetX < _width / 2,
+        };
     }
 
     private void StepOresundBridgeSection()
@@ -5360,6 +5398,60 @@ internal sealed class StormaktGame
             _enemyShots.Clear();
             _audio?.Trigger(StormaktSound.Broadside);
         }
+    }
+
+    private void StepOresundSoren()
+    {
+        if (_levelId != 2 || _oresundSoren is not OresundSorenState intervention) return;
+        intervention.Age++;
+
+        if (!intervention.RadioQueued &&
+            (_bridgeSection is not BridgeSectionState section || section.NoticeAge == 0))
+        {
+            intervention.RadioQueued = true;
+            ActivateBossRadio(OresundSorenStrikeRadio);
+            ActivateBossRadio(OresundEbbaSorenRadio);
+        }
+
+        double stagingX = intervention.TargetX + (intervention.FromRight ? 74 : -74);
+        if (intervention.Age < 150)
+        {
+            intervention.X += Math.Clamp(stagingX - intervention.X, -5.0, 5.0);
+            intervention.Y = 58 + Math.Sin(intervention.Age * 0.055) * 10.0;
+        }
+        else if (intervention.Age < 220)
+        {
+            intervention.X += Math.Clamp(stagingX - intervention.X, -2.0, 2.0);
+            intervention.Y = 64 + Math.Sin(intervention.Age * 0.09) * 5.0;
+            if (intervention.Age == 180)
+            {
+                intervention.ShotFired = true;
+                _audio?.Trigger(StormaktSound.Broadside);
+            }
+            if (intervention.Age == 210)
+            {
+                intervention.TargetDestroyed = true;
+                if (_bridgeSection is BridgeSectionState resultSection)
+                {
+                    resultSection.LastEvent = $"SOREN {intervention.Target}";
+                    resultSection.Notice = intervention.Target switch
+                    {
+                        OresundSorenTarget.TrackSwitch => "SÖREN TAR VÄXELN",
+                        OresundSorenTarget.LaserRelay => "SÖREN TAR FYREN",
+                        _ => "SÖREN TAR TÅGET",
+                    };
+                    resultSection.NoticeAge = 100;
+                }
+                _audio?.Trigger(StormaktSound.EnemyExplosion);
+            }
+        }
+        else
+        {
+            intervention.X += intervention.FromRight ? -6.0 : 6.0;
+            intervention.Y -= 0.45;
+        }
+
+        if (intervention.Age >= 720) _oresundSoren = null;
     }
 
     private void StepGlimminge()
@@ -8752,6 +8844,11 @@ internal sealed class StormaktGame
 
     private void DrawSorenBackgroundPass(uint[] frame)
     {
+        if (_levelId == 2)
+        {
+            DrawOresundSorenIntervention(frame);
+            return;
+        }
         if (_levelId != 1 || _missionFrame < 540 || _missionFrame >= 780)
         {
             return;
@@ -8770,6 +8867,72 @@ internal sealed class StormaktGame
         FillTriangle(frame, x, y - 17, x - 18, y + 16, x + 18, y + 16, 0xff171b19);
         DrawLine(frame, x - 14, y + 8, x + 14, y + 8, 0xff87583a);
         PutPixel(frame, x, y - 3, 0xff65c58a);
+    }
+
+    private void DrawOresundSorenIntervention(uint[] frame)
+    {
+        if (_oresundSoren is not OresundSorenState intervention) return;
+        int targetX = intervention.TargetX;
+        int targetY = intervention.TargetY;
+        if (intervention.TargetDestroyed)
+        {
+            if (intervention.Age < 270)
+            {
+                int blast = 8 + (intervention.Age / 4 & 5);
+                FillCircle(frame, targetX, targetY, blast, 0xffb33b2e);
+                FillCircle(frame, targetX, targetY, Math.Max(3, blast - 5), 0xffff8a34);
+            }
+            else
+            {
+                DrawRect(frame, targetX - 13, targetY - 8, 27, 16, 0xff201d1d);
+                FillCircle(frame, targetX + 4, targetY - 2, 3, 0xff8f3929);
+            }
+            DrawLine(frame, targetX - 14, targetY + 10, targetX + 13, targetY - 9, 0xff3b2928);
+        }
+        else
+        {
+            switch (intervention.Target)
+            {
+                case OresundSorenTarget.TrackSwitch:
+                    DrawRect(frame, targetX - 13, targetY - 12, 27, 24, 0xff283944);
+                    DrawLine(frame, targetX - 7, targetY + 6, targetX + 7, targetY - 2, 0xffd6b25e);
+                    FillCircle(frame, targetX + 7, targetY - 3, 3, 0xffffd66b);
+                    break;
+                case OresundSorenTarget.LaserRelay:
+                    FillCircle(frame, targetX, targetY, 13, 0xff26343e);
+                    FillCircle(frame, targetX, targetY, 7, 0xff8f2635);
+                    DrawCircleOutline(frame, targetX, targetY, 14, 0xff6c91a8);
+                    DrawRect(frame, targetX - 3, targetY + 11, 6, 17, 0xff8a6b38);
+                    break;
+                default:
+                    DrawOresundTrainSprite(frame, "oresund_train_cannon", targetX, targetY, 52, 70,
+                        0xff30383d);
+                    break;
+            }
+        }
+
+        int x = (int)Math.Round(intervention.X);
+        int y = (int)Math.Round(intervention.Y);
+        string spriteName = intervention.Age is >= 130 and < 240 ? "soren_corsair_boost" : "soren_corsair";
+        if (_sprites?.TryGet(spriteName, out Sprite corsair) == true)
+            DrawSprite(frame, corsair, x - corsair.Width / 2, y - corsair.Height / 2);
+        else
+        {
+            FillTriangle(frame, x, y - 17, x - 18, y + 16, x + 18, y + 16, 0xff171b19);
+            DrawLine(frame, x - 14, y + 8, x + 14, y + 8, 0xff87583a);
+        }
+
+        if (intervention.ShotFired && !intervention.TargetDestroyed)
+        {
+            double t = Math.Clamp((intervention.Age - 180) / 30.0, 0.0, 1.0);
+            int shotX = (int)Math.Round(intervention.X + (targetX - intervention.X) * t);
+            int shotY = (int)Math.Round(intervention.Y + (targetY - intervention.Y) * t);
+            DrawLine(frame, x, y, shotX, shotY, 0xff87583a);
+            FillCircle(frame, shotX, shotY, 3, 0xffffd66b);
+        }
+
+        if (_developerMode)
+            DrawText(frame, 6, _height - 28, $"SÖREN MÅL {intervention.Target}", 0xff65c58a);
     }
 
     private void DrawDistantWreck(uint[] frame, int x, int y)
@@ -10695,6 +10858,13 @@ internal sealed class StormaktGame
         Train,
     }
 
+    private enum OresundSorenTarget
+    {
+        TrackSwitch,
+        LaserRelay,
+        RearCannon,
+    }
+
     private enum RtsBuildingType
     {
         SteamPlant,
@@ -10966,6 +11136,20 @@ internal sealed class StormaktGame
         public int Age { get; set; }
         public bool Interrupted { get; set; }
         public int InterruptAge { get; set; }
+    }
+
+    private sealed class OresundSorenState
+    {
+        public int Age { get; set; }
+        public double X { get; set; }
+        public double Y { get; set; }
+        public int TargetX { get; set; }
+        public int TargetY { get; set; }
+        public bool FromRight { get; set; }
+        public bool RadioQueued { get; set; }
+        public bool ShotFired { get; set; }
+        public bool TargetDestroyed { get; set; }
+        public OresundSorenTarget Target { get; set; }
     }
 
     private sealed class GlimmingeState
