@@ -449,6 +449,13 @@ internal sealed class StormaktGame
             }
         }
 
+        if (_levelId == 4 && _titheWorld is TitheWorldState titheChoice && titheChoice.ChoosingUpgrade)
+        {
+            StepTitheUpgradeChoice(titheChoice, buttons);
+            _previousButtons = buttons;
+            return;
+        }
+
         if (Pressed(buttons, Start))
         {
             _paused = !_paused;
@@ -469,13 +476,6 @@ internal sealed class StormaktGame
             _previousButtons = buttons;
             return;
         }
-        if (_levelId == 4 && _titheWorld is TitheWorldState titheChoice && titheChoice.ChoosingUpgrade)
-        {
-            StepTitheUpgradeChoice(titheChoice, buttons);
-            _previousButtons = buttons;
-            return;
-        }
-
         StepRadio();
 
         int speed = (buttons & Slow) != 0 ? (_width <= 320 ? 2 : 3) : (_width <= 320 ? 4 : 5);
@@ -1920,7 +1920,7 @@ internal sealed class StormaktGame
         dungeon.Guarding = (buttons & Slow) != 0 && dungeon.AttackAge == 0;
         if (dungeon.HurtAge > 0) dungeon.HurtAge--;
         bool interacted = false;
-        if (Pressed(buttons, Fire))
+        if (Pressed(buttons, Fire) || Pressed(buttons, Start))
         {
             DungeonItem? ground = dungeon.Items.Where(item => item.OnGround)
                 .OrderBy(item => DistanceSquared(item.WorldX, item.WorldY, dungeon.KarlX, dungeon.KarlY)).FirstOrDefault();
@@ -10903,7 +10903,7 @@ internal sealed class StormaktGame
         int cardHeight = height - 48;
         DrawTitheUpgradeCard(frame, x + 9, cardY, cardWidth, cardHeight, 0, state);
         DrawTitheUpgradeCard(frame, x + 9 + cardWidth + gap, cardY, cardWidth, cardHeight, 1, state);
-        DrawText(frame, x + 10, y + height - 15, "V H VÄLJ  Z INSTALLERA  X DETALJ", 0xffb7c7d6);
+        DrawText(frame, x + 10, y + height - 15, "V H VÄLJ  Z/ENTER INSTALLERA  X DETALJ", 0xffb7c7d6);
     }
 
     private void DrawTitheUpgradeCard(uint[] frame, int x, int y, int width, int height, int index,
