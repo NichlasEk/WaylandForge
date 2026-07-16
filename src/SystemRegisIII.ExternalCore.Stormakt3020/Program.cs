@@ -291,7 +291,13 @@ internal sealed class StormaktGame
         new(2_220, 3_480, 105, 7, 3),
     ];
     private static readonly RadioCard[] OresundRadioCards = [];
-    private static readonly RadioCard[] TitheRadioCards = [];
+    private static readonly RadioCard[] TitheRadioCards =
+    [
+        new(2_410, 330, true, "SÖREN SVARTKRUT", "JAG KÄNNER DEM", "FOGDEN TOG BÅDA", null,
+            "portrait_soren", true),
+        new(2_760, 390, false, "EBBA GRIP", "FRED ÄR FÖRLUST", "I REGISTRET", null,
+            "portrait_ebba"),
+    ];
     private static readonly RadioCard OresundSorenStrikeRadio =
         new(0, 390, true, "SÖREN SVARTKRUT", "BRON HAR NERVER", "JAG SKÄR EN NU", StormaktVoice.SorenOresundNerve,
             "portrait_soren", true);
@@ -4778,8 +4784,9 @@ internal sealed class StormaktGame
         {
             StepTitheCustomsCorridor(state);
             StepTitheCoinMines(state);
+            StepTitheRegisterRoute(state);
         }
-        if (state.UpgradeInstalled && state.Age >= 2_250)
+        if (state.UpgradeInstalled && state.Age >= 3_150)
         {
             _stageClear = true;
             _stageClearAge = 0;
@@ -4787,6 +4794,53 @@ internal sealed class StormaktGame
             _enemyShots.Clear();
             _enemies.Clear();
             _audio?.Trigger(StormaktSound.Deploy);
+        }
+    }
+
+    private void StepTitheRegisterRoute(TitheWorldState state)
+    {
+        if (state.Age == 2_175)
+        {
+            state.Gates.Clear();
+            state.Mines.Clear();
+            _enemyShots.Clear();
+            _enemies.Clear();
+        }
+        if (state.Age == 2_200)
+        {
+            state.RouteChoiceActive = true;
+            state.RouteNoticeAge = 0;
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        if (state.RouteChoiceActive && state.Age == 2_380)
+        {
+            state.RouteChoiceActive = false;
+            state.Route = _shipX < _width / 2 ? TitheRegisterRoute.Revision : TitheRegisterRoute.ChainHall;
+            state.RouteNoticeAge = 150;
+            if (state.Route == TitheRegisterRoute.Revision)
+            {
+                _score += 1_500;
+            }
+            else
+            {
+                state.Chains.Add(new TitheChainTarget(68, 58, 1));
+                state.Chains.Add(new TitheChainTarget(_width / 2, 43, 0));
+                state.Chains.Add(new TitheChainTarget(_width - 68, 67, 1));
+            }
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        if (state.RouteNoticeAge > 0) state.RouteNoticeAge--;
+
+        if (state.Route == TitheRegisterRoute.Revision && state.Age is 2_470 or 2_620 or 2_770)
+        {
+            int side = state.Age / 150 & 1;
+            _enemies.Add(new Enemy(side == 0 ? 52 : _width - 52, -18, 1, 14, 10,
+                0xff8f2635, 7, state.Age * 0.017, state.Age, 0, false));
+        }
+        else if (state.Route == TitheRegisterRoute.ChainHall && state.Age == 2_700)
+        {
+            _enemies.Add(new Enemy(_width / 2, -18, 1, 10, 9,
+                0xff8f2635, 7, state.Age * 0.017, state.Age, 0, false));
         }
     }
 
@@ -10886,6 +10940,7 @@ internal sealed class StormaktGame
     {
         Clear(frame, 0xff05090c);
         DrawTitheArchive(frame);
+        DrawTitheRegisterRoute(frame);
         if (_titheWorld is TitheWorldState state)
         {
             foreach (TitheChainTarget chain in state.Chains) DrawTitheChainTarget(frame, chain);
@@ -10942,6 +10997,47 @@ internal sealed class StormaktGame
         {
             DrawLine(frame, 0, y, _width - 1, y, 0xff17242b);
             DrawLine(frame, 0, y + 1, _width - 1, y + 1, 0xff0a1014);
+        }
+    }
+
+    private void DrawTitheRegisterRoute(uint[] frame)
+    {
+        if (_titheWorld is not TitheWorldState state) return;
+        if (state.RouteChoiceActive)
+        {
+            int center = _width / 2;
+            DrawRect(frame, 0, 17, center - 3, _height - 29, 0xff15130e);
+            DrawRect(frame, center + 3, 17, _width - center - 3, _height - 29, 0xff0b181b);
+            DrawLine(frame, center - 3, 17, center - 3, _height - 13, 0xffffd66b);
+            DrawLine(frame, center + 3, 17, center + 3, _height - 13, 0xff65c5ca);
+            for (int y = 30; y < _height - 20; y += 22)
+            {
+                FillTriangle(frame, center - 14, y, center - 5, y - 5, center - 5, y + 5, 0xffffd66b);
+                FillTriangle(frame, center + 14, y, center + 5, y - 5, center + 5, y + 5, 0xff65c5ca);
+            }
+            int panelWidth = Math.Min(356, _width - 16);
+            int panelX = (_width - panelWidth) / 2;
+            DrawRect(frame, panelX, 62, panelWidth, 52, 0xee080d12);
+            DrawLine(frame, panelX, 62, panelX + panelWidth - 1, 62, 0xff8a6b38);
+            DrawLine(frame, panelX, 113, panelX + panelWidth - 1, 113, 0xff65c5ca);
+            DrawText(frame, panelX + (panelWidth - 96) / 2, 69, "VÄLJ REGISTERLED", 0xffffffff);
+            DrawText(frame, panelX + 14, 86, "VÄNSTER  REVISION", 0xffffd66b);
+            DrawText(frame, panelX + panelWidth / 2 + 8, 86, "HÖGER  KEDJEHALL", 0xff9bd4dc);
+            DrawText(frame, panelX + 20, 100, "MER POÄNG  MER RISK", 0xffff8a4a);
+            DrawText(frame, panelX + panelWidth / 2 + 14, 100, "FLER SKEPP  MER TID", 0xff65c58a);
+        }
+        else if (state.RouteNoticeAge > 0 && state.Route != TitheRegisterRoute.None)
+        {
+            string route = state.Route == TitheRegisterRoute.Revision
+                ? "REVISIONSRÄNNAN  BONUS 1500"
+                : "KEDJEHALLEN  BEFRIA SKEPP";
+            int width = Math.Min(_width - 20, route.Length * 6 + 18);
+            int x = (_width - width) / 2;
+            DrawRect(frame, x, 57, width, 19, 0xee080d12);
+            DrawLine(frame, x, 57, x + width - 1, 57,
+                state.Route == TitheRegisterRoute.Revision ? 0xffffd66b : 0xff65c5ca);
+            DrawText(frame, x + 9, 64, route,
+                state.Route == TitheRegisterRoute.Revision ? 0xffffd66b : 0xff65c58a);
         }
     }
 
@@ -11181,8 +11277,11 @@ internal sealed class StormaktGame
             }
             else if (_levelId == 4)
             {
-                DrawText(frame, panelX + 35, 99, "FÖRSTA VALVET ÖPPET", 0xffffd66b);
-                DrawText(frame, panelX + 37, 116, "VAPENSYSTEM SÄKRAT", 0xff65c58a);
+                DrawText(frame, panelX + 34, 99, "REGISTERVÄG SÄKRAD", 0xffffd66b);
+                if (_titheWorld?.Route == TitheRegisterRoute.Revision)
+                    DrawText(frame, panelX + 41, 116, "REVISION BONUS 1500", 0xffff8a4a);
+                else
+                    DrawText(frame, panelX + 42, 116, $"FLOTTA {_titheWorld?.FreedShips ?? 0} SKEPP", 0xff65c58a);
             }
             else
             {
@@ -12328,6 +12427,13 @@ internal sealed class StormaktGame
         VolleyDirector,
     }
 
+    private enum TitheRegisterRoute
+    {
+        None,
+        Revision,
+        ChainHall,
+    }
+
     private sealed class TitheWorldState
     {
         public int Age { get; set; }
@@ -12335,6 +12441,9 @@ internal sealed class StormaktGame
         public List<TitheCustomsGate> Gates { get; } = [];
         public List<TitheCoinMine> Mines { get; } = [];
         public int MinesSpawned { get; set; }
+        public bool RouteChoiceActive { get; set; }
+        public int RouteNoticeAge { get; set; }
+        public TitheRegisterRoute Route { get; set; }
         public int FreedShips { get; set; }
         public bool UpgradeOffered { get; set; }
         public bool ChoosingUpgrade { get; set; }
