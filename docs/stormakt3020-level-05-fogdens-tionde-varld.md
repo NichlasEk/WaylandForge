@@ -167,7 +167,7 @@ Systemet introduceras här och följer med genom bana 5–7. Bana 1–4 förblir
 3. **Första skåpet (spelbart 2026-07-16):** båda `Z`-modulerna har kompakt wide/legacy-UI, synlig nackdel, skilda projektilmönster, skada, intervall, värme och HUD-namn. Permanent kampanjsparning och egna ljud/assets hör till checkpoint 6 respektive konst/ljudpasset.
 4. **Tullkorridorer (första skiva landad 2026-07-16):** fyra alternerande tullpass visar en 60-bilders säker öppning innan de går fysiskt genom spelplanen. Magnetiska myntminor söker Karl, laddar i 45 bilder och kan skjutas sönder eller fångas av bredsidan som cyan returminor. Genererade port/mynt-assets och den senare Magnetbredsidan återstår.
 5. **Registerval (spelbart 2026-07-16):** spelaren väljer led genom att flyga vänster till revisionsrännan eller höger till kedjehallen. Revision ger fast 1500-bonus och tre hårdare indrivare; kedjehallen ger tid och tre nya fysiska skeppslås. Resultatkortet visar vald led och verkligt antal befriade skepp. Nya korta Sören/Ebba-rutor avslöjar att fogden tagit båda sidors skepp och bokför fred som förlust; syntetröster återstår till röstpasset.
-6. **Fullt vapensystem:** båda `X`-modulerna, kylare/pansar och sparning till framtida banor.
+6. **Fullt vapensystem (andra skåpet spelbart 2026-07-16):** Ränteverket har fem långsamma, segmenterade sigillväggar och lätta pressprojektiler. Magnetbredsidan ger två korta cyan pulser, vänder lätta skott inom fångstfältet men kostar 24 värme. Kedjekarteschen ger fem power-8 strukturskott men vänder ingenting och laddar i 30 bilder. Skåp III med kylare/pansar och kampanjsparning återstår innan checkpointen är fullständig.
 7. **Rigsregnskabet:** tre faser, egen röst, musikvariant, död och resultatkort.
 8. **Publicering:** determinism, wide/legacy, balansering och status `STRID`.
 
@@ -201,3 +201,4 @@ Systemet introduceras här och följer med genom bana 5–7. Bana 1–4 förblir
 - Remote-säker bekräftelse med `Enter/Start` verifieras direkt efter skåpet i båda upplösningarna; den går före vanlig pauslogik och installerar valt vapen omedelbart.
 - Tullpassvarning och en fångad `RETUR`-mina har direkta wide/legacy-bilder. Samma returspår ger samma objektordning och slutbild vid upprepning.
 - Båda registerlederna är körda till separata resultatkort i wide och legacy. Samma kedjehallsspår räknar bara skepp vars lås verkligen sköts sönder; ingen presentationsbild tilldelar gratis allierade.
+- Ränteverkets sigillvägg, det andra skåpet och båda installerade bredsidorna har separata direkta bilder i wide och legacy. Magnetspåret och karteschspåret får skilda projektilfält, HUD-namn, värme och stabila slutbilder.
