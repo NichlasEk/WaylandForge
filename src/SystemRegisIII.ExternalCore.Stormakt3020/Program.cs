@@ -1920,7 +1920,7 @@ internal sealed class StormaktGame
         dungeon.Guarding = (buttons & Slow) != 0 && dungeon.AttackAge == 0;
         if (dungeon.HurtAge > 0) dungeon.HurtAge--;
         bool interacted = false;
-        if (Pressed(buttons, Fire) || Pressed(buttons, Start))
+        if (Pressed(buttons, Fire))
         {
             DungeonItem? ground = dungeon.Items.Where(item => item.OnGround)
                 .OrderBy(item => DistanceSquared(item.WorldX, item.WorldY, dungeon.KarlX, dungeon.KarlY)).FirstOrDefault();
@@ -4774,7 +4774,12 @@ internal sealed class StormaktGame
             _enemies.Clear();
             _audio?.Trigger(StormaktSound.Deploy);
         }
-        if (state.UpgradeInstalled && state.Age >= 1_650)
+        if (state.UpgradeInstalled)
+        {
+            StepTitheCustomsCorridor(state);
+            StepTitheCoinMines(state);
+        }
+        if (state.UpgradeInstalled && state.Age >= 2_250)
         {
             _stageClear = true;
             _stageClearAge = 0;
@@ -4782,6 +4787,123 @@ internal sealed class StormaktGame
             _enemyShots.Clear();
             _enemies.Clear();
             _audio?.Trigger(StormaktSound.Deploy);
+        }
+    }
+
+    private void StepTitheCustomsCorridor(TitheWorldState state)
+    {
+        if (state.Age is 1_000 or 1_300 or 1_600 or 1_900)
+        {
+            int passage = state.Age / 300 & 1;
+            state.Gates.Add(new TitheCustomsGate(passage == 0 ? _width / 3 : _width * 2 / 3));
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+
+        for (int index = state.Gates.Count - 1; index >= 0; index--)
+        {
+            TitheCustomsGate gate = state.Gates[index];
+            gate.Age++;
+            if (gate.Age > TitheCustomsGate.WarningFrames) gate.Y += _height <= 224 ? 1.25 : 1.55;
+
+            int openingHalf = _width <= 320 ? 34 : 42;
+            for (int shotIndex = _shots.Count - 1; shotIndex >= 0; shotIndex--)
+            {
+                Shot shot = _shots[shotIndex];
+                if (Math.Abs(shot.Y - gate.Y) > 6 || Math.Abs(shot.X - gate.OpeningX) <= openingHalf) continue;
+                _shots.RemoveAt(shotIndex);
+            }
+            if (!gate.HitPlayer && gate.Age > TitheCustomsGate.WarningFrames &&
+                Math.Abs(_shipY - gate.Y) < 8 && Math.Abs(_shipX - gate.OpeningX) > openingHalf - 5)
+            {
+                gate.HitPlayer = true;
+                DamageShip();
+            }
+            if (gate.Y > _height + 24) state.Gates.RemoveAt(index);
+        }
+    }
+
+    private void StepTitheCoinMines(TitheWorldState state)
+    {
+        if (state.Age is 1_075 or 1_190 or 1_420 or 1_535 or 1_775 or 2_025)
+        {
+            int ordinal = state.MinesSpawned++;
+            double x = 38 + (ordinal * 83 + 47) % Math.Max(80, _width - 76);
+            state.Mines.Add(new TitheCoinMine(x, 24));
+        }
+
+        for (int index = state.Mines.Count - 1; index >= 0; index--)
+        {
+            TitheCoinMine mine = state.Mines[index];
+            mine.Age++;
+            if (mine.Reflected)
+            {
+                mine.X += mine.Vx;
+                mine.Y += mine.Vy;
+                mine.Vy = Math.Max(-4.4, mine.Vy - 0.035);
+                for (int enemyIndex = _enemies.Count - 1; enemyIndex >= 0; enemyIndex--)
+                {
+                    Enemy enemy = _enemies[enemyIndex];
+                    if (DistanceSquared(mine.X, mine.Y, enemy.X, enemy.Y) > 18 * 18) continue;
+                    _enemies.RemoveAt(enemyIndex);
+                    state.Mines.RemoveAt(index);
+                    _score += 650;
+                    _audio?.Trigger(StormaktSound.EnemyExplosion);
+                    goto NextMine;
+                }
+            }
+            else
+            {
+                double dx = _shipX - mine.X;
+                double dy = _shipY - mine.Y;
+                double length = Math.Max(1, Math.Sqrt(dx * dx + dy * dy));
+                mine.Vx = Math.Clamp(mine.Vx + dx / length * 0.035, -1.8, 1.8);
+                mine.Vy = Math.Clamp(mine.Vy + dy / length * 0.027, 0.45, 1.65);
+                mine.X += mine.Vx;
+                mine.Y += mine.Vy;
+                if (length < 70 || mine.Age > 185) mine.ChargeAge++;
+            }
+
+            for (int shotIndex = _shots.Count - 1; shotIndex >= 0; shotIndex--)
+            {
+                Shot shot = _shots[shotIndex];
+                bool broadsideCatch = !mine.Reflected && shot.Power >= 5 &&
+                    Math.Abs(mine.X - shot.X) <= 90 && Math.Abs(mine.Y - shot.Y) <= 85;
+                if (!broadsideCatch && DistanceSquared(mine.X, mine.Y, shot.X, shot.Y) > 13 * 13) continue;
+                _shots.RemoveAt(shotIndex);
+                if (!mine.Reflected && shot.Power >= 5)
+                {
+                    mine.Reflected = true;
+                    mine.ChargeAge = 0;
+                    mine.Vx = Math.Clamp((mine.X - _shipX) * 0.035, -2.6, 2.6);
+                    mine.Vy = -2.7;
+                    _score += 120;
+                    _audio?.Trigger(StormaktSound.Broadside);
+                }
+                else
+                {
+                    mine.Health -= shot.Power;
+                    if (mine.Health <= 0)
+                    {
+                        state.Mines.RemoveAt(index);
+                        _score += 280;
+                        _audio?.Trigger(StormaktSound.EnemyExplosion);
+                        goto NextMine;
+                    }
+                }
+                break;
+            }
+
+            if (!mine.Reflected && mine.ChargeAge >= TitheCoinMine.FuseFrames)
+            {
+                if (DistanceSquared(mine.X, mine.Y, _shipX, _shipY) < 42 * 42) DamageShip();
+                state.Mines.RemoveAt(index);
+                _audio?.Trigger(StormaktSound.EnemyExplosion);
+                goto NextMine;
+            }
+            if (mine.Y < -28 || mine.Y > _height + 28 || mine.X < -28 || mine.X > _width + 28)
+                state.Mines.RemoveAt(index);
+
+        NextMine:;
         }
     }
 
@@ -4797,7 +4919,7 @@ internal sealed class StormaktGame
             state.ShowUpgradeDetails = !state.ShowUpgradeDetails;
             _audio?.Trigger(StormaktSound.Deploy);
         }
-        if (Pressed(buttons, Fire))
+        if (Pressed(buttons, Fire) || Pressed(buttons, Start))
         {
             state.PrimaryModule = state.UpgradeSelection == 0
                 ? TithePrimaryModule.CrownDrill
@@ -10767,6 +10889,8 @@ internal sealed class StormaktGame
         if (_titheWorld is TitheWorldState state)
         {
             foreach (TitheChainTarget chain in state.Chains) DrawTitheChainTarget(frame, chain);
+            foreach (TitheCustomsGate gate in state.Gates) DrawTitheCustomsGate(frame, gate);
+            foreach (TitheCoinMine mine in state.Mines) DrawTitheCoinMine(frame, mine);
         }
         DrawShots(frame);
         DrawEnemyShots(frame);
@@ -10861,6 +10985,64 @@ internal sealed class StormaktGame
         }
         if (chain.Freed && chain.FreedAge < 45)
             DrawText(frame, x - 12, y + 24, "FRI", 0xff65c58a);
+    }
+
+    private void DrawTitheCustomsGate(uint[] frame, TitheCustomsGate gate)
+    {
+        int y = (int)Math.Round(gate.Y);
+        int openingHalf = _width <= 320 ? 34 : 42;
+        int leftEnd = gate.OpeningX - openingHalf;
+        int rightStart = gate.OpeningX + openingHalf;
+        bool warning = gate.Age <= TitheCustomsGate.WarningFrames;
+        uint iron = warning ? 0xff33434a : 0xff151d22;
+        uint edge = warning && (gate.Age / 6 & 1) == 0 ? 0xffffd66b : 0xff8a6b38;
+        uint signal = warning ? 0xffff6b62 : 0xff65c5ca;
+        if (warning) y = 43;
+
+        DrawRect(frame, 0, y - 6, Math.Max(0, leftEnd), 13, iron);
+        DrawRect(frame, rightStart, y - 6, Math.Max(0, _width - rightStart), 13, iron);
+        DrawLine(frame, 0, y - 7, leftEnd, y - 7, edge);
+        DrawLine(frame, rightStart, y - 7, _width - 1, y - 7, edge);
+        DrawLine(frame, 0, y + 7, leftEnd, y + 7, edge);
+        DrawLine(frame, rightStart, y + 7, _width - 1, y + 7, edge);
+        for (int x = 5; x < leftEnd; x += 12)
+            FillTriangle(frame, x, y - 5, x + 5, y, x, y + 5, 0xff52636a);
+        for (int x = rightStart + 5; x < _width; x += 12)
+            FillTriangle(frame, x, y - 5, x + 5, y, x, y + 5, 0xff52636a);
+        DrawRect(frame, leftEnd - 4, y - 10, 4, 21, signal);
+        DrawRect(frame, rightStart, y - 10, 4, 21, signal);
+        if (warning)
+        {
+            DrawLine(frame, gate.OpeningX, y + 12, gate.OpeningX, _height - 20, 0xff35515b);
+            DrawText(frame, Math.Clamp(gate.OpeningX - 31, 4, _width - 66), y + 15, "TULLPASS", 0xffffd66b);
+        }
+    }
+
+    private void DrawTitheCoinMine(uint[] frame, TitheCoinMine mine)
+    {
+        int x = (int)Math.Round(mine.X);
+        int y = (int)Math.Round(mine.Y);
+        uint rim = mine.Reflected ? 0xff65c5ca : 0xffb48545;
+        uint core = mine.Reflected ? 0xffbdf8ff :
+            mine.ChargeAge > TitheCoinMine.FuseFrames - 18 && (mine.ChargeAge / 3 & 1) == 0
+                ? 0xffff6b62 : 0xffffd66b;
+        FillCircle(frame, x, y, 9, 0xff1a2429);
+        FillCircle(frame, x, y, 7, rim);
+        FillCircle(frame, x, y, 4, 0xff44351f);
+        DrawCrown(frame, x - 2, y - 2, core);
+        for (int spoke = 0; spoke < 4; spoke++)
+        {
+            int dx = spoke % 2 == 0 ? (spoke == 0 ? -13 : 13) : 0;
+            int dy = spoke % 2 != 0 ? (spoke == 1 ? -13 : 13) : 0;
+            DrawLine(frame, x + Math.Sign(dx) * 7, y + Math.Sign(dy) * 7, x + dx, y + dy, rim);
+        }
+        if (!mine.Reflected && mine.ChargeAge > 0)
+        {
+            int radius = 12 + mine.ChargeAge * 10 / TitheCoinMine.FuseFrames;
+            DrawCircleOutline(frame, x, y, radius, core);
+        }
+        if (mine.Reflected)
+            DrawText(frame, x - 12, y + 14, "RETUR", 0xff65c58a);
     }
 
     private void DrawTitheMissionTitle(uint[] frame)
@@ -12150,6 +12332,9 @@ internal sealed class StormaktGame
     {
         public int Age { get; set; }
         public List<TitheChainTarget> Chains { get; } = [];
+        public List<TitheCustomsGate> Gates { get; } = [];
+        public List<TitheCoinMine> Mines { get; } = [];
+        public int MinesSpawned { get; set; }
         public int FreedShips { get; set; }
         public bool UpgradeOffered { get; set; }
         public bool ChoosingUpgrade { get; set; }
@@ -12157,6 +12342,28 @@ internal sealed class StormaktGame
         public bool ShowUpgradeDetails { get; set; }
         public int UpgradeSelection { get; set; }
         public TithePrimaryModule PrimaryModule { get; set; } = TithePrimaryModule.Standard;
+    }
+
+    private sealed class TitheCustomsGate(int openingX)
+    {
+        public const int WarningFrames = 60;
+        public int OpeningX { get; } = openingX;
+        public double Y { get; set; } = 24;
+        public int Age { get; set; }
+        public bool HitPlayer { get; set; }
+    }
+
+    private sealed class TitheCoinMine(double x, double y)
+    {
+        public const int FuseFrames = 45;
+        public double X { get; set; } = x;
+        public double Y { get; set; } = y;
+        public double Vx { get; set; }
+        public double Vy { get; set; } = 0.55;
+        public int Health { get; set; } = 12;
+        public int Age { get; set; }
+        public int ChargeAge { get; set; }
+        public bool Reflected { get; set; }
     }
 
     private sealed class TitheChainTarget(double x, double y, int kind)

@@ -165,7 +165,7 @@ Systemet introduceras här och följer med genom bana 5–7. Bana 1–4 förblir
 1. **Plan och kampanjrad (landad 2026-07-16):** detta dokument, Bana 5-rad som `DEV`, nivå-id, seed och separat deterministisk tidslinje.
 2. **Beslagsfält (första skiva landad 2026-07-16):** kodritat mekaniskt arkiv, två kedjade skepp, fysiska cyanlås och befrielseflykt. Genererade parallaxlager och full skeppsvariation återstår till konstpasset.
 3. **Första skåpet (spelbart 2026-07-16):** båda `Z`-modulerna har kompakt wide/legacy-UI, synlig nackdel, skilda projektilmönster, skada, intervall, värme och HUD-namn. Permanent kampanjsparning och egna ljud/assets hör till checkpoint 6 respektive konst/ljudpasset.
-4. **Tullkorridorer:** roterande portar och magnetiska myntminor med bredsideinteraktion.
+4. **Tullkorridorer (första skiva landad 2026-07-16):** fyra alternerande tullpass visar en 60-bilders säker öppning innan de går fysiskt genom spelplanen. Magnetiska myntminor söker Karl, laddar i 45 bilder och kan skjutas sönder eller fångas av bredsidan som cyan returminor. Genererade port/mynt-assets och den senare Magnetbredsidan återstår.
 5. **Registerval:** riskkorridorer, befriade skepp och Sörens/Ebbas avslöjande.
 6. **Fullt vapensystem:** båda `X`-modulerna, kylare/pansar och sparning till framtida banor.
 7. **Rigsregnskabet:** tre faser, egen röst, musikvariant, död och resultatkort.
@@ -198,3 +198,5 @@ Systemet introduceras här och följer med genom bana 5–7. Bana 1–4 förblir
 - Kronborren och Salvdirektören ger olika slutbilder efter samma rörelsespår i både 400x280 och 320x224.
 - Uppgraderingspanelen är verifierad vid bild 849; upprepade körningar gav identisk hash `cc7d4c1dc0c7ecdb`.
 - Salvdirektörspåret upprepades med identisk hash `01b0f8a942447d1e`; båda legacy-valen har separata stabila slutbilder.
+- Remote-säker bekräftelse med `Enter/Start` verifieras direkt efter skåpet i båda upplösningarna; den går före vanlig pauslogik och installerar valt vapen omedelbart.
+- Tullpassvarning och en fångad `RETUR`-mina har direkta wide/legacy-bilder. Samma returspår ger samma objektordning och slutbild vid upprepning.
