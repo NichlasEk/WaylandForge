@@ -198,7 +198,8 @@ internal sealed class StormaktGame
     private static readonly RadioCard RtsSilverRadio =
         new(0, 390, false, "EBBA GRIP", "MASSIVT SILVER", "LANDA KARL", StormaktVoice.EbbaSilverBody, "portrait_ebba");
     private static readonly RadioCard RtsKarlSmellRadio =
-        new(0, 220, false, "KARL CCLV", "JAG KÄNNER SILVER", "NEDANFÖR OSS", null, "portrait_karl");
+        new(0, 220, false, "KARL CCLV", "JAG KÄNNER SILVER", "NEDANFÖR OSS",
+            StormaktVoice.KarlSilverScent, "portrait_karl");
     private static readonly RadioCard RtsVacuumRadio =
         new(0, 540, false, "EBBA GRIP", "DET ÄR VAKUUM KARL", "MEN JAG SER ÅDERN",
             StormaktVoice.EbbaVacuumReply, "portrait_ebba");

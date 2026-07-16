@@ -727,6 +727,32 @@
       "sha256": "fc373054ba1aff50118cad902c5e9579fbfbb1d1fc64cea98cf1594ab541f2e2",
       "request": "assets/stormakt3020/radio/raw/ebba-silver-vacuum-sv-request.json",
       "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "reference",
+      "role": "karl-cclv",
+      "job_id": "904fc98030184a85bd4f83cae5ee47b0",
+      "file": "assets/stormakt3020/radio/references/karl-cclv-reference.wav",
+      "sha256": "768fb86a95a5cf2c0d14543289abd4c2ca4fe2c9c824af820a1796c6e87aec1d",
+      "request": {
+        "text": "Jag heter Karl tvåhundrafemtiofem. Kronan väger lättare än ett löfte, och ett löfte väger mindre än laddad järnmalm. Håll skeppet stadigt. Om vägen inte finns rider vi fram en, och om kartan protesterar får kartan lära sig bättre seder.",
+        "language": "sv",
+        "voice_instruction": "An adult Swedish Carolean king-soldier, assured medium-low baritone, dry eccentric confidence, crisp natural Swedish diction, battle-worn but energetic, aristocratic without sounding theatrical, old or comedic.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302028
+      }
+    },
+    {
+      "kind": "line",
+      "line": "karl-silver-scent",
+      "role": "karl-cclv",
+      "job_id": "7eb226ea9e6d4f0e99c8a45c64a6fe30",
+      "file": "assets/stormakt3020/radio/raw/karl-silver-scent-sv-raw.wav",
+      "sha256": "65ec3c1b66317e0cd59a1517a2885bb601f94bd3f0a8e7c14de3a3b342ec83d7",
+      "request": "assets/stormakt3020/radio/raw/karl-silver-scent-sv-request.json",
+      "reference_sha256": "768fb86a95a5cf2c0d14543289abd4c2ca4fe2c9c824af820a1796c6e87aec1d"
     }
   ],
   "service": "http://127.0.0.1:8765",

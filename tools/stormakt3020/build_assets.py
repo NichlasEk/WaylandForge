@@ -172,6 +172,20 @@ def append_two_frame_portrait(entries: list[tuple[str, Image.Image]], source: Im
         entries.append((name, sprite))
 
 
+def append_karl_portrait(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    half = source.width // 2
+    for name, crop in [
+        ("portrait_karl_neutral", (0, 0, half, source.height)),
+        ("portrait_karl_speak", (half, 0, source.width, source.height)),
+    ]:
+        cell = source.crop(crop)
+        cell = cell.crop((int(cell.width * 0.18), int(cell.height * 0.02),
+                          int(cell.width * 0.82), int(cell.height * 0.82)))
+        sprite = trim_alpha(chroma_alpha(cell))
+        sprite.thumbnail((38, 38), Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def append_louhi_portrait(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
     half = source.width // 2
     for name, crop in [
@@ -939,6 +953,7 @@ def build(
     input_path: Path,
     danish_input_path: Path,
     portrait_input_path: Path,
+    karl_portrait_input_path: Path,
     snapphane_portrait_input_path: Path,
     soren_corsair_input_path: Path,
     player_input_path: Path,
@@ -1011,6 +1026,7 @@ def build(
     source = Image.open(input_path)
     danish_source = Image.open(danish_input_path)
     portrait_source = Image.open(portrait_input_path)
+    karl_portrait_source = Image.open(karl_portrait_input_path).convert("RGBA")
     snapphane_portrait_source = Image.open(snapphane_portrait_input_path)
     soren_corsair_source = Image.open(soren_corsair_input_path)
     player_source = Image.open(player_input_path)
@@ -1082,6 +1098,7 @@ def build(
     append_sprites(entries, source, PRIMARY_SPRITES)
     append_sprites(entries, danish_source, DANISH_SPRITES)
     append_sprites(entries, portrait_source, RADIO_PORTRAITS)
+    append_karl_portrait(entries, karl_portrait_source)
     append_two_frame_portrait(entries, snapphane_portrait_source)
     append_three_frame_corsair(entries, soren_corsair_source)
     append_skanska_props(entries, skanska_props_source)
@@ -1229,6 +1246,11 @@ def main() -> None:
         "--portrait-input",
         type=Path,
         default=Path("assets/stormakt3020/stormakt-radio-portraits-v1.png"),
+    )
+    parser.add_argument(
+        "--karl-portrait-input",
+        type=Path,
+        default=Path("assets/stormakt3020/karl-cclv-radio-v1.png"),
     )
     parser.add_argument(
         "--snapphane-portrait-input",
@@ -1411,6 +1433,7 @@ def main() -> None:
         args.input,
         args.danish_input,
         args.portrait_input,
+        args.karl_portrait_input,
         args.snapphane_portrait_input,
         args.soren_corsair_input,
         args.player_input,

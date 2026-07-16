@@ -178,7 +178,7 @@ Gamepad använder gruppval per typ inom en liten radie. Musläget skickas genom 
 5. **Danska vågor:** fem fiendetyper, stabil målsökning och försvarstorn. **Landed 2026-07-11.**
 6. **Toldhuset:** kartan sträcks till drygt två skärmbredder; den mobila markbossen, två sigillmaster, öppnad port, kärnhälsa, dansk förstärkningsproduktion och det kombinerade segervillkoret är spelbara. Karl CCLV:s särskilda markbredsida och slutligt resultatkort återstår. **Major boss slice landed 2026-07-12.**
 7. **Presentation:** genererade byggnads- och truppassets, arbets-/anfallsanimationer, nio lokala stridsljud, sex svenska/danska händelseradior samt egen 84 BPM ångdriven karolinsk RTS-fältmarsch. 400x280 och 320x224 headless-verifieras. **Landed 2026-07-11.**
-8. **Berättande insertion:** egen omloppsbild, Karls textkort, Ebbas vakuuminvändning med rollseed `302121`, landning och automatisk älgritt till den synliga silverådern före första byggordern. **Landed 2026-07-15.**
+8. **Berättande insertion:** egen omloppsbild, Karls porträtt och syntetiska rollröst med seeds `302028`/`302128`, Ebbas vakuuminvändning med rollseed `302121`, landning och automatisk älgritt till den synliga silverådern före första byggordern. **Landed 2026-07-16.**
 
 ## Icke-mål för första spelbara versionen
 
