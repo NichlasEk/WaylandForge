@@ -408,18 +408,7 @@ internal sealed class StormaktGame
         {
             if (Pressed(buttons, Start))
             {
-                if (_levelId == 2)
-                {
-                    _inLevelSelect = true;
-                    _levelSelection = 2;
-                    _stageClear = false;
-                    _stageClearAge = 0;
-                    _audio?.SwitchMusic(StormaktMusicTrack.Menu);
-                }
-                else
-                {
-                    Reset();
-                }
+                ReturnToCampaignSelect(Math.Min(_levelId + 1, CampaignNames.Length - 1));
                 _audio?.Trigger(StormaktSound.Deploy);
             }
             else
@@ -824,6 +813,20 @@ internal sealed class StormaktGame
 
     private bool Pressed(uint buttons, uint button) => (buttons & button) != 0 && (_previousButtons & button) == 0;
 
+    private void ReturnToCampaignSelect(int selection)
+    {
+        _stageClear = false;
+        _stageClearAge = 0;
+        _inLevelPreview = false;
+        _inSilverkroppenSelect = false;
+        _inLevelSelect = true;
+        _levelSelection = Math.Clamp(selection, 0, CampaignNames.Length - 1);
+        _lockedLevelNoticeFrames = 0;
+        ClearBossRadio();
+        _audio?.SetPaused(false);
+        _audio?.SwitchMusic(StormaktMusicTrack.Menu);
+    }
+
     private void StepLevelSelect(uint buttons)
     {
         if (Pressed(buttons, Up))
@@ -838,7 +841,7 @@ internal sealed class StormaktGame
         }
         if (Pressed(buttons, Start))
         {
-            if (_levelSelection == 3 && _developerMode)
+            if (_levelSelection == 3)
             {
                 _inLevelSelect = false;
                 _inSilverkroppenSelect = true;
@@ -847,7 +850,7 @@ internal sealed class StormaktGame
                 _previousButtons = buttons;
                 return;
             }
-            if (_levelSelection is 0 or 1 or 2 or 4 || (_developerMode && _levelSelection == 3))
+            if (_levelSelection is 0 or 1 or 2 or 4)
             {
                 StartLevel(_levelSelection, fresh: (buttons & Slow) != 0);
             }
@@ -2637,10 +2640,7 @@ internal sealed class StormaktGame
         }
         if (dungeon.EpilogueAge < 970 || !Pressed(buttons, Fire)) return;
         _dungeon = null;
-        _inLevelSelect = true;
-        _inSilverkroppenSelect = false;
-        _levelSelection = 3;
-        _audio?.SwitchMusic(StormaktMusicTrack.Menu);
+        ReturnToCampaignSelect(4);
         _audio?.Trigger(StormaktSound.Deploy);
     }
 
@@ -11587,8 +11587,6 @@ internal sealed class StormaktGame
             DrawCrown(frame, 15, 42, 0xffffd66b);
             DrawCrown(frame, _width - 19, 42, 0xffffd66b);
         }
-        DrawLine(frame, 0, 82, 34, 82, 0xff65c5ca);
-        DrawLine(frame, _width - 34, 82, _width - 1, 82, 0xff65c5ca);
         if (state.Age is >= 3_140 and < 3_290)
         {
             int width = Math.Min(220, _width - 20);
@@ -11738,12 +11736,15 @@ internal sealed class StormaktGame
             int x = segment * segmentWidth;
             int width = Math.Min(segmentWidth - 2, _width - x);
             string sealName = wall.Health[segment] >= TitheSealWall.SegmentHealth
-                ? "tithe_seal_segment"
+                ? "tithe_seal_segment_intact"
                 : wall.Health[segment] > TitheSealWall.SegmentHealth / 2
                     ? "tithe_seal_segment_damaged"
                     : "tithe_seal_segment_critical";
             if (_sprites?.TryGet(sealName, out Sprite seal) == true)
                 DrawSpriteScaled(frame, seal, x, y - 11, width, 22);
+            else if (wall.Health[segment] >= TitheSealWall.SegmentHealth &&
+                _sprites?.TryGet("tithe_seal_segment", out Sprite legacySeal) == true)
+                DrawSpriteScaled(frame, legacySeal, x, y - 11, width, 22);
             else
             {
                 uint plate = wall.Health[segment] < TitheSealWall.SegmentHealth / 2 ? 0xff59312c : 0xff8f2635;
@@ -12289,7 +12290,7 @@ internal sealed class StormaktGame
         for (int index = 0; index < CampaignNames.Length; index++)
         {
             string status = index == 3 && File.Exists(DungeonSavePath("autosave")) ? "FORTSÄTT" :
-                index is 0 or 1 or 2 or 4 ? "STRID" : _developerMode ? "DEV" : "LÅST";
+                index is 0 or 1 or 2 or 3 or 4 ? "STRID" : _developerMode ? "DEV" : "LÅST";
             DrawLevelOption(frame, panelX + 12, listY + index * rowHeight, panelWidth - 24,
                 rowHeight - 2, index, $"{index + 1}  {CampaignNames[index]}", status);
         }

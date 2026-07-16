@@ -171,7 +171,7 @@ Varje brosektion minns högst två spelarorsakade förändringar tills den lämn
 
 ## Landad checkpoint 1
 
-Nivå-id `2` har egen seed `3303`, tom egen radiotabell, egen fiendevåg, egen kodritad ringbro/räls/Kronspann, egen musikdispatch och eget resultatkort. DEV-rad 3 startar nivån direkt medan normalläget behåller den låst. Start från resultatet återgår till samma kampanjrad.
+Nivå-id `2` har egen seed `3303`, tom egen radiotabell, egen fiendevåg, egen kodritad ringbro/räls/Kronspann, egen musikdispatch och eget resultatkort. Efter seger står resultatkortet kvar tills Start; därefter öppnas fälttågsmenyn i menymusik med Silverkroppen förvald utan att startas automatiskt.
 
 Två upprepade direkta WFEX-spår matchade vid bild 60, 1200, 3590 och 3650:
 

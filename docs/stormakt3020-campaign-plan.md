@@ -58,6 +58,8 @@ Sören leder spelaren genom en storm av vrak och falska fyrar mot fogdens komman
 
 Boss/miniboss: först en hedersduell mot Sören, därefter gemensam strid mot jägarflottan **De Røde Hunde**.
 
+Implementeringsplan: `docs/stormakt3020-level-06-snapphanens-ed.md`.
+
 ### Bana 7 - Köpenhamns sista ring
 
 Final över en barock rymdstad med spiror, dockor, urverk och en kronformad försvarsring. Tidigare val avgör vilka allierade skepp som syns i bakgrunden och vilka batterier som redan är utslagna.

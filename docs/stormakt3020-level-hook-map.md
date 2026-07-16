@@ -25,7 +25,7 @@ level select
        HUD / boss HUD / title / radio / result / pause
 ```
 
-`StartLevel`, `ResetLevelState`, `StepLevelTimeline` and `DrawLevelScenery` are the stable campaign hooks. Stora Bält, Skånska skuggor, Öresunds järnkrona and Fogdens tionde värld are public `STRID` rows; Silverkroppen retains its separate developer submenu while its campaign flow is completed.
+`StartLevel`, `ResetLevelState`, `StepLevelTimeline` and `DrawLevelScenery` are the stable campaign hooks. Stora Bält, Skånska skuggor, Öresunds järnkrona, Silverkroppen and Fogdens tionde värld are public campaign rows. Silverkroppen retains its separate RTS/dungeon submenu, but the submenu itself is publicly reachable.
 
 ## Selection and state ownership
 
@@ -34,8 +34,8 @@ level select
 | Selected row | `_levelSelection` in `StepLevelSelect` | Pass row 0 or 1 into `StartLevel`; unfinished later rows retain preview behavior. |
 | Active campaign | missing | Add `_levelId`; never infer the running level from `_levelSelection`. |
 | Deterministic reset | `Reset()` uses seed `3020` | Rename/generalize to reset the active level and seed level 2 independently. |
-| Menu return | `StepLevelPreview` | Keep preview return; level clear/game over restart the same active level. |
-| Public unlock | campaign status in `DrawLevelSelect` and `StepLevelSelect` | Level ids 0-2 and 4 are startable without developer mode; level id 3 retains its separate developer submenu. |
+| Menu return | `ReturnToCampaignSelect` | A result card waits for Start, then returns to menu music with the next campaign row selected; game over still recalls the current active level. |
+| Public unlock | campaign status in `DrawLevelSelect` and `StepLevelSelect` | Level ids 0-4 are reachable without developer mode; level id 3 opens its separate RTS/dungeon submenu. |
 
 Invariant: selecting Skånska skuggor may never run Stora Bält with a changed title. `_levelId` owns every level-specific timeline, asset and result choice.
 
@@ -105,7 +105,7 @@ For every checkpoint: build, `git diff --check`, capture at least one direct WFE
 
 ## Öresund dispatch
 
-Campaign row 3 owns level id `2` and is publicly startable as `STRID`. Reset seed `3303`, `OresundEnemyWaves`, the empty timed `OresundRadioCards` reservation, `StormaktMusicTrack.Oresund`, ringbridge layers, mission title and result card are all separate dispatch branches. The timeline begins the twin-fortress boss at frame 4500 and retains frame 9000 only as a defensive clear failsafe. Start returns to selected campaign row 3. It must not fall through to Stora Bält or Skånska tables when a future subsystem is absent.
+Campaign row 3 owns level id `2` and is publicly startable as `STRID`. Reset seed `3303`, `OresundEnemyWaves`, the empty timed `OresundRadioCards` reservation, `StormaktMusicTrack.Oresund`, ringbridge layers, mission title and result card are all separate dispatch branches. The timeline begins the twin-fortress boss at frame 4500 and retains frame 9000 only as a defensive clear failsafe. Start on the completed result card returns to the campaign menu with row 4, Silverkroppen, selected. It must not fall through to Stora Bält or Skånska tables when a future subsystem is absent.
 
 The first deterministic wide/legacy WFEX baseline landed 2026-07-14. `BridgeSectionState` and its direct-destruction, coupling-to-laser and control-house reroute paths landed 2026-07-15. Checkpoint 3 adds generated non-physical ringbridge layers plus two state-owned physical flap passages; ordinary shots stop on the shared flap rectangles while the second passage's laser ignores cover after a 60-frame warning. Checkpoint 4 composes the generated locomotive, command wagon, two cannon wagons and wreck from the same state. Its direct-disarm and explicit `MasterCouplingBroken → TrackDiverted → TrainBufferCrash` paths each repeated ten times in wide and legacy fields. Checkpoint 5 maps `TrainDisarmed`, `TrainCrashed` or a passed train to three explicit Sören targets, queues his and Ebba's existing voiced cards after the train result, and never mutates future boss state. Checkpoint 6 adds independent Helsingör/Helsingborg anchors, one shared 720-health pool, alternating shield/fire turns, warned cross-current beams, a central crown core and a clean collapse/result transition. Both focus solutions repeated ten times in wide and legacy fields, and the row is now public `STRID`.
 
@@ -136,3 +136,9 @@ Ränteverket begins at age 3140 and owns `TitheSealWall` records rather than gro
 The third cabinet opens at age 4650. `SilverCooler` changes heat decay from one to three after 18 idle frames and draws cyan cooling fins. `SeizureArmor` halves normal cooling cadence, draws dark vault plates and consumes one explicit armor charge before `DamageShip` can take a life. `StormaktCampaignSave` persists all three enum selections and the freed-ship count atomically beside dungeon saves. Level 5 loads the kit on normal Start; `Slow+Start` produces the deterministic standard kit. In-memory reset also preserves the current loadout after death.
 
 Campaign row 5 is public `STRID`. `DamageShip` follows the ordinary life-loss path after armor resolution; the former developer-only guard and `DEVSKÖLD` HUD marker are removed. `SeizureArmor` still consumes its one explicit armor charge before an ordinary hit can take a life.
+
+## Sequential campaign return
+
+All completed public missions use the same two-step handoff. Their result card remains on screen until Start, preserving the level's victory music and giving the player a deliberate pause. Start then calls `ReturnToCampaignSelect(levelId + 1)`, switches to menu music and highlights the following campaign row without starting it. Stora Bält selects Skånska skuggor, Skånska selects Öresunds järnkrona, Öresund selects Silverkroppen, the completed temple epilogue selects Fogdens tionde värld, and Rigsregnskabet selects Snapphanens ed. A death is intentionally different: `START ÅTERKALLAR` resets the current level rather than advancing.
+
+The handoff was exercised through real public WFEX input for all five completed campaign missions. Stora Bält returned with row 2 highlighted, Skånska with row 3, Öresund with row 4, the temple epilogue with row 5 and Tionde världen with row 6. Silverkroppen's separate RTS/dungeon submenu also opens in non-developer mode. No handoff auto-started the highlighted mission.

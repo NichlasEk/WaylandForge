@@ -92,7 +92,7 @@ Status: checkpoint 1, 2A-2C, bosscheckpoint 3A-3C och den första grafikpolishen
 - Sigillet skjuter en permanent långsam tvåarmad orange spiral. Fas-3-skadan är balanserad för att en träffsäker dubbelkanon ska hinna uppleva båda rusningarna före noll hälsa.
 - Dödsekvensen spränger vänsterkanon, högerkanon, pansar, sigill och kärna i tidsordning. Bossmusiken duckas till cirka en tredjedel under den 2,6 sekunder långa huvudbrisningen.
 - Efter 210 dödsrutor tas bossens träffytor bort och resultatkortet visar `BÄLTET ÄR ÖPPET` / `KRONARKIV SÄKRAT`.
-- En liten svart/kopparfärgad snapphane med grön signalglöd betraktar vrakplatsen ordlöst. Start återställer hela den deterministiska banan och stridsmusiken.
+- En liten svart/kopparfärgad snapphane med grön signalglöd betraktar vrakplatsen ordlöst. Resultatkortet står kvar tills Start; därefter öppnas fälttågsmenyn med Skånska skuggor förvald och menymusiken aktiv. Dödens `START ÅTERKALLAR` startar däremot om samma bana.
 - Två fristående 6 501-rutorskörningar gav samma aktiva fas-3-bild: SHA-256 `6bbeb1153f48e0312ccaeb815d3fd146e4ec6bccf9429a644b5df2136a5219dc`. En 6 901-rutorskörning nådde det färdiga resultatkortet.
 
 ## Banans löfte

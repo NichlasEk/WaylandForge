@@ -1022,7 +1022,7 @@ def append_rigsregnskabet_phase_assets(
 
 def append_tithe_world_assets(
     entries: list[tuple[str, Image.Image]], background: Image.Image, machinery: Image.Image,
-    damage_projectiles: Image.Image
+    seal_intact: Image.Image, damage_projectiles: Image.Image
 ) -> None:
     archive = background.convert("RGBA")
     archive.thumbnail((400, 720), Image.Resampling.LANCZOS)
@@ -1048,6 +1048,10 @@ def append_tithe_world_assets(
             sprite = sprite.rotate(90, expand=True)
         sprite.thumbnail(target, Image.Resampling.LANCZOS)
         entries.append((name, sprite))
+
+    intact_seal = trim_alpha(seal_intact.convert("RGBA"))
+    intact_seal.thumbnail((58, 25), Image.Resampling.LANCZOS)
+    entries.append(("tithe_seal_segment_intact", intact_seal))
 
     damage_definitions = [
         ("tithe_seal_segment_damaged", 0, 0, (58, 25)),
@@ -1181,6 +1185,7 @@ def build(
     rigsregnskabet_power_rings_input_path: Path,
     tithe_background_input_path: Path,
     tithe_machinery_input_path: Path,
+    tithe_seal_intact_input_path: Path,
     tithe_damage_projectiles_input_path: Path,
     tithe_ship_modules_input_path: Path,
     tithe_weapon_effects_input_path: Path,
@@ -1265,6 +1270,7 @@ def build(
     rigsregnskabet_power_rings_source = Image.open(rigsregnskabet_power_rings_input_path).convert("RGBA")
     tithe_background_source = Image.open(tithe_background_input_path).convert("RGBA")
     tithe_machinery_source = Image.open(tithe_machinery_input_path).convert("RGBA")
+    tithe_seal_intact_source = Image.open(tithe_seal_intact_input_path).convert("RGBA")
     tithe_damage_projectiles_source = Image.open(tithe_damage_projectiles_input_path).convert("RGBA")
     tithe_ship_modules_source = Image.open(tithe_ship_modules_input_path).convert("RGBA")
     tithe_weapon_effects_source = Image.open(tithe_weapon_effects_input_path).convert("RGBA")
@@ -1384,6 +1390,7 @@ def build(
                                        rigsregnskabet_death_effects_source,
                                        rigsregnskabet_power_rings_source)
     append_tithe_world_assets(entries, tithe_background_source, tithe_machinery_source,
+                              tithe_seal_intact_source,
                               tithe_damage_projectiles_source)
     append_tithe_weapon_assets(entries, tithe_ship_modules_source, tithe_weapon_effects_source)
     append_tithe_route_assets(entries, tithe_route_customs_source)
@@ -1614,6 +1621,7 @@ def main() -> None:
     parser.add_argument("--rigsregnskabet-power-rings-input", type=Path, default=Path("assets/stormakt3020/rigsregnskabet-power-rings-v1.png"))
     parser.add_argument("--tithe-background-input", type=Path, default=Path("assets/stormakt3020/tithe-archive-background-source-v1.png"))
     parser.add_argument("--tithe-machinery-input", type=Path, default=Path("assets/stormakt3020/tithe-machinery-v1.png"))
+    parser.add_argument("--tithe-seal-intact-input", type=Path, default=Path("assets/stormakt3020/tithe-seal-intact-v2.png"))
     parser.add_argument("--tithe-damage-projectiles-input", type=Path, default=Path("assets/stormakt3020/tithe-damage-projectiles-v1.png"))
     parser.add_argument("--tithe-ship-modules-input", type=Path, default=Path("assets/stormakt3020/tithe-ship-modules-v1.png"))
     parser.add_argument("--tithe-weapon-effects-input", type=Path, default=Path("assets/stormakt3020/tithe-weapon-effects-v1.png"))
@@ -1703,6 +1711,7 @@ def main() -> None:
         args.rigsregnskabet_power_rings_input,
         args.tithe_background_input,
         args.tithe_machinery_input,
+        args.tithe_seal_intact_input,
         args.tithe_damage_projectiles_input,
         args.tithe_ship_modules_input,
         args.tithe_weapon_effects_input,
