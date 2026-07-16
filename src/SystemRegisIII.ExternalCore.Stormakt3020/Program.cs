@@ -8107,8 +8107,17 @@ internal sealed class StormaktGame
             PutPixel(frame, star.X, y, color);
         }
         int horizonY = _height + 112 - rts.Age / 12;
-        FillCircle(frame, _width / 2, horizonY, _width / 2 + 74, 0xff14231f);
-        DrawCircleOutline(frame, _width / 2, horizonY, _width / 2 + 72, 0xff3d6d62);
+        if (_sprites?.TryGet("rts_orbit_forest_moon", out Sprite orbitMoon) == true)
+        {
+            int moonHeight = Math.Max(1, orbitMoon.Height * _width / orbitMoon.Width);
+            int moonTop = _height + 38 - _width / 2 - rts.Age / 12;
+            DrawSpriteScaled(frame, orbitMoon, 0, moonTop, _width, moonHeight);
+        }
+        else
+        {
+            FillCircle(frame, _width / 2, horizonY, _width / 2 + 74, 0xff14231f);
+            DrawCircleOutline(frame, _width / 2, horizonY, _width / 2 + 72, 0xff3d6d62);
+        }
         int shipY = 72 + rts.Age / 8;
         if (_sprites?.TryGet("player", out Sprite ship) == true)
             DrawSprite(frame, ship, _width / 2 - ship.Width / 2, shipY - ship.Height / 2);

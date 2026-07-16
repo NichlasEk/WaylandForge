@@ -416,6 +416,12 @@ def append_rts_frontier_road(entries: list[tuple[str, Image.Image]], source: Ima
         entries.append((name, tile))
 
 
+def append_rts_orbit_moon(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    moon = trim_alpha(chroma_alpha(source.convert("RGBA")))
+    moon.thumbnail((400, 200), Image.Resampling.LANCZOS)
+    entries.append(("rts_orbit_forest_moon", moon))
+
+
 def append_dungeon_assets(entries: list[tuple[str, Image.Image]], karl: Image.Image, mine: Image.Image) -> None:
     karl_names = ["dungeon_karl_s_idle", "dungeon_karl_s_walk_a", "dungeon_karl_s_walk_b", "dungeon_karl_kneel",
                   "dungeon_karl_n_idle", "dungeon_karl_n_walk", "dungeon_karl_e_idle", "dungeon_karl_e_walk"]
@@ -990,6 +996,7 @@ def build(
     rts_floor_input_path: Path,
     rts_vein_input_path: Path,
     rts_landing_pad_input_path: Path,
+    rts_orbit_moon_input_path: Path,
     rts_road_input_path: Path,
     dungeon_karl_input_path: Path,
     dungeon_mine_input_path: Path,
@@ -1063,6 +1070,7 @@ def build(
     rts_floor_source = Image.open(rts_floor_input_path).convert("RGBA")
     rts_vein_source = Image.open(rts_vein_input_path).convert("RGBA")
     rts_landing_pad_source = Image.open(rts_landing_pad_input_path).convert("RGBA")
+    rts_orbit_moon_source = Image.open(rts_orbit_moon_input_path).convert("RGBA")
     rts_road_source = Image.open(rts_road_input_path).convert("RGBA")
     dungeon_karl_source = Image.open(dungeon_karl_input_path).convert("RGBA")
     dungeon_mine_source = Image.open(dungeon_mine_input_path).convert("RGBA")
@@ -1172,6 +1180,7 @@ def build(
         ("rts_dk_wagon_rut", 3, 1, (42, 28)),
     ])
     append_rts_terrain_details(entries, rts_floor_source, rts_vein_source, rts_landing_pad_source)
+    append_rts_orbit_moon(entries, rts_orbit_moon_source)
     append_rts_frontier_road(entries, rts_road_source)
     append_dungeon_assets(entries, dungeon_karl_source, dungeon_mine_source)
     append_dungeon_loot(entries, dungeon_loot_source)
@@ -1392,6 +1401,7 @@ def main() -> None:
     parser.add_argument("--rts-floor-input", type=Path, default=Path("assets/stormakt3020/rts-forest-floor-v1.png"))
     parser.add_argument("--rts-vein-input", type=Path, default=Path("assets/stormakt3020/rts-silver-vein-v1.png"))
     parser.add_argument("--rts-landing-pad-input", type=Path, default=Path("assets/stormakt3020/rts-karl-landing-pad-v1.png"))
+    parser.add_argument("--rts-orbit-moon-input", type=Path, default=Path("assets/stormakt3020/rts-orbital-forest-moon-v1.png"))
     parser.add_argument("--rts-road-input", type=Path, default=Path("assets/stormakt3020/rts-danish-frontier-road-v1.png"))
     parser.add_argument("--dungeon-karl-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-v1.png"))
     parser.add_argument("--dungeon-mine-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva1-environment-v1.png"))
@@ -1470,6 +1480,7 @@ def main() -> None:
         args.rts_floor_input,
         args.rts_vein_input,
         args.rts_landing_pad_input,
+        args.rts_orbit_moon_input,
         args.rts_road_input,
         args.dungeon_karl_input,
         args.dungeon_mine_input,
