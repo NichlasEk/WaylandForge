@@ -753,6 +753,62 @@
       "sha256": "65ec3c1b66317e0cd59a1517a2885bb601f94bd3f0a8e7c14de3a3b342ec83d7",
       "request": "assets/stormakt3020/radio/raw/karl-silver-scent-sv-request.json",
       "reference_sha256": "768fb86a95a5cf2c0d14543289abd4c2ca4fe2c9c824af820a1796c6e87aec1d"
+    },
+    {
+      "kind": "reference",
+      "role": "rigsregnskabet",
+      "job_id": "176d212f23b141eb8bf60b59f1a41836",
+      "file": "assets/stormakt3020/radio/references/rigsregnskabet-reference.wav",
+      "sha256": "cd825d66a5b6bfc4b3ec39009d8fb74cafa8c02ab15fed159b89f862b61c769b",
+      "request": {
+        "text": "Regnskabet åbnes. Hver mønt, hvert skib og hvert navn står indført under Kronens segl. Ingen gæld forsvinder i mørket. Ingen fredsaftale ændrer summen. Når renterne er talt, bliver den sidste post inddrevet med jern.",
+        "language": "da",
+        "voice_instruction": "A wholly synthetic Danish royal accounting engine, deep androgynous bass register formed from several perfectly synchronized chancery clerks, cold precise natural Danish diction, slow implacable bureaucratic authority, faint metallic resonance, never humanly emotional, comic, robotic beeps, distorted or unintelligible.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302029
+      }
+    },
+    {
+      "kind": "line",
+      "line": "rigsregnskabet-intro",
+      "role": "rigsregnskabet",
+      "job_id": "aee2151c589e4094b44fa884b4b72f24",
+      "file": "assets/stormakt3020/radio/raw/rigsregnskabet-intro-da-raw.wav",
+      "sha256": "d25f222346a56fc26656663f1ffc117b3c34e1ba6010a0a9d88d7cdbcdf8b55f",
+      "request": "assets/stormakt3020/radio/raw/rigsregnskabet-intro-da-request.json",
+      "reference_sha256": "cd825d66a5b6bfc4b3ec39009d8fb74cafa8c02ab15fed159b89f862b61c769b"
+    },
+    {
+      "kind": "line",
+      "line": "rigsregnskabet-interest",
+      "role": "rigsregnskabet",
+      "job_id": "0f19a5fabf7641c4a50a2f79873aeb66",
+      "file": "assets/stormakt3020/radio/raw/rigsregnskabet-interest-da-raw.wav",
+      "sha256": "5e13436009ebd25da9d402bf94be7e66f9bbfc8a453e7735319a78a517db0ad5",
+      "request": "assets/stormakt3020/radio/raw/rigsregnskabet-interest-da-request.json",
+      "reference_sha256": "cd825d66a5b6bfc4b3ec39009d8fb74cafa8c02ab15fed159b89f862b61c769b"
+    },
+    {
+      "kind": "line",
+      "line": "rigsregnskabet-core",
+      "role": "rigsregnskabet",
+      "job_id": "598320e559ab47178a1f490a67447d5d",
+      "file": "assets/stormakt3020/radio/raw/rigsregnskabet-core-da-raw.wav",
+      "sha256": "8f968da6bdfecd0591558a283cbf319b8f8d29d6eeabd25c554371f2a3430b0b",
+      "request": "assets/stormakt3020/radio/raw/rigsregnskabet-core-da-request.json",
+      "reference_sha256": "cd825d66a5b6bfc4b3ec39009d8fb74cafa8c02ab15fed159b89f862b61c769b"
+    },
+    {
+      "kind": "line",
+      "line": "rigsregnskabet-death",
+      "role": "rigsregnskabet",
+      "job_id": "1245d0094020479fbf9d3056e19f5a59",
+      "file": "assets/stormakt3020/radio/raw/rigsregnskabet-death-da-raw.wav",
+      "sha256": "e2930d41a274c69d2cf7568daeb09915e3850a67e7cbadcee63e17a82720e479",
+      "request": "assets/stormakt3020/radio/raw/rigsregnskabet-death-da-request.json",
+      "reference_sha256": "cd825d66a5b6bfc4b3ec39009d8fb74cafa8c02ab15fed159b89f862b61c769b"
     }
   ],
   "service": "http://127.0.0.1:8765",

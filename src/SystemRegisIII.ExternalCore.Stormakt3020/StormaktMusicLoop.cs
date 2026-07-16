@@ -21,6 +21,7 @@ internal sealed class StormaktMusicLoop : IDisposable
     private readonly float[]? _rtsSamples;
     private readonly float[]? _dungeonSamples;
     private readonly float[]? _bossSamples;
+    private readonly float[]? _titheBossSamples;
     private readonly float[]? _escapeSamples;
     private readonly float[]? _reliefSamples;
     private readonly Dictionary<StormaktSound, LoadedEffect> _effects;
@@ -52,6 +53,7 @@ internal sealed class StormaktMusicLoop : IDisposable
         float[]? rtsSamples,
         float[]? dungeonSamples,
         float[]? bossSamples,
+        float[]? titheBossSamples,
         float[]? escapeSamples,
         float[]? reliefSamples,
         Dictionary<StormaktSound, LoadedEffect> effects,
@@ -66,6 +68,7 @@ internal sealed class StormaktMusicLoop : IDisposable
         _rtsSamples = rtsSamples;
         _dungeonSamples = dungeonSamples;
         _bossSamples = bossSamples;
+        _titheBossSamples = titheBossSamples;
         _escapeSamples = escapeSamples;
         _reliefSamples = reliefSamples;
         _effects = effects;
@@ -130,6 +133,8 @@ internal sealed class StormaktMusicLoop : IDisposable
                 string originalBossPath = Path.Combine(musicDirectory, "kronans-sista-salva-v1.wav");
                 string bossPath = File.Exists(loopedBossPath) ? loopedBossPath : originalBossPath;
                 float[]? bossSamples = File.Exists(bossPath) ? LoadPcm16StereoWav(bossPath) : null;
+                string titheBossPath = Path.Combine(musicDirectory, "rigsregnskabet-boss-loop-v1.wav");
+                float[]? titheBossSamples = File.Exists(titheBossPath) ? LoadPcm16StereoWav(titheBossPath) : bossSamples;
                 string escapePath = Path.Combine(musicDirectory, "lemminkainen-flykt-v1.wav");
                 float[]? escapeSamples = File.Exists(escapePath) ? LoadPcm16StereoWav(escapePath) : null;
                 string reliefPath = Path.Combine(musicDirectory, "lemminkainen-lattnad-v1.wav");
@@ -146,14 +151,16 @@ internal sealed class StormaktMusicLoop : IDisposable
                 string rtsDescription = rtsSamples is null ? "missing" : $"ready ({rtsSamples.Length / Channels / SampleRate}s)";
                 string dungeonDescription = dungeonSamples is null ? "missing" : $"ready ({dungeonSamples.Length / Channels / SampleRate}s)";
                 string bossDescription = bossSamples is null ? "missing" : $"ready ({bossSamples.Length / Channels / SampleRate}s)";
+                string titheBossDescription = File.Exists(titheBossPath)
+                    ? $"ready ({titheBossSamples!.Length / Channels / SampleRate}s)" : "boss fallback";
                 string escapeDescription = escapeSamples is null ? "missing" : $"ready ({escapeSamples.Length / Channels / SampleRate}s)";
                 string reliefDescription = reliefSamples is null ? "missing" : $"ready ({reliefSamples.Length / Channels / SampleRate}s)";
                 Console.Error.WriteLine($"Stormakt audio: loaded {Path.GetFileName(path)} ({samples.Length / Channels / SampleRate}s), " +
-                    $"menu march={menuDescription}, Skanska score={skanskaDescription}, Oresund score={oresundDescription}, RTS score={rtsDescription}, dungeon score={dungeonDescription}, boss score={bossDescription}, " +
+                    $"menu march={menuDescription}, Skanska score={skanskaDescription}, Oresund score={oresundDescription}, RTS score={rtsDescription}, dungeon score={dungeonDescription}, boss score={bossDescription}, Tithe boss={titheBossDescription}, " +
                     $"escape score={escapeDescription}, relief score={reliefDescription}, " +
                     $"{effects.Count} effects and {voices.Count} radio voices.");
                 return new StormaktMusicLoop(samples, menuSamples, skanskaSamples, oresundSamples, rtsSamples, dungeonSamples,
-                    bossSamples, escapeSamples, reliefSamples, effects, voices, socketPath);
+                    bossSamples, titheBossSamples, escapeSamples, reliefSamples, effects, voices, socketPath);
             }
             catch (Exception exception)
             {
@@ -297,6 +304,7 @@ internal sealed class StormaktMusicLoop : IDisposable
                 StormaktMusicTrack.Rts => _rtsSamples,
                 StormaktMusicTrack.Dungeon => _dungeonSamples,
                 StormaktMusicTrack.Boss => _bossSamples,
+                StormaktMusicTrack.TitheBoss => _titheBossSamples,
                 StormaktMusicTrack.Escape => _escapeSamples,
                 StormaktMusicTrack.Relief => _reliefSamples,
                 _ => null,
@@ -676,6 +684,10 @@ internal sealed class StormaktMusicLoop : IDisposable
             (StormaktVoice.RasmusOresundCrossfire, "rasmus-oresund-crossfire-da-radio.wav", 0.92f),
             (StormaktVoice.RasmusOresundCore, "rasmus-oresund-core-da-radio.wav", 0.94f),
             (StormaktVoice.RasmusOresundFall, "rasmus-oresund-fall-da-radio.wav", 0.96f),
+            (StormaktVoice.RigsregnskabetIntro, "rigsregnskabet-intro-da-radio.wav", 0.88f),
+            (StormaktVoice.RigsregnskabetInterest, "rigsregnskabet-interest-da-radio.wav", 0.90f),
+            (StormaktVoice.RigsregnskabetCore, "rigsregnskabet-core-da-radio.wav", 0.92f),
+            (StormaktVoice.RigsregnskabetDeath, "rigsregnskabet-death-da-radio.wav", 0.96f),
         ];
         Dictionary<StormaktVoice, LoadedEffect> voices = [];
         foreach ((StormaktVoice voice, string file, float gain) in entries)
@@ -855,6 +867,10 @@ internal enum StormaktVoice
     RasmusOresundCrossfire,
     RasmusOresundCore,
     RasmusOresundFall,
+    RigsregnskabetIntro,
+    RigsregnskabetInterest,
+    RigsregnskabetCore,
+    RigsregnskabetDeath,
 }
 
 internal enum StormaktMusicTrack
@@ -866,6 +882,7 @@ internal enum StormaktMusicTrack
     Rts,
     Dungeon,
     Boss,
+    TitheBoss,
     Escape,
     Relief,
 }

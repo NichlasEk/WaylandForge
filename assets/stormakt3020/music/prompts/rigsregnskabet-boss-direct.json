@@ -1,0 +1,22 @@
+{
+  "prompt": "Instrumental monumental boss-battle loop for Rigsregnskabet, a gigantic mechanical royal tax archive in a dark Swedish retro-futurist vertical shoot-em-up. C minor, 90 BPM, severe circular sixteen-bar machinery fugue. Huge pipe organ states a descending three-note Carolean fate motif while low brass, contrabass, bass viol and relentless field snare answer in tightening counterpoint. Printing-press pistons, ledger-drum impacts, chain reels, stamped sealing-wax blows and metallic coin pulses become percussion. Phase one is a stern bureaucratic march, phase two adds rotating dissonant coin figures, phase three opens into terrifying cyan-core organ harmony and desperate noble brass without becoming cheerful or triumphant. The field snare, bass ostinato and machinery percussion must remain continuously audible through every bar: no breakdown, no sparse interlude, no pause, no silence. Immediate full presence, continuous escalation, no quiet intro, no final cadence and no fade. No vocals, no choir, no EDM, no rock guitar, no modern trailer braams, no comedy, no victory ending.",
+  "lyrics": "[Instrumental]",
+  "vocal_language": "unknown",
+  "audio_duration": 64,
+  "audio_format": "wav",
+  "task_type": "text2music",
+  "batch_size": 1,
+  "thinking": false,
+  "use_format": false,
+  "bpm": 90,
+  "key_scale": "C minor",
+  "time_signature": "4/4",
+  "inference_steps": 8,
+  "guidance_scale": 8.0,
+  "use_random_seed": false,
+  "seed": 30201706,
+  "constrained_decoding": true,
+  "use_cot_caption": false,
+  "use_cot_language": false,
+  "lm_negative_prompt": "vocals, choir, singing, EDM, rock, pop, comedy, cheerful, triumphant, victory ending, trailer braams, quiet intro, breakdown, sparse interlude, pause, silence, final cadence, fade"
+}

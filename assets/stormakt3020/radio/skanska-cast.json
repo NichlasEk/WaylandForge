@@ -68,6 +68,15 @@
       "dialogue_seed": 302125
     },
     {
+      "id": "rigsregnskabet",
+      "speaker": "RIGSREGNSKABET",
+      "language": "da",
+      "voice_instruction": "A wholly synthetic Danish royal accounting engine, deep androgynous bass register formed from several perfectly synchronized chancery clerks, cold precise natural Danish diction, slow implacable bureaucratic authority, faint metallic resonance, never humanly emotional, comic, robotic beeps, distorted or unintelligible.",
+      "reference_text": "Regnskabet åbnes. Hver mønt, hvert skib og hvert navn står indført under Kronens segl. Ingen gæld forsvinder i mørket. Ingen fredsaftale ændrer summen. Når renterne er talt, bliver den sidste post inddrevet med jern.",
+      "reference_seed": 302029,
+      "dialogue_seed": 302129
+    },
+    {
       "id": "blind-shepherd",
       "speaker": "DEN BLINDE HERDEN",
       "language": "sv",
@@ -769,6 +778,50 @@
       "text": "Begge slotte falder. Sundet adlyder ingen.",
       "subtitle_lines": ["SLOTTENE FALDER", "SUNDET ER FRIT"],
       "seed": 330316,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "rigsregnskabet-intro",
+      "role": "rigsregnskabet",
+      "level": 4,
+      "frame": 5700,
+      "cue": "rigsregnskabet_intro",
+      "text": "Gældspost fundet. Fartøj Karl to hundrede femoghalvtreds registreres til inddrivelse.",
+      "subtitle_lines": ["SKULD FUNNEN", "KARL CCLV"],
+      "seed": 302129,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "rigsregnskabet-interest",
+      "role": "rigsregnskabet",
+      "level": 4,
+      "frame": -1,
+      "cue": "rigsregnskabet_phase_two",
+      "text": "Rente på rente. Alt svensk sølv skal betales.",
+      "subtitle_lines": ["RÄNTA PÅ RÄNTA", "ALLT SKA BETALAS"],
+      "seed": 302129,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "rigsregnskabet-core",
+      "role": "rigsregnskabet",
+      "level": 4,
+      "frame": -1,
+      "cue": "rigsregnskabet_phase_three",
+      "text": "Fred er en fejlpost. Jeg retter hovedbogen nu.",
+      "subtitle_lines": ["FRED ÄR FELPOST", "JAG KORRIGERAR"],
+      "seed": 302129,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "rigsregnskabet-death",
+      "role": "rigsregnskabet",
+      "level": 4,
+      "frame": -1,
+      "cue": "rigsregnskabet_death",
+      "text": "Hovedbogen kan ikke... slutte.",
+      "subtitle_lines": ["HUVUDBOKEN", "KAN INTE SLUTA"],
+      "seed": 302129,
       "model_backend": "voxcpm2"
     }
   ]

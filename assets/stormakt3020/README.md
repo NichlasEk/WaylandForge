@@ -60,6 +60,8 @@
 
 `rts-orbital-forest-moon-v1.png` replaces the flat code-drawn orbital dome in Silverkroppen's insertion. Its curved forest-moon surface carries distant crater basins, miniature conifers, cold mist and branching silver seams beneath a thin cyan mineral rim. The source, three-reference prompt and alpha-cleaned runtime image are retained; the original dome remains a missing-asset fallback.
 
+`rigsregnskabet-v1.png` is the alpha-cleaned Bana 5 boss: a flying tax archive assembled from confiscated hulls, ledger drums, seal presses, chains, coin rings and two revision arms around a cyan bookkeeping core. `rigsregnskabet-source-v1.png` and the exact built-in generation prompt are retained. The pack downsamples it to one `rigsregnskabet` sprite; phase damage, detached armor and core light remain deterministic runtime layers with a code-drawn fallback.
+
 Silverkroppen now opens in orbit before the existing RTS state: Karl claims he can smell silver in vacuum, Ebba answers in a newly generated seed-locked line, the frigate lands and the established `rts_moose_charge`/`rts_moose_ready` family carries Karl to the visible vein. Building input remains locked until the short deterministic insertion completes.
 
 `stormakt-bridge-cannons-projectiles-v1.png` adds three bridge-collapse pieces, intact/destroyed Danish bridge cannon states, a detachable boss broadside cannon and red/white/gold enemy projectile families. Runtime uses the wreck pieces during the existing 45-frame collapse and mirrors the broadside module for the boss's right side.
@@ -165,6 +167,8 @@ Additional scored roles live under `music/`:
 - `music/lemminkainen-lattnad-v1.wav`: active 48-second G-major/E-minor, 92 BPM mounted escape and spacecraft departure score, generated locally with fixed seed `30201662`.
 - `oresund-i-brand-v1.wav`: faster normal-combat loop.
 - `kronans-sista-salva-v1.wav`: monumental boss loop.
+- `music/rigsregnskabet-boss-v1.wav`: bevarad 64-sekunders lokal ACE-Step-generation för Bana 5-finalen.
+- `music/rigsregnskabet-boss-loop-v1.wav`: aktiv tystnadsfri 12-takters, 90 BPM-maskinfuga för Rigsregnskabet.
 
 `kronans-sista-salva-v1.wav` is the preserved 60-second generation; its final 12.09 seconds are effectively silent. `kronans-sista-salva-loop-v2.wav` is the active non-destructive edit: 40.000 seconds, exactly 14 four-beat bars at 84 BPM, cut before the generated fade. Rebuild it with `python tools/stormakt3020/build_music_loops.py`.
 
@@ -185,7 +189,7 @@ The external core triggers them from actual gameplay events and mixes up to 32 v
 
 ## Radio voices
 
-The campaign radio uses a two-stage local casting pipeline: VoxCPM2 creates fully synthetic reference performances for Ebba, Sören, Rasmus and Christian, then the selected local backend renders versioned Swedish or Danish dialogue from each reference WAV and exact transcript. Silverkroppen adds six event-driven Swedish/Danish calls for the silver landing, steam power, first royal claim, powder warning, organ wagon and moose readiness. The three older Matcha English files remain archived but are no longer loaded by runtime. Requests, raw output, job IDs, hashes and approval state are preserved under `radio/`; no known or third-party voice is cloned and none of these voices are final casting until listened to and approved.
+The campaign radio uses a two-stage local casting pipeline: VoxCPM2 creates fully synthetic reference performances for Ebba, Sören, Rasmus and Christian, then the selected local backend renders versioned Swedish or Danish dialogue from each reference WAV and exact transcript. Silverkroppen adds six event-driven Swedish/Danish calls for the silver landing, steam power, first royal claim, powder warning, organ wagon and moose readiness. Rigsregnskabet adds a wholly synthetic Danish chancery-engine role and four seeded boss calls; every call uses dialogue seed `302129`. The three older Matcha English files remain archived but are no longer loaded by runtime. Requests, raw output, job IDs, hashes and approval state are preserved under `radio/`; no known or third-party voice is cloned and none of these voices are final casting until listened to and approved.
 
 Rebuild the 48 kHz stereo radio-filtered runtime files from the raw WAV files with:
 

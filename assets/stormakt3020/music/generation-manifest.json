@@ -122,6 +122,15 @@
       "seed": "2985970231",
       "duration_seconds": 60,
       "thinking": true
+    },
+    {
+      "role": "level_05_rigsregnskabet_boss",
+      "file": "rigsregnskabet-boss-v1.wav",
+      "request": "prompts/rigsregnskabet-boss-direct.json",
+      "task_id": "854bd402-2de8-41ab-b4b4-e8533f922e2a",
+      "seed": "30201706",
+      "duration_seconds": 64,
+      "thinking": false
     }
   ],
   "derived": [
@@ -167,6 +176,17 @@
       "duration_seconds": 40,
       "runtime_crossfade_seconds": 0.5,
       "sha256": "1c6caa3b1875216c3a86eea8d64773ffdf2cb477ef77ccdd100325dbcfe37ccb"
+    },
+    {
+      "role": "level_05_rigsregnskabet_boss_runtime_loop",
+      "file": "rigsregnskabet-boss-loop-v1.wav",
+      "source": "rigsregnskabet-boss-v1.wav",
+      "tool": "ffmpeg exact bar trim",
+      "bpm": 90,
+      "bars": 12,
+      "duration_seconds": 32,
+      "runtime_crossfade_seconds": 0.5,
+      "sha256": "9d8cc7c6c399c733f533516c4b36de662e3b8be001c5e7d5ad35c83e5aa472c8"
     }
   ],
   "rejected": [

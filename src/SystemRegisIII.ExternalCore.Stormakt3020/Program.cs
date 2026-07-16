@@ -300,6 +300,14 @@ internal sealed class StormaktGame
         new(3_200, 300, false, "EBBA GRIP", "SIGILLPRESSAR", "DE BYGGER VÄGG", null,
             "portrait_ebba"),
     ];
+    private static readonly RadioCard RigsregnskabetIntroRadio =
+        new(0, 390, true, "RIGSREGNSKABET", "SKULD FUNNEN", "KARL CCLV", StormaktVoice.RigsregnskabetIntro, "rigsregnskabet");
+    private static readonly RadioCard RigsregnskabetInterestRadio =
+        new(0, 360, true, "RIGSREGNSKABET", "RÄNTA PÅ RÄNTA", "ALLT SKA BETALAS", StormaktVoice.RigsregnskabetInterest, "rigsregnskabet");
+    private static readonly RadioCard RigsregnskabetCoreRadio =
+        new(0, 390, true, "RIGSREGNSKABET", "FRED ÄR FELPOST", "JAG KORRIGERAR", StormaktVoice.RigsregnskabetCore, "rigsregnskabet");
+    private static readonly RadioCard RigsregnskabetDeathRadio =
+        new(0, 420, true, "RIGSREGNSKABET", "HUVUDBOKEN", "KAN INTE SLUTA", StormaktVoice.RigsregnskabetDeath, "rigsregnskabet");
     private static readonly RadioCard OresundSorenStrikeRadio =
         new(0, 390, true, "SÖREN SVARTKRUT", "BRON HAR NERVER", "JAG SKÄR EN NU", StormaktVoice.SorenOresundNerve,
             "portrait_soren", true);
@@ -4879,16 +4887,177 @@ internal sealed class StormaktGame
             StepTitheCoinMines(state);
             StepTitheRegisterRoute(state);
             StepTitheInterestWorks(state);
+            StepTitheBoss(state);
         }
-        if (state.ShipUpgradeInstalled && state.Age >= 5_700)
+    }
+
+    private void StepTitheBoss(TitheWorldState state)
+    {
+        if (!state.ShipUpgradeInstalled) return;
+        if (state.Age == 5_700 && state.Boss is null)
         {
-            _stageClear = true;
-            _stageClearAge = 0;
+            state.SealWalls.Clear();
+            state.Mines.Clear();
             _shots.Clear();
             _enemyShots.Clear();
             _enemies.Clear();
+            state.Boss = new TitheBossState
+            {
+                X = _width / 2.0,
+                Y = -112,
+                Health = TitheBossState.MaxHealth,
+                LeftArmor = TitheBossState.ArmorHealth,
+                RightArmor = TitheBossState.ArmorHealth,
+                LeftLedger = TitheBossState.LedgerHealth,
+                RightLedger = TitheBossState.LedgerHealth,
+                Phase = 1,
+            };
+            ActivateBossRadio(RigsregnskabetIntroRadio);
+            _audio?.SwitchMusic(StormaktMusicTrack.TitheBoss);
             _audio?.Trigger(StormaktSound.Deploy);
         }
+        if (state.Boss is not TitheBossState boss) return;
+
+        boss.Age++;
+        boss.PhaseAge++;
+        if (boss.Phase == 4)
+        {
+            boss.Y += 0.12;
+            if (boss.PhaseAge % 32 == 1) _audio?.Trigger(StormaktSound.EnemyExplosion);
+            if (boss.PhaseAge >= 480 && _bossRadioCard is null)
+            {
+                state.Boss = null;
+                WriteTitheCampaignSave(state);
+                _stageClear = true;
+                _stageClearAge = 0;
+                _shots.Clear();
+                _enemyShots.Clear();
+                state.Mines.Clear();
+                state.SealWalls.Clear();
+                _audio?.SwitchMusic(StormaktMusicTrack.Combat);
+            }
+            return;
+        }
+
+        if (boss.Age <= 150)
+        {
+            double t = boss.Age / 150.0;
+            double eased = t * t * (3.0 - 2.0 * t);
+            boss.Y = -112 + (92 + 112) * eased;
+        }
+        else
+        {
+            boss.X = _width / 2.0 + Math.Sin(boss.Age * 0.018) * (_width <= 320 ? 22 : 30);
+            boss.Y = 92 + Math.Sin(boss.Age * 0.026) * 5;
+        }
+
+        int bossX = (int)Math.Round(boss.X);
+        int bossY = (int)Math.Round(boss.Y);
+        for (int shotIndex = _shots.Count - 1; shotIndex >= 0; shotIndex--)
+        {
+            Shot shot = _shots[shotIndex];
+            bool hit = false;
+            if (boss.Phase == 1 && boss.LeftArmor > 0 &&
+                Math.Abs(shot.X - (bossX - 66)) <= 35 && Math.Abs(shot.Y - (bossY + 2)) <= 48)
+            {
+                boss.LeftArmor -= shot.Power;
+                hit = true;
+            }
+            else if (boss.Phase == 1 && boss.RightArmor > 0 &&
+                Math.Abs(shot.X - (bossX + 66)) <= 35 && Math.Abs(shot.Y - (bossY + 2)) <= 48)
+            {
+                boss.RightArmor -= shot.Power;
+                hit = true;
+            }
+            else if (boss.Phase == 2 && Math.Abs(shot.X - bossX) <= 34 && Math.Abs(shot.Y - (bossY + 12)) <= 44)
+            {
+                boss.Health -= shot.Power;
+                hit = true;
+            }
+            else if (boss.Phase == 3 && boss.LeftLedger > 0 &&
+                Math.Abs(shot.X - (bossX - 58)) <= 19 && Math.Abs(shot.Y - (bossY + 18)) <= 28)
+            {
+                boss.LeftLedger -= shot.Power;
+                hit = true;
+            }
+            else if (boss.Phase == 3 && boss.RightLedger > 0 &&
+                Math.Abs(shot.X - (bossX + 58)) <= 19 && Math.Abs(shot.Y - (bossY + 18)) <= 28)
+            {
+                boss.RightLedger -= shot.Power;
+                hit = true;
+            }
+            else if (boss.Phase == 3 && boss.LeftLedger <= 0 && boss.RightLedger <= 0 &&
+                Math.Abs(shot.X - bossX) <= 32 && Math.Abs(shot.Y - (bossY + 12)) <= 42)
+            {
+                boss.Health -= shot.Power;
+                hit = true;
+            }
+            if (hit) _shots.RemoveAt(shotIndex);
+        }
+
+        if (boss.Phase == 1 && boss.LeftArmor <= 0 && boss.RightArmor <= 0)
+        {
+            boss.Phase = 2;
+            boss.PhaseAge = 0;
+            boss.Health = Math.Max(boss.Health, TitheBossState.PhaseThreeHealth);
+            _shots.Clear();
+            _enemyShots.Clear();
+            ActivateBossRadio(RigsregnskabetInterestRadio);
+            _audio?.Trigger(StormaktSound.Broadside);
+        }
+        else if (boss.Phase == 2 && boss.Health <= TitheBossState.PhaseThreeHealth)
+        {
+            boss.Health = TitheBossState.PhaseThreeHealth;
+            boss.Phase = 3;
+            boss.PhaseAge = 0;
+            state.Mines.Clear();
+            state.SealWalls.Clear();
+            _shots.Clear();
+            _enemyShots.Clear();
+            ActivateBossRadio(RigsregnskabetCoreRadio);
+            _audio?.Trigger(StormaktSound.Broadside);
+        }
+        else if (boss.Phase == 3 && boss.Health <= 0)
+        {
+            boss.Health = 0;
+            boss.Phase = 4;
+            boss.PhaseAge = 0;
+            _shots.Clear();
+            _enemyShots.Clear();
+            state.Mines.Clear();
+            state.SealWalls.Clear();
+            _score += 8_000;
+            ActivateBossRadio(RigsregnskabetDeathRadio);
+            _audio?.Trigger(StormaktSound.EnemyExplosion);
+        }
+
+        if (boss.Age <= 170) return;
+        if (boss.Phase == 1 && boss.PhaseAge % 72 == 0)
+        {
+            FireTitheBossFan(bossX - 66, bossY + 22, 7, 3);
+            FireTitheBossFan(bossX + 66, bossY + 22, 7, 3);
+        }
+        else if (boss.Phase == 2)
+        {
+            if (boss.PhaseAge % 105 == 1)
+                state.Mines.Add(new TitheCoinMine(bossX + (boss.PhaseAge / 105 % 3 - 1) * 58, bossY + 32));
+            if (boss.PhaseAge % 210 == 80)
+                state.SealWalls.Add(new TitheSealWall((boss.PhaseAge / 210 * 2 + 1) % TitheSealWall.SegmentCount));
+        }
+        else if (boss.Phase == 3 && boss.PhaseAge % 58 == 0)
+        {
+            FireTitheBossFan(bossX, bossY + 30, 6, 5);
+        }
+    }
+
+    private void FireTitheBossFan(int x, int y, int kind, int count)
+    {
+        for (int index = 0; index < count; index++)
+        {
+            double vx = (index - (count - 1) / 2.0) * 0.75;
+            _enemyShots.Add(new EnemyShot(x, y, vx, 2.0 + Math.Abs(vx) * 0.18, kind));
+        }
+        _audio?.Trigger(StormaktSound.TwinCannon);
     }
 
     private void StepTitheInterestWorks(TitheWorldState state)
@@ -11222,6 +11391,7 @@ internal sealed class StormaktGame
             foreach (TitheCoinMine mine in state.Mines) DrawTitheCoinMine(frame, mine);
             foreach (TitheSealWall wall in state.SealWalls) DrawTitheSealWall(frame, wall);
         }
+        DrawTitheBoss(frame);
         DrawShots(frame);
         DrawEnemyShots(frame);
         DrawEnemies(frame);
@@ -11229,6 +11399,7 @@ internal sealed class StormaktGame
         DrawBorder(frame);
         DrawHud(frame);
         DrawTitheModuleHud(frame);
+        DrawTitheBossHud(frame);
         DrawTitheMissionTitle(frame);
         DrawRadio(frame);
         DrawStageClear(frame);
@@ -11340,6 +11511,100 @@ internal sealed class StormaktGame
             DrawText(frame, x + (width - 66) / 2, 67, "RÄNTEVERKET", 0xffffd66b);
             DrawText(frame, x + (width - 126) / 2, 81, "BRYT SIGILL ELLER PASSERA", 0xff9bd4dc);
         }
+    }
+
+    private void DrawTitheBoss(uint[] frame)
+    {
+        if (_titheWorld?.Boss is not TitheBossState boss) return;
+        int x = (int)Math.Round(boss.X);
+        int y = (int)Math.Round(boss.Y);
+        if (_sprites?.TryGet("rigsregnskabet", out Sprite sprite) == true)
+        {
+            DrawSprite(frame, sprite, x - sprite.Width / 2, y - sprite.Height / 2);
+        }
+        else
+        {
+            DrawRect(frame, x - 82, y - 56, 164, 102, 0xff182126);
+            FillCircle(frame, x, y + 7, 28, 0xff244f52);
+            FillCircle(frame, x, y + 7, 17, 0xff65c5ca);
+            DrawRect(frame, x - 88, y - 12, 34, 58, 0xff56362b);
+            DrawRect(frame, x + 54, y - 12, 34, 58, 0xff56362b);
+            DrawLine(frame, x - 92, y - 18, x - 115, y + 54, 0xffd6b25e);
+            DrawLine(frame, x + 92, y - 18, x + 115, y + 54, 0xffd6b25e);
+        }
+
+        if (boss.LeftArmor <= 0)
+        {
+            DrawLine(frame, x - 94, y - 30, x - 48, y + 42, 0xffff8a4a);
+            DrawLine(frame, x - 88, y + 35, x - 52, y - 24, 0xff090d12);
+        }
+        if (boss.RightArmor <= 0)
+        {
+            DrawLine(frame, x + 94, y - 30, x + 48, y + 42, 0xffff8a4a);
+            DrawLine(frame, x + 88, y + 35, x + 52, y - 24, 0xff090d12);
+        }
+        if (boss.Phase >= 2)
+        {
+            int ring = 33 + (boss.PhaseAge / 4 % 9);
+            DrawCircleOutline(frame, x, y + 10, ring, boss.Phase == 2 ? 0xffffd66b : 0xff65c5ca);
+            DrawCircleOutline(frame, x, y + 10, ring + 12, 0xff8a6b38);
+        }
+        if (boss.Phase == 3)
+        {
+            DrawTitheLedgerNode(frame, x - 58, y + 18, boss.LeftLedger, false);
+            DrawTitheLedgerNode(frame, x + 58, y + 18, boss.RightLedger, true);
+            uint core = boss.LeftLedger <= 0 && boss.RightLedger <= 0 ? 0xffbdf8ff : 0xff315b5d;
+            FillCircle(frame, x, y + 12, 12 + (boss.PhaseAge / 5 & 2), core);
+        }
+        if (boss.Phase == 4)
+        {
+            for (int burst = 0; burst < 6; burst++)
+            {
+                int bx = x - 70 + (burst * 31 + boss.PhaseAge * 3) % 140;
+                int by = y - 45 + (burst * 47 + boss.PhaseAge * 2) % 100;
+                int radius = 3 + (boss.PhaseAge / 4 + burst) % 8;
+                FillCircle(frame, bx, by, radius, (burst & 1) == 0 ? 0xffff8a4a : 0xffffd66b);
+            }
+        }
+    }
+
+    private void DrawTitheLedgerNode(uint[] frame, int x, int y, int health, bool mirror)
+    {
+        uint paper = health > 0 ? 0xffd8d2b8 : 0xff3b3028;
+        DrawRect(frame, x - 13, y - 18, 26, 36, 0xff2a2520);
+        DrawRect(frame, x - 9, y - 14, 18, 28, paper);
+        for (int line = -9; line <= 9; line += 6)
+            DrawLine(frame, x - 6, y + line, x + 6, y + line, health > 0 ? 0xff765139 : 0xff1a1513);
+        DrawRect(frame, mirror ? x + 9 : x - 12, y - 17, 3, 34, 0xff8f2635);
+        if (health <= 0) DrawLine(frame, x - 11, y - 15, x + 11, y + 15, 0xffff8a4a);
+    }
+
+    private void DrawTitheBossHud(uint[] frame)
+    {
+        if (_titheWorld?.Boss is not TitheBossState boss || boss.Phase == 4) return;
+        int y = _bossRadioCard is null ? 18 : 68;
+        int width = Math.Min(272, _width - 20);
+        int x = (_width - width) / 2;
+        DrawRect(frame, x, y, width, 17, 0xee080d12);
+        DrawText(frame, x + 7, y + 4, "RIGSREGNSKABET", 0xffd8e6f0);
+        int barX = x + 105;
+        int barWidth = width - 113;
+        DrawRect(frame, barX, y + 6, barWidth, 5, 0xff263036);
+        int health = boss.Phase == 1
+            ? Math.Max(0, boss.LeftArmor) + Math.Max(0, boss.RightArmor)
+            : boss.Phase == 3 && (boss.LeftLedger > 0 || boss.RightLedger > 0)
+                ? Math.Max(0, boss.LeftLedger) + Math.Max(0, boss.RightLedger)
+                : Math.Max(0, boss.Health);
+        int maximum = boss.Phase switch
+        {
+            1 => TitheBossState.ArmorHealth * 2,
+            3 when boss.LeftLedger > 0 || boss.RightLedger > 0 => TitheBossState.LedgerHealth * 2,
+            3 => TitheBossState.PhaseThreeHealth,
+            _ => TitheBossState.MaxHealth - TitheBossState.PhaseThreeHealth,
+        };
+        if (boss.Phase == 2) health = Math.Max(0, boss.Health - TitheBossState.PhaseThreeHealth);
+        DrawRect(frame, barX, y + 6, Math.Clamp(health, 0, maximum) * barWidth / Math.Max(1, maximum), 5,
+            boss.Phase == 1 ? 0xff8f2635 : boss.Phase == 2 ? 0xffffd66b : 0xff65c5ca);
     }
 
     private void DrawTitheSealWall(uint[] frame, TitheSealWall wall)
@@ -11682,11 +11947,11 @@ internal sealed class StormaktGame
             }
             else if (_levelId == 4)
             {
-                DrawText(frame, panelX + 34, 99, "REGISTERVÄG SÄKRAD", 0xffffd66b);
+                DrawText(frame, panelX + 31, 99, "RIGSREGNSKABET BRUTET", 0xffffd66b);
                 if (_titheWorld?.Route == TitheRegisterRoute.Revision)
-                    DrawText(frame, panelX + 41, 116, "REVISION BONUS 1500", 0xffff8a4a);
+                    DrawText(frame, panelX + 37, 116, "KAMPANJKIT SPARAT", 0xffff8a4a);
                 else
-                    DrawText(frame, panelX + 42, 116, $"FLOTTA {_titheWorld?.FreedShips ?? 0} SKEPP", 0xff65c58a);
+                    DrawText(frame, panelX + 42, 116, $"FLOTTA {_titheWorld?.FreedShips ?? 0} SKEPP FRI", 0xff65c58a);
             }
             else
             {
@@ -12893,6 +13158,25 @@ internal sealed class StormaktGame
         public int ArmorCharge { get; set; }
         public int WeaponIdleAge { get; set; }
         public int DevShieldFlash { get; set; }
+        public TitheBossState? Boss { get; set; }
+    }
+
+    private sealed class TitheBossState
+    {
+        public const int MaxHealth = 900;
+        public const int PhaseThreeHealth = 520;
+        public const int ArmorHealth = 160;
+        public const int LedgerHealth = 110;
+        public double X { get; set; }
+        public double Y { get; set; }
+        public int Health { get; set; }
+        public int LeftArmor { get; set; }
+        public int RightArmor { get; set; }
+        public int LeftLedger { get; set; }
+        public int RightLedger { get; set; }
+        public int Age { get; set; }
+        public int Phase { get; set; }
+        public int PhaseAge { get; set; }
     }
 
     private sealed class TitheSealWall(int gapSegment)

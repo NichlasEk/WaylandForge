@@ -1,0 +1,13 @@
+{
+  "text": "Gældspost fundet. Fartøj Karl to hundrede femoghalvtreds registreres til inddrivelse.",
+  "language": "da",
+  "model_backend": "voxcpm2",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Regnskabet åbnes. Hver mønt, hvert skib og hvert navn står indført under Kronens segl. Ingen gæld forsvinder i mørket. Ingen fredsaftale ændrer summen. Når renterne er talt, bliver den sidste post inddrevet med jern.",
+  "voice_instruction": "A wholly synthetic Danish royal accounting engine, deep androgynous bass register formed from several perfectly synchronized chancery clerks, cold precise natural Danish diction, slow implacable bureaucratic authority, faint metallic resonance, never humanly emotional, comic, robotic beeps, distorted or unintelligible.",
+  "seed": 302129,
+  "dots_num_steps": 4,
+  "dots_guidance_scale": 1.2,
+  "dots_speaker_scale": 1.5
+}

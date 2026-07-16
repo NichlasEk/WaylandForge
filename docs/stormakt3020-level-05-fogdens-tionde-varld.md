@@ -1,6 +1,6 @@
 # Bana 5 - Fogdens tionde värld
 
-Status: sammanhängande systemslice landad 2026-07-16. Kampanjrad 5 är startbar som `DEV`: beslagfält, tullpass, myntminor, registerval, Ränteverket och alla tre tvåvalsskåp kör på eget state och seed `3505`. Boss och full konst/ljudproduktion återstår.
+Status: komplett spelbar bana landad 2026-07-16 och kvar som `DEV` för direkt balanseringsprov. Beslagfält, tullpass, myntminor, registerval, Ränteverket, tre tvåvalsskåp och Rigsregnskabets trefasfinal kör på eget state och seed `3505`. Bossen har egen packad konst, dansk syntetröst, radiokö och unik 90 BPM-maskinfuga.
 
 ## Dramatiskt löfte
 
@@ -168,7 +168,7 @@ Systemet introduceras här och följer med genom bana 5–7. Bana 1–4 förblir
 4. **Tullkorridorer (första skiva landad 2026-07-16):** fyra alternerande tullpass visar en 60-bilders säker öppning innan de går fysiskt genom spelplanen. Magnetiska myntminor söker Karl, laddar i 45 bilder och kan skjutas sönder eller fångas av bredsidan som cyan returminor. Genererade port/mynt-assets och den senare Magnetbredsidan återstår.
 5. **Registerval (spelbart 2026-07-16):** spelaren väljer led genom att flyga vänster till revisionsrännan eller höger till kedjehallen. Revision ger fast 1500-bonus och tre hårdare indrivare; kedjehallen ger tid och tre nya fysiska skeppslås. Resultatkortet visar vald led och verkligt antal befriade skepp. Nya korta Sören/Ebba-rutor avslöjar att fogden tagit båda sidors skepp och bokför fred som förlust; syntetröster återstår till röstpasset.
 6. **Fullt vapensystem (landat 2026-07-16):** Ränteverket har fem långsamma, segmenterade sigillväggar och lätta pressprojektiler. Magnetbredsidan ger två korta cyan pulser, vänder lätta skott inom fångstfältet men kostar 24 värme. Kedjekarteschen ger fem power-8 strukturskott men vänder ingenting och laddar i 30 bilder. Skåp III installerar Silverkylare, som tredubblar kylningen efter 18 bilders eldpause, eller ett synligt Beslagspansar med ett laddat sköldsegment och långsammare kylning. De tre valen skrivs atomiskt till `campaign.json`, laddas med vanlig Start och kringgås med `Slow+Start standard`.
-7. **Rigsregnskabet:** tre faser, egen röst, musikvariant, död och resultatkort.
+7. **Rigsregnskabet (landat 2026-07-16):** den enorma revisionsmaskinen anländer först efter skåp III. Fas 1 har två separata revisionspansar, fas 2 öppnar räntkärnan och blandar minor med sigillväggar, fas 3 kräver att båda huvudboksrullarna bryts innan kärnan tar skada. Fyra köade danska VoxCPM2-repliker delar rollseed `302129`; dödsrepliken får tala klart innan resultatkortet. Den egna 90 BPM-musiken använder en tystnadsfri 12-takters runtime-loop, och segern sparar kampanjkitet atomiskt.
 8. **Publicering:** determinism, wide/legacy, balansering och status `STRID`.
 
 ## Acceptanskriterier
@@ -204,3 +204,4 @@ Systemet introduceras här och följer med genom bana 5–7. Bana 1–4 förblir
 - Ränteverkets sigillvägg, det andra skåpet och båda installerade bredsidorna har separata direkta bilder i wide och legacy. Magnetspåret och karteschspåret får skilda projektilfält, HUD-namn, värme och stabila slutbilder.
 - Tredje skåpet, Silverkylarens fenor, Beslagspansarets järnplåtar, sköldladdning och båda värmekurvorna har separata wide/legacy-spår. Ett efterföljande nytt nivå-5-startprov läser tillbaka det sparade kitet.
 - Så länge raden heter `DEV` fångar en märkt utvecklarsköld skada efter att ett eventuellt Beslagspansarsegment förbrukats. Det är en provspelningshjälp för låg-FPS-remote och ska tas bort när raden publiceras som `STRID`; ordinarie balansvärden ändras inte.
+- Rigsregnskabet är besegrad genom verklig styrning och eld i både 400x280 och 320x224. Upprepade wide-körningar genom hela banan gav samma slutbildshash `b434ea0ad73e252b`; legacy gav `ba27438cb306de12`. Resultatkortet väntar på dödsradions avslut och visar det sparade kampanjkitet.
