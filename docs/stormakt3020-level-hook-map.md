@@ -25,7 +25,7 @@ level select
        HUD / boss HUD / title / radio / result / pause
 ```
 
-`StartLevel`, `ResetLevelState`, `StepLevelTimeline` and `DrawLevelScenery` are the stable campaign hooks. Stora Bält, Skånska skuggor and Öresunds järnkrona are public `STRID` rows; Silverkroppen remains the active developer frontier.
+`StartLevel`, `ResetLevelState`, `StepLevelTimeline` and `DrawLevelScenery` are the stable campaign hooks. Stora Bält, Skånska skuggor, Öresunds järnkrona and Fogdens tionde värld are public `STRID` rows; Silverkroppen retains its separate developer submenu while its campaign flow is completed.
 
 ## Selection and state ownership
 
@@ -35,7 +35,7 @@ level select
 | Active campaign | missing | Add `_levelId`; never infer the running level from `_levelSelection`. |
 | Deterministic reset | `Reset()` uses seed `3020` | Rename/generalize to reset the active level and seed level 2 independently. |
 | Menu return | `StepLevelPreview` | Keep preview return; level clear/game over restart the same active level. |
-| Public unlock | campaign status in `DrawLevelSelect` and `StepLevelSelect` | Level ids 0-2 are startable without developer mode; level id 3 remains `DEV`. |
+| Public unlock | campaign status in `DrawLevelSelect` and `StepLevelSelect` | Level ids 0-2 and 4 are startable without developer mode; level id 3 retains its separate developer submenu. |
 
 Invariant: selecting Skånska skuggor may never run Stora Bält with a changed title. `_levelId` owns every level-specific timeline, asset and result choice.
 
@@ -135,4 +135,4 @@ Ränteverket begins at age 3140 and owns `TitheSealWall` records rather than gro
 
 The third cabinet opens at age 4650. `SilverCooler` changes heat decay from one to three after 18 idle frames and draws cyan cooling fins. `SeizureArmor` halves normal cooling cadence, draws dark vault plates and consumes one explicit armor charge before `DamageShip` can take a life. `StormaktCampaignSave` persists all three enum selections and the freed-ship count atomically beside dungeon saves. Level 5 loads the kit on normal Start; `Slow+Start` produces the deterministic standard kit. In-memory reset also preserves the current loadout after death.
 
-Because row 5 is still developer-only, `DamageShip` exposes a `DEVSKÖLD` guard after armor resolution: it retains hit audio, heat and invulnerability but not life loss. This is strictly a low-frame-rate remote testing aid and must be removed in the same checkpoint that changes the campaign row from `DEV` to `STRID`.
+Campaign row 5 is public `STRID`. `DamageShip` follows the ordinary life-loss path after armor resolution; the former developer-only guard and `DEVSKÖLD` HUD marker are removed. `SeizureArmor` still consumes its one explicit armor charge before an ordinary hit can take a life.

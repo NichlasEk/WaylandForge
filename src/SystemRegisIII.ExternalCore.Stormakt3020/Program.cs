@@ -847,7 +847,7 @@ internal sealed class StormaktGame
                 _previousButtons = buttons;
                 return;
             }
-            if (_levelSelection is 0 or 1 or 2 || (_developerMode && _levelSelection is 3 or 4))
+            if (_levelSelection is 0 or 1 or 2 or 4 || (_developerMode && _levelSelection == 3))
             {
                 StartLevel(_levelSelection, fresh: (buttons & Slow) != 0);
             }
@@ -4835,7 +4835,6 @@ internal sealed class StormaktGame
             return;
 
         state.Age++;
-        if (state.DevShieldFlash > 0) state.DevShieldFlash--;
         if (state.Age == 80) state.Chains.Add(new TitheChainTarget(_width / 2 - 74, 76, 0));
         if (state.Age == 370) state.Chains.Add(new TitheChainTarget(_width / 2 + 82, 60, 1));
         if (state.Age is 220 or 520 or 1_080)
@@ -6063,17 +6062,8 @@ internal sealed class StormaktGame
         if (_titheWorld is TitheWorldState { ShipModule: TitheShipModule.SeizureArmor, ArmorCharge: > 0 } armor)
         {
             armor.ArmorCharge--;
-            armor.DevShieldFlash = 45;
             _heat = Math.Max(_heat, 90);
             _invulnerabilityFrames = 90;
-            _audio?.Trigger(StormaktSound.HullHit);
-            return;
-        }
-        if (_developerMode && _levelId == 4 && _titheWorld is TitheWorldState developerTithe)
-        {
-            developerTithe.DevShieldFlash = 45;
-            _heat = Math.Max(_heat, 55);
-            _invulnerabilityFrames = 45;
             _audio?.Trigger(StormaktSound.HullHit);
             return;
         }
@@ -11922,11 +11912,6 @@ internal sealed class StormaktGame
             DrawRect(frame, 4, _height - 49, ship.Length * 6 + 8, 11, 0xdd081019);
             DrawText(frame, 8, _height - 47, ship, 0xff9bd4dc);
         }
-        if (_developerMode)
-        {
-            uint color = state.DevShieldFlash > 0 ? 0xffffd66b : 0xff65c58a;
-            DrawText(frame, _width - 62, _height - 21, "DEVSKÖLD", color);
-        }
     }
 
     private void DrawTitheUpgradePanel(uint[] frame)
@@ -12297,7 +12282,7 @@ internal sealed class StormaktGame
         for (int index = 0; index < CampaignNames.Length; index++)
         {
             string status = index == 3 && File.Exists(DungeonSavePath("autosave")) ? "FORTSÄTT" :
-                index is 0 or 1 or 2 ? "STRID" : _developerMode ? "DEV" : "LÅST";
+                index is 0 or 1 or 2 or 4 ? "STRID" : _developerMode ? "DEV" : "LÅST";
             DrawLevelOption(frame, panelX + 12, listY + index * rowHeight, panelWidth - 24,
                 rowHeight - 2, index, $"{index + 1}  {CampaignNames[index]}", status);
         }
@@ -13338,7 +13323,6 @@ internal sealed class StormaktGame
         public TitheShipModule ShipModule { get; set; } = TitheShipModule.Standard;
         public int ArmorCharge { get; set; }
         public int WeaponIdleAge { get; set; }
-        public int DevShieldFlash { get; set; }
         public TitheBossState? Boss { get; set; }
     }
 
