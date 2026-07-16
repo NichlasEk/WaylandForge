@@ -64,6 +64,8 @@
 
 `tithe-archive-background-source-v1.png` is the generated top-down hanging archive used as a continuously scrolling Bana 5 backdrop. `tithe-machinery-source-v1.png` preserves the green-screen generation and `tithe-machinery-v1.png` is its alpha-cleaned 3x2 runtime source. The pack extracts dedicated chain-lock, coin-mine, sealing-wall, customs-gate, confiscation-cabinet and interest-press sprites. Exact built-in prompts are stored beside both assets.
 
+`tithe-ship-modules-v1.png` adds six physical overlay parts for Karl CCLV: Kronborren, Salvdirektören, Magnetbredsidan, Kedjekarteschen, Silverkylaren and Beslagspansaret. `tithe-weapon-effects-v1.png` supplies their drill bolt, volley shell, magnet ring, chain shot, cooling flare and charged shield. The same packed sprites appear on the ship, in all three choice cabinets and on live projectiles; mechanics and collision remain state-owned and unchanged. Both green-screen sources and exact built-in prompts are retained.
+
 Silverkroppen now opens in orbit before the existing RTS state: Karl claims he can smell silver in vacuum, Ebba answers in a newly generated seed-locked line, the frigate lands and the established `rts_moose_charge`/`rts_moose_ready` family carries Karl to the visible vein. Building input remains locked until the short deterministic insertion completes.
 
 `stormakt-bridge-cannons-projectiles-v1.png` adds three bridge-collapse pieces, intact/destroyed Danish bridge cannon states, a detachable boss broadside cannon and red/white/gold enemy projectile families. Runtime uses the wreck pieces during the existing 45-frame collapse and mirrors the broadside module for the boss's right side.

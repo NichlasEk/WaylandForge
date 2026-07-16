@@ -144,6 +144,10 @@ internal sealed class StormaktGame
     private const uint DropItem = 1u << 10;
     private const uint DeveloperSave = 1u << 19;
     private const uint DeveloperLoad = 1u << 20;
+    private const int TitheShotDrillBolt = 20;
+    private const int TitheShotVolleyShell = 21;
+    private const int TitheShotMagnetRing = 22;
+    private const int TitheShotChainShot = 23;
 
     private readonly int _width;
     private readonly int _height;
@@ -525,15 +529,15 @@ internal sealed class StormaktGame
             {
                 _shots.Add(new Shot(_shipX - 5, _shipY - 12, 0, -7, 0xffffd66b, 3));
                 _shots.Add(new Shot(_shipX + 5, _shipY - 12, 0, -7, 0xffffd66b, 3));
-                _shots.Add(new Shot(_shipX, _shipY - 17, 0, -9, 0xffbdf8ff, 7));
+                _shots.Add(new Shot(_shipX, _shipY - 17, 0, -9, 0xffbdf8ff, 7, TitheShotDrillBolt));
                 _cooldown = 9;
                 _heat = Math.Min(120, _heat + 11);
             }
             else if (module == TithePrimaryModule.VolleyDirector)
             {
-                _shots.Add(new Shot(_shipX - 7, _shipY - 12, -1, -7, 0xffffd66b, 2));
-                _shots.Add(new Shot(_shipX, _shipY - 15, 0, -8, 0xff9bd4dc, 2));
-                _shots.Add(new Shot(_shipX + 7, _shipY - 12, 1, -7, 0xffffd66b, 2));
+                _shots.Add(new Shot(_shipX - 7, _shipY - 12, -1, -7, 0xffffd66b, 2, TitheShotVolleyShell));
+                _shots.Add(new Shot(_shipX, _shipY - 15, 0, -8, 0xff9bd4dc, 2, TitheShotVolleyShell));
+                _shots.Add(new Shot(_shipX + 7, _shipY - 12, 1, -7, 0xffffd66b, 2, TitheShotVolleyShell));
                 _cooldown = 4;
                 _heat = Math.Min(120, _heat + 9);
             }
@@ -551,19 +555,19 @@ internal sealed class StormaktGame
             TitheBroadsideModule broadside = _titheWorld?.BroadsideModule ?? TitheBroadsideModule.Standard;
             if (broadside == TitheBroadsideModule.MagnetBroadside)
             {
-                _shots.Add(new Shot(_shipX - 14, _shipY - 7, -1, -4, 0xff65c5ca, 6));
-                _shots.Add(new Shot(_shipX + 14, _shipY - 7, 1, -4, 0xffbdf8ff, 6));
+                _shots.Add(new Shot(_shipX - 14, _shipY - 7, -1, -4, 0xff65c5ca, 6, TitheShotMagnetRing));
+                _shots.Add(new Shot(_shipX + 14, _shipY - 7, 1, -4, 0xffbdf8ff, 6, TitheShotMagnetRing));
                 ReflectTitheLightShots();
                 _altCooldown = 26;
                 _heat = Math.Min(120, _heat + 24);
             }
             else if (broadside == TitheBroadsideModule.ChainCanister)
             {
-                _shots.Add(new Shot(_shipX - 12, _shipY - 5, -3, -5, 0xffffd66b, 8));
-                _shots.Add(new Shot(_shipX - 6, _shipY - 8, -1, -6, 0xff9bd4dc, 8));
-                _shots.Add(new Shot(_shipX, _shipY - 10, 0, -7, 0xffffec9a, 8));
-                _shots.Add(new Shot(_shipX + 6, _shipY - 8, 1, -6, 0xff9bd4dc, 8));
-                _shots.Add(new Shot(_shipX + 12, _shipY - 5, 3, -5, 0xffffd66b, 8));
+                _shots.Add(new Shot(_shipX - 12, _shipY - 5, -3, -5, 0xffffd66b, 8, TitheShotChainShot));
+                _shots.Add(new Shot(_shipX - 6, _shipY - 8, -1, -6, 0xff9bd4dc, 8, TitheShotChainShot));
+                _shots.Add(new Shot(_shipX, _shipY - 10, 0, -7, 0xffffec9a, 8, TitheShotChainShot));
+                _shots.Add(new Shot(_shipX + 6, _shipY - 8, 1, -6, 0xff9bd4dc, 8, TitheShotChainShot));
+                _shots.Add(new Shot(_shipX + 12, _shipY - 5, 3, -5, 0xffffd66b, 8, TitheShotChainShot));
                 _altCooldown = 30;
                 _heat = Math.Min(120, _heat + 20);
             }
@@ -10238,8 +10242,35 @@ internal sealed class StormaktGame
     private void DrawTitheShipModule(uint[] frame, int centerY)
     {
         if (_titheWorld is not TitheWorldState state) return;
+        string? primaryName = state.PrimaryModule switch
+        {
+            TithePrimaryModule.CrownDrill => "tithe_module_crown_drill",
+            TithePrimaryModule.VolleyDirector => "tithe_module_volley_director",
+            _ => null,
+        };
+        if (primaryName is not null && _sprites?.TryGet(primaryName, out Sprite primary) == true)
+            DrawSprite(frame, primary, _shipX - primary.Width / 2, centerY - primary.Height - 2);
+
+        string? broadsideName = state.BroadsideModule switch
+        {
+            TitheBroadsideModule.MagnetBroadside => "tithe_module_magnet_broadside",
+            TitheBroadsideModule.ChainCanister => "tithe_module_chain_canister",
+            _ => null,
+        };
+        if (broadsideName is not null && _sprites?.TryGet(broadsideName, out Sprite broadside) == true)
+            DrawSprite(frame, broadside, _shipX - broadside.Width / 2, centerY - broadside.Height / 2 + 3);
+
         if (state.ShipModule == TitheShipModule.SilverCooler)
         {
+            if (_sprites?.TryGet("tithe_module_silver_cooler", out Sprite cooler) == true)
+            {
+                DrawSprite(frame, cooler, _shipX - cooler.Width / 2, centerY - cooler.Height / 2 + 8);
+                if (state.WeaponIdleAge >= 18 && (_missionFrame / 4 & 1) == 0 &&
+                    _sprites.TryGet("tithe_effect_silver_cooling", out Sprite cooling))
+                    DrawSpriteAlpha(frame, cooling, _shipX - cooling.Width / 2,
+                        centerY - cooling.Height / 2 + 13, 205);
+                return;
+            }
             uint glow = state.WeaponIdleAge >= 18 && (_missionFrame / 4 & 1) == 0 ? 0xffbdf8ff : 0xff65c5ca;
             DrawLine(frame, _shipX - 20, centerY + 8, _shipX - 27, centerY + 15, glow);
             DrawLine(frame, _shipX - 17, centerY + 10, _shipX - 23, centerY + 19, 0xff9bd4dc);
@@ -10248,6 +10279,15 @@ internal sealed class StormaktGame
         }
         else if (state.ShipModule == TitheShipModule.SeizureArmor)
         {
+            if (_sprites?.TryGet("tithe_module_seizure_armor", out Sprite armor) == true)
+            {
+                DrawSprite(frame, armor, _shipX - armor.Width / 2, centerY - armor.Height / 2 + 5);
+                if (state.ArmorCharge > 0 && (_missionFrame / 5 & 1) == 0 &&
+                    _sprites.TryGet("tithe_effect_seizure_shield", out Sprite shield))
+                    DrawSpriteAlpha(frame, shield, _shipX - shield.Width / 2,
+                        centerY - shield.Height / 2 + 5, 145);
+                return;
+            }
             uint iron = state.ArmorCharge > 0 ? 0xff52636a : 0xff29343a;
             uint seal = state.ArmorCharge > 0 ? 0xffffd66b : 0xff765139;
             DrawLine(frame, _shipX - 22, centerY - 10, _shipX - 25, centerY + 15, iron);
@@ -11018,6 +11058,19 @@ internal sealed class StormaktGame
     {
         foreach (Shot shot in _shots)
         {
+            string? titheEffect = shot.Kind switch
+            {
+                TitheShotDrillBolt => "tithe_effect_drill_bolt",
+                TitheShotVolleyShell => "tithe_effect_volley_shell",
+                TitheShotMagnetRing => "tithe_effect_magnet_ring",
+                TitheShotChainShot => "tithe_effect_chain_shot",
+                _ => null,
+            };
+            if (titheEffect is not null && _sprites?.TryGet(titheEffect, out Sprite moduleShot) == true)
+            {
+                DrawSprite(frame, moduleShot, shot.X - moduleShot.Width / 2, shot.Y - moduleShot.Height / 2);
+                continue;
+            }
             if (_levelId == 4 && shot.Power == 8)
             {
                 FillCircle(frame, shot.X, shot.Y, 3, 0xffffd66b);
@@ -11884,6 +11937,13 @@ internal sealed class StormaktGame
 
     private void DrawTitheShipSystemIcon(uint[] frame, int x, int y, TitheShipModule module)
     {
+        string name = module == TitheShipModule.SilverCooler
+            ? "tithe_module_silver_cooler" : "tithe_module_seizure_armor";
+        if (_sprites?.TryGet(name, out Sprite generated) == true)
+        {
+            DrawSpriteScaled(frame, generated, x - 19, y - 11, 38, 22);
+            return;
+        }
         if (module == TitheShipModule.SilverCooler)
         {
             DrawLine(frame, x - 12, y + 7, x - 4, y - 9, 0xff65c5ca);
@@ -11901,6 +11961,13 @@ internal sealed class StormaktGame
 
     private void DrawTitheBroadsideIcon(uint[] frame, int x, int y, TitheBroadsideModule module)
     {
+        string name = module == TitheBroadsideModule.MagnetBroadside
+            ? "tithe_module_magnet_broadside" : "tithe_module_chain_canister";
+        if (_sprites?.TryGet(name, out Sprite generated) == true)
+        {
+            DrawSpriteScaled(frame, generated, x - 20, y - 10, 40, 20);
+            return;
+        }
         if (module == TitheBroadsideModule.MagnetBroadside)
         {
             DrawCircleOutline(frame, x, y, 10, 0xff65c5ca);
@@ -11918,6 +11985,13 @@ internal sealed class StormaktGame
 
     private void DrawTitheModuleIcon(uint[] frame, int x, int y, TithePrimaryModule module)
     {
+        string name = module == TithePrimaryModule.CrownDrill
+            ? "tithe_module_crown_drill" : "tithe_module_volley_director";
+        if (_sprites?.TryGet(name, out Sprite generated) == true)
+        {
+            DrawSpriteScaled(frame, generated, x - 10, y - 12, 20, 24);
+            return;
+        }
         uint brass = 0xffd6b25e;
         uint cyan = 0xff65c5ca;
         if (module == TithePrimaryModule.CrownDrill)
@@ -12699,7 +12773,7 @@ internal sealed class StormaktGame
         frame[index] = 0xff000000u | (r << 16) | (g << 8) | b;
     }
 
-    private record struct Shot(int X, int Y, int Vx, int Vy, uint Color, int Power);
+    private record struct Shot(int X, int Y, int Vx, int Vy, uint Color, int Power, int Kind = 0);
     private record struct EnemyShot(double X, double Y, double Vx, double Vy, int Kind);
     private record struct AnchorHazard(int X, int Age);
     private record struct CrystalSpear(int X, int Age);

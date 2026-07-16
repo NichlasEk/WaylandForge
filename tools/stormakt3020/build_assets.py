@@ -996,6 +996,53 @@ def append_tithe_world_assets(
         entries.append((name, sprite))
 
 
+def append_tithe_weapon_assets(
+    entries: list[tuple[str, Image.Image]], modules: Image.Image, effects: Image.Image
+) -> None:
+    module_definitions = [
+        ("tithe_module_crown_drill", 0, 0, (18, 32)),
+        ("tithe_module_volley_director", 1, 0, (24, 28)),
+        ("tithe_module_magnet_broadside", 2, 0, (66, 28)),
+        ("tithe_module_chain_canister", 0, 1, (66, 30)),
+        ("tithe_module_silver_cooler", 1, 1, (66, 34)),
+        ("tithe_module_seizure_armor", 2, 1, (68, 36)),
+    ]
+    for name, column, row, target in module_definitions:
+        cell = modules.crop((
+            column * modules.width // 3,
+            row * modules.height // 2,
+            (column + 1) * modules.width // 3,
+            (row + 1) * modules.height // 2,
+        )).convert("RGBA")
+        sprite = trim_alpha(cell)
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+    effect_cells = [
+        effects.crop((column * effects.width // 3, row * effects.height // 2,
+                      (column + 1) * effects.width // 3, (row + 1) * effects.height // 2)).convert("RGBA")
+        for row in range(2) for column in range(3)
+    ]
+    drill = trim_alpha(effect_cells[0])
+    drill.thumbnail((10, 23), Image.Resampling.LANCZOS)
+    entries.append(("tithe_effect_drill_bolt", drill))
+    volley = split_alpha_components(effect_cells[1], 3)[1]
+    volley.thumbnail((8, 14), Image.Resampling.LANCZOS)
+    entries.append(("tithe_effect_volley_shell", volley))
+    magnet = split_alpha_components(effect_cells[2], 2)[0]
+    magnet.thumbnail((14, 16), Image.Resampling.LANCZOS)
+    entries.append(("tithe_effect_magnet_ring", magnet))
+    chain = split_alpha_components(effect_cells[3], 5)[2]
+    chain.thumbnail((9, 15), Image.Resampling.LANCZOS)
+    entries.append(("tithe_effect_chain_shot", chain))
+    cooler = trim_alpha(effect_cells[4])
+    cooler.thumbnail((62, 31), Image.Resampling.LANCZOS)
+    entries.append(("tithe_effect_silver_cooling", cooler))
+    armor = trim_alpha(effect_cells[5])
+    armor.thumbnail((70, 40), Image.Resampling.LANCZOS)
+    entries.append(("tithe_effect_seizure_shield", armor))
+
+
 def build(
     input_path: Path,
     danish_input_path: Path,
@@ -1041,6 +1088,8 @@ def build(
     rigsregnskabet_input_path: Path,
     tithe_background_input_path: Path,
     tithe_machinery_input_path: Path,
+    tithe_ship_modules_input_path: Path,
+    tithe_weapon_effects_input_path: Path,
     rts_road_input_path: Path,
     dungeon_karl_input_path: Path,
     dungeon_mine_input_path: Path,
@@ -1118,6 +1167,8 @@ def build(
     rigsregnskabet_source = Image.open(rigsregnskabet_input_path).convert("RGBA")
     tithe_background_source = Image.open(tithe_background_input_path).convert("RGBA")
     tithe_machinery_source = Image.open(tithe_machinery_input_path).convert("RGBA")
+    tithe_ship_modules_source = Image.open(tithe_ship_modules_input_path).convert("RGBA")
+    tithe_weapon_effects_source = Image.open(tithe_weapon_effects_input_path).convert("RGBA")
     rts_road_source = Image.open(rts_road_input_path).convert("RGBA")
     dungeon_karl_source = Image.open(dungeon_karl_input_path).convert("RGBA")
     dungeon_mine_source = Image.open(dungeon_mine_input_path).convert("RGBA")
@@ -1230,6 +1281,7 @@ def build(
     append_rts_orbit_moon(entries, rts_orbit_moon_source)
     append_rigsregnskabet(entries, rigsregnskabet_source)
     append_tithe_world_assets(entries, tithe_background_source, tithe_machinery_source)
+    append_tithe_weapon_assets(entries, tithe_ship_modules_source, tithe_weapon_effects_source)
     append_rts_frontier_road(entries, rts_road_source)
     append_dungeon_assets(entries, dungeon_karl_source, dungeon_mine_source)
     append_dungeon_loot(entries, dungeon_loot_source)
@@ -1454,6 +1506,8 @@ def main() -> None:
     parser.add_argument("--rigsregnskabet-input", type=Path, default=Path("assets/stormakt3020/rigsregnskabet-v1.png"))
     parser.add_argument("--tithe-background-input", type=Path, default=Path("assets/stormakt3020/tithe-archive-background-source-v1.png"))
     parser.add_argument("--tithe-machinery-input", type=Path, default=Path("assets/stormakt3020/tithe-machinery-v1.png"))
+    parser.add_argument("--tithe-ship-modules-input", type=Path, default=Path("assets/stormakt3020/tithe-ship-modules-v1.png"))
+    parser.add_argument("--tithe-weapon-effects-input", type=Path, default=Path("assets/stormakt3020/tithe-weapon-effects-v1.png"))
     parser.add_argument("--rts-road-input", type=Path, default=Path("assets/stormakt3020/rts-danish-frontier-road-v1.png"))
     parser.add_argument("--dungeon-karl-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-v1.png"))
     parser.add_argument("--dungeon-mine-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva1-environment-v1.png"))
@@ -1536,6 +1590,8 @@ def main() -> None:
         args.rigsregnskabet_input,
         args.tithe_background_input,
         args.tithe_machinery_input,
+        args.tithe_ship_modules_input,
+        args.tithe_weapon_effects_input,
         args.rts_road_input,
         args.dungeon_karl_input,
         args.dungeon_mine_input,
