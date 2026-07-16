@@ -48,6 +48,10 @@ Infiltration av ett mekaniskt skattearkiv där beslagtagna skepp hänger i kedjo
 
 Boss: revisionsmaskinen **Rigsregnskabet**, en modulär valvkoloss som bygger om sin rustning av indrivna skeppsdelar.
 
+Malmmoderns ring öppnar tre beslagsskåp som introducerar kampanjens permanenta vapensystem: ett val för huvudeld, ett för bredsida och ett för kylning/pansar. Varje modul har en konkret nackdel och följer med genom bana 5–7; tidigare banor förblir oförändrade.
+
+Plan: `docs/stormakt3020-level-05-fogdens-tionde-varld.md`.
+
 ### Bana 6 - Snapphanens ed
 
 Sören leder spelaren genom en storm av vrak och falska fyrar mot fogdens kommandokedja. Banan har valbara riskkorridorer: hjälp rebellflottan och få mindre eldkraft nu men stöd i finalen, eller rusa mot målet för högre poäng.
