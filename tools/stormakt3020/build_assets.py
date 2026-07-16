@@ -967,6 +967,35 @@ def append_rigsregnskabet(entries: list[tuple[str, Image.Image]], source: Image.
     entries.append(("rigsregnskabet_speak", portrait.copy()))
 
 
+def append_tithe_world_assets(
+    entries: list[tuple[str, Image.Image]], background: Image.Image, machinery: Image.Image
+) -> None:
+    archive = background.convert("RGBA")
+    archive.thumbnail((400, 720), Image.Resampling.LANCZOS)
+    entries.append(("tithe_archive_background", archive))
+
+    definitions = [
+        ("tithe_chain_lock", 0, 0, (42, 54), False),
+        ("tithe_coin_mine", 1, 0, (30, 30), False),
+        ("tithe_seal_segment", 2, 0, (58, 25), True),
+        ("tithe_customs_gate", 0, 1, (154, 42), False),
+        ("tithe_upgrade_cabinet", 1, 1, (62, 78), False),
+        ("tithe_interest_press", 2, 1, (70, 72), False),
+    ]
+    for name, column, row, target, rotate in definitions:
+        cell = machinery.crop((
+            column * machinery.width // 3,
+            row * machinery.height // 2,
+            (column + 1) * machinery.width // 3,
+            (row + 1) * machinery.height // 2,
+        )).convert("RGBA")
+        sprite = trim_alpha(cell)
+        if rotate:
+            sprite = sprite.rotate(90, expand=True)
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def build(
     input_path: Path,
     danish_input_path: Path,
@@ -1010,6 +1039,8 @@ def build(
     rts_landing_pad_input_path: Path,
     rts_orbit_moon_input_path: Path,
     rigsregnskabet_input_path: Path,
+    tithe_background_input_path: Path,
+    tithe_machinery_input_path: Path,
     rts_road_input_path: Path,
     dungeon_karl_input_path: Path,
     dungeon_mine_input_path: Path,
@@ -1085,6 +1116,8 @@ def build(
     rts_landing_pad_source = Image.open(rts_landing_pad_input_path).convert("RGBA")
     rts_orbit_moon_source = Image.open(rts_orbit_moon_input_path).convert("RGBA")
     rigsregnskabet_source = Image.open(rigsregnskabet_input_path).convert("RGBA")
+    tithe_background_source = Image.open(tithe_background_input_path).convert("RGBA")
+    tithe_machinery_source = Image.open(tithe_machinery_input_path).convert("RGBA")
     rts_road_source = Image.open(rts_road_input_path).convert("RGBA")
     dungeon_karl_source = Image.open(dungeon_karl_input_path).convert("RGBA")
     dungeon_mine_source = Image.open(dungeon_mine_input_path).convert("RGBA")
@@ -1196,6 +1229,7 @@ def build(
     append_rts_terrain_details(entries, rts_floor_source, rts_vein_source, rts_landing_pad_source)
     append_rts_orbit_moon(entries, rts_orbit_moon_source)
     append_rigsregnskabet(entries, rigsregnskabet_source)
+    append_tithe_world_assets(entries, tithe_background_source, tithe_machinery_source)
     append_rts_frontier_road(entries, rts_road_source)
     append_dungeon_assets(entries, dungeon_karl_source, dungeon_mine_source)
     append_dungeon_loot(entries, dungeon_loot_source)
@@ -1418,6 +1452,8 @@ def main() -> None:
     parser.add_argument("--rts-landing-pad-input", type=Path, default=Path("assets/stormakt3020/rts-karl-landing-pad-v1.png"))
     parser.add_argument("--rts-orbit-moon-input", type=Path, default=Path("assets/stormakt3020/rts-orbital-forest-moon-v1.png"))
     parser.add_argument("--rigsregnskabet-input", type=Path, default=Path("assets/stormakt3020/rigsregnskabet-v1.png"))
+    parser.add_argument("--tithe-background-input", type=Path, default=Path("assets/stormakt3020/tithe-archive-background-source-v1.png"))
+    parser.add_argument("--tithe-machinery-input", type=Path, default=Path("assets/stormakt3020/tithe-machinery-v1.png"))
     parser.add_argument("--rts-road-input", type=Path, default=Path("assets/stormakt3020/rts-danish-frontier-road-v1.png"))
     parser.add_argument("--dungeon-karl-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-v1.png"))
     parser.add_argument("--dungeon-mine-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva1-environment-v1.png"))
@@ -1498,6 +1534,8 @@ def main() -> None:
         args.rts_landing_pad_input,
         args.rts_orbit_moon_input,
         args.rigsregnskabet_input,
+        args.tithe_background_input,
+        args.tithe_machinery_input,
         args.rts_road_input,
         args.dungeon_karl_input,
         args.dungeon_mine_input,

@@ -11417,6 +11417,14 @@ internal sealed class StormaktGame
 
     private void DrawTitheArchive(uint[] frame)
     {
+        if (_sprites?.TryGet("tithe_archive_background", out Sprite archive) == true)
+        {
+            int height = archive.Height * _width / Math.Max(1, archive.Width);
+            int scroll = (_titheWorld?.Age / 3 ?? 0) % Math.Max(1, height);
+            DrawSpriteScaled(frame, archive, 0, 17 - scroll, _width, height);
+            DrawSpriteScaled(frame, archive, 0, 17 - scroll + height, _width, height);
+            return;
+        }
         DrawRect(frame, 0, 17, _width, _height - 29, 0xff080d11);
         int slow = _titheWorld?.Age / 4 ?? 0;
         for (int x = -24; x < _width + 28; x += 48)
@@ -11492,14 +11500,22 @@ internal sealed class StormaktGame
         if (_titheWorld is not TitheWorldState { InterestWorksActive: true } state || state.Age < 3_140) return;
         int pulse = state.Age / 8 & 1;
         uint piston = pulse == 0 ? 0xff8a6b38 : 0xffb48545;
-        DrawRect(frame, 0, 20, 34, 62, 0xff121b20);
-        DrawRect(frame, _width - 34, 20, 34, 62, 0xff121b20);
-        DrawRect(frame, 4, 29, 26, 31, 0xff29343a);
-        DrawRect(frame, _width - 30, 29, 26, 31, 0xff29343a);
-        DrawRect(frame, 12, 37, 10, 37 + pulse * 7, piston);
-        DrawRect(frame, _width - 22, 37, 10, 37 + pulse * 7, piston);
-        DrawCrown(frame, 15, 42, 0xffffd66b);
-        DrawCrown(frame, _width - 19, 42, 0xffffd66b);
+        if (_sprites?.TryGet("tithe_interest_press", out Sprite press) == true)
+        {
+            DrawSpriteScaled(frame, press, -7, 20 + pulse * 2, 72, 74);
+            DrawSpriteScaled(frame, press, _width - 65, 20 + pulse * 2, 72, 74);
+        }
+        else
+        {
+            DrawRect(frame, 0, 20, 34, 62, 0xff121b20);
+            DrawRect(frame, _width - 34, 20, 34, 62, 0xff121b20);
+            DrawRect(frame, 4, 29, 26, 31, 0xff29343a);
+            DrawRect(frame, _width - 30, 29, 26, 31, 0xff29343a);
+            DrawRect(frame, 12, 37, 10, 37 + pulse * 7, piston);
+            DrawRect(frame, _width - 22, 37, 10, 37 + pulse * 7, piston);
+            DrawCrown(frame, 15, 42, 0xffffd66b);
+            DrawCrown(frame, _width - 19, 42, 0xffffd66b);
+        }
         DrawLine(frame, 0, 82, 34, 82, 0xff65c5ca);
         DrawLine(frame, _width - 34, 82, _width - 1, 82, 0xff65c5ca);
         if (state.Age is >= 3_140 and < 3_290)
@@ -11616,12 +11632,17 @@ internal sealed class StormaktGame
             if (wall.Health[segment] <= 0) continue;
             int x = segment * segmentWidth;
             int width = Math.Min(segmentWidth - 2, _width - x);
-            uint plate = wall.Health[segment] < TitheSealWall.SegmentHealth / 2 ? 0xff59312c : 0xff8f2635;
-            DrawRect(frame, x, y - 8, width, 16, plate);
-            DrawLine(frame, x, y - 9, x + width - 1, y - 9, 0xffffd66b);
-            DrawLine(frame, x, y + 8, x + width - 1, y + 8, 0xff432026);
-            FillCircle(frame, x + width / 2, y, 5, 0xffd6b25e);
-            DrawCrown(frame, x + width / 2 - 2, y - 2, 0xff35191c);
+            if (_sprites?.TryGet("tithe_seal_segment", out Sprite seal) == true)
+                DrawSpriteScaled(frame, seal, x, y - 11, width, 22);
+            else
+            {
+                uint plate = wall.Health[segment] < TitheSealWall.SegmentHealth / 2 ? 0xff59312c : 0xff8f2635;
+                DrawRect(frame, x, y - 8, width, 16, plate);
+                DrawLine(frame, x, y - 9, x + width - 1, y - 9, 0xffffd66b);
+                DrawLine(frame, x, y + 8, x + width - 1, y + 8, 0xff432026);
+                FillCircle(frame, x + width / 2, y, 5, 0xffd6b25e);
+                DrawCrown(frame, x + width / 2 - 2, y - 2, 0xff35191c);
+            }
             if (wall.Health[segment] < TitheSealWall.SegmentHealth)
                 DrawLine(frame, x + 4, y - 6, x + width - 5, y + 6, 0xffff8a4a);
         }
@@ -11642,9 +11663,14 @@ internal sealed class StormaktGame
             }
             DrawLine(frame, x, lockY + 5, x - 16, y - 5, 0xff8a6b38);
             DrawLine(frame, x, lockY + 5, x + 16, y - 5, 0xff8a6b38);
-            DrawRect(frame, x - 7, lockY - 5, 14, 12, 0xff1d292e);
-            DrawRect(frame, x - 4, lockY - 2, 8, 7, 0xff9b743a);
-            FillCircle(frame, x, lockY + 1, 2, 0xff9bd4dc);
+            if (_sprites?.TryGet("tithe_chain_lock", out Sprite chainLock) == true)
+                DrawSpriteScaled(frame, chainLock, x - 17, lockY - 20, 34, 43);
+            else
+            {
+                DrawRect(frame, x - 7, lockY - 5, 14, 12, 0xff1d292e);
+                DrawRect(frame, x - 4, lockY - 2, 8, 7, 0xff9b743a);
+                FillCircle(frame, x, lockY + 1, 2, 0xff9bd4dc);
+            }
         }
         string spriteName = chain.Kind == 0 ? "player" : "fogde_sloop";
         if (_sprites?.TryGet(spriteName, out Sprite captive) == true)
@@ -11681,8 +11707,16 @@ internal sealed class StormaktGame
         uint signal = warning ? 0xffff6b62 : 0xff65c5ca;
         if (warning) y = 43;
 
-        DrawRect(frame, 0, y - 6, Math.Max(0, leftEnd), 13, iron);
-        DrawRect(frame, rightStart, y - 6, Math.Max(0, _width - rightStart), 13, iron);
+        if (_sprites?.TryGet("tithe_customs_gate", out Sprite customsGate) == true)
+        {
+            DrawSpriteScaled(frame, customsGate, 0, y - 15, Math.Max(0, leftEnd), 30);
+            DrawSpriteScaled(frame, customsGate, rightStart, y - 15, Math.Max(0, _width - rightStart), 30);
+        }
+        else
+        {
+            DrawRect(frame, 0, y - 6, Math.Max(0, leftEnd), 13, iron);
+            DrawRect(frame, rightStart, y - 6, Math.Max(0, _width - rightStart), 13, iron);
+        }
         DrawLine(frame, 0, y - 7, leftEnd, y - 7, edge);
         DrawLine(frame, rightStart, y - 7, _width - 1, y - 7, edge);
         DrawLine(frame, 0, y + 7, leftEnd, y + 7, edge);
@@ -11708,15 +11742,20 @@ internal sealed class StormaktGame
         uint core = mine.Reflected ? 0xffbdf8ff :
             mine.ChargeAge > TitheCoinMine.FuseFrames - 18 && (mine.ChargeAge / 3 & 1) == 0
                 ? 0xffff6b62 : 0xffffd66b;
-        FillCircle(frame, x, y, 9, 0xff1a2429);
-        FillCircle(frame, x, y, 7, rim);
-        FillCircle(frame, x, y, 4, 0xff44351f);
-        DrawCrown(frame, x - 2, y - 2, core);
-        for (int spoke = 0; spoke < 4; spoke++)
+        if (_sprites?.TryGet("tithe_coin_mine", out Sprite coinMine) == true)
+            DrawSpriteScaled(frame, coinMine, x - 13, y - 13, 26, 26);
+        else
         {
-            int dx = spoke % 2 == 0 ? (spoke == 0 ? -13 : 13) : 0;
-            int dy = spoke % 2 != 0 ? (spoke == 1 ? -13 : 13) : 0;
-            DrawLine(frame, x + Math.Sign(dx) * 7, y + Math.Sign(dy) * 7, x + dx, y + dy, rim);
+            FillCircle(frame, x, y, 9, 0xff1a2429);
+            FillCircle(frame, x, y, 7, rim);
+            FillCircle(frame, x, y, 4, 0xff44351f);
+            DrawCrown(frame, x - 2, y - 2, core);
+            for (int spoke = 0; spoke < 4; spoke++)
+            {
+                int dx = spoke % 2 == 0 ? (spoke == 0 ? -13 : 13) : 0;
+                int dy = spoke % 2 != 0 ? (spoke == 1 ? -13 : 13) : 0;
+                DrawLine(frame, x + Math.Sign(dx) * 7, y + Math.Sign(dy) * 7, x + dx, y + dy, rim);
+            }
         }
         if (!mine.Reflected && mine.ChargeAge > 0)
         {
@@ -11778,6 +11817,8 @@ internal sealed class StormaktGame
         int height = _height <= 224 ? 126 : 142;
         int x = (_width - width) / 2;
         int y = (_height - height) / 2;
+        if (_sprites?.TryGet("tithe_upgrade_cabinet", out Sprite cabinet) == true)
+            DrawSpriteScaled(frame, cabinet, _width / 2 - 31, y - 58, 62, 78);
         DrawRect(frame, x, y, width, height, 0xf5080d12);
         DrawLine(frame, x, y, x + width - 1, y, 0xffffd66b);
         DrawLine(frame, x, y + height - 1, x + width - 1, y + height - 1, 0xff65c5ca);
