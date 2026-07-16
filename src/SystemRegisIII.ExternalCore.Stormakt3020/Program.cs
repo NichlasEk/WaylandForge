@@ -11513,23 +11513,33 @@ internal sealed class StormaktGame
         if (state.RouteChoiceActive)
         {
             int center = _width / 2;
-            DrawRect(frame, 0, 17, center - 3, _height - 29, 0xff15130e);
-            DrawRect(frame, center + 3, 17, _width - center - 3, _height - 29, 0xff0b181b);
+            if (_sprites?.TryGet("tithe_route_splitter", out Sprite splitter) == true)
+                DrawSpriteAlpha(frame, splitter, center - splitter.Width / 2, 20, 225);
             DrawLine(frame, center - 3, 17, center - 3, _height - 13, 0xffffd66b);
             DrawLine(frame, center + 3, 17, center + 3, _height - 13, 0xff65c5ca);
+            DrawLine(frame, 5, 17, 5, _height - 13, 0xff8a6b38);
+            DrawLine(frame, _width - 6, 17, _width - 6, _height - 13, 0xff315b5d);
             for (int y = 30; y < _height - 20; y += 22)
             {
                 FillTriangle(frame, center - 14, y, center - 5, y - 5, center - 5, y + 5, 0xffffd66b);
                 FillTriangle(frame, center + 14, y, center + 5, y - 5, center + 5, y + 5, 0xff65c5ca);
             }
+            if (_sprites?.TryGet("tithe_route_revision_emblem", out Sprite revision) == true)
+                DrawSprite(frame, revision, center / 2 - revision.Width / 2, 137);
+            if (_sprites?.TryGet("tithe_route_chainhall_emblem", out Sprite chainHall) == true)
+                DrawSprite(frame, chainHall, center + center / 2 - chainHall.Width / 2, 137);
             int panelWidth = Math.Min(356, _width - 16);
             int panelX = (_width - panelWidth) / 2;
             DrawRect(frame, panelX, 62, panelWidth, 52, 0xee080d12);
             DrawLine(frame, panelX, 62, panelX + panelWidth - 1, 62, 0xff8a6b38);
             DrawLine(frame, panelX, 113, panelX + panelWidth - 1, 113, 0xff65c5ca);
             DrawText(frame, panelX + (panelWidth - 96) / 2, 69, "VÄLJ REGISTERLED", 0xffffffff);
-            DrawText(frame, panelX + 14, 86, "VÄNSTER  REVISION", 0xffffd66b);
-            DrawText(frame, panelX + panelWidth / 2 + 8, 86, "HÖGER  KEDJEHALL", 0xff9bd4dc);
+            if (_sprites?.TryGet("tithe_route_revision_emblem", out revision) == true)
+                DrawSpriteScaled(frame, revision, panelX + 9, 82, 28, 28);
+            if (_sprites?.TryGet("tithe_route_chainhall_emblem", out chainHall) == true)
+                DrawSpriteScaled(frame, chainHall, panelX + panelWidth / 2 + 8, 82, 28, 28);
+            DrawText(frame, panelX + 43, 86, "REVISION", 0xffffd66b);
+            DrawText(frame, panelX + panelWidth / 2 + 42, 86, "KEDJEHALL", 0xff9bd4dc);
             DrawText(frame, panelX + 20, 100, "MER POÄNG  MER RISK", 0xffff8a4a);
             DrawText(frame, panelX + panelWidth / 2 + 14, 100, "FLER SKEPP  MER TID", 0xff65c58a);
         }
@@ -11760,6 +11770,13 @@ internal sealed class StormaktGame
         uint signal = warning ? 0xffff6b62 : 0xff65c5ca;
         if (warning) y = 43;
 
+        bool hasWarningArch = false;
+        if (warning && _sprites?.TryGet("tithe_customs_warning_arch", out Sprite warningArch) == true)
+        {
+            DrawSpriteScaled(frame, warningArch, gate.OpeningX - 42, 18, 84, 58);
+            hasWarningArch = true;
+        }
+
         if (_sprites?.TryGet("tithe_customs_gate", out Sprite customsGate) == true)
         {
             DrawSpriteScaled(frame, customsGate, 0, y - 15, Math.Max(0, leftEnd), 30);
@@ -11783,7 +11800,8 @@ internal sealed class StormaktGame
         if (warning)
         {
             DrawLine(frame, gate.OpeningX, y + 12, gate.OpeningX, _height - 20, 0xff35515b);
-            DrawText(frame, Math.Clamp(gate.OpeningX - 31, 4, _width - 66), y + 15, "TULLPASS", 0xffffd66b);
+            DrawText(frame, Math.Clamp(gate.OpeningX - 31, 4, _width - 66),
+                hasWarningArch ? y + 34 : y + 15, "TULLPASS", 0xffffd66b);
         }
     }
 

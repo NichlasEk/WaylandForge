@@ -1043,6 +1043,25 @@ def append_tithe_weapon_assets(
     entries.append(("tithe_effect_seizure_shield", armor))
 
 
+def append_tithe_route_assets(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    definitions = [
+        ("tithe_customs_warning_arch", 0, 0, (84, 58)),
+        ("tithe_route_revision_emblem", 1, 0, (58, 58)),
+        ("tithe_route_chainhall_emblem", 0, 1, (58, 58)),
+        ("tithe_route_splitter", 1, 1, (108, 92)),
+    ]
+    for name, column, row, target in definitions:
+        cell = source.crop((
+            column * source.width // 2,
+            row * source.height // 2,
+            (column + 1) * source.width // 2,
+            (row + 1) * source.height // 2,
+        )).convert("RGBA")
+        sprite = trim_alpha(cell)
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def build(
     input_path: Path,
     danish_input_path: Path,
@@ -1090,6 +1109,7 @@ def build(
     tithe_machinery_input_path: Path,
     tithe_ship_modules_input_path: Path,
     tithe_weapon_effects_input_path: Path,
+    tithe_route_customs_input_path: Path,
     rts_road_input_path: Path,
     dungeon_karl_input_path: Path,
     dungeon_mine_input_path: Path,
@@ -1169,6 +1189,7 @@ def build(
     tithe_machinery_source = Image.open(tithe_machinery_input_path).convert("RGBA")
     tithe_ship_modules_source = Image.open(tithe_ship_modules_input_path).convert("RGBA")
     tithe_weapon_effects_source = Image.open(tithe_weapon_effects_input_path).convert("RGBA")
+    tithe_route_customs_source = Image.open(tithe_route_customs_input_path).convert("RGBA")
     rts_road_source = Image.open(rts_road_input_path).convert("RGBA")
     dungeon_karl_source = Image.open(dungeon_karl_input_path).convert("RGBA")
     dungeon_mine_source = Image.open(dungeon_mine_input_path).convert("RGBA")
@@ -1282,6 +1303,7 @@ def build(
     append_rigsregnskabet(entries, rigsregnskabet_source)
     append_tithe_world_assets(entries, tithe_background_source, tithe_machinery_source)
     append_tithe_weapon_assets(entries, tithe_ship_modules_source, tithe_weapon_effects_source)
+    append_tithe_route_assets(entries, tithe_route_customs_source)
     append_rts_frontier_road(entries, rts_road_source)
     append_dungeon_assets(entries, dungeon_karl_source, dungeon_mine_source)
     append_dungeon_loot(entries, dungeon_loot_source)
@@ -1508,6 +1530,7 @@ def main() -> None:
     parser.add_argument("--tithe-machinery-input", type=Path, default=Path("assets/stormakt3020/tithe-machinery-v1.png"))
     parser.add_argument("--tithe-ship-modules-input", type=Path, default=Path("assets/stormakt3020/tithe-ship-modules-v1.png"))
     parser.add_argument("--tithe-weapon-effects-input", type=Path, default=Path("assets/stormakt3020/tithe-weapon-effects-v1.png"))
+    parser.add_argument("--tithe-route-customs-input", type=Path, default=Path("assets/stormakt3020/tithe-route-customs-v1.png"))
     parser.add_argument("--rts-road-input", type=Path, default=Path("assets/stormakt3020/rts-danish-frontier-road-v1.png"))
     parser.add_argument("--dungeon-karl-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-v1.png"))
     parser.add_argument("--dungeon-mine-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva1-environment-v1.png"))
@@ -1592,6 +1615,7 @@ def main() -> None:
         args.tithe_machinery_input,
         args.tithe_ship_modules_input,
         args.tithe_weapon_effects_input,
+        args.tithe_route_customs_input,
         args.rts_road_input,
         args.dungeon_karl_input,
         args.dungeon_mine_input,
