@@ -967,6 +967,59 @@ def append_rigsregnskabet(entries: list[tuple[str, Image.Image]], source: Image.
     entries.append(("rigsregnskabet_speak", portrait.copy()))
 
 
+def append_rigsregnskabet_phase_assets(
+    entries: list[tuple[str, Image.Image]], phase_source: Image.Image, death_source: Image.Image,
+    ring_source: Image.Image
+) -> None:
+    phase_definitions = [
+        ("rigs_ledger_intact", 0, 0, (36, 52)),
+        ("rigs_ledger_broken", 1, 0, (36, 52)),
+        ("rigs_core_sealed", 0, 1, (58, 58)),
+        ("rigs_core_exposed", 1, 1, (58, 58)),
+    ]
+    for name, column, row, target in phase_definitions:
+        cell = phase_source.crop((
+            column * phase_source.width // 2,
+            row * phase_source.height // 2,
+            (column + 1) * phase_source.width // 2,
+            (row + 1) * phase_source.height // 2,
+        )).convert("RGBA")
+        sprite = trim_alpha(cell)
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+    death_targets = [(82, 82), (112, 112), (142, 142), (122, 122)]
+    for index, target in enumerate(death_targets):
+        column = index % 2
+        row = index // 2
+        cell = death_source.crop((
+            column * death_source.width // 2,
+            row * death_source.height // 2,
+            (column + 1) * death_source.width // 2,
+            (row + 1) * death_source.height // 2,
+        )).convert("RGBA")
+        sprite = trim_alpha(cell)
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((f"rigs_death_{index}", sprite))
+
+    ring_names = [
+        "rigs_power_amber_a", "rigs_power_amber_b",
+        "rigs_power_cyan_a", "rigs_power_cyan_b",
+    ]
+    for index, name in enumerate(ring_names):
+        column = index % 2
+        row = index // 2
+        cell = ring_source.crop((
+            column * ring_source.width // 2,
+            row * ring_source.height // 2,
+            (column + 1) * ring_source.width // 2,
+            (row + 1) * ring_source.height // 2,
+        )).convert("RGBA")
+        sprite = trim_alpha(cell)
+        sprite.thumbnail((96, 96), Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def append_tithe_world_assets(
     entries: list[tuple[str, Image.Image]], background: Image.Image, machinery: Image.Image
 ) -> None:
@@ -1105,6 +1158,9 @@ def build(
     rts_landing_pad_input_path: Path,
     rts_orbit_moon_input_path: Path,
     rigsregnskabet_input_path: Path,
+    rigsregnskabet_phase_input_path: Path,
+    rigsregnskabet_death_effects_input_path: Path,
+    rigsregnskabet_power_rings_input_path: Path,
     tithe_background_input_path: Path,
     tithe_machinery_input_path: Path,
     tithe_ship_modules_input_path: Path,
@@ -1185,6 +1241,9 @@ def build(
     rts_landing_pad_source = Image.open(rts_landing_pad_input_path).convert("RGBA")
     rts_orbit_moon_source = Image.open(rts_orbit_moon_input_path).convert("RGBA")
     rigsregnskabet_source = Image.open(rigsregnskabet_input_path).convert("RGBA")
+    rigsregnskabet_phase_source = Image.open(rigsregnskabet_phase_input_path).convert("RGBA")
+    rigsregnskabet_death_effects_source = Image.open(rigsregnskabet_death_effects_input_path).convert("RGBA")
+    rigsregnskabet_power_rings_source = Image.open(rigsregnskabet_power_rings_input_path).convert("RGBA")
     tithe_background_source = Image.open(tithe_background_input_path).convert("RGBA")
     tithe_machinery_source = Image.open(tithe_machinery_input_path).convert("RGBA")
     tithe_ship_modules_source = Image.open(tithe_ship_modules_input_path).convert("RGBA")
@@ -1301,6 +1360,9 @@ def build(
     append_rts_terrain_details(entries, rts_floor_source, rts_vein_source, rts_landing_pad_source)
     append_rts_orbit_moon(entries, rts_orbit_moon_source)
     append_rigsregnskabet(entries, rigsregnskabet_source)
+    append_rigsregnskabet_phase_assets(entries, rigsregnskabet_phase_source,
+                                       rigsregnskabet_death_effects_source,
+                                       rigsregnskabet_power_rings_source)
     append_tithe_world_assets(entries, tithe_background_source, tithe_machinery_source)
     append_tithe_weapon_assets(entries, tithe_ship_modules_source, tithe_weapon_effects_source)
     append_tithe_route_assets(entries, tithe_route_customs_source)
@@ -1526,6 +1588,9 @@ def main() -> None:
     parser.add_argument("--rts-landing-pad-input", type=Path, default=Path("assets/stormakt3020/rts-karl-landing-pad-v1.png"))
     parser.add_argument("--rts-orbit-moon-input", type=Path, default=Path("assets/stormakt3020/rts-orbital-forest-moon-v1.png"))
     parser.add_argument("--rigsregnskabet-input", type=Path, default=Path("assets/stormakt3020/rigsregnskabet-v1.png"))
+    parser.add_argument("--rigsregnskabet-phase-input", type=Path, default=Path("assets/stormakt3020/rigsregnskabet-phase3-v1.png"))
+    parser.add_argument("--rigsregnskabet-death-effects-input", type=Path, default=Path("assets/stormakt3020/rigsregnskabet-death-effects-v1.png"))
+    parser.add_argument("--rigsregnskabet-power-rings-input", type=Path, default=Path("assets/stormakt3020/rigsregnskabet-power-rings-v1.png"))
     parser.add_argument("--tithe-background-input", type=Path, default=Path("assets/stormakt3020/tithe-archive-background-source-v1.png"))
     parser.add_argument("--tithe-machinery-input", type=Path, default=Path("assets/stormakt3020/tithe-machinery-v1.png"))
     parser.add_argument("--tithe-ship-modules-input", type=Path, default=Path("assets/stormakt3020/tithe-ship-modules-v1.png"))
@@ -1611,6 +1676,9 @@ def main() -> None:
         args.rts_landing_pad_input,
         args.rts_orbit_moon_input,
         args.rigsregnskabet_input,
+        args.rigsregnskabet_phase_input,
+        args.rigsregnskabet_death_effects_input,
+        args.rigsregnskabet_power_rings_input,
         args.tithe_background_input,
         args.tithe_machinery_input,
         args.tithe_ship_modules_input,

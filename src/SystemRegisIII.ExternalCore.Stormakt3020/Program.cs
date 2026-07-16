@@ -11613,7 +11613,16 @@ internal sealed class StormaktGame
         int y = (int)Math.Round(boss.Y);
         if (_sprites?.TryGet("rigsregnskabet", out Sprite sprite) == true)
         {
-            DrawSprite(frame, sprite, x - sprite.Width / 2, y - sprite.Height / 2);
+            if (boss.Phase == 4)
+            {
+                int fade = Math.Max(0, 255 - boss.PhaseAge * 2);
+                if (fade > 0)
+                    DrawSpriteAlpha(frame, sprite, x - sprite.Width / 2, y - sprite.Height / 2, (uint)fade);
+            }
+            else
+            {
+                DrawSprite(frame, sprite, x - sprite.Width / 2, y - sprite.Height / 2);
+            }
         }
         else
         {
@@ -11626,39 +11635,64 @@ internal sealed class StormaktGame
             DrawLine(frame, x + 92, y - 18, x + 115, y + 54, 0xffd6b25e);
         }
 
-        if (boss.LeftArmor <= 0)
+        if (boss.Phase is 2 or 3)
         {
-            DrawLine(frame, x - 94, y - 30, x - 48, y + 42, 0xffff8a4a);
-            DrawLine(frame, x - 88, y + 35, x - 52, y - 24, 0xff090d12);
-        }
-        if (boss.RightArmor <= 0)
-        {
-            DrawLine(frame, x + 94, y - 30, x + 48, y + 42, 0xffff8a4a);
-            DrawLine(frame, x + 88, y + 35, x + 52, y - 24, 0xff090d12);
-        }
-        if (boss.Phase >= 2)
-        {
-            int ring = 33 + (boss.PhaseAge / 4 % 9);
-            DrawCircleOutline(frame, x, y + 10, ring, boss.Phase == 2 ? 0xffffd66b : 0xff65c5ca);
-            DrawCircleOutline(frame, x, y + 10, ring + 12, 0xff8a6b38);
+            string ringName = boss.Phase == 2
+                ? (boss.PhaseAge / 7 & 1) == 0 ? "rigs_power_amber_a" : "rigs_power_amber_b"
+                : (boss.PhaseAge / 7 & 1) == 0 ? "rigs_power_cyan_a" : "rigs_power_cyan_b";
+            if (_sprites?.TryGet(ringName, out Sprite powerRing) == true)
+                DrawSpriteAlpha(frame, powerRing, x - powerRing.Width / 2,
+                    y + 10 - powerRing.Height / 2, 225);
+            else
+            {
+                int ring = 33 + (boss.PhaseAge / 4 % 9);
+                DrawCircleOutline(frame, x, y + 10, ring, boss.Phase == 2 ? 0xffffd66b : 0xff65c5ca);
+                DrawCircleOutline(frame, x, y + 10, ring + 12, 0xff8a6b38);
+            }
         }
         if (boss.Phase == 3)
         {
-            DrawTitheLedgerNode(frame, x - 58, y + 18, boss.LeftLedger, false);
-            DrawTitheLedgerNode(frame, x + 58, y + 18, boss.RightLedger, true);
-            uint core = boss.LeftLedger <= 0 && boss.RightLedger <= 0 ? 0xffbdf8ff : 0xff315b5d;
-            FillCircle(frame, x, y + 12, 12 + (boss.PhaseAge / 5 & 2), core);
+            DrawTitheLedgerNodeAsset(frame, x - 58, y + 18, boss.LeftLedger, false);
+            DrawTitheLedgerNodeAsset(frame, x + 58, y + 18, boss.RightLedger, true);
+            bool coreExposed = boss.LeftLedger <= 0 && boss.RightLedger <= 0;
+            string coreName = coreExposed ? "rigs_core_exposed" : "rigs_core_sealed";
+            if (_sprites?.TryGet(coreName, out Sprite core) == true)
+                DrawSpriteAlpha(frame, core, x - core.Width / 2, y + 12 - core.Height / 2,
+                    coreExposed ? (uint)(220 + (boss.PhaseAge / 4 & 31)) : 230);
+            else
+                FillCircle(frame, x, y + 12, 12 + (boss.PhaseAge / 5 & 2),
+                    coreExposed ? 0xffbdf8ff : 0xff315b5d);
         }
         if (boss.Phase == 4)
         {
-            for (int burst = 0; burst < 6; burst++)
+            int deathFrame = boss.PhaseAge < 80 ? 0 : boss.PhaseAge < 160 ? 1 : boss.PhaseAge < 270 ? 2 : 3;
+            if (_sprites?.TryGet($"rigs_death_{deathFrame}", out Sprite death) == true)
             {
-                int bx = x - 70 + (burst * 31 + boss.PhaseAge * 3) % 140;
-                int by = y - 45 + (burst * 47 + boss.PhaseAge * 2) % 100;
-                int radius = 3 + (boss.PhaseAge / 4 + burst) % 8;
-                FillCircle(frame, bx, by, radius, (burst & 1) == 0 ? 0xffff8a4a : 0xffffd66b);
+                int fade = boss.PhaseAge <= 390 ? 255 : Math.Max(40, 255 - (boss.PhaseAge - 390) * 3);
+                DrawSpriteAlpha(frame, death, x - death.Width / 2, y - death.Height / 2, (uint)fade);
+            }
+            else
+            {
+                for (int burst = 0; burst < 6; burst++)
+                {
+                    int bx = x - 70 + (burst * 31 + boss.PhaseAge * 3) % 140;
+                    int by = y - 45 + (burst * 47 + boss.PhaseAge * 2) % 100;
+                    int radius = 3 + (boss.PhaseAge / 4 + burst) % 8;
+                    FillCircle(frame, bx, by, radius, (burst & 1) == 0 ? 0xffff8a4a : 0xffffd66b);
+                }
             }
         }
+    }
+
+    private void DrawTitheLedgerNodeAsset(uint[] frame, int x, int y, int health, bool mirror)
+    {
+        string name = health > 0 ? "rigs_ledger_intact" : "rigs_ledger_broken";
+        if (_sprites?.TryGet(name, out Sprite ledger) == true)
+        {
+            DrawSprite(frame, ledger, x - ledger.Width / 2, y - ledger.Height / 2);
+            return;
+        }
+        DrawTitheLedgerNode(frame, x, y, health, mirror);
     }
 
     private void DrawTitheLedgerNode(uint[] frame, int x, int y, int health, bool mirror)
