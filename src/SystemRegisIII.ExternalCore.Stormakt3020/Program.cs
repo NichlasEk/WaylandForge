@@ -297,11 +297,11 @@ internal sealed class StormaktGame
     private static readonly RadioCard[] OresundRadioCards = [];
     private static readonly RadioCard[] TitheRadioCards =
     [
-        new(2_410, 330, true, "SÖREN SVARTKRUT", "JAG KÄNNER DEM", "FOGDEN TOG BÅDA", null,
+        new(2_410, 330, true, "SÖREN SVARTKRUT", "JAG KÄNNER DEM", "FOGDEN TOG BÅDA", StormaktVoice.SorenTitheSeizedShips,
             "portrait_soren", true),
-        new(2_760, 390, false, "EBBA GRIP", "FRED ÄR FÖRLUST", "I REGISTRET", null,
+        new(2_760, 390, false, "EBBA GRIP", "FRED ÄR FÖRLUST", "I REGISTRET", StormaktVoice.EbbaTithePeaceLoss,
             "portrait_ebba"),
-        new(3_200, 300, false, "EBBA GRIP", "SIGILLPRESSAR", "DE BYGGER VÄGG", null,
+        new(3_200, 330, false, "EBBA GRIP", "SIGILLPRESSAR", "DE BYGGER VÄGG", StormaktVoice.EbbaTitheSealPress,
             "portrait_ebba"),
     ];
     private static readonly RadioCard RigsregnskabetIntroRadio =
@@ -532,6 +532,7 @@ internal sealed class StormaktGame
                 _shots.Add(new Shot(_shipX, _shipY - 17, 0, -9, 0xffbdf8ff, 7, TitheShotDrillBolt));
                 _cooldown = 9;
                 _heat = Math.Min(120, _heat + 11);
+                _audio?.Trigger(StormaktSound.TitheCrownDrill);
             }
             else if (module == TithePrimaryModule.VolleyDirector)
             {
@@ -540,6 +541,7 @@ internal sealed class StormaktGame
                 _shots.Add(new Shot(_shipX + 7, _shipY - 12, 1, -7, 0xffffd66b, 2, TitheShotVolleyShell));
                 _cooldown = 4;
                 _heat = Math.Min(120, _heat + 9);
+                _audio?.Trigger(StormaktSound.TitheVolleyDirector);
             }
             else
             {
@@ -547,8 +549,8 @@ internal sealed class StormaktGame
                 _shots.Add(new Shot(_shipX + 4, _shipY - 12, 0, -7, 0xffffd66b, 3));
                 _cooldown = 6;
                 _heat = Math.Min(120, _heat + 7);
+                _audio?.Trigger(StormaktSound.TwinCannon);
             }
-            _audio?.Trigger(StormaktSound.TwinCannon);
         }
         if ((buttons & AltFire) != 0 && _altCooldown == 0)
         {
@@ -560,6 +562,7 @@ internal sealed class StormaktGame
                 ReflectTitheLightShots();
                 _altCooldown = 26;
                 _heat = Math.Min(120, _heat + 24);
+                _audio?.Trigger(StormaktSound.TitheMagnetBroadside);
             }
             else if (broadside == TitheBroadsideModule.ChainCanister)
             {
@@ -570,6 +573,7 @@ internal sealed class StormaktGame
                 _shots.Add(new Shot(_shipX + 12, _shipY - 5, 3, -5, 0xffffd66b, 8, TitheShotChainShot));
                 _altCooldown = 30;
                 _heat = Math.Min(120, _heat + 20);
+                _audio?.Trigger(StormaktSound.TitheChainCanister);
             }
             else
             {
@@ -577,8 +581,8 @@ internal sealed class StormaktGame
                 _shots.Add(new Shot(_shipX + 11, _shipY - 5, 2, -5, 0xff7fc7ff, 5));
                 _altCooldown = 18;
                 _heat = Math.Min(120, _heat + 15);
+                _audio?.Trigger(StormaktSound.Broadside);
             }
-            _audio?.Trigger(StormaktSound.Broadside);
         }
 
         StepShots();
@@ -4868,7 +4872,7 @@ internal sealed class StormaktGame
                     chain.FreedAge = 0;
                     state.FreedShips++;
                     _score += 1_200;
-                    _audio?.Trigger(StormaktSound.EnemyExplosion);
+                    _audio?.Trigger(StormaktSound.TitheChainLockBreak);
                 }
                 break;
             }
@@ -4981,13 +4985,19 @@ internal sealed class StormaktGame
             else if (boss.Phase == 3 && boss.LeftLedger > 0 &&
                 Math.Abs(shot.X - (bossX - 58)) <= 19 && Math.Abs(shot.Y - (bossY + 18)) <= 28)
             {
+                int priorHealth = boss.LeftLedger;
                 boss.LeftLedger -= shot.Power;
+                if (priorHealth > 0 && boss.LeftLedger <= 0)
+                    _audio?.Trigger(StormaktSound.TitheLedgerShatter);
                 hit = true;
             }
             else if (boss.Phase == 3 && boss.RightLedger > 0 &&
                 Math.Abs(shot.X - (bossX + 58)) <= 19 && Math.Abs(shot.Y - (bossY + 18)) <= 28)
             {
+                int priorHealth = boss.RightLedger;
                 boss.RightLedger -= shot.Power;
+                if (priorHealth > 0 && boss.RightLedger <= 0)
+                    _audio?.Trigger(StormaktSound.TitheLedgerShatter);
                 hit = true;
             }
             else if (boss.Phase == 3 && boss.LeftLedger <= 0 && boss.RightLedger <= 0 &&
@@ -5007,7 +5017,7 @@ internal sealed class StormaktGame
             _shots.Clear();
             _enemyShots.Clear();
             ActivateBossRadio(RigsregnskabetInterestRadio);
-            _audio?.Trigger(StormaktSound.Broadside);
+            _audio?.Trigger(StormaktSound.TitheBossPhaseBreak);
         }
         else if (boss.Phase == 2 && boss.Health <= TitheBossState.PhaseThreeHealth)
         {
@@ -5019,7 +5029,7 @@ internal sealed class StormaktGame
             _shots.Clear();
             _enemyShots.Clear();
             ActivateBossRadio(RigsregnskabetCoreRadio);
-            _audio?.Trigger(StormaktSound.Broadside);
+            _audio?.Trigger(StormaktSound.TitheBossPhaseBreak);
         }
         else if (boss.Phase == 3 && boss.Health <= 0)
         {
@@ -5080,7 +5090,7 @@ internal sealed class StormaktGame
             int ordinal = state.SealWallsSpawned++;
             int gap = (ordinal * 3 + 2) % TitheSealWall.SegmentCount;
             state.SealWalls.Add(new TitheSealWall(gap));
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.TitheSealWall);
         }
 
         for (int wallIndex = state.SealWalls.Count - 1; wallIndex >= 0; wallIndex--)
@@ -5196,7 +5206,7 @@ internal sealed class StormaktGame
                 state.Chains.Add(new TitheChainTarget(_width / 2, 43, 0));
                 state.Chains.Add(new TitheChainTarget(_width - 68, 67, 1));
             }
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.TitheRegisterSwitch);
         }
         if (state.RouteNoticeAge > 0) state.RouteNoticeAge--;
 
@@ -5219,7 +5229,7 @@ internal sealed class StormaktGame
         {
             int passage = state.Age / 300 & 1;
             state.Gates.Add(new TitheCustomsGate(passage == 0 ? _width / 3 : _width * 2 / 3));
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.TitheCustomsGate);
         }
 
         for (int index = state.Gates.Count - 1; index >= 0; index--)
@@ -5283,7 +5293,11 @@ internal sealed class StormaktGame
                 mine.Vy = Math.Clamp(mine.Vy + dy / length * 0.027, 0.45, 1.65);
                 mine.X += mine.Vx;
                 mine.Y += mine.Vy;
-                if (length < 70 || mine.Age > 185) mine.ChargeAge++;
+                if (length < 70 || mine.Age > 185)
+                {
+                    if (mine.ChargeAge == 0) _audio?.Trigger(StormaktSound.TitheCoinMineCharge);
+                    mine.ChargeAge++;
+                }
             }
 
             for (int shotIndex = _shots.Count - 1; shotIndex >= 0; shotIndex--)
@@ -5309,7 +5323,7 @@ internal sealed class StormaktGame
                     {
                         state.Mines.RemoveAt(index);
                         _score += 280;
-                        _audio?.Trigger(StormaktSound.EnemyExplosion);
+                        _audio?.Trigger(StormaktSound.TitheCoinMineBreak);
                         goto NextMine;
                     }
                 }
@@ -5320,7 +5334,7 @@ internal sealed class StormaktGame
             {
                 if (DistanceSquared(mine.X, mine.Y, _shipX, _shipY) < 42 * 42) DamageShip();
                 state.Mines.RemoveAt(index);
-                _audio?.Trigger(StormaktSound.EnemyExplosion);
+                _audio?.Trigger(StormaktSound.TitheCoinMineBreak);
                 goto NextMine;
             }
             if (mine.Y < -28 || mine.Y > _height + 28 || mine.X < -28 || mine.X > _width + 28)
@@ -5372,7 +5386,7 @@ internal sealed class StormaktGame
             state.ChoosingUpgrade = false;
             _cooldown = 0;
             _heat = Math.Min(_heat, 45);
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.TitheUpgradeInstall);
         }
     }
 

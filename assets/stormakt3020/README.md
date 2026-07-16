@@ -184,18 +184,20 @@ The loop edit is preloaded with the combat score. Kronens Tiende requests a 0.5-
 
 ## Sound effects
 
-The original five deterministic 48 kHz stereo effects are joined by nine Silverkroppen effects: construction, Carolean volley, moose charge, tower fire, raid horn, powder fuse/explosion, organ volley and unit-ready chime. Rebuild them with:
+The original five deterministic 48 kHz stereo effects are joined by nine Silverkroppen effects: construction, Carolean volley, moose charge, tower fire, raid horn, powder fuse/explosion, organ volley and unit-ready chime. Fogdens tionde värld adds thirteen fixed-seed Stable Audio 3 Small-SFX effects for its customs machinery, mines, route switch, upgrades, four weapon families and boss break states. Runtime gains keep the loud generated iron machinery behind active radio. Rebuild the procedural families with:
 
 ```sh
 python tools/stormakt3020/build_sfx.py
 python tools/stormakt3020/build_rts_sfx.py
 ```
 
+Regenerate the Tithe World model family with `/home/nichlas/ai/stable-audio-3/.venv/bin/python tools/stormakt3020/generate_tithe_sfx.py`. Exact prompts, seeds and durations live in that script and are summarized in `sfx/tithe-world-sfx-v1.prompt.md`; untouched 44.1 kHz masters remain under `sfx/raw/` beside the converted 48 kHz runtime files.
+
 The external core triggers them from actual gameplay events and mixes up to 32 voices into the music stream with headroom before sending 2048-frame `WFAU` packets.
 
 ## Radio voices
 
-The campaign radio uses a two-stage local casting pipeline: VoxCPM2 creates fully synthetic reference performances for Ebba, Sören, Rasmus and Christian, then the selected local backend renders versioned Swedish or Danish dialogue from each reference WAV and exact transcript. Silverkroppen adds six event-driven Swedish/Danish calls for the silver landing, steam power, first royal claim, powder warning, organ wagon and moose readiness. Rigsregnskabet adds a wholly synthetic Danish chancery-engine role and four seeded boss calls; every call uses dialogue seed `302129`. The three older Matcha English files remain archived but are no longer loaded by runtime. Requests, raw output, job IDs, hashes and approval state are preserved under `radio/`; no known or third-party voice is cloned and none of these voices are final casting until listened to and approved.
+The campaign radio uses a two-stage local casting pipeline: VoxCPM2 creates fully synthetic reference performances for Ebba, Sören, Rasmus and Christian, then the selected local backend renders versioned Swedish or Danish dialogue from each reference WAV and exact transcript. Silverkroppen adds six event-driven Swedish/Danish calls for the silver landing, steam power, first royal claim, powder warning, organ wagon and moose readiness. Fogdens tionde värld adds three new archive calls for Sören and Ebba using their unchanged fixed dialogue seeds `302122` and `302121`. Rigsregnskabet adds a wholly synthetic Danish chancery-engine role and four seeded boss calls; every call uses dialogue seed `302129`. The three older Matcha English files remain archived but are no longer loaded by runtime. Requests, raw output, job IDs, hashes and approval state are preserved under `radio/`; no known or third-party voice is cloned and none of these voices are final casting until listened to and approved.
 
 Rebuild the 48 kHz stereo radio-filtered runtime files from the raw WAV files with:
 

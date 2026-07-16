@@ -781,6 +781,39 @@
       "model_backend": "voxcpm2"
     },
     {
+      "id": "soren-tithe-seized-ships",
+      "role": "soren-svartkrut",
+      "level": 4,
+      "frame": 2410,
+      "cue": "tithe_register_soren",
+      "text": "Jag känner igen skeppen. Fogden tog dem från båda sidor.",
+      "subtitle_lines": ["JAG KÄNNER DEM", "FOGDEN TOG BÅDA"],
+      "seed": 302122,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-tithe-peace-loss",
+      "role": "ebba-grip",
+      "level": 4,
+      "frame": 2760,
+      "cue": "tithe_register_ebba",
+      "text": "Fred bokförs som förlust i det här registret.",
+      "subtitle_lines": ["FRED ÄR FÖRLUST", "I REGISTRET"],
+      "seed": 302121,
+      "model_backend": "voxcpm2"
+    },
+    {
+      "id": "ebba-tithe-seal-press",
+      "role": "ebba-grip",
+      "level": 4,
+      "frame": 3200,
+      "cue": "tithe_interest_warning",
+      "text": "Sigillpressarna bygger en vägg. Sök den öppna sektionen.",
+      "subtitle_lines": ["SIGILLPRESSAR", "DE BYGGER VÄGG"],
+      "seed": 302121,
+      "model_backend": "voxcpm2"
+    },
+    {
       "id": "rigsregnskabet-intro",
       "role": "rigsregnskabet",
       "level": 4,

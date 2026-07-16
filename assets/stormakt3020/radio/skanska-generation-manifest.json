@@ -809,6 +809,36 @@
       "sha256": "e2930d41a274c69d2cf7568daeb09915e3850a67e7cbadcee63e17a82720e479",
       "request": "assets/stormakt3020/radio/raw/rigsregnskabet-death-da-request.json",
       "reference_sha256": "cd825d66a5b6bfc4b3ec39009d8fb74cafa8c02ab15fed159b89f862b61c769b"
+    },
+    {
+      "kind": "line",
+      "line": "soren-tithe-seized-ships",
+      "role": "soren-svartkrut",
+      "job_id": "37d98e621dc444eda2ba0b0fa8f2a2a1",
+      "file": "assets/stormakt3020/radio/raw/soren-tithe-seized-ships-sv-raw.wav",
+      "sha256": "1449d53704fbca52af4cbbeac599ccf20697fc06722a8962a967e56723336f42",
+      "request": "assets/stormakt3020/radio/raw/soren-tithe-seized-ships-sv-request.json",
+      "reference_sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-tithe-peace-loss",
+      "role": "ebba-grip",
+      "job_id": "88f4b0900f3d49aa97a3fc86ef739443",
+      "file": "assets/stormakt3020/radio/raw/ebba-tithe-peace-loss-sv-raw.wav",
+      "sha256": "7a5c17841131500f41b1c1dffbce7ad6d7846fce738aaa7ca63829858b81e79f",
+      "request": "assets/stormakt3020/radio/raw/ebba-tithe-peace-loss-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-tithe-seal-press",
+      "role": "ebba-grip",
+      "job_id": "fa78f19aca9b4f55a64b9376efdc68d8",
+      "file": "assets/stormakt3020/radio/raw/ebba-tithe-seal-press-sv-raw.wav",
+      "sha256": "7e17bd663de15591611d8f9d0b6f59d7291c10ef6917ad5cf40708058286d1a5",
+      "request": "assets/stormakt3020/radio/raw/ebba-tithe-seal-press-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
     }
   ],
   "service": "http://127.0.0.1:8765",
