@@ -291,6 +291,7 @@ internal sealed class StormaktGame
         new(2_220, 3_480, 105, 7, 3),
     ];
     private static readonly RadioCard[] OresundRadioCards = [];
+    private static readonly RadioCard[] TitheRadioCards = [];
     private static readonly RadioCard OresundSorenStrikeRadio =
         new(0, 390, true, "SÖREN SVARTKRUT", "BRON HAR NERVER", "JAG SKÄR EN NU", StormaktVoice.SorenOresundNerve,
             "portrait_soren", true);
@@ -326,6 +327,7 @@ internal sealed class StormaktGame
     private BridgeSectionState? _bridgeSection;
     private RtsState? _rts;
     private DungeonState? _dungeon;
+    private TitheWorldState? _titheWorld;
     private bool _stageClear;
     private int _stageClearAge;
     private uint _previousButtons;
@@ -467,6 +469,12 @@ internal sealed class StormaktGame
             _previousButtons = buttons;
             return;
         }
+        if (_levelId == 4 && _titheWorld is TitheWorldState titheChoice && titheChoice.ChoosingUpgrade)
+        {
+            StepTitheUpgradeChoice(titheChoice, buttons);
+            _previousButtons = buttons;
+            return;
+        }
 
         StepRadio();
 
@@ -484,10 +492,30 @@ internal sealed class StormaktGame
         _invulnerabilityFrames = Math.Max(0, _invulnerabilityFrames - 1);
         if ((buttons & Fire) != 0 && _cooldown == 0)
         {
-            _shots.Add(new Shot(_shipX - 4, _shipY - 12, 0, -7, 0xffffd66b, 3));
-            _shots.Add(new Shot(_shipX + 4, _shipY - 12, 0, -7, 0xffffd66b, 3));
-            _cooldown = 6;
-            _heat = Math.Min(120, _heat + 7);
+            TithePrimaryModule module = _titheWorld?.PrimaryModule ?? TithePrimaryModule.Standard;
+            if (module == TithePrimaryModule.CrownDrill)
+            {
+                _shots.Add(new Shot(_shipX - 5, _shipY - 12, 0, -7, 0xffffd66b, 3));
+                _shots.Add(new Shot(_shipX + 5, _shipY - 12, 0, -7, 0xffffd66b, 3));
+                _shots.Add(new Shot(_shipX, _shipY - 17, 0, -9, 0xffbdf8ff, 7));
+                _cooldown = 9;
+                _heat = Math.Min(120, _heat + 11);
+            }
+            else if (module == TithePrimaryModule.VolleyDirector)
+            {
+                _shots.Add(new Shot(_shipX - 7, _shipY - 12, -1, -7, 0xffffd66b, 2));
+                _shots.Add(new Shot(_shipX, _shipY - 15, 0, -8, 0xff9bd4dc, 2));
+                _shots.Add(new Shot(_shipX + 7, _shipY - 12, 1, -7, 0xffffd66b, 2));
+                _cooldown = 4;
+                _heat = Math.Min(120, _heat + 9);
+            }
+            else
+            {
+                _shots.Add(new Shot(_shipX - 4, _shipY - 12, 0, -7, 0xffffd66b, 3));
+                _shots.Add(new Shot(_shipX + 4, _shipY - 12, 0, -7, 0xffffd66b, 3));
+                _cooldown = 6;
+                _heat = Math.Min(120, _heat + 7);
+            }
             _audio?.Trigger(StormaktSound.TwinCannon);
         }
         if ((buttons & AltFire) != 0 && _altCooldown == 0)
@@ -500,6 +528,7 @@ internal sealed class StormaktGame
         }
 
         StepShots();
+        StepTitheWorld();
         StepOresundBridgeSection();
         StepEnemyShots();
         StepEnemies();
@@ -537,6 +566,11 @@ internal sealed class StormaktGame
                 DrawStageClear(frame);
             }
             DrawPause(frame);
+            return;
+        }
+        if (_levelId == 4 && !_inLevelSelect && !_inLevelPreview)
+        {
+            DrawTitheWorld(frame);
             return;
         }
         DrawSky(frame);
@@ -594,7 +628,7 @@ internal sealed class StormaktGame
         _groundTargets.Clear();
         _anchorHazards.Clear();
         _crystalSpears.Clear();
-        _random = new Random(_levelId switch { 1 => 3202, 2 => 3303, 3 => 3404, _ => 3020 });
+        _random = new Random(_levelId switch { 1 => 3202, 2 => 3303, 3 => 3404, 4 => 3505, _ => 3020 });
         for (int i = 0; i < _stars.Length; i++)
         {
             _stars[i] = new Star(_random.Next(_width), _random.Next(_height), 1 + _random.Next(3), _random.Next(50, 180));
@@ -626,6 +660,7 @@ internal sealed class StormaktGame
             }
             : null;
         _dungeon = null;
+        _titheWorld = _levelId == 4 ? new TitheWorldState() : null;
         if (_rts is RtsState resetRts)
         {
             resetRts.Fortress = new RtsFortress(resetRts.MapWidth - 170, resetRts.MapHeight / 2);
@@ -738,7 +773,7 @@ internal sealed class StormaktGame
                 _previousButtons = buttons;
                 return;
             }
-            if (_levelSelection is 0 or 1 or 2 || (_developerMode && _levelSelection == 3))
+            if (_levelSelection is 0 or 1 or 2 || (_developerMode && _levelSelection is 3 or 4))
             {
                 StartLevel(_levelSelection, fresh: (buttons & Slow) != 0);
             }
@@ -4583,6 +4618,7 @@ internal sealed class StormaktGame
         {
             1 => SkanskaRadioCards,
             2 => OresundRadioCards,
+            4 => TitheRadioCards,
             _ => RadioCards,
         };
         foreach (RadioCard card in cards)
@@ -4676,6 +4712,100 @@ internal sealed class StormaktGame
                 Health = 140,
             };
             _enemies.Clear();
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+    }
+
+    private void StepTitheWorld()
+    {
+        if (_levelId != 4 || _titheWorld is not TitheWorldState state || state.ChoosingUpgrade || _stageClear)
+            return;
+
+        state.Age++;
+        if (state.Age == 80) state.Chains.Add(new TitheChainTarget(_width / 2 - 74, 76, 0));
+        if (state.Age == 370) state.Chains.Add(new TitheChainTarget(_width / 2 + 82, 60, 1));
+        if (state.Age is 220 or 520 or 1_080)
+        {
+            int side = state.Age / 220 & 1;
+            _enemies.Add(new Enemy(side == 0 ? 62 : _width - 62, -18, 1, 10, 9,
+                0xff8f2635, 7, state.Age * 0.013, state.Age, 0, false));
+        }
+
+        for (int index = state.Chains.Count - 1; index >= 0; index--)
+        {
+            TitheChainTarget chain = state.Chains[index];
+            chain.Age++;
+            if (chain.Freed)
+            {
+                chain.FreedAge++;
+                chain.X += chain.Kind == 0 ? -1.35 : 1.35;
+                chain.Y -= 0.42;
+                if (chain.FreedAge > 150) state.Chains.RemoveAt(index);
+                continue;
+            }
+
+            chain.Y += 0.16;
+            int lockY = (int)Math.Round(chain.Y) - 31;
+            for (int shotIndex = _shots.Count - 1; shotIndex >= 0; shotIndex--)
+            {
+                Shot shot = _shots[shotIndex];
+                if (Math.Abs(shot.X - chain.X) > 13 || Math.Abs(shot.Y - lockY) > 15) continue;
+                chain.Health -= shot.Power;
+                _shots.RemoveAt(shotIndex);
+                if (chain.Health <= 0)
+                {
+                    chain.Freed = true;
+                    chain.FreedAge = 0;
+                    state.FreedShips++;
+                    _score += 1_200;
+                    _audio?.Trigger(StormaktSound.EnemyExplosion);
+                }
+                break;
+            }
+        }
+
+        if (state.Age == 850 && !state.UpgradeOffered)
+        {
+            state.UpgradeOffered = true;
+            state.ChoosingUpgrade = true;
+            state.UpgradeSelection = 0;
+            _shots.Clear();
+            _enemyShots.Clear();
+            _enemies.Clear();
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        if (state.UpgradeInstalled && state.Age >= 1_650)
+        {
+            _stageClear = true;
+            _stageClearAge = 0;
+            _shots.Clear();
+            _enemyShots.Clear();
+            _enemies.Clear();
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+    }
+
+    private void StepTitheUpgradeChoice(TitheWorldState state, uint buttons)
+    {
+        if (Pressed(buttons, Left) || Pressed(buttons, Right))
+        {
+            state.UpgradeSelection = 1 - state.UpgradeSelection;
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        if (Pressed(buttons, AltFire))
+        {
+            state.ShowUpgradeDetails = !state.ShowUpgradeDetails;
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        if (Pressed(buttons, Fire))
+        {
+            state.PrimaryModule = state.UpgradeSelection == 0
+                ? TithePrimaryModule.CrownDrill
+                : TithePrimaryModule.VolleyDirector;
+            state.ChoosingUpgrade = false;
+            state.UpgradeInstalled = true;
+            _cooldown = 0;
+            _heat = Math.Min(_heat, 45);
             _audio?.Trigger(StormaktSound.Deploy);
         }
     }
@@ -6454,6 +6584,7 @@ internal sealed class StormaktGame
 
     private void SpawnEnemies()
     {
+        if (_levelId == 4) return;
         int endFrame = _levelId switch { 1 => 2_700, 2 => FlythroughFrames, _ => BossArrivalFrame };
         if (_missionFrame >= endFrame)
         {
@@ -10629,6 +10760,193 @@ internal sealed class StormaktGame
         }
     }
 
+    private void DrawTitheWorld(uint[] frame)
+    {
+        Clear(frame, 0xff05090c);
+        DrawTitheArchive(frame);
+        if (_titheWorld is TitheWorldState state)
+        {
+            foreach (TitheChainTarget chain in state.Chains) DrawTitheChainTarget(frame, chain);
+        }
+        DrawShots(frame);
+        DrawEnemyShots(frame);
+        DrawEnemies(frame);
+        DrawShip(frame);
+        DrawBorder(frame);
+        DrawHud(frame);
+        DrawTitheModuleHud(frame);
+        DrawTitheMissionTitle(frame);
+        DrawRadio(frame);
+        DrawStageClear(frame);
+        DrawPause(frame);
+        if (_titheWorld?.ChoosingUpgrade == true) DrawTitheUpgradePanel(frame);
+        if (_gameOver)
+        {
+            int x = (_width - 168) / 2;
+            int y = (_height - 42) / 2;
+            DrawRect(frame, x, y, 168, 42, 0xdd090b10);
+            DrawText(frame, x + 16, y + 10, "FLOTTAN FÖLL", 0xffff6b7f);
+            DrawText(frame, x + 22, y + 26, "START ÅTERKALLAR", 0xffffd66b);
+        }
+    }
+
+    private void DrawTitheArchive(uint[] frame)
+    {
+        DrawRect(frame, 0, 17, _width, _height - 29, 0xff080d11);
+        int slow = _titheWorld?.Age / 4 ?? 0;
+        for (int x = -24; x < _width + 28; x += 48)
+        {
+            int railX = x + slow % 48;
+            DrawRect(frame, railX, 17, 7, _height - 29, 0xff111a20);
+            DrawLine(frame, railX, 17, railX, _height - 13, 0xff4d402d);
+            DrawLine(frame, railX + 6, 17, railX + 6, _height - 13, 0xff263a43);
+            for (int y = 22 + slow % 18; y < _height - 14; y += 18)
+                DrawRect(frame, railX - 2, y, 11, 3, 0xff715735);
+        }
+        int ledgerX = _width / 2;
+        DrawRect(frame, ledgerX - 30, 17, 60, _height - 29, 0xff0c1419);
+        DrawLine(frame, ledgerX - 30, 17, ledgerX - 30, _height - 13, 0xff8a6b38);
+        DrawLine(frame, ledgerX + 29, 17, ledgerX + 29, _height - 13, 0xff8a6b38);
+        for (int y = 27 - slow % 22; y < _height - 13; y += 22)
+        {
+            DrawRect(frame, ledgerX - 25, y, 50, 11, 0xff111d24);
+            DrawLine(frame, ledgerX - 20, y + 3, ledgerX + 13, y + 3, 0xff35515b);
+            DrawLine(frame, ledgerX - 20, y + 7, ledgerX + 20, y + 7, 0xff293c43);
+            DrawRect(frame, ledgerX + 17, y + 2, 4, 6, 0xff9b743a);
+        }
+        for (int y = 35; y < _height - 18; y += 54)
+        {
+            DrawLine(frame, 0, y, _width - 1, y, 0xff17242b);
+            DrawLine(frame, 0, y + 1, _width - 1, y + 1, 0xff0a1014);
+        }
+    }
+
+    private void DrawTitheChainTarget(uint[] frame, TitheChainTarget chain)
+    {
+        int x = (int)Math.Round(chain.X);
+        int y = (int)Math.Round(chain.Y);
+        int lockY = y - 31;
+        if (!chain.Freed)
+        {
+            for (int linkY = 17; linkY < lockY - 4; linkY += 7)
+            {
+                uint link = (linkY / 7 & 1) == 0 ? 0xffa37b42 : 0xff52636a;
+                DrawRect(frame, x - 2, linkY, 4, 5, link);
+                PutPixel(frame, x - 3, linkY + 2, 0xff20292d);
+            }
+            DrawLine(frame, x, lockY + 5, x - 16, y - 5, 0xff8a6b38);
+            DrawLine(frame, x, lockY + 5, x + 16, y - 5, 0xff8a6b38);
+            DrawRect(frame, x - 7, lockY - 5, 14, 12, 0xff1d292e);
+            DrawRect(frame, x - 4, lockY - 2, 8, 7, 0xff9b743a);
+            FillCircle(frame, x, lockY + 1, 2, 0xff9bd4dc);
+        }
+        string spriteName = chain.Kind == 0 ? "player" : "fogde_sloop";
+        if (_sprites?.TryGet(spriteName, out Sprite captive) == true)
+        {
+            int width = chain.Kind == 0 ? 38 : 34;
+            int height = chain.Kind == 0 ? 48 : 42;
+            DrawSpriteScaled(frame, captive, x - width / 2, y - height / 2, width, height);
+        }
+        else
+        {
+            uint hull = chain.Kind == 0 ? 0xff315e88 : 0xff7b2a32;
+            FillTriangle(frame, x, y - 18, x - 14, y + 15, x + 14, y + 15, hull);
+            DrawRect(frame, x - 4, y - 9, 8, 21, 0xff9b743a);
+        }
+        if (!chain.Freed && chain.Health < TitheChainTarget.MaxHealth)
+        {
+            DrawRect(frame, x - 14, y + 24, 28, 3, 0xff202a30);
+            DrawRect(frame, x - 14, y + 24, Math.Max(0, chain.Health) * 28 / TitheChainTarget.MaxHealth,
+                3, 0xff65c5ca);
+        }
+        if (chain.Freed && chain.FreedAge < 45)
+            DrawText(frame, x - 12, y + 24, "FRI", 0xff65c58a);
+    }
+
+    private void DrawTitheMissionTitle(uint[] frame)
+    {
+        int age = _titheWorld?.Age ?? 0;
+        if (age < 15 || age >= 165) return;
+        int edge = Math.Min(age - 14, 165 - age);
+        int y = 73 - Math.Min(12, edge);
+        int width = Math.Min(276, _width - 18);
+        int x = (_width - width) / 2;
+        DrawRect(frame, x, y, width, 39, 0xff080f14);
+        DrawLine(frame, x, y, x + width - 1, y, 0xff8a6b38);
+        DrawLine(frame, x, y + 38, x + width - 1, y + 38, 0xff65c5ca);
+        DrawText(frame, x + (width - 132) / 2, y + 8, "DET HÄNGANDE REGISTRET", 0xffffd66b);
+        DrawText(frame, x + (width - 120) / 2, y + 22, "FOGDENS TIONDE VÄRLD", 0xff9bd4dc);
+    }
+
+    private void DrawTitheModuleHud(uint[] frame)
+    {
+        if (_titheWorld is not TitheWorldState state || state.PrimaryModule == TithePrimaryModule.Standard) return;
+        string text = state.PrimaryModule == TithePrimaryModule.CrownDrill ? "Z KRONBORR" : "Z SALVDIR";
+        DrawRect(frame, 4, _height - 25, text.Length * 6 + 8, 11, 0xdd081019);
+        DrawText(frame, 8, _height - 23, text, 0xff65c5ca);
+    }
+
+    private void DrawTitheUpgradePanel(uint[] frame)
+    {
+        if (_titheWorld is not TitheWorldState state) return;
+        int width = Math.Min(360, _width - 16);
+        int height = _height <= 224 ? 126 : 142;
+        int x = (_width - width) / 2;
+        int y = (_height - height) / 2;
+        DrawRect(frame, x, y, width, height, 0xf5080d12);
+        DrawLine(frame, x, y, x + width - 1, y, 0xffffd66b);
+        DrawLine(frame, x, y + height - 1, x + width - 1, y + height - 1, 0xff65c5ca);
+        DrawText(frame, x + (width - 114) / 2, y + 8, "VÄLJ Z-MEKANISM", 0xffffd66b);
+        int gap = 6;
+        int cardWidth = (width - 24 - gap) / 2;
+        int cardY = y + 24;
+        int cardHeight = height - 48;
+        DrawTitheUpgradeCard(frame, x + 9, cardY, cardWidth, cardHeight, 0, state);
+        DrawTitheUpgradeCard(frame, x + 9 + cardWidth + gap, cardY, cardWidth, cardHeight, 1, state);
+        DrawText(frame, x + 10, y + height - 15, "V H VÄLJ  Z INSTALLERA  X DETALJ", 0xffb7c7d6);
+    }
+
+    private void DrawTitheUpgradeCard(uint[] frame, int x, int y, int width, int height, int index,
+        TitheWorldState state)
+    {
+        bool selected = state.UpgradeSelection == index;
+        uint border = selected ? 0xffffd66b : 0xff344d5c;
+        DrawRect(frame, x, y, width, height, selected ? 0xff172536 : 0xff0d151d);
+        DrawLine(frame, x, y, x + width - 1, y, border);
+        DrawLine(frame, x, y + height - 1, x + width - 1, y + height - 1, border);
+        DrawLine(frame, x, y, x, y + height - 1, border);
+        DrawLine(frame, x + width - 1, y, x + width - 1, y + height - 1, border);
+        DrawTitheModuleIcon(frame, x + width / 2, y + 19,
+            index == 0 ? TithePrimaryModule.CrownDrill : TithePrimaryModule.VolleyDirector);
+        DrawText(frame, x + 7, y + 35, index == 0 ? "KRONBORREN" : "SALVDIREKTÖREN", selected ? 0xffffd66b : 0xff9bd4dc);
+        DrawText(frame, x + 7, y + 49, index == 0 ? "CENTRUMBULT 07" : "TRE SKOTT 02", 0xffdce8f2);
+        DrawText(frame, x + 7, y + 61, index == 0 ? "INTERVALL 09" : "INTERVALL 04", 0xff65c58a);
+        if (state.ShowUpgradeDetails && height >= 90)
+            DrawText(frame, x + 7, y + 73, index == 0 ? "- LÅNGSAM" : "- SPRIDNING", 0xffff6b7f);
+        else if (height >= 86)
+            DrawText(frame, x + 7, y + 73, index == 0 ? "VÄRME +11" : "VÄRME +09", 0xffb7c7d6);
+    }
+
+    private void DrawTitheModuleIcon(uint[] frame, int x, int y, TithePrimaryModule module)
+    {
+        uint brass = 0xffd6b25e;
+        uint cyan = 0xff65c5ca;
+        if (module == TithePrimaryModule.CrownDrill)
+        {
+            FillTriangle(frame, x, y - 11, x - 7, y + 7, x + 7, y + 7, brass);
+            DrawRect(frame, x - 2, y - 8, 4, 17, cyan);
+            DrawCrown(frame, x - 2, y + 3, 0xffffd66b);
+        }
+        else
+        {
+            DrawRect(frame, x - 10, y - 5, 20, 10, 0xff293c43);
+            DrawLine(frame, x - 10, y - 7, x + 10, y - 7, brass);
+            FillCircle(frame, x - 7, y + 7, 2, cyan);
+            FillCircle(frame, x, y + 7, 2, cyan);
+            FillCircle(frame, x + 7, y + 7, 2, cyan);
+        }
+    }
+
     private void DrawStageClear(uint[] frame)
     {
         if (!_stageClear)
@@ -10647,6 +10965,11 @@ internal sealed class StormaktGame
         else if (_levelId == 3)
         {
             DrawRtsVictorySilver(frame, panelX + 196, 67);
+        }
+        else if (_levelId == 4)
+        {
+            DrawTitheModuleIcon(frame, panelX + 196, 67,
+                _titheWorld?.PrimaryModule ?? TithePrimaryModule.Standard);
         }
         else
         {
@@ -10673,6 +10996,11 @@ internal sealed class StormaktGame
             {
                 DrawText(frame, panelX + 42, 99, "UNDER SILVERÅDERN", 0xffffd66b);
                 DrawText(frame, panelX + 34, 116, "NEDSTIGNING VÄNTAR", 0xff65c58a);
+            }
+            else if (_levelId == 4)
+            {
+                DrawText(frame, panelX + 35, 99, "FÖRSTA VALVET ÖPPET", 0xffffd66b);
+                DrawText(frame, panelX + 37, 116, "VAPENSYSTEM SÄKRAT", 0xff65c58a);
             }
             else
             {
@@ -10923,6 +11251,7 @@ internal sealed class StormaktGame
         {
             1 => SkanskaRadioCards,
             2 => OresundRadioCards,
+            4 => TitheRadioCards,
             _ => RadioCards,
         };
         foreach (RadioCard card in cards)
@@ -11808,6 +12137,38 @@ internal sealed class StormaktGame
         public int PhaseAge { get; set; }
         public int BurningTransitionAge { get; set; }
         public double PhaseTransitionX { get; set; }
+    }
+
+    private enum TithePrimaryModule
+    {
+        Standard,
+        CrownDrill,
+        VolleyDirector,
+    }
+
+    private sealed class TitheWorldState
+    {
+        public int Age { get; set; }
+        public List<TitheChainTarget> Chains { get; } = [];
+        public int FreedShips { get; set; }
+        public bool UpgradeOffered { get; set; }
+        public bool ChoosingUpgrade { get; set; }
+        public bool UpgradeInstalled { get; set; }
+        public bool ShowUpgradeDetails { get; set; }
+        public int UpgradeSelection { get; set; }
+        public TithePrimaryModule PrimaryModule { get; set; } = TithePrimaryModule.Standard;
+    }
+
+    private sealed class TitheChainTarget(double x, double y, int kind)
+    {
+        public const int MaxHealth = 24;
+        public double X { get; set; } = x;
+        public double Y { get; set; } = y;
+        public int Kind { get; } = kind;
+        public int Health { get; set; } = MaxHealth;
+        public int Age { get; set; }
+        public bool Freed { get; set; }
+        public int FreedAge { get; set; }
     }
 
     private sealed class RtsState

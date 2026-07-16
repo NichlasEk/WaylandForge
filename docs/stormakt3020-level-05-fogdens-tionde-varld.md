@@ -1,6 +1,6 @@
 # Bana 5 - Fogdens tionde värld
 
-Status: planerad 2026-07-16. Nästa implementerade kampanjrad efter Silverkroppen. Första kodskivan ska stanna vid en spelbar inflygning, ett beslagsvalv och den första vapenuppgraderingen.
+Status: första spelbara kodskivan landad 2026-07-16. Kampanjrad 5 är startbar som `DEV`: Det hängande registret, två kedjade skepp, fysiska kedjelås och det första tvåvalsskåpet kör på eget state och seed `3505`.
 
 ## Dramatiskt löfte
 
@@ -162,9 +162,9 @@ Systemet introduceras här och följer med genom bana 5–7. Bana 1–4 förblir
 
 ## Tekniska checkpoints
 
-1. **Plan och kampanjrad:** detta dokument, Bana 5-rad som `DEV`, nivå-id, seed och tom deterministisk tidslinje.
-2. **Beslagsfält:** tre bakgrundslager, kedjade skepp, fysiska kedjelås och ett befriat skepp.
-3. **Första skåpet:** kampanjstate och båda `Z`-modulerna med UI, grafik, ljud och fallback.
+1. **Plan och kampanjrad (landad 2026-07-16):** detta dokument, Bana 5-rad som `DEV`, nivå-id, seed och separat deterministisk tidslinje.
+2. **Beslagsfält (första skiva landad 2026-07-16):** kodritat mekaniskt arkiv, två kedjade skepp, fysiska cyanlås och befrielseflykt. Genererade parallaxlager och full skeppsvariation återstår till konstpasset.
+3. **Första skåpet (spelbart 2026-07-16):** båda `Z`-modulerna har kompakt wide/legacy-UI, synlig nackdel, skilda projektilmönster, skada, intervall, värme och HUD-namn. Permanent kampanjsparning och egna ljud/assets hör till checkpoint 6 respektive konst/ljudpasset.
 4. **Tullkorridorer:** roterande portar och magnetiska myntminor med bredsideinteraktion.
 5. **Registerval:** riskkorridorer, befriade skepp och Sörens/Ebbas avslöjande.
 6. **Fullt vapensystem:** båda `X`-modulerna, kylare/pansar och sparning till framtida banor.
@@ -191,3 +191,10 @@ Systemet introduceras här och följer med genom bana 5–7. Bana 1–4 förblir
 - Ingen fri ombyggnad under strid.
 - Inga hundratals aktiva räddade skepp; flottan är presentation och framtida kampanjstate.
 - Ingen full boss eller permanent save-migrering innan första skåpets båda val är roliga i direkt provspelning.
+
+## Första skivans verifiering
+
+- Direkt WFEX startar rad 5 i utvecklarläge och går aldrig via tidigare banors radio- eller fiendetabeller.
+- Kronborren och Salvdirektören ger olika slutbilder efter samma rörelsespår i både 400x280 och 320x224.
+- Uppgraderingspanelen är verifierad vid bild 849; upprepade körningar gav identisk hash `cc7d4c1dc0c7ecdb`.
+- Salvdirektörspåret upprepades med identisk hash `01b0f8a942447d1e`; båda legacy-valen har separata stabila slutbilder.
