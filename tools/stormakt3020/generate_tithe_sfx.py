@@ -8,6 +8,7 @@ Run with the Stable Audio 3 virtual environment so the model is loaded once:
 """
 from __future__ import annotations
 
+import argparse
 import os
 import subprocess
 from dataclasses import dataclass
@@ -37,6 +38,7 @@ class Effect:
     duration: float
     seed: int
     prompt: str
+    raw_revision: str = ""
 
 
 EFFECTS = [
@@ -56,10 +58,12 @@ EFFECTS = [
            "Single confiscated starship weapon module installed, brass clamps close in sequence, iron couplings engage, restrained cyan power-up chime, dry isolated retro science fiction game sound effect"),
     Effect("tithe-crown-drill", 1.0, 3020508,
            "Single compact crown drill cannon shot, fast rotating brass bore spins up and launches one dense piercing cyan bolt, hard mechanical recoil, dry isolated retro science fiction game sound effect"),
-    Effect("tithe-volley-director", 0.8, 3020509,
-           "Single tight three-gun starship volley, synchronized brass breech snaps and three compact electromagnetic cracks almost together, short dry tail, isolated retro science fiction game sound effect"),
-    Effect("tithe-magnet-broadside", 1.6, 3020510,
-           "Single magnetic starship broadside pulse, two deep cyan coils discharge outward, wide resonant field sweep pulls metal and fades quickly, dry isolated retro science fiction game sound effect"),
+    Effect("tithe-volley-director", 0.55, 3020514,
+           "Single subdued three-gun starship volley, three tiny brass clockwork breeches click almost together, compact soft electromagnetic pops, restrained mechanical recoil, very short dry tail, quiet isolated retro science fiction game sound effect, no cannon boom no sharp crack",
+           "v2"),
+    Effect("tithe-magnet-broadside", 0.85, 3020515,
+           "Single compact magnetic starship broadside, paired cyan coils make one muted low mechanical thump and a short soft field flutter, restrained brass relay click, narrow dry tail, quiet isolated retro science fiction game sound effect, no laser blast no resonant sweep",
+           "v2"),
     Effect("tithe-chain-canister", 1.4, 3020511,
            "Single chain canister starship broadside, heavy iron breech blast launches several linked chain fragments, sharp brass recoil and rattling metal tail, dry isolated retro science fiction game sound effect"),
     Effect("tithe-boss-phase-break", 2.4, 3020512,
@@ -70,12 +74,18 @@ EFFECTS = [
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--only", action="append", choices=[effect.name for effect in EFFECTS],
+                        help="Generate only the named effect; repeat for more than one.")
+    args = parser.parse_args()
+    selected = [effect for effect in EFFECTS if not args.only or effect.name in args.only]
     RAW.mkdir(parents=True, exist_ok=True)
     ROOT.mkdir(parents=True, exist_ok=True)
     print("Loading Stable Audio 3 Small-SFX once...")
     model = StableAudioModel.from_pretrained("small-sfx", device="cuda", model_half=True)
-    for effect in EFFECTS:
-        raw = RAW / f"{effect.name}-stable-audio3.wav"
+    for effect in selected:
+        revision = f"-{effect.raw_revision}" if effect.raw_revision else ""
+        raw = RAW / f"{effect.name}{revision}-stable-audio3.wav"
         runtime = ROOT / f"{effect.name}.wav"
         print(f"Generating {effect.name} seed={effect.seed} duration={effect.duration:.1f}s")
         audio = model.generate(

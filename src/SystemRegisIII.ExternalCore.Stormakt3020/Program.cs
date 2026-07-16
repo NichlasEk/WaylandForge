@@ -11109,7 +11109,11 @@ internal sealed class StormaktGame
         {
             int x = (int)Math.Round(shot.X);
             int y = (int)Math.Round(shot.Y);
-            string? generatedShotName = shot.Kind switch
+            string? generatedShotName = _levelId == 4 && shot.Kind == 7
+                ? ((_missionFrame / 4 + y / 3) & 1) == 0
+                    ? "tithe_effect_press_bolt_a"
+                    : "tithe_effect_press_bolt_b"
+                : shot.Kind switch
             {
                 0 => "enemy_shot_red",
                 1 or 4 => "enemy_shot_seal",
@@ -11733,7 +11737,12 @@ internal sealed class StormaktGame
             if (wall.Health[segment] <= 0) continue;
             int x = segment * segmentWidth;
             int width = Math.Min(segmentWidth - 2, _width - x);
-            if (_sprites?.TryGet("tithe_seal_segment", out Sprite seal) == true)
+            string sealName = wall.Health[segment] >= TitheSealWall.SegmentHealth
+                ? "tithe_seal_segment"
+                : wall.Health[segment] > TitheSealWall.SegmentHealth / 2
+                    ? "tithe_seal_segment_damaged"
+                    : "tithe_seal_segment_critical";
+            if (_sprites?.TryGet(sealName, out Sprite seal) == true)
                 DrawSpriteScaled(frame, seal, x, y - 11, width, 22);
             else
             {
@@ -11744,8 +11753,6 @@ internal sealed class StormaktGame
                 FillCircle(frame, x + width / 2, y, 5, 0xffd6b25e);
                 DrawCrown(frame, x + width / 2 - 2, y - 2, 0xff35191c);
             }
-            if (wall.Health[segment] < TitheSealWall.SegmentHealth)
-                DrawLine(frame, x + 4, y - 6, x + width - 5, y + 6, 0xffff8a4a);
         }
     }
 
