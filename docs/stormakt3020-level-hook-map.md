@@ -25,7 +25,7 @@ level select
        HUD / boss HUD / title / radio / result / pause
 ```
 
-`StartLevel`, `ResetLevelState`, `StepLevelTimeline` and `DrawLevelScenery` are the stable campaign hooks. Stora Bält, Skånska skuggor, Öresunds järnkrona, Silverkroppen and Fogdens tionde värld are public campaign rows. Silverkroppen retains its separate RTS/dungeon submenu, but the submenu itself is publicly reachable.
+`StartLevel`, `ResetLevelState`, `StepLevelTimeline` and `DrawLevelScenery` are the stable campaign hooks. Stora Bält, Skånska skuggor, Öresunds järnkrona, Silverkroppen and Fogdens tionde värld are public campaign rows. Silverkroppen retains its separate RTS/dungeon submenu, but the submenu itself is publicly reachable. Snapphanens ed is a directly startable developer row with its own level state; Köpenhamns ring remains the next locked/developer preview row.
 
 ## Selection and state ownership
 
@@ -142,3 +142,9 @@ Campaign row 5 is public `STRID`. `DamageShip` follows the ordinary life-loss pa
 All completed public missions use the same two-step handoff. Their result card remains on screen until Start, preserving the level's victory music and giving the player a deliberate pause. Start then calls `ReturnToCampaignSelect(levelId + 1)`, switches to menu music and highlights the following campaign row without starting it. Stora Bält selects Skånska skuggor, Skånska selects Öresunds järnkrona, Öresund selects Silverkroppen, the completed temple epilogue selects Fogdens tionde värld, and Rigsregnskabet selects Snapphanens ed. A death is intentionally different: `START ÅTERKALLAR` resets the current level rather than advancing.
 
 The handoff was exercised through real public WFEX input for all five completed campaign missions. Stora Bält returned with row 2 highlighted, Skånska with row 3, Öresund with row 4, the temple epilogue with row 5 and Tionde världen with row 6. Silverkroppen's separate RTS/dungeon submenu also opens in non-developer mode. No handoff auto-started the highlighted mission.
+
+## Snapphanens ed dispatch
+
+Campaign row 6 owns level id `5`, reset seed `3606` and a separate `SnapphaneWorldState`. The first checkpoint branches out of the shared shooter spine immediately after player movement, weapon input and `StepShots`; generic enemies, ground encounters, bosses and old level timelines are never stepped. Both scheduled radio selectors explicitly choose an empty Bana 6 table, so Stora Bält dialogue cannot leak into the new level while its real script is still being produced.
+
+`DrawSnapphaneWorld` is a separate render stack with three state-owned wreck depths, the physical silhouette of Sören's uneven green double-blink and its own mission title. The temporary one-minute checkpoint result remains in combat music until Start, then opens the campaign menu with row 7 selected. Seven-row menu spacing is verified in 400x280 and 320x224 without overlapping the footer. Repeated wide WFEX traces matched at the title, result and campaign handoff frames; a separate legacy trace covered the same three states.

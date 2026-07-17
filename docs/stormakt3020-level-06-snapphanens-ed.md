@@ -1,6 +1,6 @@
 # Bana 6 - Snapphanens ed
 
-Status: implementeringsplan fastlagd 2026-07-16. Bana 6 blir kampanjrad 6, nivå-id `5`, seed `3606` och börjar som `DEV`. Första spelbara checkpointen ska kunna startas direkt från den rad som redan förväljs efter Rigsregnskabets resultatkort. Banan publiceras som `STRID` först när båda vägvalen, Sörens duell, De Røde Hunde, radio, unik musik och wide/legacy-verifiering är färdiga.
+Status: implementeringsplan fastlagd 2026-07-16; checkpoint 1 landad 2026-07-17. Bana 6 är kampanjrad 6, nivå-id `5`, seed `3606` och börjar som `DEV`. Den första spelbara minuten kan startas direkt från den rad som redan förväljs efter Rigsregnskabets resultatkort. Banan publiceras som `STRID` först när båda vägvalen, Sörens duell, De Røde Hunde, radio, unik musik och wide/legacy-verifiering är färdiga.
 
 ## Dramatiskt löfte
 
@@ -187,7 +187,7 @@ All radio går genom befintlig kö; fasbyten får inte tala över en aktiv repli
 
 ## Implementeringscheckpoints
 
-1. **Plan och kampanjrad:** detta dokument, rad 6 som `DEV`, nivå-id `5`, seed `3606`, tom separat state/render/tidslinje, titel och resultatkort. Resultat-Start markerar Bana 7. Commit och push.
+1. **Plan och kampanjrad (landad 2026-07-17):** detta dokument, rad 6 som `DEV`, nivå-id `5`, seed `3606`, separat `SnapphaneWorldState`, en deterministisk minut av det första tredelade vrakhavet, egen render/tidslinje, grön dubbelblinkande signalfyr, titel och resultatkort. Bana 1:s fiender och radio är hårt bortkopplade. Resultat-Start går till menymusik och markerar Bana 7; radlayouten rymmer nu alla sju fälttåg i wide och legacy. Commit och push.
 2. **Kampanjkit och save-schema:** bryt ut aktiv loadout, ladda schema 1/2, bevisa alla åtta kit i en kort testarena och skriv inga saves under testläge. Commit och push.
 3. **Vrakhav och falska fyrar:** tre bakgrundslager, fysiska vrak, fyra fyrstates, doftminor och minst ett emergent fiende-mot-miljöutfall. Wide/legacy-hashar. Commit och push.
 4. **Sörens hedersduell:** egen state, två faser, efterbildsläsning, krokattack, radio och mjuk övergång till jämsidesflygning. Ingen dödsexplosion. Commit och push.

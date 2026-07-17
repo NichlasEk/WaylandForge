@@ -348,6 +348,7 @@ internal sealed class StormaktGame
     private RtsState? _rts;
     private DungeonState? _dungeon;
     private TitheWorldState? _titheWorld;
+    private SnapphaneWorldState? _snapphaneWorld;
     private bool _stageClear;
     private int _stageClearAge;
     private uint _previousButtons;
@@ -575,6 +576,13 @@ internal sealed class StormaktGame
         }
 
         StepShots();
+        if (_levelId == 5)
+        {
+            StepSnapphaneWorld();
+            StepStars();
+            _previousButtons = buttons;
+            return;
+        }
         StepTitheWorld();
         StepOresundBridgeSection();
         StepEnemyShots();
@@ -618,6 +626,11 @@ internal sealed class StormaktGame
         if (_levelId == 4 && !_inLevelSelect && !_inLevelPreview)
         {
             DrawTitheWorld(frame);
+            return;
+        }
+        if (_levelId == 5 && !_inLevelSelect && !_inLevelPreview)
+        {
+            DrawSnapphaneWorld(frame);
             return;
         }
         DrawSky(frame);
@@ -676,7 +689,7 @@ internal sealed class StormaktGame
         _groundTargets.Clear();
         _anchorHazards.Clear();
         _crystalSpears.Clear();
-        _random = new Random(_levelId switch { 1 => 3202, 2 => 3303, 3 => 3404, 4 => 3505, _ => 3020 });
+        _random = new Random(_levelId switch { 1 => 3202, 2 => 3303, 3 => 3404, 4 => 3505, 5 => 3606, _ => 3020 });
         for (int i = 0; i < _stars.Length; i++)
         {
             _stars[i] = new Star(_random.Next(_width), _random.Next(_height), 1 + _random.Next(3), _random.Next(50, 180));
@@ -709,6 +722,11 @@ internal sealed class StormaktGame
             : null;
         _dungeon = null;
         _titheWorld = _levelId == 4 ? new TitheWorldState() : null;
+        _snapphaneWorld = _levelId == 5 ? new SnapphaneWorldState() : null;
+        if (_snapphaneWorld is SnapphaneWorldState resetSnapphane)
+        {
+            ResetSnapphaneWorld(resetSnapphane);
+        }
         if (_titheWorld is TitheWorldState resetTithe && previousTithe is not null)
         {
             resetTithe.PrimaryModule = previousTithe.PrimaryModule;
@@ -850,7 +868,7 @@ internal sealed class StormaktGame
                 _previousButtons = buttons;
                 return;
             }
-            if (_levelSelection is 0 or 1 or 2 or 4)
+            if (_levelSelection is 0 or 1 or 2 or 4 || _developerMode && _levelSelection == 5)
             {
                 StartLevel(_levelSelection, fresh: (buttons & Slow) != 0);
             }
@@ -4732,6 +4750,7 @@ internal sealed class StormaktGame
             1 => SkanskaRadioCards,
             2 => OresundRadioCards,
             4 => TitheRadioCards,
+            5 => [],
             _ => RadioCards,
         };
         foreach (RadioCard card in cards)
@@ -4827,6 +4846,51 @@ internal sealed class StormaktGame
             _enemies.Clear();
             _audio?.Trigger(StormaktSound.Deploy);
         }
+    }
+
+    private void ResetSnapphaneWorld(SnapphaneWorldState state)
+    {
+        state.Age = 0;
+        state.WreckSerial = 18;
+        for (int index = 0; index < 18; index++)
+        {
+            int layer = index % 3;
+            int margin = layer == 2 ? 34 : 12;
+            double x = margin + _random.Next(Math.Max(1, _width - margin * 2));
+            double y = 20 + _random.Next(Math.Max(1, _height - 34));
+            double speed = layer switch { 0 => 0.12, 1 => 0.28, _ => 0.58 } + _random.NextDouble() * 0.12;
+            state.Wrecks.Add(new SnapphaneWreck(x, y, speed, layer, index % 4, index * 17));
+        }
+    }
+
+    private void StepSnapphaneWorld()
+    {
+        if (_snapphaneWorld is not SnapphaneWorldState state || _stageClear) return;
+
+        state.Age++;
+        foreach (SnapphaneWreck wreck in state.Wrecks)
+        {
+            wreck.Y += wreck.Speed;
+            if (wreck.Y <= _height + 38) continue;
+
+            int serial = state.WreckSerial++;
+            wreck.Y = -28 - (serial % 5) * 13;
+            wreck.X = 18 + Math.Abs(serial * 73 + wreck.Kind * 41) % Math.Max(1, _width - 36);
+            wreck.Kind = (wreck.Kind + 1 + serial) & 3;
+            wreck.Phase = serial * 19;
+        }
+
+        // Checkpoint one ends after one deterministic minute. Later slices replace this
+        // seam with the beacon, duel, route and Red Hounds timelines without touching
+        // the campaign handoff.
+        if (state.Age < 3_600) return;
+
+        _stageClear = true;
+        _stageClearAge = 0;
+        _shots.Clear();
+        _enemyShots.Clear();
+        _enemies.Clear();
+        _audio?.Trigger(StormaktSound.Deploy);
     }
 
     private void StepTitheWorld()
@@ -11439,6 +11503,121 @@ internal sealed class StormaktGame
         }
     }
 
+    private void DrawSnapphaneWorld(uint[] frame)
+    {
+        Clear(frame, 0xff03090b);
+        int age = _snapphaneWorld?.Age ?? 0;
+        for (int y = 17; y < _height - 12; y++)
+        {
+            int depth = y * 22 / Math.Max(1, _height);
+            uint color = 0xff000000u |
+                ((uint)(4 + depth / 5) << 16) |
+                ((uint)(12 + depth) << 8) |
+                (uint)(15 + depth);
+            DrawLine(frame, 0, y, _width - 1, y, color);
+        }
+
+        DrawStars(frame);
+        if (_snapphaneWorld is SnapphaneWorldState state)
+        {
+            for (int layer = 0; layer < 3; layer++)
+            {
+                foreach (SnapphaneWreck wreck in state.Wrecks)
+                {
+                    if (wreck.Layer == layer) DrawSnapphaneWreck(frame, wreck, age);
+                }
+            }
+        }
+        DrawSnapphaneBeacon(frame, age);
+        DrawShots(frame);
+        DrawShip(frame);
+        DrawBorder(frame);
+        DrawHud(frame);
+        DrawSnapphaneMissionTitle(frame);
+        DrawStageClear(frame);
+        DrawPause(frame);
+        if (_gameOver)
+        {
+            int x = (_width - 168) / 2;
+            int y = (_height - 42) / 2;
+            DrawRect(frame, x, y, 168, 42, 0xdd090b10);
+            DrawText(frame, x + 16, y + 10, "FLOTTAN FÖLL", 0xffff6b7f);
+            DrawText(frame, x + 22, y + 26, "START ÅTERKALLAR", 0xffffd66b);
+        }
+    }
+
+    private void DrawSnapphaneWreck(uint[] frame, SnapphaneWreck wreck, int age)
+    {
+        int x = (int)Math.Round(wreck.X);
+        int y = (int)Math.Round(wreck.Y);
+        int scale = wreck.Layer switch { 0 => 5, 1 => 9, _ => 14 };
+        int sway = (int)Math.Round(Math.Sin((age + wreck.Phase) * 0.012) * (wreck.Layer + 1));
+        x += sway;
+        uint shadow = wreck.Layer switch { 0 => 0xff0c1718, 1 => 0xff142322, _ => 0xff1e2926 };
+        uint edge = wreck.Layer switch { 0 => 0xff243131, 1 => 0xff465047, _ => 0xff725a3b };
+        uint scar = wreck.Layer == 2 ? 0xff315b42 : 0xff263b35;
+
+        switch (wreck.Kind)
+        {
+            case 0:
+                FillTriangle(frame, x - scale, y, x + scale, y - scale / 2, x + scale / 2, y + scale / 2, shadow);
+                DrawLine(frame, x - scale, y, x + scale, y - scale / 2, edge);
+                DrawLine(frame, x - scale / 2, y - scale, x + scale / 3, y + scale / 2, edge);
+                break;
+            case 1:
+                DrawRect(frame, x - scale, y - scale / 3, scale * 2, Math.Max(3, scale * 2 / 3), shadow);
+                DrawLine(frame, x - scale, y - scale / 3, x + scale, y + scale / 3, edge);
+                DrawLine(frame, x, y - scale, x, y + scale / 2, edge);
+                break;
+            case 2:
+                FillTriangle(frame, x, y - scale, x - scale, y + scale / 2, x + scale, y + scale / 3, shadow);
+                DrawLine(frame, x, y - scale, x - scale, y + scale / 2, edge);
+                DrawLine(frame, x - scale / 2, y, x + scale / 2, y, scar);
+                break;
+            default:
+                DrawRect(frame, x - scale / 2, y - scale, Math.Max(3, scale), scale * 2, shadow);
+                DrawLine(frame, x - scale, y - scale / 2, x + scale, y + scale / 2, edge);
+                DrawLine(frame, x + scale, y - scale / 2, x - scale, y + scale / 2, edge);
+                break;
+        }
+        if (wreck.Layer == 2 && ((wreck.Phase / 17) & 1) == 0)
+        {
+            PutPixel(frame, x + scale / 3, y, scar);
+        }
+    }
+
+    private void DrawSnapphaneBeacon(uint[] frame, int age)
+    {
+        int x = _width / 2;
+        int y = 39;
+        int pulse = age % 90;
+        bool doubleBlink = pulse < 8 || pulse is >= 18 and < 26;
+        uint green = doubleBlink ? 0xff77e6a0 : 0xff244936;
+        DrawLine(frame, x - 11, y + 5, x, y - 4, 0xff3f4d45);
+        DrawLine(frame, x, y - 4, x + 11, y + 5, 0xff3f4d45);
+        DrawLine(frame, x - 8, y + 5, x + 8, y + 5, 0xff765139);
+        DrawRect(frame, x - 2, y - 1, 5, 7, 0xff17221f);
+        FillCircle(frame, x, y - 2, doubleBlink ? 2 : 1, green);
+        if (doubleBlink)
+        {
+            PutPixel(frame, x - 5, y - 2, 0xff315b42);
+            PutPixel(frame, x + 5, y - 2, 0xff315b42);
+        }
+    }
+
+    private void DrawSnapphaneMissionTitle(uint[] frame)
+    {
+        if (_missionFrame < 15 || _missionFrame >= 165) return;
+        int edge = Math.Min(_missionFrame - 14, 165 - _missionFrame);
+        int y = 73 - Math.Min(12, edge);
+        int panelX = (_width - 272) / 2;
+        DrawRect(frame, panelX, y, 272, 39, 0xff07100f);
+        DrawLine(frame, panelX, y, panelX + 271, y, 0xff765139);
+        DrawLine(frame, panelX, y + 38, panelX + 271, y + 38, 0xff315b42);
+        DrawText(frame, panelX + 91, y + 8, "DEN GRÖNA SIGNALEN", 0xffffd66b);
+        DrawText(frame, panelX + 91, y + 22, "SNAPPHANENS ED", 0xff77e6a0);
+    }
+
     private void DrawTitheWorld(uint[] frame)
     {
         Clear(frame, 0xff05090c);
@@ -12093,6 +12272,10 @@ internal sealed class StormaktGame
             DrawTitheModuleIcon(frame, panelX + 196, 67,
                 _titheWorld?.PrimaryModule ?? TithePrimaryModule.Standard);
         }
+        else if (_levelId == 5)
+        {
+            DrawSnapphaneOathSeal(frame, panelX + 196, 67);
+        }
         else
         {
             DrawSnapphaneSilhouette(frame, panelX + 196, 67);
@@ -12127,12 +12310,30 @@ internal sealed class StormaktGame
                 else
                     DrawText(frame, panelX + 42, 116, $"FLOTTA {_titheWorld?.FreedShips ?? 0} SKEPP FRI", 0xff65c58a);
             }
+            else if (_levelId == 5)
+            {
+                DrawText(frame, panelX + 43, 99, "EDENS SIGNAL FUNNEN", 0xffffd66b);
+                DrawText(frame, panelX + 36, 116, "MOT KÖPENHAMNS RING", 0xff77e6a0);
+            }
             else
             {
                 DrawText(frame, panelX + 51, 99, "BÄLTET ÄR ÖPPET", 0xffffd66b);
                 DrawText(frame, panelX + 39, 116, "KRONARKIV SÄKRAT", 0xff9bd4dc);
             }
         }
+    }
+
+    private void DrawSnapphaneOathSeal(uint[] frame, int x, int y)
+    {
+        int pulse = (_stageClearAge / 6) & 1;
+        uint green = pulse == 0 ? 0xff77e6a0 : 0xff315b42;
+        uint copper = 0xff765139;
+        FillCircle(frame, x, y, 19, 0xff101a17);
+        DrawCircleOutline(frame, x, y, 18, copper);
+        DrawCircleOutline(frame, x, y, 13, green);
+        DrawLine(frame, x - 8, y - 3, x, y + 7, green);
+        DrawLine(frame, x, y + 7, x + 10, y - 8, green);
+        DrawLine(frame, x - 10, y + 10, x + 11, y + 10, copper);
     }
 
     private void DrawOresundResultCrown(uint[] frame, int x, int y)
@@ -12270,7 +12471,7 @@ internal sealed class StormaktGame
         int panelTop = legacy ? 67 : 103;
         int panelBottom = _height - 12;
         int listY = legacy ? 82 : 120;
-        int rowHeight = legacy ? 18 : 21;
+        int rowHeight = legacy ? 16 : 18;
         string logoName = legacy ? "stormakt_logo_legacy" : "stormakt_logo_wide";
         if (_sprites?.TryGet(logoName, out Sprite logo) == true)
         {
@@ -12378,6 +12579,7 @@ internal sealed class StormaktGame
             1 => SkanskaRadioCards,
             2 => OresundRadioCards,
             4 => TitheRadioCards,
+            5 => [],
             _ => RadioCards,
         };
         foreach (RadioCard card in cards)
@@ -13300,6 +13502,23 @@ internal sealed class StormaktGame
         Standard,
         SilverCooler,
         SeizureArmor,
+    }
+
+    private sealed class SnapphaneWorldState
+    {
+        public int Age { get; set; }
+        public int WreckSerial { get; set; }
+        public List<SnapphaneWreck> Wrecks { get; } = [];
+    }
+
+    private sealed class SnapphaneWreck(double x, double y, double speed, int layer, int kind, int phase)
+    {
+        public double X { get; set; } = x;
+        public double Y { get; set; } = y;
+        public double Speed { get; } = speed;
+        public int Layer { get; } = layer;
+        public int Kind { get; set; } = kind;
+        public int Phase { get; set; } = phase;
     }
 
     private sealed class TitheWorldState
