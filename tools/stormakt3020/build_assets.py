@@ -1164,6 +1164,29 @@ def append_snapphane_world_assets(entries: list[tuple[str, Image.Image]], source
         entries.append((name, sprite))
 
 
+def append_snapphane_duel_assets(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    definitions = [
+        ("soren_duel_ready", 0, 0, (58, 62)),
+        ("soren_duel_dash", 1, 0, (62, 66)),
+        ("soren_duel_hooks", 2, 0, (68, 68)),
+        ("soren_duel_oath", 3, 0, (58, 62)),
+        ("soren_duel_afterimage", 0, 1, (58, 62)),
+        ("soren_chain_hook", 1, 1, (28, 34)),
+        ("soren_copper_salvo", 2, 1, (18, 22)),
+        ("soren_oath_pulse", 3, 1, (42, 42)),
+    ]
+    for name, column, row, target in definitions:
+        cell = source.crop((
+            column * source.width // 4,
+            row * source.height // 2,
+            (column + 1) * source.width // 4,
+            (row + 1) * source.height // 2,
+        )).convert("RGBA")
+        sprite = trim_alpha(cell)
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def build(
     input_path: Path,
     danish_input_path: Path,
@@ -1218,6 +1241,7 @@ def build(
     tithe_weapon_effects_input_path: Path,
     tithe_route_customs_input_path: Path,
     snapphane_world_input_path: Path,
+    snapphane_duel_input_path: Path,
     rts_road_input_path: Path,
     dungeon_karl_input_path: Path,
     dungeon_mine_input_path: Path,
@@ -1304,6 +1328,7 @@ def build(
     tithe_weapon_effects_source = Image.open(tithe_weapon_effects_input_path).convert("RGBA")
     tithe_route_customs_source = Image.open(tithe_route_customs_input_path).convert("RGBA")
     snapphane_world_source = Image.open(snapphane_world_input_path).convert("RGBA")
+    snapphane_duel_source = Image.open(snapphane_duel_input_path).convert("RGBA")
     rts_road_source = Image.open(rts_road_input_path).convert("RGBA")
     dungeon_karl_source = Image.open(dungeon_karl_input_path).convert("RGBA")
     dungeon_mine_source = Image.open(dungeon_mine_input_path).convert("RGBA")
@@ -1424,6 +1449,7 @@ def build(
     append_tithe_weapon_assets(entries, tithe_ship_modules_source, tithe_weapon_effects_source)
     append_tithe_route_assets(entries, tithe_route_customs_source)
     append_snapphane_world_assets(entries, snapphane_world_source)
+    append_snapphane_duel_assets(entries, snapphane_duel_source)
     append_rts_frontier_road(entries, rts_road_source)
     append_dungeon_assets(entries, dungeon_karl_source, dungeon_mine_source)
     append_dungeon_loot(entries, dungeon_loot_source)
@@ -1657,6 +1683,7 @@ def main() -> None:
     parser.add_argument("--tithe-weapon-effects-input", type=Path, default=Path("assets/stormakt3020/tithe-weapon-effects-v1.png"))
     parser.add_argument("--tithe-route-customs-input", type=Path, default=Path("assets/stormakt3020/tithe-route-customs-v1.png"))
     parser.add_argument("--snapphane-world-input", type=Path, default=Path("assets/stormakt3020/snapphane-beacons-wrecks-v1.png"))
+    parser.add_argument("--snapphane-duel-input", type=Path, default=Path("assets/stormakt3020/snapphane-soren-duel-v1.png"))
     parser.add_argument("--rts-road-input", type=Path, default=Path("assets/stormakt3020/rts-danish-frontier-road-v1.png"))
     parser.add_argument("--dungeon-karl-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-v1.png"))
     parser.add_argument("--dungeon-mine-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva1-environment-v1.png"))
@@ -1748,6 +1775,7 @@ def main() -> None:
         args.tithe_weapon_effects_input,
         args.tithe_route_customs_input,
         args.snapphane_world_input,
+        args.snapphane_duel_input,
         args.rts_road_input,
         args.dungeon_karl_input,
         args.dungeon_mine_input,
