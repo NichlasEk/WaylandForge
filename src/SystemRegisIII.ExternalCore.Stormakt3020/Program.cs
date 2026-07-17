@@ -163,6 +163,8 @@ internal sealed class StormaktGame
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_LOADOUT_TEST"), out int testKit) && testKit is >= 0 and < 8
             ? testKit
             : null;
+    private readonly bool _snapphaneEmergenceTestMode = string.Equals(
+        Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_EMERGENCE_TEST"), "1", StringComparison.Ordinal);
     private readonly SpritePack? _sprites;
     private readonly StormaktMusicLoop? _audio;
     private Random _random = new(3020);
@@ -735,6 +737,16 @@ internal sealed class StormaktGame
         if (_snapphaneWorld is SnapphaneWorldState resetSnapphane)
         {
             ResetSnapphaneWorld(resetSnapphane);
+            if (_snapphaneEmergenceTestMode)
+            {
+                resetSnapphane.ScentMines.Add(new SnapphaneScentMine(_width / 2.0, 92, 900)
+                {
+                    Turned = true,
+                    Vy = 0.12,
+                });
+                resetSnapphane.Hunters.Add(new SnapphaneHunter(_width / 2.0 - 24, 34, 901));
+                resetSnapphane.Hunters.Add(new SnapphaneHunter(_width / 2.0 + 18, 102, 902) { Health = 20 });
+            }
         }
         if (_rts is RtsState resetRts)
         {
@@ -4876,7 +4888,8 @@ internal sealed class StormaktGame
             int layer = index % 3;
             int margin = layer == 2 ? 34 : 12;
             double x = margin + _random.Next(Math.Max(1, _width - margin * 2));
-            double y = 20 + _random.Next(Math.Max(1, _height - 34));
+            int fieldHeight = layer == 2 ? Math.Max(1, _height - 112) : Math.Max(1, _height - 34);
+            double y = 20 + _random.Next(fieldHeight);
             double speed = layer switch { 0 => 0.12, 1 => 0.28, _ => 0.58 } + _random.NextDouble() * 0.12;
             state.Wrecks.Add(new SnapphaneWreck(x, y, speed, layer, index % 4, index * 17));
         }
@@ -4889,27 +4902,332 @@ internal sealed class StormaktGame
         state.Age++;
         foreach (SnapphaneWreck wreck in state.Wrecks)
         {
+            if (wreck.BurstAge > 0)
+            {
+                wreck.BurstAge++;
+                if (wreck.BurstAge < 42) continue;
+                ResetSnapphaneWreck(state, wreck);
+                continue;
+            }
+            wreck.X += wreck.Vx;
+            wreck.Vx *= 0.992;
             wreck.Y += wreck.Speed;
-            if (wreck.Y <= _height + 38) continue;
-
-            int serial = state.WreckSerial++;
-            wreck.Y = -28 - (serial % 5) * 13;
-            wreck.X = 18 + Math.Abs(serial * 73 + wreck.Kind * 41) % Math.Max(1, _width - 36);
-            wreck.Kind = (wreck.Kind + 1 + serial) & 3;
-            wreck.Phase = serial * 19;
+            if (wreck.Physical && DistanceSquared(wreck.X, wreck.Y, _shipX, _shipY) < 20 * 20) DamageShip();
+            if (wreck.Y > _height + 38 || wreck.X < -48 || wreck.X > _width + 48)
+                ResetSnapphaneWreck(state, wreck);
         }
 
-        // Checkpoint one ends after one deterministic minute. Later slices replace this
-        // seam with the beacon, duel, route and Red Hounds timelines without touching
-        // the campaign handoff.
-        if (state.Age < 3_600) return;
+        if (state.Age is 90 or 1_050 or 2_010) SpawnSnapphaneBeaconWave(state);
+        if (state.Age is 420 or 780 or 1_260 or 1_740 or 2_220 or 2_700 or 3_180)
+            SpawnSnapphaneScentMine(state);
+
+        StepSnapphaneBeacons(state);
+        StepSnapphaneMines(state);
+        StepSnapphaneHunters(state);
+        StepSnapphaneHuntShots(state);
+        StepSnapphanePlayerShots(state);
+
+        if (state.Age < 4_200) return;
 
         _stageClear = true;
         _stageClearAge = 0;
         _shots.Clear();
         _enemyShots.Clear();
         _enemies.Clear();
+        state.HuntShots.Clear();
         _audio?.Trigger(StormaktSound.Deploy);
+    }
+
+    private void ResetSnapphaneWreck(SnapphaneWorldState state, SnapphaneWreck wreck)
+    {
+        int serial = state.WreckSerial++;
+        wreck.Y = -28 - (serial % 5) * 13;
+        wreck.X = 18 + Math.Abs(serial * 73 + wreck.Kind * 41) % Math.Max(1, _width - 36);
+        wreck.Kind = (wreck.Kind + 1 + serial) % 3;
+        wreck.Phase = serial * 19;
+        wreck.Vx = 0;
+        wreck.Health = wreck.Physical ? 30 : 999;
+        wreck.BurstAge = 0;
+    }
+
+    private void SpawnSnapphaneBeaconWave(SnapphaneWorldState state)
+    {
+        int group = state.BeaconWave++;
+        int trueIndex = group switch { 0 => 1, 1 => 2, _ => 0 };
+        for (int index = 0; index < 3; index++)
+        {
+            double x = (index + 1) * _width / 4.0 + (group - 1) * 7;
+            state.Beacons.Add(new SnapphaneBeacon(x, -28 - index * 5, index == trueIndex, group));
+        }
+    }
+
+    private void SpawnSnapphaneScentMine(SnapphaneWorldState state)
+    {
+        int serial = state.ScentMines.Count + state.Age / 30;
+        bool left = (serial & 1) == 0;
+        state.ScentMines.Add(new SnapphaneScentMine(left ? 30 : _width - 30, -18, serial)
+        {
+            Vx = left ? 0.22 : -0.22,
+        });
+    }
+
+    private void StepSnapphaneBeacons(SnapphaneWorldState state)
+    {
+        for (int index = state.Beacons.Count - 1; index >= 0; index--)
+        {
+            SnapphaneBeacon beacon = state.Beacons[index];
+            beacon.Age++;
+            beacon.Y += beacon.State == SnapphaneBeaconState.Destroyed ? 0.48 : 0.24;
+            if (beacon.State is not (SnapphaneBeaconState.Revealed or SnapphaneBeaconState.Destroyed))
+            {
+                int pulse = beacon.Age % 90;
+                bool lit = beacon.TrueSignal
+                    ? pulse < 8 || pulse is >= 18 and < 26
+                    : pulse < 24;
+                beacon.State = lit ? SnapphaneBeaconState.Signal : SnapphaneBeaconState.Off;
+            }
+            if (beacon.Y > _height + 42 || beacon.State == SnapphaneBeaconState.Destroyed && beacon.Age > 360)
+                state.Beacons.RemoveAt(index);
+        }
+    }
+
+    private void StepSnapphaneMines(SnapphaneWorldState state)
+    {
+        for (int index = state.ScentMines.Count - 1; index >= 0; index--)
+        {
+            SnapphaneScentMine mine = state.ScentMines[index];
+            mine.Age++;
+            if (mine.BurstAge > 0)
+            {
+                if (++mine.BurstAge > 34) state.ScentMines.RemoveAt(index);
+                continue;
+            }
+            if (mine.Turned)
+            {
+                mine.Vy = Math.Max(0.12, mine.Vy - 0.01);
+            }
+            else
+            {
+                double dx = _shipX - mine.X;
+                mine.Vx = Math.Clamp(mine.Vx + Math.Sign(dx) * 0.008, -0.72, 0.72);
+                mine.Vy = Math.Min(1.25, mine.Vy + 0.006);
+            }
+            mine.X += mine.Vx;
+            mine.Y += mine.Vy;
+            if (!mine.Turned && DistanceSquared(mine.X, mine.Y, _shipX, _shipY) < 15 * 15)
+            {
+                mine.BurstAge = 1;
+                DamageShip();
+            }
+            if (mine.Y < -42 || mine.Y > _height + 42 || mine.X < -42 || mine.X > _width + 42)
+                state.ScentMines.RemoveAt(index);
+        }
+    }
+
+    private void StepSnapphaneHunters(SnapphaneWorldState state)
+    {
+        for (int index = state.Hunters.Count - 1; index >= 0; index--)
+        {
+            SnapphaneHunter hunter = state.Hunters[index];
+            hunter.Age++;
+            if (hunter.BurstAge > 0)
+            {
+                if (++hunter.BurstAge > 38) state.Hunters.RemoveAt(index);
+                continue;
+            }
+            hunter.Y += hunter.Y < 58 + hunter.Serial % 32 ? 0.72 : 0.08;
+            hunter.X += Math.Sin((hunter.Age + hunter.Serial * 13) * 0.035) * 0.34;
+            if (hunter.Age % 105 == 42)
+            {
+                double dx = _shipX - hunter.X;
+                double dy = _shipY - hunter.Y;
+                double length = Math.Max(1, Math.Sqrt(dx * dx + dy * dy));
+                state.HuntShots.Add(new SnapphaneHuntShot(hunter.X, hunter.Y + 10,
+                    dx / length * 1.8, dy / length * 1.8, hunter.Serial));
+            }
+            if (DistanceSquared(hunter.X, hunter.Y, _shipX, _shipY) < 18 * 18) DamageShip();
+        }
+    }
+
+    private void StepSnapphaneHuntShots(SnapphaneWorldState state)
+    {
+        for (int index = state.HuntShots.Count - 1; index >= 0; index--)
+        {
+            SnapphaneHuntShot shot = state.HuntShots[index];
+            shot.Age++;
+            SnapphaneScentMine? lure = state.ScentMines
+                .Where(mine => mine.Turned && mine.BurstAge == 0)
+                .OrderBy(mine => DistanceSquared(shot.X, shot.Y, mine.X, mine.Y))
+                .FirstOrDefault();
+            double targetX = lure?.X ?? _shipX;
+            double targetY = lure?.Y ?? _shipY;
+            double dx = targetX - shot.X;
+            double dy = targetY - shot.Y;
+            double length = Math.Max(1, Math.Sqrt(dx * dx + dy * dy));
+            shot.Vx = shot.Vx * 0.94 + dx / length * 0.16;
+            shot.Vy = shot.Vy * 0.94 + dy / length * 0.16;
+            shot.X += shot.Vx;
+            shot.Y += shot.Vy;
+
+            if (lure is not null && DistanceSquared(shot.X, shot.Y, lure.X, lure.Y) < 9 * 9)
+            {
+                BurstSnapphaneMine(state, lure);
+                state.HuntShots.RemoveAt(index);
+                continue;
+            }
+            if (TrySnapphaneHuntShotEnvironmentHit(state, shot))
+            {
+                state.HuntShots.RemoveAt(index);
+                continue;
+            }
+            if (lure is null && DistanceSquared(shot.X, shot.Y, _shipX, _shipY) < 7 * 7)
+            {
+                DamageShip();
+                state.HuntShots.RemoveAt(index);
+                continue;
+            }
+            if (shot.Age > 300 || shot.X < -16 || shot.X > _width + 16 || shot.Y < -16 || shot.Y > _height + 16)
+                state.HuntShots.RemoveAt(index);
+        }
+    }
+
+    private bool TrySnapphaneHuntShotEnvironmentHit(SnapphaneWorldState state, SnapphaneHuntShot shot)
+    {
+        foreach (SnapphaneWreck wreck in state.Wrecks)
+        {
+            if (!wreck.Physical || wreck.BurstAge > 0 || DistanceSquared(shot.X, shot.Y, wreck.X, wreck.Y) >= 15 * 15)
+                continue;
+            DamageSnapphaneWreck(wreck, 12, shot.Serial);
+            state.EnvironmentKills++;
+            return true;
+        }
+        foreach (SnapphaneBeacon beacon in state.Beacons)
+        {
+            if (beacon.TrueSignal || beacon.State == SnapphaneBeaconState.Destroyed ||
+                DistanceSquared(shot.X, shot.Y, beacon.X, beacon.Y) >= 14 * 14) continue;
+            DamageSnapphaneBeacon(state, beacon, 12);
+            state.EnvironmentKills++;
+            return true;
+        }
+        foreach (SnapphaneHunter hunter in state.Hunters)
+        {
+            if (hunter.Serial == shot.Serial || hunter.BurstAge > 0 ||
+                DistanceSquared(shot.X, shot.Y, hunter.X, hunter.Y) >= 14 * 14) continue;
+            hunter.Health -= 14;
+            if (hunter.Health <= 0) hunter.BurstAge = 1;
+            state.EnvironmentKills++;
+            return true;
+        }
+        return false;
+    }
+
+    private void StepSnapphanePlayerShots(SnapphaneWorldState state)
+    {
+        for (int shotIndex = _shots.Count - 1; shotIndex >= 0; shotIndex--)
+        {
+            Shot shot = _shots[shotIndex];
+            bool consumed = false;
+            foreach (SnapphaneScentMine mine in state.ScentMines)
+            {
+                if (mine.BurstAge > 0 || DistanceSquared(shot.X, shot.Y, mine.X, mine.Y) >= 13 * 13) continue;
+                if (shot.Kind == TitheShotMagnetRing)
+                {
+                    mine.Turned = true;
+                    mine.Vy = Math.Min(mine.Vy, 0.28);
+                    _score += 75;
+                }
+                else
+                {
+                    mine.Health -= shot.Kind == TitheShotChainShot ? shot.Power * 2 : shot.Power;
+                    if (mine.Health <= 0) mine.BurstAge = 1;
+                }
+                consumed = true;
+                break;
+            }
+            if (!consumed)
+            {
+                foreach (SnapphaneBeacon beacon in state.Beacons)
+                {
+                    if (beacon.State == SnapphaneBeaconState.Destroyed ||
+                        DistanceSquared(shot.X, shot.Y, beacon.X, beacon.Y) >= 15 * 15) continue;
+                    if (!beacon.TrueSignal) DamageSnapphaneBeacon(state, beacon, shot.Power);
+                    consumed = true;
+                    break;
+                }
+            }
+            if (!consumed)
+            {
+                foreach (SnapphaneHunter hunter in state.Hunters)
+                {
+                    if (hunter.BurstAge > 0 || DistanceSquared(shot.X, shot.Y, hunter.X, hunter.Y) >= 15 * 15) continue;
+                    hunter.Health -= shot.Power;
+                    if (hunter.Health <= 0)
+                    {
+                        hunter.BurstAge = 1;
+                        _score += 180;
+                    }
+                    consumed = true;
+                    break;
+                }
+            }
+            if (!consumed)
+            {
+                foreach (SnapphaneWreck wreck in state.Wrecks)
+                {
+                    if (!wreck.Physical || wreck.BurstAge > 0 ||
+                        DistanceSquared(shot.X, shot.Y, wreck.X, wreck.Y) >= 17 * 17) continue;
+                    DamageSnapphaneWreck(wreck, shot.Power, shot.X + shot.Kind);
+                    consumed = true;
+                    break;
+                }
+            }
+            if (consumed) _shots.RemoveAt(shotIndex);
+        }
+    }
+
+    private void DamageSnapphaneBeacon(SnapphaneWorldState state, SnapphaneBeacon beacon, int damage)
+    {
+        if (beacon.TrueSignal) return;
+        beacon.State = SnapphaneBeaconState.Revealed;
+        beacon.Health -= damage;
+        if (!beacon.HunterReleased)
+        {
+            beacon.HunterReleased = true;
+            state.Hunters.Add(new SnapphaneHunter(beacon.X, beacon.Y - 12, beacon.Group * 10 + state.Hunters.Count));
+        }
+        if (beacon.Health <= 0)
+        {
+            beacon.State = SnapphaneBeaconState.Destroyed;
+            beacon.Age = 0;
+            _score += 125;
+        }
+    }
+
+    private static void DamageSnapphaneWreck(SnapphaneWreck wreck, int damage, int impulseSeed)
+    {
+        wreck.Health -= damage;
+        if (damage >= 7) wreck.Vx += ((impulseSeed & 1) == 0 ? -1 : 1) * Math.Min(0.8, damage * 0.045);
+        if (wreck.Health <= 0) wreck.BurstAge = 1;
+    }
+
+    private void BurstSnapphaneMine(SnapphaneWorldState state, SnapphaneScentMine mine)
+    {
+        mine.BurstAge = 1;
+        foreach (SnapphaneWreck wreck in state.Wrecks)
+            if (wreck.Physical && wreck.BurstAge == 0 && DistanceSquared(mine.X, mine.Y, wreck.X, wreck.Y) < 58 * 58)
+                DamageSnapphaneWreck(wreck, 24, mine.Serial);
+        foreach (SnapphaneBeacon beacon in state.Beacons)
+            if (!beacon.TrueSignal && beacon.State != SnapphaneBeaconState.Destroyed &&
+                DistanceSquared(mine.X, mine.Y, beacon.X, beacon.Y) < 58 * 58)
+                DamageSnapphaneBeacon(state, beacon, 24);
+        foreach (SnapphaneHunter hunter in state.Hunters)
+        {
+            if (hunter.BurstAge > 0 || DistanceSquared(mine.X, mine.Y, hunter.X, hunter.Y) >= 58 * 58) continue;
+            hunter.Health -= 24;
+            if (hunter.Health <= 0) hunter.BurstAge = 1;
+        }
+        state.EnvironmentKills++;
+        _score += 220;
     }
 
     private void StepTitheWorld()
@@ -11547,13 +11865,18 @@ internal sealed class StormaktGame
                     if (wreck.Layer == layer) DrawSnapphaneWreck(frame, wreck, age);
                 }
             }
+            foreach (SnapphaneBeacon beacon in state.Beacons) DrawSnapphaneBeacon(frame, beacon);
+            foreach (SnapphaneScentMine mine in state.ScentMines) DrawSnapphaneScentMine(frame, mine);
+            foreach (SnapphaneHunter hunter in state.Hunters) DrawSnapphaneHunter(frame, hunter);
+            foreach (SnapphaneHuntShot shot in state.HuntShots) DrawSnapphaneHuntShot(frame, shot);
         }
-        DrawSnapphaneBeacon(frame, age);
         DrawShots(frame);
         DrawShip(frame);
         DrawBorder(frame);
         DrawHud(frame);
         DrawLoadoutHud(frame);
+        if ((_snapphaneWorld?.EnvironmentKills ?? 0) > 0)
+            DrawText(frame, _width - 94, _height - 21, $"VILSELD {_snapphaneWorld!.EnvironmentKills}", 0xff77e6a0);
         DrawSnapphaneMissionTitle(frame);
         DrawStageClear(frame);
         DrawPause(frame);
@@ -11574,6 +11897,27 @@ internal sealed class StormaktGame
         int scale = wreck.Layer switch { 0 => 5, 1 => 9, _ => 14 };
         int sway = (int)Math.Round(Math.Sin((age + wreck.Phase) * 0.012) * (wreck.Layer + 1));
         x += sway;
+        if (wreck.Physical && wreck.BurstAge > 0 &&
+            _sprites?.TryGet("snapphane_wreck_burst", out Sprite burst) == true)
+        {
+            uint opacity = (uint)Math.Clamp(255 - wreck.BurstAge * 5, 35, 255);
+            DrawSpriteAlpha(frame, burst, x - burst.Width / 2, y - burst.Height / 2, opacity);
+            return;
+        }
+        if (wreck.Physical)
+        {
+            string asset = wreck.Kind switch
+            {
+                0 => "snapphane_wreck_bow",
+                1 => "snapphane_wreck_mast",
+                _ => "snapphane_wreck_broadside",
+            };
+            if (_sprites?.TryGet(asset, out Sprite sprite) == true)
+            {
+                DrawSprite(frame, sprite, x - sprite.Width / 2, y - sprite.Height / 2);
+                return;
+            }
+        }
         uint shadow = wreck.Layer switch { 0 => 0xff0c1718, 1 => 0xff142322, _ => 0xff1e2926 };
         uint edge = wreck.Layer switch { 0 => 0xff243131, 1 => 0xff465047, _ => 0xff725a3b };
         uint scar = wreck.Layer == 2 ? 0xff315b42 : 0xff263b35;
@@ -11607,23 +11951,82 @@ internal sealed class StormaktGame
         }
     }
 
-    private void DrawSnapphaneBeacon(uint[] frame, int age)
+    private void DrawSnapphaneBeacon(uint[] frame, SnapphaneBeacon beacon)
     {
-        int x = _width / 2;
-        int y = 39;
-        int pulse = age % 90;
-        bool doubleBlink = pulse < 8 || pulse is >= 18 and < 26;
-        uint green = doubleBlink ? 0xff77e6a0 : 0xff244936;
+        int x = (int)Math.Round(beacon.X);
+        int y = (int)Math.Round(beacon.Y);
+        string asset = beacon.State switch
+        {
+            SnapphaneBeaconState.Signal when beacon.TrueSignal => "snapphane_beacon_true",
+            SnapphaneBeaconState.Signal => "snapphane_beacon_false",
+            SnapphaneBeaconState.Revealed or SnapphaneBeaconState.Destroyed => "snapphane_beacon_revealed",
+            _ => "snapphane_beacon_off",
+        };
+        if (_sprites?.TryGet(asset, out Sprite sprite) == true)
+        {
+            uint opacity = beacon.State == SnapphaneBeaconState.Destroyed
+                ? (uint)Math.Clamp(230 - beacon.Age, 50, 230)
+                : 255;
+            DrawSpriteAlpha(frame, sprite, x - sprite.Width / 2, y - sprite.Height / 2, opacity);
+            if (beacon.State == SnapphaneBeaconState.Destroyed && (beacon.Age / 4 & 1) == 0)
+                PutPixel(frame, x + 9, y - 5, 0xffff8a4a);
+            return;
+        }
+        bool lit = beacon.State == SnapphaneBeaconState.Signal;
+        uint green = beacon.TrueSignal ? (lit ? 0xff77e6a0 : 0xff244936) : 0xffc92f42;
         DrawLine(frame, x - 11, y + 5, x, y - 4, 0xff3f4d45);
         DrawLine(frame, x, y - 4, x + 11, y + 5, 0xff3f4d45);
         DrawLine(frame, x - 8, y + 5, x + 8, y + 5, 0xff765139);
         DrawRect(frame, x - 2, y - 1, 5, 7, 0xff17221f);
-        FillCircle(frame, x, y - 2, doubleBlink ? 2 : 1, green);
-        if (doubleBlink)
+        FillCircle(frame, x, y - 2, lit ? 2 : 1, green);
+        if (lit)
         {
             PutPixel(frame, x - 5, y - 2, 0xff315b42);
             PutPixel(frame, x + 5, y - 2, 0xff315b42);
         }
+    }
+
+    private void DrawSnapphaneScentMine(uint[] frame, SnapphaneScentMine mine)
+    {
+        int x = (int)Math.Round(mine.X);
+        int y = (int)Math.Round(mine.Y);
+        string asset = mine.BurstAge > 0 ? "snapphane_scent_mine_broken" :
+            mine.Turned ? "snapphane_scent_mine_turned" : "snapphane_scent_mine";
+        if (_sprites?.TryGet(asset, out Sprite sprite) == true)
+        {
+            DrawSprite(frame, sprite, x - sprite.Width / 2, y - sprite.Height / 2);
+            return;
+        }
+        FillCircle(frame, x, y, 8, mine.Turned ? 0xff65c5ca : 0xff8f2635);
+        DrawCircleOutline(frame, x, y, 9, 0xff765139);
+    }
+
+    private void DrawSnapphaneHunter(uint[] frame, SnapphaneHunter hunter)
+    {
+        int x = (int)Math.Round(hunter.X);
+        int y = (int)Math.Round(hunter.Y);
+        if (hunter.BurstAge > 0 && _sprites?.TryGet("snapphane_wreck_burst", out Sprite burst) == true)
+        {
+            DrawSpriteAlpha(frame, burst, x - burst.Width / 2, y - burst.Height / 2,
+                (uint)Math.Clamp(255 - hunter.BurstAge * 6, 35, 255));
+            return;
+        }
+        if (_sprites?.TryGet("snapphane_hunter_skiff", out Sprite sprite) == true)
+        {
+            DrawSprite(frame, sprite, x - sprite.Width / 2, y - sprite.Height / 2);
+            return;
+        }
+        FillTriangle(frame, x, y + 12, x - 16, y - 9, x + 16, y - 9, 0xff8f2635);
+        DrawLine(frame, x - 13, y - 7, x + 13, y - 7, 0xfff4f1e8);
+    }
+
+    private void DrawSnapphaneHuntShot(uint[] frame, SnapphaneHuntShot shot)
+    {
+        int x = (int)Math.Round(shot.X);
+        int y = (int)Math.Round(shot.Y);
+        FillCircle(frame, x, y, 3, 0xffc92f42);
+        PutPixel(frame, x, y, 0xffffffff);
+        PutPixel(frame, x - Math.Sign(shot.Vx) * 3, y - Math.Sign(shot.Vy) * 3, 0xffff8a4a);
     }
 
     private void DrawSnapphaneMissionTitle(uint[] frame)
@@ -13534,6 +13937,14 @@ internal sealed class StormaktGame
         Krutrannan,
     }
 
+    private enum SnapphaneBeaconState
+    {
+        Off,
+        Signal,
+        Revealed,
+        Destroyed,
+    }
+
     private sealed class StormaktLoadout
     {
         public TithePrimaryModule PrimaryModule { get; set; } = TithePrimaryModule.Standard;
@@ -13574,21 +13985,76 @@ internal sealed class StormaktGame
     {
         public int Age { get; set; }
         public int WreckSerial { get; set; }
+        public int BeaconWave { get; set; }
+        public int EnvironmentKills { get; set; }
         public int IncomingFreedShips { get; set; }
         public SnapphaneRoute Route { get; set; }
         public int SnapphaneAllies { get; set; }
         public bool SorenOathComplete { get; set; }
         public List<SnapphaneWreck> Wrecks { get; } = [];
+        public List<SnapphaneBeacon> Beacons { get; } = [];
+        public List<SnapphaneScentMine> ScentMines { get; } = [];
+        public List<SnapphaneHunter> Hunters { get; } = [];
+        public List<SnapphaneHuntShot> HuntShots { get; } = [];
     }
 
     private sealed class SnapphaneWreck(double x, double y, double speed, int layer, int kind, int phase)
     {
         public double X { get; set; } = x;
         public double Y { get; set; } = y;
+        public double Vx { get; set; }
         public double Speed { get; } = speed;
         public int Layer { get; } = layer;
         public int Kind { get; set; } = kind;
         public int Phase { get; set; } = phase;
+        public int Health { get; set; } = layer == 2 ? 30 : 999;
+        public int BurstAge { get; set; }
+        public bool Physical => Layer == 2;
+    }
+
+    private sealed class SnapphaneBeacon(double x, double y, bool trueSignal, int group)
+    {
+        public double X { get; set; } = x;
+        public double Y { get; set; } = y;
+        public bool TrueSignal { get; } = trueSignal;
+        public int Group { get; } = group;
+        public int Health { get; set; } = trueSignal ? 999 : 22;
+        public int Age { get; set; }
+        public SnapphaneBeaconState State { get; set; }
+        public bool HunterReleased { get; set; }
+    }
+
+    private sealed class SnapphaneScentMine(double x, double y, int serial)
+    {
+        public double X { get; set; } = x;
+        public double Y { get; set; } = y;
+        public double Vx { get; set; }
+        public double Vy { get; set; } = 0.42;
+        public int Serial { get; } = serial;
+        public int Health { get; set; } = 16;
+        public int Age { get; set; }
+        public bool Turned { get; set; }
+        public int BurstAge { get; set; }
+    }
+
+    private sealed class SnapphaneHunter(double x, double y, int serial)
+    {
+        public double X { get; set; } = x;
+        public double Y { get; set; } = y;
+        public int Serial { get; } = serial;
+        public int Health { get; set; } = 30;
+        public int Age { get; set; }
+        public int BurstAge { get; set; }
+    }
+
+    private sealed class SnapphaneHuntShot(double x, double y, double vx, double vy, int serial)
+    {
+        public double X { get; set; } = x;
+        public double Y { get; set; } = y;
+        public double Vx { get; set; } = vx;
+        public double Vy { get; set; } = vy;
+        public int Serial { get; } = serial;
+        public int Age { get; set; }
     }
 
     private sealed class TitheWorldState

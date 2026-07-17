@@ -1,6 +1,6 @@
 # Bana 6 - Snapphanens ed
 
-Status: implementeringsplan fastlagd 2026-07-16; checkpoint 1–2 landade 2026-07-17. Bana 6 är kampanjrad 6, nivå-id `5`, seed `3606` och börjar som `DEV`. Den första spelbara minuten kan startas direkt från den rad som redan förväljs efter Rigsregnskabets resultatkort och använder det sparade vapenkitet från Bana 5. Banan publiceras som `STRID` först när båda vägvalen, Sörens duell, De Røde Hunde, radio, unik musik och wide/legacy-verifiering är färdiga.
+Status: implementeringsplan fastlagd 2026-07-16; checkpoint 1–3 landade 2026-07-17. Bana 6 är kampanjrad 6, nivå-id `5`, seed `3606` och börjar som `DEV`. Den första spelbara vrakhavssektionen kan startas direkt från den rad som redan förväljs efter Rigsregnskabets resultatkort och använder det sparade vapenkitet från Bana 5. Banan publiceras som `STRID` först när båda vägvalen, Sörens duell, De Røde Hunde, radio, unik musik och wide/legacy-verifiering är färdiga.
 
 ## Dramatiskt löfte
 
@@ -189,7 +189,7 @@ All radio går genom befintlig kö; fasbyten får inte tala över en aktiv repli
 
 1. **Plan och kampanjrad (landad 2026-07-17):** detta dokument, rad 6 som `DEV`, nivå-id `5`, seed `3606`, separat `SnapphaneWorldState`, en deterministisk minut av det första tredelade vrakhavet, egen render/tidslinje, grön dubbelblinkande signalfyr, titel och resultatkort. Bana 1:s fiender och radio är hårt bortkopplade. Resultat-Start går till menymusik och markerar Bana 7; radlayouten rymmer nu alla sju fälttåg i wide och legacy. Commit och push.
 2. **Kampanjkit och save-schema (landad 2026-07-17):** `StormaktLoadout` äger huvudvapen, bredsida, skeppssystem, pansarladdning och vapenvila gemensamt för Bana 5–6. Schema 1 laddas bakåtkompatibelt; schema 2 skriver även `SnapphaneRoute`, `SnapphaneAllies` och `SorenOathComplete` atomiskt. Alla åtta kit ger skilda beväpnade WFEX-bilder i vrakhavsarenan. `WAYLANDFORGE_STORMAKT_LOADOUT_TEST=0..7` och `Slow+Start` undertrycker kampanjskrivning; ett verkligt Bana 5-val skriver schema 2. Commit och push.
-3. **Vrakhav och falska fyrar:** tre bakgrundslager, fysiska vrak, fyra fyrstates, doftminor och minst ett emergent fiende-mot-miljöutfall. Wide/legacy-hashar. Commit och push.
+3. **Vrakhav och falska fyrar (landad 2026-07-17):** tre stateägda vrakdjup, skjutbara fysiska vrak med seedad impuls, tre grupper av äkta/falska fyrar, fyra fyrstates, doftminor, vänd Magnetbredsida-state och egna kungliga jägare/projektiler. Målsökningen väljer en vänd mina framför Karl; detonationen kan skada fyr, vrak eller annan jägare och räknas som `VILSELD`. Tolv bildgenererade alpha-assets med prompt/källbild/runtimebild är packade med kodfallback. Två wide-spår matchar i sex kontrollbilder; legacy och resultat→Bana 7 är verifierade separat. Commit och push.
 4. **Sörens hedersduell:** egen state, två faser, efterbildsläsning, krokattack, radio och mjuk övergång till jämsidesflygning. Ingen dödsexplosion. Commit och push.
 5. **Eden och vägvalet:** spatial korsning, tre räddningsbojar, tillfällig kanaliseringsnackdel, Krutrännan, verklig allieradräkning och atomisk schema-2-save. Commit och push.
 6. **De Røde Hunde:** tre självständiga bossankare, delad hälsa, jaktlås, två brytbara kedjor, jaktmask, Sören/allierad målprioritet och ryckfria fasövergångar. Commit och push.

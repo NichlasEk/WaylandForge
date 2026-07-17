@@ -1137,6 +1137,33 @@ def append_tithe_route_assets(entries: list[tuple[str, Image.Image]], source: Im
         entries.append((name, sprite))
 
 
+def append_snapphane_world_assets(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    definitions = [
+        ("snapphane_beacon_off", 0, 0, (34, 44)),
+        ("snapphane_beacon_true", 1, 0, (34, 44)),
+        ("snapphane_beacon_false", 2, 0, (34, 44)),
+        ("snapphane_beacon_revealed", 3, 0, (36, 44)),
+        ("snapphane_scent_mine", 0, 1, (28, 28)),
+        ("snapphane_scent_mine_turned", 1, 1, (30, 30)),
+        ("snapphane_scent_mine_broken", 2, 1, (28, 28)),
+        ("snapphane_hunter_skiff", 3, 1, (44, 36)),
+        ("snapphane_wreck_bow", 0, 2, (62, 62)),
+        ("snapphane_wreck_mast", 1, 2, (58, 64)),
+        ("snapphane_wreck_broadside", 2, 2, (64, 62)),
+        ("snapphane_wreck_burst", 3, 2, (44, 44)),
+    ]
+    for name, column, row, target in definitions:
+        cell = source.crop((
+            column * source.width // 4,
+            row * source.height // 3,
+            (column + 1) * source.width // 4,
+            (row + 1) * source.height // 3,
+        )).convert("RGBA")
+        sprite = trim_alpha(cell)
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def build(
     input_path: Path,
     danish_input_path: Path,
@@ -1190,6 +1217,7 @@ def build(
     tithe_ship_modules_input_path: Path,
     tithe_weapon_effects_input_path: Path,
     tithe_route_customs_input_path: Path,
+    snapphane_world_input_path: Path,
     rts_road_input_path: Path,
     dungeon_karl_input_path: Path,
     dungeon_mine_input_path: Path,
@@ -1275,6 +1303,7 @@ def build(
     tithe_ship_modules_source = Image.open(tithe_ship_modules_input_path).convert("RGBA")
     tithe_weapon_effects_source = Image.open(tithe_weapon_effects_input_path).convert("RGBA")
     tithe_route_customs_source = Image.open(tithe_route_customs_input_path).convert("RGBA")
+    snapphane_world_source = Image.open(snapphane_world_input_path).convert("RGBA")
     rts_road_source = Image.open(rts_road_input_path).convert("RGBA")
     dungeon_karl_source = Image.open(dungeon_karl_input_path).convert("RGBA")
     dungeon_mine_source = Image.open(dungeon_mine_input_path).convert("RGBA")
@@ -1394,6 +1423,7 @@ def build(
                               tithe_damage_projectiles_source)
     append_tithe_weapon_assets(entries, tithe_ship_modules_source, tithe_weapon_effects_source)
     append_tithe_route_assets(entries, tithe_route_customs_source)
+    append_snapphane_world_assets(entries, snapphane_world_source)
     append_rts_frontier_road(entries, rts_road_source)
     append_dungeon_assets(entries, dungeon_karl_source, dungeon_mine_source)
     append_dungeon_loot(entries, dungeon_loot_source)
@@ -1626,6 +1656,7 @@ def main() -> None:
     parser.add_argument("--tithe-ship-modules-input", type=Path, default=Path("assets/stormakt3020/tithe-ship-modules-v1.png"))
     parser.add_argument("--tithe-weapon-effects-input", type=Path, default=Path("assets/stormakt3020/tithe-weapon-effects-v1.png"))
     parser.add_argument("--tithe-route-customs-input", type=Path, default=Path("assets/stormakt3020/tithe-route-customs-v1.png"))
+    parser.add_argument("--snapphane-world-input", type=Path, default=Path("assets/stormakt3020/snapphane-beacons-wrecks-v1.png"))
     parser.add_argument("--rts-road-input", type=Path, default=Path("assets/stormakt3020/rts-danish-frontier-road-v1.png"))
     parser.add_argument("--dungeon-karl-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-v1.png"))
     parser.add_argument("--dungeon-mine-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva1-environment-v1.png"))
@@ -1716,6 +1747,7 @@ def main() -> None:
         args.tithe_ship_modules_input,
         args.tithe_weapon_effects_input,
         args.tithe_route_customs_input,
+        args.snapphane_world_input,
         args.rts_road_input,
         args.dungeon_karl_input,
         args.dungeon_mine_input,
