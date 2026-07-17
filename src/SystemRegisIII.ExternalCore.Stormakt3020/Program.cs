@@ -318,6 +318,12 @@ internal sealed class StormaktGame
         new(0, 390, true, "SÖREN SVARTKRUT", "INGEN FOGDE", "MELLAN OSS", null, "portrait_soren", true);
     private static readonly RadioCard SnapphaneEbbaOathRadio =
         new(0, 330, false, "EBBA GRIP", "EDEN ÄR LÅST", "KURSEN ÖPPNAS", null, "portrait_ebba");
+    private static readonly RadioCard SnapphaneRouteOpenRadio =
+        new(0, 330, false, "EBBA GRIP", "TVÅ LEDER", "VÄLJ MED SKROVET", null, "portrait_ebba");
+    private static readonly RadioCard SnapphaneKaparRouteRadio =
+        new(0, 330, true, "SÖREN SVARTKRUT", "NI TAR BOJARNA", "JAG TAR ELDEN", null, "portrait_soren", true);
+    private static readonly RadioCard SnapphaneKrutRouteRadio =
+        new(0, 330, true, "SÖREN SVARTKRUT", "RÄTT FRAM", "LÅT JÄRNET GÅ", null, "portrait_soren", true);
     private static readonly RadioCard RigsregnskabetIntroRadio =
         new(0, 390, true, "RIGSREGNSKABET", "SKULD FUNNEN", "KARL CCLV", StormaktVoice.RigsregnskabetIntro, "rigsregnskabet");
     private static readonly RadioCard RigsregnskabetInterestRadio =
@@ -512,6 +518,7 @@ internal sealed class StormaktGame
         _shipX = Math.Clamp(_shipX, 22, _width - 22);
         _shipY = Math.Clamp(_shipY, 48, _height - 18);
 
+        bool snapphaneRescueChanneling = IsSnapphaneRescueChanneling();
         _cooldown = Math.Max(0, _cooldown - 1);
         _altCooldown = Math.Max(0, _altCooldown - 1);
         int heatDecay = 1;
@@ -537,6 +544,7 @@ internal sealed class StormaktGame
                 _shots.Add(new Shot(_shipX + 5, _shipY - 12, 0, -7, 0xffffd66b, 3));
                 _shots.Add(new Shot(_shipX, _shipY - 17, 0, -9, 0xffbdf8ff, 7, TitheShotDrillBolt));
                 _cooldown = 9;
+                if (snapphaneRescueChanneling) _cooldown *= 2;
                 _heat = Math.Min(120, _heat + 11);
                 _audio?.Trigger(StormaktSound.TitheCrownDrill);
             }
@@ -546,6 +554,7 @@ internal sealed class StormaktGame
                 _shots.Add(new Shot(_shipX, _shipY - 15, 0, -8, 0xff9bd4dc, 2, TitheShotVolleyShell));
                 _shots.Add(new Shot(_shipX + 7, _shipY - 12, 1, -7, 0xffffd66b, 2, TitheShotVolleyShell));
                 _cooldown = 4;
+                if (snapphaneRescueChanneling) _cooldown *= 2;
                 _heat = Math.Min(120, _heat + 9);
                 _audio?.Trigger(StormaktSound.TitheVolleyDirector);
             }
@@ -554,11 +563,12 @@ internal sealed class StormaktGame
                 _shots.Add(new Shot(_shipX - 4, _shipY - 12, 0, -7, 0xffffd66b, 3));
                 _shots.Add(new Shot(_shipX + 4, _shipY - 12, 0, -7, 0xffffd66b, 3));
                 _cooldown = 6;
+                if (snapphaneRescueChanneling) _cooldown *= 2;
                 _heat = Math.Min(120, _heat + 7);
                 _audio?.Trigger(StormaktSound.TwinCannon);
             }
         }
-        if ((buttons & AltFire) != 0 && _altCooldown == 0)
+        if ((buttons & AltFire) != 0 && _altCooldown == 0 && !snapphaneRescueChanneling)
         {
             TitheBroadsideModule broadside = _activeLoadout?.BroadsideModule ?? TitheBroadsideModule.Standard;
             if (broadside == TitheBroadsideModule.MagnetBroadside)
@@ -4935,9 +4945,12 @@ internal sealed class StormaktGame
         StepSnapphaneHunters(state);
         StepSnapphaneHuntShots(state);
         StepSorenDuel(state);
+        StepSnapphaneRoute(state);
         StepSnapphanePlayerShots(state);
 
-        if (state.Duel is not { Phase: 3, OathAge: >= 720 } || _bossRadioCard is not null) return;
+        if (state.Duel is { Phase: 3, OathAge: >= 720 } && !state.RouteStarted && _bossRadioCard is null)
+            BeginSnapphaneRouteChoice(state);
+        if (!state.RouteComplete || _bossRadioCard is not null) return;
 
         _stageClear = true;
         _stageClearAge = 0;
@@ -4945,6 +4958,169 @@ internal sealed class StormaktGame
         _enemyShots.Clear();
         _enemies.Clear();
         state.HuntShots.Clear();
+        _audio?.Trigger(StormaktSound.Deploy);
+    }
+
+    private bool IsSnapphaneRescueChanneling()
+    {
+        if (_snapphaneWorld is not { Route: SnapphaneRoute.Kaparleden, RouteComplete: false } state) return false;
+        return state.Rescues.Any(rescue => !rescue.Rescued && rescue.Y > 35 &&
+            DistanceSquared(_shipX, _shipY, rescue.X, rescue.Y) < 31 * 31);
+    }
+
+    private void BeginSnapphaneRouteChoice(SnapphaneWorldState state)
+    {
+        state.RouteStarted = true;
+        state.RouteChoiceActive = true;
+        state.RouteChoiceAge = 0;
+        state.Route = SnapphaneRoute.None;
+        state.SnapphaneAllies = 0;
+        state.RouteTargetsDestroyed = 0;
+        state.Beacons.Clear();
+        state.ScentMines.Clear();
+        state.Hunters.Clear();
+        state.HuntShots.Clear();
+        _shots.Clear();
+        ActivateBossRadio(SnapphaneRouteOpenRadio);
+        _audio?.Trigger(StormaktSound.Deploy);
+    }
+
+    private void StepSnapphaneRoute(SnapphaneWorldState state)
+    {
+        if (!state.RouteStarted || state.RouteComplete) return;
+        if (state.RouteChoiceActive)
+        {
+            state.RouteChoiceAge++;
+            if (state.RouteChoiceAge < 90 || _bossRadioCard is not null) return;
+            int deadZone = Math.Max(22, _width / 13);
+            if (_shipX < _width / 2.0 - deadZone) LockSnapphaneRoute(state, SnapphaneRoute.Kaparleden);
+            else if (_shipX > _width / 2.0 + deadZone) LockSnapphaneRoute(state, SnapphaneRoute.Krutrannan);
+            return;
+        }
+
+        state.RouteAge++;
+        if (state.Route == SnapphaneRoute.Kaparleden) StepSnapphaneKaparRoute(state);
+        else if (state.Route == SnapphaneRoute.Krutrannan) StepSnapphaneKrutRoute(state);
+    }
+
+    private void LockSnapphaneRoute(SnapphaneWorldState state, SnapphaneRoute route)
+    {
+        state.Route = route;
+        state.RouteChoiceActive = false;
+        state.RouteAge = 0;
+        if (route == SnapphaneRoute.Kaparleden)
+        {
+            double laneX = Math.Max(48, _width * 0.28);
+            state.Rescues.Add(new SnapphaneRescueShip(laneX - 8, 72, 0));
+            state.Rescues.Add(new SnapphaneRescueShip(laneX + 13, 126, 1));
+            state.Rescues.Add(new SnapphaneRescueShip(laneX - 3, Math.Min(_height - 42, 180), 2));
+            ActivateBossRadio(SnapphaneKaparRouteRadio);
+        }
+        else
+        {
+            ActivateBossRadio(SnapphaneKrutRouteRadio);
+        }
+        WriteCampaignSave(state.IncomingFreedShips);
+        _audio?.Trigger(StormaktSound.Deploy);
+    }
+
+    private void StepSnapphaneKaparRoute(SnapphaneWorldState state)
+    {
+        for (int index = 0; index < state.Rescues.Count; index++)
+        {
+            SnapphaneRescueShip rescue = state.Rescues[index];
+            if (rescue.Rescued)
+            {
+                rescue.FreedAge++;
+                rescue.X -= 0.34 + index * 0.04;
+                rescue.Y -= 0.22;
+                continue;
+            }
+            int arrivalAge = index * 180;
+            if (state.RouteAge < arrivalAge) continue;
+            rescue.Y += (rescue.TargetY - rescue.Y) * 0.045;
+            bool channeling = DistanceSquared(_shipX, _shipY, rescue.X, rescue.Y) < 31 * 31;
+            if (channeling) rescue.Progress = Math.Min(SnapphaneRescueShip.RequiredProgress, rescue.Progress + 1);
+            else rescue.Progress = Math.Max(0, rescue.Progress - 1);
+            if (rescue.Progress < SnapphaneRescueShip.RequiredProgress) continue;
+            rescue.Rescued = true;
+            rescue.FreedAge = 1;
+            state.SnapphaneAllies++;
+            _score += 900;
+            WriteCampaignSave(state.IncomingFreedShips);
+            _audio?.Trigger(StormaktSound.TitheChainLockBreak);
+        }
+
+        if ((state.Rescues.Count > 0 && state.Rescues.All(rescue => rescue.Rescued)) || state.RouteAge >= 2_100)
+            CompleteSnapphaneRoute(state);
+    }
+
+    private void StepSnapphaneKrutRoute(SnapphaneWorldState state)
+    {
+        if (state.RouteAge is 90 or 390 or 690 or 990)
+        {
+            int serial = state.RouteAge / 300;
+            double gapX = serial switch
+            {
+                0 => _width * 0.69,
+                1 => _width * 0.43,
+                2 => _width * 0.72,
+                _ => _width * 0.52,
+            };
+            state.Presses.Add(new SnapphaneWreckPress(gapX, serial));
+        }
+        if (state.RouteAge is 170 or 520 or 870)
+        {
+            int serial = state.RouteAge / 350;
+            state.Beacons.Add(new SnapphaneBeacon(_width * (serial % 2 == 0 ? 0.68 : 0.42), -22,
+                false, 70 + serial));
+        }
+        if (state.RouteAge is 260 or 760)
+        {
+            int serial = 700 + state.RouteAge;
+            state.Hunters.Add(new SnapphaneHunter(state.RouteAge == 260 ? _width - 62 : 62, -26, serial)
+            {
+                Health = 74,
+                Elite = true,
+            });
+        }
+        if (state.RouteAge is 330 or 630 or 930 or 1_230) SpawnSnapphaneScentMine(state);
+
+        for (int index = state.Presses.Count - 1; index >= 0; index--)
+        {
+            SnapphaneWreckPress press = state.Presses[index];
+            press.Age++;
+            press.Y += 1.08;
+            press.GapX += Math.Sin((press.Age + press.Serial * 41) * 0.025) * 0.32;
+            double gapWidth = _width <= 320 ? 62 : 76;
+            if (!press.HitPlayer && Math.Abs(_shipY - press.Y) < 17 && Math.Abs(_shipX - press.GapX) > gapWidth / 2)
+            {
+                press.HitPlayer = true;
+                DamageShip();
+            }
+            if (press.Y > _height + 48) state.Presses.RemoveAt(index);
+        }
+
+        if (state.RouteAge >= 1_520) CompleteSnapphaneRoute(state);
+    }
+
+    private void CompleteSnapphaneRoute(SnapphaneWorldState state)
+    {
+        if (state.RouteComplete) return;
+        state.RouteComplete = true;
+        if (state.Route == SnapphaneRoute.Krutrannan)
+        {
+            int bonus = 900 + state.RouteTargetsDestroyed * 300;
+            state.KrutBonus = bonus;
+            _score += bonus;
+        }
+        WriteCampaignSave(state.IncomingFreedShips);
+        _shots.Clear();
+        state.Beacons.Clear();
+        state.ScentMines.Clear();
+        state.Hunters.Clear();
+        state.HuntShots.Clear();
+        state.Presses.Clear();
         _audio?.Trigger(StormaktSound.Deploy);
     }
 
@@ -5219,13 +5395,17 @@ internal sealed class StormaktGame
             }
             hunter.Y += hunter.Y < 58 + hunter.Serial % 32 ? 0.72 : 0.08;
             hunter.X += Math.Sin((hunter.Age + hunter.Serial * 13) * 0.035) * 0.34;
-            if (hunter.Age % 105 == 42)
+            int firingInterval = hunter.Elite ? 72 : 105;
+            if (hunter.Age % firingInterval == 42)
             {
                 double dx = _shipX - hunter.X;
                 double dy = _shipY - hunter.Y;
                 double length = Math.Max(1, Math.Sqrt(dx * dx + dy * dy));
                 state.HuntShots.Add(new SnapphaneHuntShot(hunter.X, hunter.Y + 10,
                     dx / length * 1.8, dy / length * 1.8, hunter.Serial));
+                if (hunter.Elite)
+                    state.HuntShots.Add(new SnapphaneHuntShot(hunter.X, hunter.Y + 10,
+                        dx / length * 1.65 + 0.32, dy / length * 1.65, hunter.Serial));
             }
             if (DistanceSquared(hunter.X, hunter.Y, _shipX, _shipY) < 18 * 18) DamageShip();
         }
@@ -5405,6 +5585,7 @@ internal sealed class StormaktGame
             beacon.State = SnapphaneBeaconState.Destroyed;
             beacon.Age = 0;
             _score += 125;
+            if (beacon.Group >= 70) state.RouteTargetsDestroyed++;
         }
     }
 
@@ -12072,6 +12253,7 @@ internal sealed class StormaktGame
             }
             foreach (SnapphaneBeacon beacon in state.Beacons) DrawSnapphaneBeacon(frame, beacon);
             foreach (SnapphaneScentMine mine in state.ScentMines) DrawSnapphaneScentMine(frame, mine);
+            DrawSnapphaneRoute(frame, state);
             foreach (SnapphaneHunter hunter in state.Hunters) DrawSnapphaneHunter(frame, hunter);
             foreach (SnapphaneHuntShot shot in state.HuntShots) DrawSnapphaneHuntShot(frame, shot);
             DrawSorenDuel(frame, state);
@@ -12082,6 +12264,7 @@ internal sealed class StormaktGame
         DrawHud(frame);
         DrawLoadoutHud(frame);
         DrawSorenDuelHud(frame);
+        DrawSnapphaneRouteHud(frame);
         if ((_snapphaneWorld?.EnvironmentKills ?? 0) > 0)
             DrawText(frame, _width - 94, _height - 21, $"VILSELD {_snapphaneWorld!.EnvironmentKills}", 0xff77e6a0);
         DrawSnapphaneMissionTitle(frame);
@@ -12219,7 +12402,8 @@ internal sealed class StormaktGame
                 (uint)Math.Clamp(255 - hunter.BurstAge * 6, 35, 255));
             return;
         }
-        if (_sprites?.TryGet("snapphane_hunter_skiff", out Sprite sprite) == true)
+        string asset = hunter.Elite ? "snapphane_route_elite_hunter" : "snapphane_hunter_skiff";
+        if (_sprites?.TryGet(asset, out Sprite sprite) == true)
         {
             DrawSprite(frame, sprite, x - sprite.Width / 2, y - sprite.Height / 2);
             return;
@@ -12235,6 +12419,98 @@ internal sealed class StormaktGame
         FillCircle(frame, x, y, 3, 0xffc92f42);
         PutPixel(frame, x, y, 0xffffffff);
         PutPixel(frame, x - Math.Sign(shot.Vx) * 3, y - Math.Sign(shot.Vy) * 3, 0xffff8a4a);
+    }
+
+    private void DrawSnapphaneRoute(uint[] frame, SnapphaneWorldState state)
+    {
+        if (!state.RouteStarted) return;
+        if (state.RouteChoiceActive)
+        {
+            int center = _width / 2;
+            int markerY = Math.Min(112, _height / 2);
+            DrawRect(frame, 8, markerY - 22, center - 16, 44, 0xcc0b1514);
+            DrawRect(frame, center + 8, markerY - 22, center - 16, 44, 0xcc160f0b);
+            DrawLine(frame, 8, markerY - 22, center - 9, markerY - 22, 0xff77e6a0);
+            DrawLine(frame, center + 8, markerY - 22, _width - 9, markerY - 22, 0xffff8a4a);
+            if (_sprites?.TryGet("snapphane_rescue_buoy", out Sprite buoy) == true)
+                DrawSpriteScaled(frame, buoy, center / 2 - 15, markerY - 18, 30, 32);
+            if (_sprites?.TryGet("snapphane_route_press_left", out Sprite press) == true)
+                DrawSpriteScaled(frame, press, center + center / 2 - 21, markerY - 18, 42, 36);
+            DrawText(frame, 18, markerY + 9, "VÄNSTER  KAPARLED", 0xff77e6a0);
+            DrawText(frame, center + 17, markerY + 9, "HÖGER  KRUTRÄNNA", 0xffff8a4a);
+            return;
+        }
+
+        foreach (SnapphaneRescueShip rescue in state.Rescues)
+        {
+            if (state.RouteAge < rescue.Serial * 180 && !rescue.Rescued) continue;
+            int x = (int)Math.Round(rescue.X);
+            int y = (int)Math.Round(rescue.Y);
+            string shipName = (rescue.Serial & 1) == 0 ? "snapphane_rescue_corvette" : "snapphane_rescue_cutter";
+            if (_sprites?.TryGet(shipName, out Sprite ship) == true)
+                DrawSprite(frame, ship, x - ship.Width / 2, y - ship.Height / 2);
+            else
+                FillTriangle(frame, x, y - 18, x - 16, y + 17, x + 16, y + 17, 0xff273b31);
+
+            int buoyX = x + 24;
+            int buoyY = y - 8;
+            string buoyName = rescue.Rescued ? "snapphane_rescue_buoy_broken" : "snapphane_rescue_buoy";
+            if (_sprites?.TryGet(buoyName, out Sprite buoy) == true)
+                DrawSprite(frame, buoy, buoyX - buoy.Width / 2, buoyY - buoy.Height / 2);
+            if (!rescue.Rescued)
+            {
+                DrawSorenPhysicalChain(frame, x + 8, y - 3, buoyX - 7, buoyY + 4);
+                int progress = rescue.Progress * 34 / SnapphaneRescueShip.RequiredProgress;
+                DrawRect(frame, x - 17, y + 27, 34, 4, 0xff26322e);
+                DrawRect(frame, x - 17, y + 27, progress, 4, 0xff77e6a0);
+            }
+            else if (rescue.FreedAge < 90 &&
+                _sprites?.TryGet("snapphane_route_release_pulse", out Sprite pulse) == true)
+            {
+                DrawSpriteAlpha(frame, pulse, buoyX - pulse.Width / 2, buoyY - pulse.Height / 2,
+                    (uint)Math.Clamp(230 - rescue.FreedAge * 2, 35, 230));
+            }
+        }
+
+        foreach (SnapphaneWreckPress press in state.Presses)
+        {
+            int y = (int)Math.Round(press.Y);
+            int gap = _width <= 320 ? 62 : 76;
+            int leftEdge = (int)Math.Round(press.GapX - gap / 2.0);
+            int rightEdge = (int)Math.Round(press.GapX + gap / 2.0);
+            if (_sprites?.TryGet("snapphane_route_press_left", out Sprite left) == true)
+                DrawSprite(frame, left, leftEdge - left.Width, y - left.Height / 2);
+            if (_sprites?.TryGet("snapphane_route_press_right", out Sprite right) == true)
+                DrawSprite(frame, right, rightEdge, y - right.Height / 2);
+            DrawSorenPhysicalChain(frame, 0, y, leftEdge - 52, y);
+            DrawSorenPhysicalChain(frame, rightEdge + 52, y, _width - 1, y);
+        }
+    }
+
+    private void DrawSnapphaneRouteHud(uint[] frame)
+    {
+        if (_snapphaneWorld is not { RouteStarted: true } state || state.RouteChoiceActive) return;
+        string text;
+        uint color;
+        if (state.Route == SnapphaneRoute.Kaparleden)
+        {
+            bool channeling = IsSnapphaneRescueChanneling();
+            text = channeling
+                ? $"KANALISERAR  {state.SnapphaneAllies}/3  ELD HALVERAD  X SPÄRRAD"
+                : $"KAPARLEDEN  BEFRIADE {state.SnapphaneAllies}/3";
+            color = channeling ? 0xffffd66b : 0xff77e6a0;
+        }
+        else
+        {
+            text = $"KRUTRÄNNAN  BRUTNA FYRAR {state.RouteTargetsDestroyed}/3";
+            color = 0xffff8a4a;
+        }
+        int width = Math.Min(_width - 20, text.Length * 6 + 16);
+        int x = (_width - width) / 2;
+        int y = _bossRadioCard is null ? 19 : 68;
+        DrawRect(frame, x, y, width, 15, 0xdd07100f);
+        DrawLine(frame, x, y, x + width - 1, y, color);
+        DrawText(frame, x + 8, y + 4, text, color);
     }
 
     private void DrawSorenDuel(uint[] frame, SnapphaneWorldState state)
@@ -13031,8 +13307,18 @@ internal sealed class StormaktGame
             }
             else if (_levelId == 5)
             {
-                DrawText(frame, panelX + 43, 99, "EDENS SIGNAL FUNNEN", 0xffffd66b);
-                DrawText(frame, panelX + 36, 116, "MOT KÖPENHAMNS RING", 0xff77e6a0);
+                if (_snapphaneWorld?.Route == SnapphaneRoute.Kaparleden)
+                {
+                    DrawText(frame, panelX + 41, 99, "KAPARLEDEN BRUTEN", 0xffffd66b);
+                    DrawText(frame, panelX + 45, 116,
+                        $"ALLIERADE {_snapphaneWorld.SnapphaneAllies}/3", 0xff77e6a0);
+                }
+                else
+                {
+                    DrawText(frame, panelX + 43, 99, "KRUTRÄNNAN BRUTEN", 0xffffd66b);
+                    DrawText(frame, panelX + 45, 116,
+                        $"BONUS {_snapphaneWorld?.KrutBonus ?? 0}", 0xffff8a4a);
+                }
             }
             else
             {
@@ -14286,12 +14572,21 @@ internal sealed class StormaktGame
         public SnapphaneRoute Route { get; set; }
         public int SnapphaneAllies { get; set; }
         public bool SorenOathComplete { get; set; }
+        public bool RouteStarted { get; set; }
+        public bool RouteChoiceActive { get; set; }
+        public int RouteChoiceAge { get; set; }
+        public int RouteAge { get; set; }
+        public bool RouteComplete { get; set; }
+        public int RouteTargetsDestroyed { get; set; }
+        public int KrutBonus { get; set; }
         public SorenDuelState? Duel { get; set; }
         public List<SnapphaneWreck> Wrecks { get; } = [];
         public List<SnapphaneBeacon> Beacons { get; } = [];
         public List<SnapphaneScentMine> ScentMines { get; } = [];
         public List<SnapphaneHunter> Hunters { get; } = [];
         public List<SnapphaneHuntShot> HuntShots { get; } = [];
+        public List<SnapphaneRescueShip> Rescues { get; } = [];
+        public List<SnapphaneWreckPress> Presses { get; } = [];
     }
 
     private sealed class SorenDuelState
@@ -14388,6 +14683,28 @@ internal sealed class StormaktGame
         public int Health { get; set; } = 30;
         public int Age { get; set; }
         public int BurstAge { get; set; }
+        public bool Elite { get; set; }
+    }
+
+    private sealed class SnapphaneRescueShip(double x, double targetY, int serial)
+    {
+        public const int RequiredProgress = 150;
+        public double X { get; set; } = x;
+        public double Y { get; set; } = -46 - serial * 18;
+        public double TargetY { get; } = targetY;
+        public int Serial { get; } = serial;
+        public int Progress { get; set; }
+        public bool Rescued { get; set; }
+        public int FreedAge { get; set; }
+    }
+
+    private sealed class SnapphaneWreckPress(double gapX, int serial)
+    {
+        public double GapX { get; set; } = gapX;
+        public double Y { get; set; } = -42;
+        public int Serial { get; } = serial;
+        public int Age { get; set; }
+        public bool HitPlayer { get; set; }
     }
 
     private sealed class SnapphaneHuntShot(double x, double y, double vx, double vy, int serial)
