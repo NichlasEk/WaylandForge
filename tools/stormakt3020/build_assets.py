@@ -1210,6 +1210,40 @@ def append_snapphane_route_assets(entries: list[tuple[str, Image.Image]], source
         entries.append((name, sprite))
 
 
+def append_snapphane_red_hounds_assets(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    grid_definitions = [
+        ("red_hound_sporet", 0, 0, (58, 72)),
+        ("red_hound_biddet", 1, 0, (66, 74)),
+        ("red_hound_koblet", 2, 0, (70, 78)),
+        ("red_hound_chain_link", 3, 0, (28, 42)),
+        ("red_hound_sporet_damaged", 0, 1, (58, 72)),
+        ("red_hound_biddet_damaged", 1, 1, (66, 74)),
+        ("red_hound_koblet_damaged", 2, 1, (70, 78)),
+    ]
+    for name, column, row, target in grid_definitions:
+        cell = source.crop((
+            column * source.width // 4,
+            row * source.height // 2,
+            (column + 1) * source.width // 4,
+            (row + 1) * source.height // 2,
+        )).convert("RGBA")
+        sprite = trim_alpha(cell)
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+    mask_definitions = [
+        ("red_hound_mask_closed", (0.66, 0.55, 0.84, 0.98), (42, 50)),
+        ("red_hound_mask_open", (0.80, 0.55, 1.00, 0.98), (58, 52)),
+    ]
+    for name, bounds, target in mask_definitions:
+        x0, y0, x1, y1 = bounds
+        cell = source.crop((int(source.width * x0), int(source.height * y0),
+                            int(source.width * x1), int(source.height * y1))).convert("RGBA")
+        sprite = trim_alpha(cell)
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def build(
     input_path: Path,
     danish_input_path: Path,
@@ -1266,6 +1300,7 @@ def build(
     snapphane_world_input_path: Path,
     snapphane_duel_input_path: Path,
     snapphane_route_input_path: Path,
+    snapphane_red_hounds_input_path: Path,
     rts_road_input_path: Path,
     dungeon_karl_input_path: Path,
     dungeon_mine_input_path: Path,
@@ -1354,6 +1389,7 @@ def build(
     snapphane_world_source = Image.open(snapphane_world_input_path).convert("RGBA")
     snapphane_duel_source = Image.open(snapphane_duel_input_path).convert("RGBA")
     snapphane_route_source = Image.open(snapphane_route_input_path).convert("RGBA")
+    snapphane_red_hounds_source = Image.open(snapphane_red_hounds_input_path).convert("RGBA")
     rts_road_source = Image.open(rts_road_input_path).convert("RGBA")
     dungeon_karl_source = Image.open(dungeon_karl_input_path).convert("RGBA")
     dungeon_mine_source = Image.open(dungeon_mine_input_path).convert("RGBA")
@@ -1476,6 +1512,7 @@ def build(
     append_snapphane_world_assets(entries, snapphane_world_source)
     append_snapphane_duel_assets(entries, snapphane_duel_source)
     append_snapphane_route_assets(entries, snapphane_route_source)
+    append_snapphane_red_hounds_assets(entries, snapphane_red_hounds_source)
     append_rts_frontier_road(entries, rts_road_source)
     append_dungeon_assets(entries, dungeon_karl_source, dungeon_mine_source)
     append_dungeon_loot(entries, dungeon_loot_source)
@@ -1711,6 +1748,7 @@ def main() -> None:
     parser.add_argument("--snapphane-world-input", type=Path, default=Path("assets/stormakt3020/snapphane-beacons-wrecks-v1.png"))
     parser.add_argument("--snapphane-duel-input", type=Path, default=Path("assets/stormakt3020/snapphane-soren-duel-v1.png"))
     parser.add_argument("--snapphane-route-input", type=Path, default=Path("assets/stormakt3020/snapphane-route-v1.png"))
+    parser.add_argument("--snapphane-red-hounds-input", type=Path, default=Path("assets/stormakt3020/snapphane-red-hounds-v1.png"))
     parser.add_argument("--rts-road-input", type=Path, default=Path("assets/stormakt3020/rts-danish-frontier-road-v1.png"))
     parser.add_argument("--dungeon-karl-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-v1.png"))
     parser.add_argument("--dungeon-mine-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva1-environment-v1.png"))
@@ -1804,6 +1842,7 @@ def main() -> None:
         args.snapphane_world_input,
         args.snapphane_duel_input,
         args.snapphane_route_input,
+        args.snapphane_red_hounds_input,
         args.rts_road_input,
         args.dungeon_karl_input,
         args.dungeon_mine_input,
