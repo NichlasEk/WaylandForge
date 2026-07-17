@@ -159,6 +159,10 @@ internal sealed class StormaktGame
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_RTS_EVAC_TEST"), "1", StringComparison.Ordinal);
     private readonly bool _dungeonTestMode = string.Equals(
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_TEST"), "1", StringComparison.Ordinal);
+    private readonly int? _loadoutTestKit = int.TryParse(
+        Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_LOADOUT_TEST"), out int testKit) && testKit is >= 0 and < 8
+            ? testKit
+            : null;
     private readonly SpritePack? _sprites;
     private readonly StormaktMusicLoop? _audio;
     private Random _random = new(3020);
@@ -349,6 +353,8 @@ internal sealed class StormaktGame
     private DungeonState? _dungeon;
     private TitheWorldState? _titheWorld;
     private SnapphaneWorldState? _snapphaneWorld;
+    private StormaktLoadout? _activeLoadout;
+    private bool _suppressCampaignWrites;
     private bool _stageClear;
     private int _stageClearAge;
     private uint _previousButtons;
@@ -499,14 +505,14 @@ internal sealed class StormaktGame
         _cooldown = Math.Max(0, _cooldown - 1);
         _altCooldown = Math.Max(0, _altCooldown - 1);
         int heatDecay = 1;
-        if (_titheWorld is TitheWorldState heatState)
+        if (_activeLoadout is StormaktLoadout heatState)
         {
             if ((buttons & (Fire | AltFire)) != 0) heatState.WeaponIdleAge = 0;
             else heatState.WeaponIdleAge++;
             heatDecay = heatState.ShipModule switch
             {
                 TitheShipModule.SilverCooler when heatState.WeaponIdleAge >= 18 => 3,
-                TitheShipModule.SeizureArmor => (heatState.Age & 1) == 0 ? 1 : 0,
+                TitheShipModule.SeizureArmor => (_missionFrame & 1) == 0 ? 1 : 0,
                 _ => 1,
             };
         }
@@ -514,7 +520,7 @@ internal sealed class StormaktGame
         _invulnerabilityFrames = Math.Max(0, _invulnerabilityFrames - 1);
         if ((buttons & Fire) != 0 && _cooldown == 0)
         {
-            TithePrimaryModule module = _titheWorld?.PrimaryModule ?? TithePrimaryModule.Standard;
+            TithePrimaryModule module = _activeLoadout?.PrimaryModule ?? TithePrimaryModule.Standard;
             if (module == TithePrimaryModule.CrownDrill)
             {
                 _shots.Add(new Shot(_shipX - 5, _shipY - 12, 0, -7, 0xffffd66b, 3));
@@ -544,7 +550,7 @@ internal sealed class StormaktGame
         }
         if ((buttons & AltFire) != 0 && _altCooldown == 0)
         {
-            TitheBroadsideModule broadside = _titheWorld?.BroadsideModule ?? TitheBroadsideModule.Standard;
+            TitheBroadsideModule broadside = _activeLoadout?.BroadsideModule ?? TitheBroadsideModule.Standard;
             if (broadside == TitheBroadsideModule.MagnetBroadside)
             {
                 _shots.Add(new Shot(_shipX - 14, _shipY - 7, -1, -4, 0xff65c5ca, 6, TitheShotMagnetRing));
@@ -682,7 +688,7 @@ internal sealed class StormaktGame
 
     private void Reset()
     {
-        TitheWorldState? previousTithe = _titheWorld;
+        StormaktLoadout? previousLoadout = _activeLoadout;
         _shots.Clear();
         _enemies.Clear();
         _enemyShots.Clear();
@@ -723,16 +729,12 @@ internal sealed class StormaktGame
         _dungeon = null;
         _titheWorld = _levelId == 4 ? new TitheWorldState() : null;
         _snapphaneWorld = _levelId == 5 ? new SnapphaneWorldState() : null;
+        _activeLoadout = _levelId is 4 or 5
+            ? previousLoadout?.Clone() ?? new StormaktLoadout()
+            : null;
         if (_snapphaneWorld is SnapphaneWorldState resetSnapphane)
         {
             ResetSnapphaneWorld(resetSnapphane);
-        }
-        if (_titheWorld is TitheWorldState resetTithe && previousTithe is not null)
-        {
-            resetTithe.PrimaryModule = previousTithe.PrimaryModule;
-            resetTithe.BroadsideModule = previousTithe.BroadsideModule;
-            resetTithe.ShipModule = previousTithe.ShipModule;
-            resetTithe.ArmorCharge = previousTithe.ShipModule == TitheShipModule.SeizureArmor ? 1 : 0;
         }
         if (_rts is RtsState resetRts)
         {
@@ -807,15 +809,27 @@ internal sealed class StormaktGame
 
     private void StartLevel(int levelId, bool fresh = false)
     {
+        _suppressCampaignWrites = fresh || _loadoutTestKit is not null;
         _levelId = levelId;
         Reset();
-        if (levelId == 4 && !fresh && _titheWorld is TitheWorldState tithe &&
-            TryLoadTitheCampaignSave(out StormaktCampaignSave savedCampaign))
+        if (levelId is 4 or 5)
         {
-            tithe.PrimaryModule = savedCampaign.PrimaryModule;
-            tithe.BroadsideModule = savedCampaign.BroadsideModule;
-            tithe.ShipModule = savedCampaign.ShipModule;
-            tithe.ArmorCharge = tithe.ShipModule == TitheShipModule.SeizureArmor ? 1 : 0;
+            _activeLoadout = new StormaktLoadout();
+            if (!fresh && TryLoadCampaignSave(out StormaktCampaignSave savedCampaign))
+            {
+                _activeLoadout.Apply(savedCampaign);
+                if (_snapphaneWorld is SnapphaneWorldState snapphane)
+                {
+                    snapphane.IncomingFreedShips = Math.Max(0, savedCampaign.FreedShips);
+                    snapphane.Route = savedCampaign.SnapphaneRoute;
+                    snapphane.SnapphaneAllies = Math.Max(0, savedCampaign.SnapphaneAllies);
+                    snapphane.SorenOathComplete = savedCampaign.SorenOathComplete;
+                }
+            }
+            if (levelId == 5 && _loadoutTestKit is int testKit)
+            {
+                _activeLoadout.ApplyTestKit(testKit);
+            }
         }
         if (levelId == 3 && !fresh && TryLoadDungeonSave("autosave", out DungeonState? resumed))
         {
@@ -4667,15 +4681,19 @@ internal sealed class StormaktGame
         return Path.Combine(stateRoot, "waylandforge", "stormakt3020", "saves", slot + ".json");
     }
 
-    private static void WriteTitheCampaignSave(TitheWorldState state)
+    private void WriteCampaignSave(int freedShips)
     {
+        if (_suppressCampaignWrites || _activeLoadout is not StormaktLoadout loadout) return;
         try
         {
             string path = DungeonSavePath("campaign");
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             string temporary = path + ".tmp";
-            var save = new StormaktCampaignSave(1, state.PrimaryModule, state.BroadsideModule,
-                state.ShipModule, state.FreedShips);
+            var save = new StormaktCampaignSave(2, loadout.PrimaryModule, loadout.BroadsideModule,
+                loadout.ShipModule, Math.Max(0, freedShips),
+                _snapphaneWorld?.Route ?? SnapphaneRoute.None,
+                Math.Max(0, _snapphaneWorld?.SnapphaneAllies ?? 0),
+                _snapphaneWorld?.SorenOathComplete ?? false);
             File.WriteAllText(temporary, JsonSerializer.Serialize(save));
             File.Move(temporary, path, true);
         }
@@ -4685,7 +4703,7 @@ internal sealed class StormaktGame
         }
     }
 
-    private static bool TryLoadTitheCampaignSave(out StormaktCampaignSave save)
+    private static bool TryLoadCampaignSave(out StormaktCampaignSave save)
     {
         save = default;
         try
@@ -4693,8 +4711,9 @@ internal sealed class StormaktGame
             string path = DungeonSavePath("campaign");
             if (!File.Exists(path)) return false;
             save = JsonSerializer.Deserialize<StormaktCampaignSave>(File.ReadAllText(path));
-            return save.Schema == 1 && Enum.IsDefined(save.PrimaryModule) &&
-                Enum.IsDefined(save.BroadsideModule) && Enum.IsDefined(save.ShipModule);
+            return save.Schema is 1 or 2 && Enum.IsDefined(save.PrimaryModule) &&
+                Enum.IsDefined(save.BroadsideModule) && Enum.IsDefined(save.ShipModule) &&
+                (save.Schema == 1 || Enum.IsDefined(save.SnapphaneRoute));
         }
         catch (JsonException)
         {
@@ -4998,7 +5017,7 @@ internal sealed class StormaktGame
             if (boss.PhaseAge >= 480 && _bossRadioCard is null)
             {
                 state.Boss = null;
-                WriteTitheCampaignSave(state);
+                WriteCampaignSave(state.FreedShips);
                 _stageClear = true;
                 _stageClearAge = 0;
                 _shots.Clear();
@@ -5409,6 +5428,7 @@ internal sealed class StormaktGame
 
     private void StepTitheUpgradeChoice(TitheWorldState state, uint buttons)
     {
+        if (_activeLoadout is not StormaktLoadout loadout) return;
         if (Pressed(buttons, Left) || Pressed(buttons, Right))
         {
             state.UpgradeSelection = 1 - state.UpgradeSelection;
@@ -5423,28 +5443,28 @@ internal sealed class StormaktGame
         {
             if (state.UpgradeChoice == TitheUpgradeChoice.Ship)
             {
-                state.ShipModule = state.UpgradeSelection == 0
+                loadout.ShipModule = state.UpgradeSelection == 0
                     ? TitheShipModule.SilverCooler
                     : TitheShipModule.SeizureArmor;
-                state.ArmorCharge = state.ShipModule == TitheShipModule.SeizureArmor ? 1 : 0;
+                loadout.ArmorCharge = loadout.ShipModule == TitheShipModule.SeizureArmor ? 1 : 0;
                 state.ShipUpgradeInstalled = true;
-                WriteTitheCampaignSave(state);
+                WriteCampaignSave(state.FreedShips);
             }
             else if (state.UpgradeChoice == TitheUpgradeChoice.Broadside)
             {
-                state.BroadsideModule = state.UpgradeSelection == 0
+                loadout.BroadsideModule = state.UpgradeSelection == 0
                     ? TitheBroadsideModule.MagnetBroadside
                     : TitheBroadsideModule.ChainCanister;
                 state.BroadsideUpgradeInstalled = true;
-                WriteTitheCampaignSave(state);
+                WriteCampaignSave(state.FreedShips);
             }
             else
             {
-                state.PrimaryModule = state.UpgradeSelection == 0
+                loadout.PrimaryModule = state.UpgradeSelection == 0
                     ? TithePrimaryModule.CrownDrill
                     : TithePrimaryModule.VolleyDirector;
                 state.UpgradeInstalled = true;
-                WriteTitheCampaignSave(state);
+                WriteCampaignSave(state.FreedShips);
             }
             state.ChoosingUpgrade = false;
             _cooldown = 0;
@@ -6123,7 +6143,7 @@ internal sealed class StormaktGame
 
     private void DamageShip()
     {
-        if (_titheWorld is TitheWorldState { ShipModule: TitheShipModule.SeizureArmor, ArmorCharge: > 0 } armor)
+        if (_activeLoadout is StormaktLoadout { ShipModule: TitheShipModule.SeizureArmor, ArmorCharge: > 0 } armor)
         {
             armor.ArmorCharge--;
             _heat = Math.Max(_heat, 90);
@@ -10271,7 +10291,7 @@ internal sealed class StormaktGame
             {
                 DrawPlayerThrust(frame);
             }
-            DrawTitheShipModule(frame, _shipY - 16);
+            DrawLoadoutShipModules(frame, _shipY - 16);
             return;
         }
 
@@ -10304,12 +10324,12 @@ internal sealed class StormaktGame
         PutPixel(frame, _shipX + 18, _shipY - 6, 0xffb7c7d6);
         DrawRect(frame, _shipX - 19, _shipY + 4, 4, 3, copper);
         DrawRect(frame, _shipX + 15, _shipY + 4, 4, 3, copper);
-        DrawTitheShipModule(frame, _shipY);
+        DrawLoadoutShipModules(frame, _shipY);
     }
 
-    private void DrawTitheShipModule(uint[] frame, int centerY)
+    private void DrawLoadoutShipModules(uint[] frame, int centerY)
     {
-        if (_titheWorld is not TitheWorldState state) return;
+        if (_activeLoadout is not StormaktLoadout state) return;
         string? primaryName = state.PrimaryModule switch
         {
             TithePrimaryModule.CrownDrill => "tithe_module_crown_drill",
@@ -11533,6 +11553,7 @@ internal sealed class StormaktGame
         DrawShip(frame);
         DrawBorder(frame);
         DrawHud(frame);
+        DrawLoadoutHud(frame);
         DrawSnapphaneMissionTitle(frame);
         DrawStageClear(frame);
         DrawPause(frame);
@@ -11638,7 +11659,7 @@ internal sealed class StormaktGame
         DrawShip(frame);
         DrawBorder(frame);
         DrawHud(frame);
-        DrawTitheModuleHud(frame);
+        DrawLoadoutHud(frame);
         DrawTitheBossHud(frame);
         DrawTitheMissionTitle(frame);
         DrawRadio(frame);
@@ -12077,9 +12098,9 @@ internal sealed class StormaktGame
         DrawText(frame, x + (width - 120) / 2, y + 22, "FOGDENS TIONDE VÄRLD", 0xff9bd4dc);
     }
 
-    private void DrawTitheModuleHud(uint[] frame)
+    private void DrawLoadoutHud(uint[] frame)
     {
-        if (_titheWorld is not TitheWorldState state) return;
+        if (_activeLoadout is not StormaktLoadout state) return;
         if (state.PrimaryModule != TithePrimaryModule.Standard)
         {
             string primary = state.PrimaryModule == TithePrimaryModule.CrownDrill ? "Z KRONBORR" : "Z SALVDIR";
@@ -12270,7 +12291,7 @@ internal sealed class StormaktGame
         else if (_levelId == 4)
         {
             DrawTitheModuleIcon(frame, panelX + 196, 67,
-                _titheWorld?.PrimaryModule ?? TithePrimaryModule.Standard);
+                _activeLoadout?.PrimaryModule ?? TithePrimaryModule.Standard);
         }
         else if (_levelId == 5)
         {
@@ -13414,7 +13435,9 @@ internal sealed class StormaktGame
         int SpecialCooldown, int SpecialSerial, int Depth);
     private readonly record struct DungeonChestSave(int Id, double X, double Y, bool Open, int OpenAge, int Depth);
     private readonly record struct StormaktCampaignSave(int Schema, TithePrimaryModule PrimaryModule,
-        TitheBroadsideModule BroadsideModule, TitheShipModule ShipModule, int FreedShips);
+        TitheBroadsideModule BroadsideModule, TitheShipModule ShipModule, int FreedShips,
+        SnapphaneRoute SnapphaneRoute = SnapphaneRoute.None, int SnapphaneAllies = 0,
+        bool SorenOathComplete = false);
 
     private sealed class SorenRivalState
     {
@@ -13504,10 +13527,57 @@ internal sealed class StormaktGame
         SeizureArmor,
     }
 
+    private enum SnapphaneRoute
+    {
+        None,
+        Kaparleden,
+        Krutrannan,
+    }
+
+    private sealed class StormaktLoadout
+    {
+        public TithePrimaryModule PrimaryModule { get; set; } = TithePrimaryModule.Standard;
+        public TitheBroadsideModule BroadsideModule { get; set; } = TitheBroadsideModule.Standard;
+        public TitheShipModule ShipModule { get; set; } = TitheShipModule.Standard;
+        public int ArmorCharge { get; set; }
+        public int WeaponIdleAge { get; set; }
+
+        public StormaktLoadout Clone() => new()
+        {
+            PrimaryModule = PrimaryModule,
+            BroadsideModule = BroadsideModule,
+            ShipModule = ShipModule,
+            ArmorCharge = ArmorCharge,
+            WeaponIdleAge = WeaponIdleAge,
+        };
+
+        public void Apply(StormaktCampaignSave save)
+        {
+            PrimaryModule = save.PrimaryModule;
+            BroadsideModule = save.BroadsideModule;
+            ShipModule = save.ShipModule;
+            ArmorCharge = ShipModule == TitheShipModule.SeizureArmor ? 1 : 0;
+            WeaponIdleAge = 0;
+        }
+
+        public void ApplyTestKit(int kit)
+        {
+            PrimaryModule = (kit & 1) == 0 ? TithePrimaryModule.CrownDrill : TithePrimaryModule.VolleyDirector;
+            BroadsideModule = (kit & 2) == 0 ? TitheBroadsideModule.MagnetBroadside : TitheBroadsideModule.ChainCanister;
+            ShipModule = (kit & 4) == 0 ? TitheShipModule.SilverCooler : TitheShipModule.SeizureArmor;
+            ArmorCharge = ShipModule == TitheShipModule.SeizureArmor ? 1 : 0;
+            WeaponIdleAge = 0;
+        }
+    }
+
     private sealed class SnapphaneWorldState
     {
         public int Age { get; set; }
         public int WreckSerial { get; set; }
+        public int IncomingFreedShips { get; set; }
+        public SnapphaneRoute Route { get; set; }
+        public int SnapphaneAllies { get; set; }
+        public bool SorenOathComplete { get; set; }
         public List<SnapphaneWreck> Wrecks { get; } = [];
     }
 
@@ -13545,11 +13615,6 @@ internal sealed class StormaktGame
         public bool ShowUpgradeDetails { get; set; }
         public int UpgradeSelection { get; set; }
         public TitheUpgradeChoice UpgradeChoice { get; set; }
-        public TithePrimaryModule PrimaryModule { get; set; } = TithePrimaryModule.Standard;
-        public TitheBroadsideModule BroadsideModule { get; set; } = TitheBroadsideModule.Standard;
-        public TitheShipModule ShipModule { get; set; } = TitheShipModule.Standard;
-        public int ArmorCharge { get; set; }
-        public int WeaponIdleAge { get; set; }
         public TitheBossState? Boss { get; set; }
     }
 
