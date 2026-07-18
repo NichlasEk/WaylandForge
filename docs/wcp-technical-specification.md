@@ -141,6 +141,7 @@ Defined packet types are `Hello`, `Welcome`, `DeviceConnected`, `DeviceDisconnec
 - Controller mappings persist in `[controller]` and `[controller.<core>]` TOML sections and inherit from the host defaults in the same way as keyboard profiles.
 - Axis capture converts a deliberate stick movement into a mappable directional control such as `LeftStickLeft`.
 - The input/debug windows show WCP status and the first connected controller.
+- All evdev discovery, hotplug, reads and ioctls run on the dedicated `WayControlProtocol` worker; the WFEX/render thread reads only the published normalized state.
 - Device-specific presets, configurable axis thresholds and hardware validation remain.
 - Every current keyboard mapping and deterministic WFEX input path remains intact.
 

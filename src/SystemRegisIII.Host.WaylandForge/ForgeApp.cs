@@ -113,7 +113,6 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         _clock.Tick();
         ProcessRawKey(textInput);
-        _wayControlInput.Poll();
         if (_capturingControllerBinding is InputBinding capture && _wayControlInput.TryConsumeActivatedControl(out WcpControl control))
         {
             ActiveInputProfile().ControllerBindings[capture.Id] = FormatControllerControl(control);

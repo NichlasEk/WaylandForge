@@ -6,8 +6,14 @@ internal sealed class WayControlInput : IDisposable
 {
     private const int StickThreshold = 12_000;
     private readonly WayControlHub _hub = new();
+    private readonly object _gate = new();
     private readonly Dictionary<string, DeviceState> _states = new(StringComparer.Ordinal);
+    private Thread? _worker;
+    private volatile bool _stopping;
     private string _fault = string.Empty;
+    private string _deviceSummary = "NONE";
+    private int _deviceCount;
+    private long _activeControls;
     private WcpControl? _lastActivatedControl;
 
     public WayControlInput()
@@ -16,6 +22,12 @@ internal sealed class WayControlInput : IDisposable
         try
         {
             _hub.AddBackend(new LinuxEvdevBackend());
+            _worker = new Thread(WorkerLoop)
+            {
+                IsBackground = true,
+                Name = "WayControlProtocol",
+            };
+            _worker.Start();
         }
         catch (Exception exception)
         {
@@ -23,51 +35,89 @@ internal sealed class WayControlInput : IDisposable
         }
     }
 
-    public int DeviceCount => _hub.Devices.Count();
+    public int DeviceCount
+    {
+        get { lock (_gate) return _deviceCount; }
+    }
 
-    public string Status => _fault.Length > 0
-        ? "FAULT " + _fault
-        : DeviceCount == 0 ? "NO CONTROLLER" : $"{DeviceCount} CONNECTED";
-
-    public string DeviceSummary
+    public string Status
     {
         get
         {
-            WcpDeviceInfo? device = _hub.Devices.FirstOrDefault();
-            return device is null ? "NONE" : $"{device.Bus} {device.Name}";
+            lock (_gate)
+                return _fault.Length > 0 ? "FAULT " + _fault : _deviceCount == 0 ? "NO CONTROLLER" : $"{_deviceCount} CONNECTED";
         }
     }
 
-    public void Poll()
+    public string DeviceSummary
     {
-        if (_fault.Length > 0) return;
-        try
+        get { lock (_gate) return _deviceSummary; }
+    }
+
+    private void WorkerLoop()
+    {
+        while (!_stopping)
         {
-            foreach (WcpEvent inputEvent in _hub.Poll())
-                Apply(inputEvent);
-        }
-        catch (Exception exception)
-        {
-            _states.Clear();
-            _fault = exception.Message;
+            try
+            {
+                ReadOnlySpan<WcpEvent> events = _hub.Poll();
+                bool devicesChanged = false;
+                lock (_gate)
+                {
+                    foreach (WcpEvent inputEvent in events)
+                    {
+                        Apply(inputEvent);
+                        devicesChanged |= inputEvent.Kind is WcpEventKind.DeviceConnected or WcpEventKind.DeviceDisconnected;
+                    }
+                    if (events.Length > 0) PublishActiveControls();
+                }
+
+                if (devicesChanged)
+                {
+                    WcpDeviceInfo[] devices = _hub.Devices.ToArray();
+                    lock (_gate)
+                    {
+                        _deviceCount = devices.Length;
+                        _deviceSummary = devices.Length == 0 ? "NONE" : $"{devices[0].Bus} {devices[0].Name}";
+                    }
+                }
+            }
+            catch (Exception exception)
+            {
+                lock (_gate)
+                {
+                    _states.Clear();
+                    Interlocked.Exchange(ref _activeControls, 0);
+                    _fault = exception.Message;
+                }
+                return;
+            }
+            Thread.Sleep(4);
         }
     }
 
-    public bool IsActive(WcpControl control) => _states.Values.Any(state => IsActive(state, control));
+    public bool IsActive(WcpControl control) =>
+        (ushort)control < 64 && ((ulong)Interlocked.Read(ref _activeControls) & (1UL << (ushort)control)) != 0;
 
     public bool TryConsumeActivatedControl(out WcpControl control)
     {
-        if (_lastActivatedControl is WcpControl activated)
+        lock (_gate)
         {
-            control = activated;
-            _lastActivatedControl = null;
-            return true;
+            if (_lastActivatedControl is WcpControl activated)
+            {
+                control = activated;
+                _lastActivatedControl = null;
+                return true;
+            }
+            control = WcpControl.None;
+            return false;
         }
-        control = WcpControl.None;
-        return false;
     }
 
-    public void BeginCapture() => _lastActivatedControl = null;
+    public void BeginCapture()
+    {
+        lock (_gate) _lastActivatedControl = null;
+    }
 
     private void Apply(WcpEvent inputEvent)
     {
@@ -118,6 +168,26 @@ internal sealed class WayControlInput : IDisposable
         };
     }
 
+    private void PublishActiveControls()
+    {
+        ulong active = 0;
+        foreach (DeviceState state in _states.Values)
+        {
+            foreach (WcpControl button in state.Buttons)
+                AddControl(ref active, button);
+            foreach (WcpControl control in DirectionalControls)
+                if (IsActive(state, control)) AddControl(ref active, control);
+            if (IsActive(state, WcpControl.LeftTrigger)) AddControl(ref active, WcpControl.LeftTrigger);
+            if (IsActive(state, WcpControl.RightTrigger)) AddControl(ref active, WcpControl.RightTrigger);
+        }
+        Interlocked.Exchange(ref _activeControls, unchecked((long)active));
+    }
+
+    private static void AddControl(ref ulong active, WcpControl control)
+    {
+        if ((ushort)control < 64) active |= 1UL << (ushort)control;
+    }
+
     private static WcpControl? AxisDirection(WcpControl axis, int value) => axis switch
     {
         WcpControl.LeftX => value < 0 ? WcpControl.LeftStickLeft : WcpControl.LeftStickRight,
@@ -134,11 +204,28 @@ internal sealed class WayControlInput : IDisposable
     private static int Axis(DeviceState state, WcpControl control) =>
         state.Axes.TryGetValue(control, out int value) ? value : 0;
 
-    public void Dispose() => _hub.Dispose();
+    public void Dispose()
+    {
+        _stopping = true;
+        _worker?.Join();
+        _hub.Dispose();
+    }
 
     private sealed class DeviceState
     {
         public HashSet<WcpControl> Buttons { get; } = [];
         public Dictionary<WcpControl, int> Axes { get; } = [];
     }
+
+    private static readonly WcpControl[] DirectionalControls =
+    [
+        WcpControl.LeftStickUp,
+        WcpControl.LeftStickDown,
+        WcpControl.LeftStickLeft,
+        WcpControl.LeftStickRight,
+        WcpControl.RightStickUp,
+        WcpControl.RightStickDown,
+        WcpControl.RightStickLeft,
+        WcpControl.RightStickRight,
+    ];
 }
