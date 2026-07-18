@@ -150,6 +150,8 @@ Acceptance: lockstep remains bit-deterministic; an intentionally slow host stays
 
 ### Checkpoint 5 - Optional compressed stream fallback
 
+Deferred by design. Shared memory is the normal local high-throughput path, so a compressed stream codec will be considered later only after measurements on a real non-shared transport show that byte reduction outweighs codec CPU and latency.
+
 1. Measure raw socket cost before selecting a codec.
 2. Prototype one fast lossless codec for full ARGB frames.
 3. Negotiate codec and maximum decompressed size.
@@ -159,6 +161,8 @@ Acceptance: lockstep remains bit-deterministic; an intentionally slow host stays
 Acceptance: compression is shipped only if measurements show a useful win for a real non-shared-memory transport. Raw ARGB remains mandatory and selectable.
 
 ### Checkpoint 6 - Documentation and migration
+
+Completed. The final adoption surface is recorded in [WFEX v2 Checkpoint 6 documentation and migration](wfex-v2-checkpoint-6-documentation-migration.md), with the practical workflow in the [WFEX integration guide](wfex-integration-guide.md).
 
 1. Update `wfex-technical-specification.md` with the final binary layouts.
 2. Add minimal producer examples for v1, v2 raw and v2 shared memory.
@@ -202,4 +206,4 @@ Shared memory is considered successful only if it reduces framebuffer copying wi
 
 Start with Checkpoint 0 and commit it independently. Then land handshake plus raw v2 before shared memory so negotiation and error handling can be tested without debugging two new mechanisms at once. Shared memory is the first expected performance feature. Presentation decoupling follows after frame ownership is proven. Compression remains optional and measurement-driven.
 
-Checkpoint 4 is opt-in. Shared memory remains deterministic lockstep unless `presentation_mode = "latest-frame"` is configured. Stormakt retains raw v2 and v1 fallback paths.
+WFEX v2's required local protocol work is complete through Checkpoint 6. Checkpoint 5 compression remains optional and deferred. Shared memory remains deterministic lockstep unless `presentation_mode = "latest-frame"` is configured, and every migrated producer retains its documented fallback path.

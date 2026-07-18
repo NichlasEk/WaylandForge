@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/examples/">
+    <Project Path="examples/SystemRegisIII.WfexProducerExample/SystemRegisIII.WfexProducerExample.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/SystemRegisIII.Core/SystemRegisIII.Core.csproj" />
     <Project Path="src/SystemRegisIII.ExternalCore.Dummy/SystemRegisIII.ExternalCore.Dummy.csproj" />

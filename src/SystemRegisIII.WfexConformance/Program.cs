@@ -4,6 +4,9 @@ using System.IO.Pipes;
 using SystemRegisIII.Core;
 
 RunSelfTest();
+string corpusDirectory = CorpusArgument(args) ?? Path.Combine(AppContext.BaseDirectory, "corpus");
+int corpusCases = RunMalformedCorpus(corpusDirectory);
+Console.WriteLine($"WFEX CONFORMANCE OK · {69 + corpusCases} CASES · CORPUS {corpusCases}");
 if (args.Contains("--benchmark", StringComparer.Ordinal)) RunBenchmark();
 
 static void RunSelfTest()
@@ -55,6 +58,13 @@ static void RunSelfTest()
     Require(hello.MajorVersion == 2 && hello.PixelFormats == WfexPixelFormats.Argb8888, "producer hello changed");
     Require(hello.PresentationModes == (WfexPresentationModes.DeterministicLockstep | WfexPresentationModes.LatestFrame),
         "producer did not offer both presentation modes");
+    WfexHandshakeRecord restrictedHello = WfexHandshakeRecord.CreateProducerHello(
+        new WfexLimits(400, 280, 448_000),
+        WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords,
+        WfexPresentationModes.DeterministicLockstep);
+    Require((restrictedHello.Capabilities & WfexCapabilities.SharedMemorySlots) == 0 &&
+        restrictedHello.PresentationModes == WfexPresentationModes.DeterministicLockstep,
+        "producer-specific feature offer was widened");
     WfexNegotiatedSession session = WfexNegotiation.AcceptProducerHello(
         hello, new WfexLimits(320, 240, 307_200), out WfexHandshakeRecord accept);
     Require(session.Limits == new WfexLimits(320, 240, 307_200), "negotiated limits were not intersected");
@@ -219,7 +229,71 @@ static void RunSelfTest()
         catch (InvalidDataException) { broadPermissionsRejected = true; }
         Require(broadPermissionsRejected, "broad shared-memory permissions were accepted");
     }
-    Console.WriteLine("WFEX CONFORMANCE OK · 68 CASES");
+}
+
+static string? CorpusArgument(string[] arguments)
+{
+    int index = Array.FindIndex(arguments, static value => value == "--corpus");
+    if (index < 0) return null;
+    if (index + 1 >= arguments.Length) throw new ArgumentException("--corpus requires a directory path.");
+    return arguments[index + 1];
+}
+
+static int RunMalformedCorpus(string directory)
+{
+    if (!Directory.Exists(directory))
+        throw new DirectoryNotFoundException($"WFEX malformed corpus was not found: {directory}");
+    string[] paths = Directory.GetFiles(directory, "*.wfexcase").Order(StringComparer.Ordinal).ToArray();
+    if (paths.Length == 0) throw new InvalidDataException($"WFEX malformed corpus is empty: {directory}");
+    foreach (string path in paths)
+    {
+        Dictionary<string, string> fields = File.ReadLines(path)
+            .Select(static line => line.Trim())
+            .Where(static line => line.Length > 0 && !line.StartsWith('#'))
+            .Select(line =>
+            {
+                int separator = line.IndexOf('=');
+                if (separator <= 0) throw new InvalidDataException($"Invalid corpus field in {path}: {line}");
+                return new KeyValuePair<string, string>(line[..separator], line[(separator + 1)..]);
+            })
+            .ToDictionary(StringComparer.OrdinalIgnoreCase);
+        if (!fields.TryGetValue("version", out string? version) ||
+            !fields.TryGetValue("expect", out string? expected) ||
+            !fields.TryGetValue("hex", out string? hex))
+            throw new InvalidDataException($"Corpus case {path} requires version, expect and hex fields.");
+        byte[] record;
+        try { record = Convert.FromHexString(hex); }
+        catch (FormatException ex) { throw new InvalidDataException($"Corpus case {path} has invalid hexadecimal data.", ex); }
+        string actual = version.ToLowerInvariant() switch
+        {
+            "v1" => ValidateCorpusV1(record),
+            "v2" => ValidateCorpusV2(record),
+            _ => throw new InvalidDataException($"Corpus case {path} has unknown version '{version}'."),
+        };
+        if (!string.Equals(actual, expected, StringComparison.Ordinal))
+            throw new InvalidDataException(
+                $"WFEX corpus failure in {Path.GetFileName(path)}: expected {expected}, received {actual}.");
+    }
+    return paths.Length;
+}
+
+static string ValidateCorpusV1(byte[] record)
+{
+    if (!WfexFrameHeader.TryParse(record, out WfexFrameHeader header, out WfexValidationError error))
+        return error.ToString();
+    int expectedBytes = checked(WfexFrameHeader.Size + header.PayloadBytes);
+    if (record.Length < expectedBytes) return "TruncatedPayload";
+    if (record.Length > expectedBytes) return "TrailingBytes";
+    return "Accepted";
+}
+
+static string ValidateCorpusV2(byte[] record)
+{
+    if (!WfexV2FrameHeader.TryParse(record, out WfexV2FrameHeader header, out WfexV2FrameValidationError error))
+        return error.ToString();
+    if ((ulong)record.Length < header.RecordBytes) return "TruncatedPayload";
+    if ((ulong)record.Length > header.RecordBytes) return "TrailingBytes";
+    return "Accepted";
 }
 
 static void RunBenchmark()

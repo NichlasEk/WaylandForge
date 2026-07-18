@@ -83,7 +83,7 @@ Both records are exactly 48 bytes and little-endian:
 | 40 | 4 | `uint32` | `pixelFormats` | Offered or selected pixel-format bits. |
 | 44 | 4 | `uint32` | `presentationModes` | Offered or selected presentation-mode bits. |
 
-Capability bit 0 is `RAW_FRAME_RECORDS` and bit 1 is `VERSIONED_FRAME_RECORDS`; both are mandatory for the current v2 baseline. The second bit prevents a Checkpoint 1-era producer that still emits v1 headers after negotiation from being silently misparsed. Capability bit 2 is the optional `SHARED_MEMORY_SLOTS`. Pixel-format bit 0 is `ARGB8888`. Presentation bit 0 is `DETERMINISTIC_LOCKSTEP`; bit 1 is `LATEST_FRAME`. A producer offers both modes and the host selects exactly one. `LATEST_FRAME` is valid only when shared-memory slots were also selected. Unknown required capability bits fail negotiation. Unknown optional bits are masked out.
+Capability bit 0 is `RAW_FRAME_RECORDS` and bit 1 is `VERSIONED_FRAME_RECORDS`; both are mandatory for the current v2 baseline. The second bit prevents a Checkpoint 1-era producer that still emits v1 headers after negotiation from being silently misparsed. Capability bit 2 is the optional `SHARED_MEMORY_SLOTS`. Pixel-format bit 0 is `ARGB8888`. Presentation bit 0 is `DETERMINISTIC_LOCKSTEP`; bit 1 is `LATEST_FRAME`. Every producer offers lockstep and may additionally offer latest-frame; the host selects exactly one offered mode. `LATEST_FRAME` is valid only when shared-memory slots were also selected. Unknown required capability bits fail negotiation. Unknown optional bits are masked out.
 
 The selected maximums are the component-wise minimum of the producer offer and host configuration. The mandatory Checkpoint 1 baseline is raw ARGB8888 in deterministic lockstep. The raw stream transport is therefore explicitly confirmed by capability while the already-open stdio or Unix socket determines the control transport.
 
@@ -452,7 +452,9 @@ WFEX is useful as a test artifact because it exposes the exact software-rendered
 
 Stormakt uses this pattern to check that level dispatch, timed encounters and rendering produce identical frames for identical input. The frame header itself should normally be excluded or normalized if a test wants to compare only pixels.
 
-## Minimal producer pseudocode
+## Minimal producer
+
+A compiled C# example covering v1, v2 raw and v2 shared memory lives at [`examples/SystemRegisIII.WfexProducerExample`](../examples/SystemRegisIII.WfexProducerExample/Program.cs). The [integration guide](wfex-integration-guide.md) gives matching host configurations, feature-detection order and troubleshooting. The v1 loop reduces to:
 
 ```text
 frameIndex = 0

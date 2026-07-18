@@ -42,15 +42,28 @@ public readonly record struct WfexHandshakeRecord(
     public const ushort CurrentMinorVersion = 0;
     public const int Size = 48;
 
-    public static WfexHandshakeRecord CreateProducerHello(WfexLimits limits) => new(
-        ProducerMagic,
-        CurrentMajorVersion,
-        CurrentMinorVersion,
-        WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords,
-        WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords | WfexCapabilities.SharedMemorySlots,
-        limits,
-        WfexPixelFormats.Argb8888,
-        WfexPresentationModes.DeterministicLockstep | WfexPresentationModes.LatestFrame);
+    public static WfexHandshakeRecord CreateProducerHello(
+        WfexLimits limits,
+        WfexCapabilities capabilities = WfexCapabilities.RawFrameRecords |
+            WfexCapabilities.VersionedFrameRecords | WfexCapabilities.SharedMemorySlots,
+        WfexPresentationModes presentationModes = WfexPresentationModes.DeterministicLockstep |
+            WfexPresentationModes.LatestFrame)
+    {
+        WfexCapabilities mandatory = WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords;
+        if ((capabilities & mandatory) != mandatory)
+            throw new ArgumentException("A WFEX v2 producer must offer raw versioned frame records.", nameof(capabilities));
+        if ((presentationModes & WfexPresentationModes.DeterministicLockstep) == 0)
+            throw new ArgumentException("A WFEX v2 producer must offer deterministic lockstep.", nameof(presentationModes));
+        return new WfexHandshakeRecord(
+            ProducerMagic,
+            CurrentMajorVersion,
+            CurrentMinorVersion,
+            mandatory,
+            capabilities,
+            limits,
+            WfexPixelFormats.Argb8888,
+            presentationModes);
+    }
 
     public void Write(Span<byte> destination)
     {
@@ -166,7 +179,11 @@ public static class WfexNegotiation
     public static WfexNegotiatedSession NegotiateProducerFromEnvironment(
         Stream input,
         Stream output,
-        WfexLimits producerLimits)
+        WfexLimits producerLimits,
+        WfexCapabilities offeredCapabilities = WfexCapabilities.RawFrameRecords |
+            WfexCapabilities.VersionedFrameRecords | WfexCapabilities.SharedMemorySlots,
+        WfexPresentationModes offeredPresentationModes = WfexPresentationModes.DeterministicLockstep |
+            WfexPresentationModes.LatestFrame)
     {
         string policy = Environment.GetEnvironmentVariable(PolicyEnvironmentVariable)?.Trim().ToLowerInvariant() ?? "v1";
         if (policy == "v1") return WfexNegotiatedSession.Version1(producerLimits);
@@ -174,15 +191,18 @@ public static class WfexNegotiation
             throw new InvalidDataException($"Unknown WFEX policy '{policy}'.");
 
         byte[] buffer = new byte[WfexHandshakeRecord.Size];
-        WfexHandshakeRecord.CreateProducerHello(producerLimits).Write(buffer);
+        WfexHandshakeRecord.CreateProducerHello(
+            producerLimits, offeredCapabilities, offeredPresentationModes).Write(buffer);
         output.Write(buffer);
         output.Flush();
         WfexStreamReader.ReadExactly(input, buffer);
         WfexHandshakeRecord accept = WfexHandshakeRecord.Parse(buffer, WfexHandshakeRecord.HostMagic);
         WfexCapabilities mandatoryBaseline = WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords;
         if ((accept.Capabilities & mandatoryBaseline) != mandatoryBaseline ||
+            (accept.Capabilities & ~offeredCapabilities) != 0 ||
             accept.PixelFormats != WfexPixelFormats.Argb8888 ||
-            accept.PresentationModes is not (WfexPresentationModes.DeterministicLockstep or WfexPresentationModes.LatestFrame))
+            accept.PresentationModes is not (WfexPresentationModes.DeterministicLockstep or WfexPresentationModes.LatestFrame) ||
+            (accept.PresentationModes & offeredPresentationModes) == 0)
             throw new InvalidDataException("WFEX host selected an unsupported baseline.");
         if (accept.PresentationModes == WfexPresentationModes.LatestFrame &&
             (accept.Capabilities & WfexCapabilities.SharedMemorySlots) == 0)

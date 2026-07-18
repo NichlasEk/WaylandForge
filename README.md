@@ -60,6 +60,8 @@ The fake core draws a controllable blob so every mapped button has visible outpu
 
 ## External Core Protocol
 
+WFEX v2 adds negotiated versioned records, private shared-memory slots and optional latest-frame pacing while retaining byte-for-byte v1 compatibility. See the [technical specification](docs/wfex-technical-specification.md), [integration guide](docs/wfex-integration-guide.md), and [compilable producer example](examples/SystemRegisIII.WfexProducerExample/Program.cs).
+
 `SystemRegisIII.ExternalCore.Dummy` is a deliberately tiny process-isolated core target. The host can start external cores as separate processes and speak either the original stdin/stdout probe protocol or the newer bounded Unix socket protocol.
 
 The legacy stdio probe is:
