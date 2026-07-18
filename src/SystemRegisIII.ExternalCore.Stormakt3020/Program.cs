@@ -1,7 +1,9 @@
 using System.Buffers.Binary;
+using System.Diagnostics;
 using System.Text;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Threading.Channels;
 using SystemRegisIII.Core;
 
 bool legacyResolution = string.Equals(
@@ -25,6 +27,13 @@ var command = new byte[29];
 var header = new byte[WfexV2FrameHeader.BaseHeaderSize];
 var frame = new uint[Width * Height];
 ulong frameIndex = 0;
+
+if (negotiatedSession.PresentationMode == WfexPresentationModes.LatestFrame)
+{
+    if (sharedRegion is null) throw new InvalidDataException("WFEX latest-frame mode requires shared memory.");
+    RunLatestFrame(input, output, sharedRegion, game, frame, Width, Height);
+    return;
+}
 
 while (true)
 {
@@ -109,6 +118,92 @@ static bool ReadExact(Stream stream, Span<byte> buffer)
     return true;
 }
 
+static void RunLatestFrame(
+    Stream input,
+    Stream output,
+    WfexSharedRegion sharedRegion,
+    StormaktGame game,
+    uint[] frame,
+    int width,
+    int height)
+{
+    var inputs = Channel.CreateBounded<StormaktInput>(new BoundedChannelOptions(256)
+    {
+        SingleReader = true,
+        SingleWriter = true,
+        FullMode = BoundedChannelFullMode.Wait,
+    });
+    var reader = Task.Run(() => ReadLatestInputs(input, inputs.Writer));
+    StormaktInput current = default;
+    ulong frameIndex = 0;
+    long nextTick = Stopwatch.GetTimestamp();
+    long tickTicks = Math.Max(1, Stopwatch.Frequency / 60);
+
+    while (!reader.IsCompleted || inputs.Reader.TryPeek(out _))
+    {
+        if (inputs.Reader.TryRead(out StormaktInput packet)) current = packet;
+        game.Step(current.Buttons, current.Pointer, current.Controller);
+        game.Render(frame, frameIndex);
+        WfexSharedNotification notification = sharedRegion.Publish(
+            frame, width, height, width, frameIndex,
+            frameIndex * 16_666_667UL, 16_666_667UL);
+        notification.Write(output);
+        output.Flush();
+        frameIndex++;
+
+        nextTick += tickTicks;
+        long remaining = nextTick - Stopwatch.GetTimestamp();
+        if (remaining > 0)
+        {
+            int sleepMilliseconds = (int)(remaining * 1000 / Stopwatch.Frequency);
+            if (sleepMilliseconds > 0) Thread.Sleep(sleepMilliseconds);
+            while (Stopwatch.GetTimestamp() < nextTick) Thread.SpinWait(32);
+        }
+        else if (remaining < -tickTicks * 4)
+        {
+            nextTick = Stopwatch.GetTimestamp();
+        }
+    }
+}
+
+static void ReadLatestInputs(Stream input, ChannelWriter<StormaktInput> writer)
+{
+    var command = new byte[29];
+    try
+    {
+        while (true)
+        {
+            int marker = input.ReadByte();
+            if (marker < 0) break;
+            command[0] = (byte)marker;
+            bool controllerProtocol = command[0] == ControllerPointerStepCommand;
+            bool pointerProtocol = command[0] == PointerStepCommand || controllerProtocol;
+            if (command[0] != StepCommand && !pointerProtocol) break;
+            int commandLength = controllerProtocol ? 29 : pointerProtocol ? 21 : 5;
+            if (!ReadExact(input, command.AsSpan(1, commandLength - 1))) break;
+            uint buttons = BinaryPrimitives.ReadUInt32LittleEndian(command.AsSpan(1));
+            var controller = controllerProtocol
+                ? new ControllerInput(
+                    BinaryPrimitives.ReadUInt32LittleEndian(command.AsSpan(5)),
+                    BinaryPrimitives.ReadInt16LittleEndian(command.AsSpan(9)),
+                    BinaryPrimitives.ReadInt16LittleEndian(command.AsSpan(11)))
+                : default;
+            var pointer = pointerProtocol
+                ? new RtsPointer(
+                    BinaryPrimitives.ReadInt32LittleEndian(command.AsSpan(controllerProtocol ? 13 : 5)),
+                    BinaryPrimitives.ReadInt32LittleEndian(command.AsSpan(controllerProtocol ? 17 : 9)),
+                    BinaryPrimitives.ReadUInt32LittleEndian(command.AsSpan(controllerProtocol ? 21 : 13)),
+                    BinaryPrimitives.ReadUInt32LittleEndian(command.AsSpan(controllerProtocol ? 25 : 17)) != 0)
+                : default;
+            writer.WriteAsync(new StormaktInput(buttons, pointer, controller)).AsTask().GetAwaiter().GetResult();
+        }
+    }
+    finally
+    {
+        writer.TryComplete();
+    }
+}
+
 static WfexSharedRegion? OpenSharedRegion(WfexNegotiatedSession session, Stream input, Stream output)
 {
     if ((session.Capabilities & WfexCapabilities.SharedMemorySlots) == 0) return null;
@@ -120,6 +215,7 @@ static WfexSharedRegion? OpenSharedRegion(WfexNegotiatedSession session, Stream 
 
 internal readonly record struct RtsPointer(int X, int Y, uint Buttons, bool Inside);
 internal readonly record struct ControllerInput(uint Buttons, short LeftX, short LeftY);
+internal readonly record struct StormaktInput(uint Buttons, RtsPointer Pointer, ControllerInput Controller);
 
 internal sealed class StormaktGame
 {

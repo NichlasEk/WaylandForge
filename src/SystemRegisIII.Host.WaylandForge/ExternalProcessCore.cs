@@ -24,6 +24,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     private string _pointerDriver = "absolute";
     private string _protocolPolicy = "v1";
     private string _frameTransport = "raw";
+    private string _presentationMode = "lockstep";
     private string _sharedMemoryDirectory = string.Empty;
     private string _fallbackDllPath = string.Empty;
     private WfexLimits _configuredWfexLimits = WfexLimits.Default;
@@ -61,6 +62,21 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     private ulong _lastNominalDurationNanoseconds;
     private ulong _sharedPayloadBytesAvoided;
     private bool _lastFrameUsesSharedMemory;
+    private readonly object _latestFrameLock = new();
+    private Thread? _latestFrameReader;
+    private volatile bool _stopLatestFrameReader;
+    private Exception? _latestFrameError;
+    private uint[] _latestFrame = [];
+    private int _latestWidth;
+    private int _latestHeight;
+    private int _latestStride;
+    private ulong _latestGeneration;
+    private ulong _presentedGeneration;
+    private ulong _latestSimulationIndex;
+    private ulong _latestPresentedIndex;
+    private ulong _latestDroppedFrames;
+    private long _latestReceivedTimestamp;
+    private double _latestReceiveToPresentMilliseconds;
 
     public ExternalProcessCore(UiExternalCoreConfig config, string fallbackDllPath)
     {
@@ -86,6 +102,9 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         ? "-"
         : $"{_lastPresentationTimestampNanoseconds / 1_000_000.0:0.000} MS · {_lastNominalDurationNanoseconds / 1_000_000.0:0.000} MS";
     public string ProtocolCopySavings => _sharedRegion is null ? "-" : $"{_sharedPayloadBytesAvoided / (1024.0 * 1024.0):0.0} MIB";
+    public string ProtocolPacing => _negotiatedSession.PresentationMode != WfexPresentationModes.LatestFrame
+        ? "LOCKSTEP"
+        : $"LATEST · SIM {_latestSimulationIndex} · SHOW {_latestPresentedIndex} · DROP {_latestDroppedFrames} · {_latestReceiveToPresentMilliseconds:0.00} MS";
     public bool IsRunning => _process is { HasExited: false };
     public int? ExitCode => _process is { HasExited: true } process ? process.ExitCode : _lastExitCode;
     public string Status => IsRunning ? "RUNNING" : ExitCode is int code ? $"EXIT {code}" : "STOPPED";
@@ -147,6 +166,9 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
             "require-shm" => "require-shm",
             _ => "raw",
         };
+        _presentationMode = config.PresentationMode.Equals("latest-frame", StringComparison.OrdinalIgnoreCase)
+            ? "latest-frame"
+            : "lockstep";
         _sharedMemoryDirectory = config.SharedMemoryDirectory.Trim();
         FrameIndex = 0;
         _lastWidth = 0;
@@ -264,7 +286,10 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         }
         stdin.Flush();
 
-        ReadWfexFrame(stdout, frameSink);
+        if (_negotiatedSession.PresentationMode == WfexPresentationModes.LatestFrame)
+            PresentLatestFrame(frameSink);
+        else
+            ReadWfexFrame(stdout, frameSink);
     }
 
     private void StepWfexFile(IFrameSink frameSink)
@@ -472,6 +497,117 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         }
     }
 
+    private void StartLatestFrameReader(Stream controlStream)
+    {
+        _stopLatestFrameReader = false;
+        _latestFrameError = null;
+        _latestFrameReader = new Thread(() => LatestFrameReaderLoop(controlStream))
+        {
+            IsBackground = true,
+            Name = "WFEX latest-frame reader",
+        };
+        _latestFrameReader.Start();
+    }
+
+    private void LatestFrameReaderLoop(Stream controlStream)
+    {
+        try
+        {
+            while (!_stopLatestFrameReader)
+            {
+                WfexSharedNotification notification = WfexSharedNotification.Read(controlStream);
+                ReadOnlySpan<uint> pixels = _sharedRegion!.AcquirePixels(notification, out WfexSharedFrameMetadata metadata);
+                try
+                {
+                    WfexV2FrameHeader validated = ValidateSharedMetadata(metadata, pixels.Length);
+                    lock (_latestFrameLock)
+                    {
+                        ValidateV2Sequence(validated.FrameIndex);
+                        if (_latestGeneration != _presentedGeneration) _latestDroppedFrames++;
+                        if (_latestFrame.Length != pixels.Length) _latestFrame = new uint[pixels.Length];
+                        pixels.CopyTo(_latestFrame);
+                        var record = new FrameRecordInfo(
+                            validated.Width, validated.Height, validated.StridePixels, validated.FrameIndex,
+                            validated.PayloadBytes, true, validated.PresentationTimestampNanoseconds,
+                            validated.NominalDurationNanoseconds);
+                        CommitV2Sequence(record);
+                        _sharedPayloadBytesAvoided += (uint)validated.PayloadBytes;
+                        _latestWidth = validated.Width;
+                        _latestHeight = validated.Height;
+                        _latestStride = validated.StridePixels;
+                        _latestSimulationIndex = validated.FrameIndex;
+                        _latestReceivedTimestamp = Stopwatch.GetTimestamp();
+                        _latestGeneration++;
+                        Monitor.PulseAll(_latestFrameLock);
+                    }
+                }
+                finally
+                {
+                    _sharedRegion.ReleasePixels(notification);
+                }
+            }
+        }
+        catch (Exception ex) when (_stopLatestFrameReader && ex is EndOfStreamException or IOException or ObjectDisposedException)
+        {
+        }
+        catch (Exception ex)
+        {
+            lock (_latestFrameLock)
+            {
+                _latestFrameError = ex;
+                Monitor.PulseAll(_latestFrameLock);
+            }
+        }
+    }
+
+    private WfexV2FrameHeader ValidateSharedMetadata(WfexSharedFrameMetadata metadata, int pixelCount)
+    {
+        ulong recordBytes = metadata.PayloadBytes >= 0
+            ? (ulong)WfexV2FrameHeader.BaseHeaderSize + (uint)metadata.PayloadBytes
+            : 0;
+        var candidate = new WfexV2FrameHeader(
+            WfexV2FrameHeader.CurrentMinorVersion,
+            WfexV2FrameHeader.BaseHeaderSize,
+            WfexV2FrameFlags.FullFrame,
+            WfexV2PayloadCodec.RawArgb8888,
+            metadata.Width,
+            metadata.Height,
+            metadata.StridePixels,
+            metadata.PayloadBytes,
+            metadata.FrameIndex,
+            metadata.PresentationTimestampNanoseconds,
+            metadata.NominalDurationNanoseconds,
+            recordBytes);
+        candidate.Write(_v2Header);
+        WfexV2FrameHeader validated = WfexV2FrameHeader.Parse(
+            _v2Header.AsSpan(0, WfexV2FrameHeader.BaseHeaderSize), _wfexLimits);
+        if (pixelCount != validated.PixelCount)
+            throw new InvalidDataException("WFEX shared-memory pixel span does not match its metadata.");
+        return validated;
+    }
+
+    private void PresentLatestFrame(IFrameSink frameSink)
+    {
+        lock (_latestFrameLock)
+        {
+            if (_latestGeneration == 0 && _latestFrameError is null)
+                Monitor.Wait(_latestFrameLock, 2000);
+            if (_latestFrameError is not null)
+                throw new InvalidDataException($"WFEX latest-frame reader failed: {_latestFrameError.Message}", _latestFrameError);
+            if (_latestGeneration == 0)
+                throw new TimeoutException("WFEX latest-frame producer did not publish an initial frame within 2000 ms.");
+            frameSink.Present(_latestFrame, _latestWidth, _latestHeight, _latestStride);
+            _presentedGeneration = _latestGeneration;
+            _latestPresentedIndex = _latestSimulationIndex;
+            _latestReceiveToPresentMilliseconds = Stopwatch.GetElapsedTime(_latestReceivedTimestamp).TotalMilliseconds;
+            FrameIndex = _latestPresentedIndex;
+            _lastWidth = _latestWidth;
+            _lastHeight = _latestHeight;
+            _lastStride = _latestStride;
+            _lastFrameUsesSharedMemory = false;
+        }
+    }
+
     private FrameRecordInfo ReadV1FrameHeader(Stream stream)
     {
         WfexStreamReader.ReadExactly(stream, _header);
@@ -637,11 +773,13 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
 
     private void Stop()
     {
-        CloseTransport();
+        bool readerOwnsProcessOutput = _latestFrameReader is not null;
+        if (!readerOwnsProcessOutput) CloseTransport();
         Process? process = _process;
         _process = null;
         if (process is null)
         {
+            CloseTransport();
             return;
         }
 
@@ -664,6 +802,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         finally
         {
             process.Dispose();
+            if (readerOwnsProcessOutput) CloseTransport();
         }
     }
 
@@ -677,6 +816,10 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         _socket = null;
         _socketListener?.Dispose();
         _socketListener = null;
+        _stopLatestFrameReader = true;
+        if (_latestFrameReader is not null && _latestFrameReader != Thread.CurrentThread)
+            _latestFrameReader.Join(500);
+        _latestFrameReader = null;
         _sharedRegion?.Dispose();
         _sharedRegion = null;
         DeleteSocketPath();
@@ -696,6 +839,21 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         _lastNominalDurationNanoseconds = 0;
         _sharedPayloadBytesAvoided = 0;
         _lastFrameUsesSharedMemory = false;
+        lock (_latestFrameLock)
+        {
+            _latestFrameError = null;
+            _latestFrame = [];
+            _latestWidth = 0;
+            _latestHeight = 0;
+            _latestStride = 0;
+            _latestGeneration = 0;
+            _presentedGeneration = 0;
+            _latestSimulationIndex = 0;
+            _latestPresentedIndex = 0;
+            _latestDroppedFrames = 0;
+            _latestReceivedTimestamp = 0;
+            _latestReceiveToPresentMilliseconds = 0;
+        }
     }
 
     private void EnsureFileProtocolPolicy()
@@ -737,8 +895,11 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         WfexHandshakeRecord hello = WfexHandshakeRecord.Parse(buffer, WfexHandshakeRecord.ProducerMagic);
         WfexCapabilities enabledCapabilities = WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords;
         if (_frameTransport != "raw") enabledCapabilities |= WfexCapabilities.SharedMemorySlots;
+        WfexPresentationModes requestedPresentationMode = _presentationMode == "latest-frame"
+            ? WfexPresentationModes.LatestFrame
+            : WfexPresentationModes.DeterministicLockstep;
         _negotiatedSession = WfexNegotiation.AcceptProducerHello(
-            hello, _configuredWfexLimits, out WfexHandshakeRecord response, enabledCapabilities);
+            hello, _configuredWfexLimits, out WfexHandshakeRecord response, enabledCapabilities, requestedPresentationMode);
         bool sharedMemorySelected = (_negotiatedSession.Capabilities & WfexCapabilities.SharedMemorySlots) != 0;
         if (_frameTransport == "require-shm" && !sharedMemorySelected)
             throw new InvalidDataException("WFEX shared memory was required but the producer did not offer it.");
@@ -755,7 +916,8 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
                 AddStderrLine($"HOST: shared-memory setup unavailable ({ex.Message}); using raw v2 records.");
                 enabledCapabilities &= ~WfexCapabilities.SharedMemorySlots;
                 _negotiatedSession = WfexNegotiation.AcceptProducerHello(
-                    hello, _configuredWfexLimits, out response, enabledCapabilities);
+                    hello, _configuredWfexLimits, out response, enabledCapabilities,
+                    WfexPresentationModes.DeterministicLockstep);
                 sharedMemorySelected = false;
             }
             catch (Exception ex)
@@ -767,7 +929,12 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         producerInput.Write(buffer);
         producerInput.Flush();
         _wfexLimits = _negotiatedSession.Limits;
-        if (sharedMemorySelected) ConfigureSharedMemory(producerOutput, producerInput);
+        if (sharedMemorySelected)
+        {
+            ConfigureSharedMemory(producerOutput, producerInput);
+            if (_negotiatedSession.PresentationMode == WfexPresentationModes.LatestFrame)
+                StartLatestFrameReader(producerOutput);
+        }
         _protocolNegotiated = true;
         AddStderrLine($"HOST: negotiated {_negotiatedSession.DiagnosticLabel}.");
     }

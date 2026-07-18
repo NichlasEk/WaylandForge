@@ -50,7 +50,7 @@ public readonly record struct WfexHandshakeRecord(
         WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords | WfexCapabilities.SharedMemorySlots,
         limits,
         WfexPixelFormats.Argb8888,
-        WfexPresentationModes.DeterministicLockstep);
+        WfexPresentationModes.DeterministicLockstep | WfexPresentationModes.LatestFrame);
 
     public void Write(Span<byte> destination)
     {
@@ -112,7 +112,7 @@ public readonly record struct WfexNegotiatedSession(
 
     public string DiagnosticLabel => MajorVersion == 1
         ? "V1 RAW LOCKSTEP"
-        : $"V{MajorVersion}.{MinorVersion} RAW LOCKSTEP";
+        : $"V{MajorVersion}.{MinorVersion} RAW {(PresentationMode == WfexPresentationModes.LatestFrame ? "LATEST" : "LOCKSTEP")}";
 }
 
 public static class WfexNegotiation
@@ -125,7 +125,8 @@ public static class WfexNegotiation
         WfexHandshakeRecord hello,
         WfexLimits hostLimits,
         out WfexHandshakeRecord response,
-        WfexCapabilities? enabledCapabilities = null)
+        WfexCapabilities? enabledCapabilities = null,
+        WfexPresentationModes requestedPresentationMode = WfexPresentationModes.DeterministicLockstep)
     {
         WfexCapabilities activeCapabilities = enabledCapabilities ?? HostCapabilities;
         WfexCapabilities unknownRequired = hello.RequiredCapabilities & ~activeCapabilities;
@@ -137,6 +138,12 @@ public static class WfexNegotiation
             (hello.PixelFormats & WfexPixelFormats.Argb8888) == 0 ||
             (hello.PresentationModes & WfexPresentationModes.DeterministicLockstep) == 0)
             throw new InvalidDataException("WFEX producer does not offer the mandatory raw ARGB8888 lockstep baseline.");
+        if (requestedPresentationMode is not (WfexPresentationModes.DeterministicLockstep or WfexPresentationModes.LatestFrame) ||
+            (hello.PresentationModes & requestedPresentationMode) == 0)
+            throw new InvalidDataException($"WFEX producer does not offer the requested presentation mode {requestedPresentationMode}.");
+        if (requestedPresentationMode == WfexPresentationModes.LatestFrame &&
+            (selectedCapabilities & WfexCapabilities.SharedMemorySlots) == 0)
+            throw new InvalidDataException("WFEX latest-frame presentation requires shared-memory slots.");
 
         var limits = new WfexLimits(
             Math.Min(hostLimits.MaximumWidth, hello.Limits.MaximumWidth),
@@ -150,7 +157,7 @@ public static class WfexNegotiation
             selectedCapabilities,
             limits,
             WfexPixelFormats.Argb8888,
-            WfexPresentationModes.DeterministicLockstep);
+            requestedPresentationMode);
         return new WfexNegotiatedSession(
             response.MajorVersion, response.MinorVersion, selectedCapabilities, limits,
             response.PixelFormats, response.PresentationModes);
@@ -175,8 +182,11 @@ public static class WfexNegotiation
         WfexCapabilities mandatoryBaseline = WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords;
         if ((accept.Capabilities & mandatoryBaseline) != mandatoryBaseline ||
             accept.PixelFormats != WfexPixelFormats.Argb8888 ||
-            accept.PresentationModes != WfexPresentationModes.DeterministicLockstep)
+            accept.PresentationModes is not (WfexPresentationModes.DeterministicLockstep or WfexPresentationModes.LatestFrame))
             throw new InvalidDataException("WFEX host selected an unsupported baseline.");
+        if (accept.PresentationModes == WfexPresentationModes.LatestFrame &&
+            (accept.Capabilities & WfexCapabilities.SharedMemorySlots) == 0)
+            throw new InvalidDataException("WFEX host selected latest-frame presentation without shared memory.");
         if (accept.Limits.MaximumWidth > producerLimits.MaximumWidth ||
             accept.Limits.MaximumHeight > producerLimits.MaximumHeight ||
             accept.Limits.MaximumPayloadBytes > producerLimits.MaximumPayloadBytes)

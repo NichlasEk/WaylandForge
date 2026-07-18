@@ -139,6 +139,8 @@ Acceptance: Stormakt and the dummy core run through shared memory with identical
 
 ### Checkpoint 4 - Presentation pacing
 
+Completed. The selectable pacing contract, bounded input handling, latest-frame reader and slow-host evidence are recorded in [WFEX v2 Checkpoint 4 presentation pacing](wfex-v2-checkpoint-4-presentation-pacing.md). Deterministic lockstep remains the default.
+
 1. Implement selectable lockstep and latest-frame modes.
 2. Add bounded completed-frame handling and explicit drop counters.
 3. Track simulation index, presented index, producer time, host receive time and presentation time.
@@ -200,4 +202,4 @@ Shared memory is considered successful only if it reduces framebuffer copying wi
 
 Start with Checkpoint 0 and commit it independently. Then land handshake plus raw v2 before shared memory so negotiation and error handling can be tested without debugging two new mechanisms at once. Shared memory is the first expected performance feature. Presentation decoupling follows after frame ownership is proven. Compression remains optional and measurement-driven.
 
-Until Checkpoint 4 lands, shared memory remains deterministic lockstep. Latest-frame pacing and deliberate presentation drops are not enabled. Stormakt retains raw v2 and v1 fallback paths.
+Checkpoint 4 is opt-in. Shared memory remains deterministic lockstep unless `presentation_mode = "latest-frame"` is configured. Stormakt retains raw v2 and v1 fallback paths.

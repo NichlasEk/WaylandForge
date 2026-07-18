@@ -83,7 +83,7 @@ Both records are exactly 48 bytes and little-endian:
 | 40 | 4 | `uint32` | `pixelFormats` | Offered or selected pixel-format bits. |
 | 44 | 4 | `uint32` | `presentationModes` | Offered or selected presentation-mode bits. |
 
-Capability bit 0 is `RAW_FRAME_RECORDS` and bit 1 is `VERSIONED_FRAME_RECORDS`; both are mandatory for the current v2 baseline. The second bit prevents a Checkpoint 1-era producer that still emits v1 headers after negotiation from being silently misparsed. Capability bit 2 is the optional `SHARED_MEMORY_SLOTS`. Pixel-format bit 0 is `ARGB8888`. Presentation bit 0 is `DETERMINISTIC_LOCKSTEP`; bit 1 is reserved for `LATEST_FRAME` but is not yet selected. Unknown required capability bits fail negotiation. Unknown optional bits are masked out.
+Capability bit 0 is `RAW_FRAME_RECORDS` and bit 1 is `VERSIONED_FRAME_RECORDS`; both are mandatory for the current v2 baseline. The second bit prevents a Checkpoint 1-era producer that still emits v1 headers after negotiation from being silently misparsed. Capability bit 2 is the optional `SHARED_MEMORY_SLOTS`. Pixel-format bit 0 is `ARGB8888`. Presentation bit 0 is `DETERMINISTIC_LOCKSTEP`; bit 1 is `LATEST_FRAME`. A producer offers both modes and the host selects exactly one. `LATEST_FRAME` is valid only when shared-memory slots were also selected. Unknown required capability bits fail negotiation. Unknown optional bits are masked out.
 
 The selected maximums are the component-wise minimum of the producer offer and host configuration. The mandatory Checkpoint 1 baseline is raw ARGB8888 in deterministic lockstep. The raw stream transport is therefore explicitly confirmed by capability while the already-open stdio or Unix socket determines the control transport.
 
@@ -163,6 +163,7 @@ The host validates codec, flags, dimensions, checked payload arithmetic, negotia
 [external_core3]
 protocol_policy = "prefer-v2"
 frame_transport = "prefer-shm"
+presentation_mode = "lockstep" # or latest-frame; latest-frame requires shared memory
 shared_memory_directory = "" # empty selects /dev/shm or the runtime temp directory
 ```
 
@@ -345,6 +346,26 @@ The host blocks until it has read the complete header and payload. The core wait
 - a slow core reduces the achieved frame rate instead of accumulating latency.
 
 The corresponding limitation is that a core stalled in simulation or rendering stalls the host's external-core step as well.
+
+## Stdio latest-frame behavior
+
+Checkpoint 4 adds an opt-in `latest-frame` presentation mode for shared-memory sessions. The control stream remains reliable, but simulation and presentation no longer have a one-request/one-frame relationship:
+
+```text
+host input writer ---> bounded input channel ---> 60 Hz simulation
+                                                   |
+                                                   v
+host reader <--- WFR2 notification <--- shared-memory slot
+     |
+     +-- copy newest completed frame into one bounded staging buffer
+                                      |
+                                      v
+                              next host presentation
+```
+
+The producer's input channel holds at most 256 packets and applies backpressure instead of discarding a packet. One queued packet is consumed per simulation tick; when the queue is empty, the most recent state remains active. A dedicated host reader continuously validates notifications, copies the newest complete slot into a single staging buffer and releases the slot. If that staging frame is replaced before presentation, the host increments the explicit drop counter. Simulation state is never rolled back to match presentation.
+
+The diagnostics expose the newest simulated index, presented index, deliberate presentation drops and receive-to-present latency. The host continues presenting the last complete staging frame when no newer frame has arrived. `lockstep` remains the configuration default and the only mode permitted for v1 or raw-stream sessions.
 
 ## Stormakt 3020 exchange
 

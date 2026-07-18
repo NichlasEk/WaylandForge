@@ -1,4 +1,6 @@
 using System.Buffers.Binary;
+using System.Diagnostics;
+using System.Threading.Channels;
 using SystemRegisIII.Core;
 
 const int frameWidth = 320;
@@ -17,6 +19,13 @@ var command = new byte[5];
 ulong frameIndex = 0;
 int blobX = frameWidth / 2;
 int blobY = frameHeight / 2;
+
+if (negotiatedSession.PresentationMode == WfexPresentationModes.LatestFrame)
+{
+    if (sharedRegion is null) throw new InvalidDataException("WFEX latest-frame mode requires shared memory.");
+    RunLatestFrame(input, output, sharedRegion, frame, frameWidth, frameHeight, ref blobX, ref blobY);
+    return;
+}
 
 while (ReadExact(input, command))
 {
@@ -71,6 +80,67 @@ static bool ReadExact(Stream stream, Span<byte> buffer)
         offset += read;
     }
     return true;
+}
+
+static void RunLatestFrame(
+    Stream input,
+    Stream output,
+    WfexSharedRegion sharedRegion,
+    uint[] frame,
+    int width,
+    int height,
+    ref int blobX,
+    ref int blobY)
+{
+    var inputs = Channel.CreateBounded<uint>(new BoundedChannelOptions(256)
+    {
+        SingleReader = true,
+        SingleWriter = true,
+        FullMode = BoundedChannelFullMode.Wait,
+    });
+    var reader = Task.Run(() =>
+    {
+        var command = new byte[5];
+        try
+        {
+            while (ReadExact(input, command) && command[0] == stepCommand)
+            {
+                uint buttons = BinaryPrimitives.ReadUInt32LittleEndian(command.AsSpan(1));
+                inputs.Writer.WriteAsync(buttons).AsTask().GetAwaiter().GetResult();
+            }
+        }
+        finally
+        {
+            inputs.Writer.TryComplete();
+        }
+    });
+    uint currentButtons = 0;
+    ulong frameIndex = 0;
+    long nextTick = Stopwatch.GetTimestamp();
+    long tickTicks = Math.Max(1, Stopwatch.Frequency / 60);
+    while (!reader.IsCompleted || inputs.Reader.TryPeek(out _))
+    {
+        if (inputs.Reader.TryRead(out uint buttons)) currentButtons = buttons;
+        RenderFrame(frame, width, height, frameIndex, currentButtons, ref blobX, ref blobY);
+        WfexSharedNotification notification = sharedRegion.Publish(
+            frame, width, height, width, frameIndex,
+            frameIndex * 16_666_667UL, 16_666_667UL);
+        notification.Write(output);
+        output.Flush();
+        frameIndex++;
+        nextTick += tickTicks;
+        long remaining = nextTick - Stopwatch.GetTimestamp();
+        if (remaining > 0)
+        {
+            int sleepMilliseconds = (int)(remaining * 1000 / Stopwatch.Frequency);
+            if (sleepMilliseconds > 0) Thread.Sleep(sleepMilliseconds);
+            while (Stopwatch.GetTimestamp() < nextTick) Thread.SpinWait(32);
+        }
+        else if (remaining < -tickTicks * 4)
+        {
+            nextTick = Stopwatch.GetTimestamp();
+        }
+    }
 }
 
 static void RenderFrame(uint[] frame, int width, int height, ulong frameIndex, uint buttons, ref int blobX, ref int blobY)

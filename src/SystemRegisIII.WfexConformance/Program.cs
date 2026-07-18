@@ -53,6 +53,8 @@ static void RunSelfTest()
     WfexHandshakeRecord.CreateProducerHello(new WfexLimits(400, 280, 448_000)).Write(handshake);
     WfexHandshakeRecord hello = WfexHandshakeRecord.Parse(handshake, WfexHandshakeRecord.ProducerMagic);
     Require(hello.MajorVersion == 2 && hello.PixelFormats == WfexPixelFormats.Argb8888, "producer hello changed");
+    Require(hello.PresentationModes == (WfexPresentationModes.DeterministicLockstep | WfexPresentationModes.LatestFrame),
+        "producer did not offer both presentation modes");
     WfexNegotiatedSession session = WfexNegotiation.AcceptProducerHello(
         hello, new WfexLimits(320, 240, 307_200), out WfexHandshakeRecord accept);
     Require(session.Limits == new WfexLimits(320, 240, 307_200), "negotiated limits were not intersected");
@@ -61,6 +63,20 @@ static void RunSelfTest()
     WfexNegotiatedSession rawSession = WfexNegotiation.AcceptProducerHello(
         hello, WfexLimits.Default, out _, rawCapabilities);
     Require((rawSession.Capabilities & WfexCapabilities.SharedMemorySlots) == 0, "raw policy selected shared memory");
+    WfexNegotiatedSession latestSession = WfexNegotiation.AcceptProducerHello(
+        hello, WfexLimits.Default, out WfexHandshakeRecord latestAccept,
+        WfexNegotiation.HostCapabilities, WfexPresentationModes.LatestFrame);
+    Require(latestSession.PresentationMode == WfexPresentationModes.LatestFrame &&
+        latestAccept.PresentationModes == WfexPresentationModes.LatestFrame,
+        "latest-frame presentation was not selected explicitly");
+    threw = false;
+    try
+    {
+        WfexNegotiation.AcceptProducerHello(
+            hello, WfexLimits.Default, out _, rawCapabilities, WfexPresentationModes.LatestFrame);
+    }
+    catch (InvalidDataException) { threw = true; }
+    Require(threw, "latest-frame presentation was accepted without shared memory");
     accept.Write(handshake);
     Require(WfexHandshakeRecord.Parse(handshake, WfexHandshakeRecord.HostMagic) == accept, "host accept did not roundtrip");
 
@@ -203,7 +219,7 @@ static void RunSelfTest()
         catch (InvalidDataException) { broadPermissionsRejected = true; }
         Require(broadPermissionsRejected, "broad shared-memory permissions were accepted");
     }
-    Console.WriteLine("WFEX CONFORMANCE OK · 64 CASES");
+    Console.WriteLine("WFEX CONFORMANCE OK · 68 CASES");
 }
 
 static void RunBenchmark()
