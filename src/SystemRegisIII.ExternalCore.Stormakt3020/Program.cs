@@ -95,6 +95,12 @@ internal sealed class StormaktGame
         "SNAPPHANENS ED",
         "KÖPENHAMNS RING",
     ];
+    private static readonly string[] SnapphaneWreckSeaPropNames =
+    [
+        "snapphane_sea_half_hull", "snapphane_sea_chain_mast", "snapphane_sea_twin_turret",
+        "snapphane_sea_engine_ring", "snapphane_sea_keel", "snapphane_sea_chain_anchor",
+        "snapphane_sea_boiler", "snapphane_sea_broadside",
+    ];
     private const int FlythroughFrames = 150 * 60;
     private const int BossArrivalFrame = 3_300;
     private const int BossPhaseOneHealth = 450;
@@ -12850,17 +12856,27 @@ internal sealed class StormaktGame
     {
         Clear(frame, 0xff03090b);
         int age = _snapphaneWorld?.Age ?? 0;
-        for (int y = 17; y < _height - 12; y++)
+        string backgroundName = _width <= 320 ? "snapphane_background" : "snapphane_background_wide";
+        if (_sprites is not null && _sprites.TryGet(backgroundName, out Sprite background))
         {
-            int depth = y * 22 / Math.Max(1, _height);
-            uint color = 0xff000000u |
-                ((uint)(4 + depth / 5) << 16) |
-                ((uint)(12 + depth) << 8) |
-                (uint)(15 + depth);
-            DrawLine(frame, 0, y, _width - 1, y, color);
+            int scroll = (_missionFrame / 4) % background.Height;
+            DrawSprite(frame, background, 0, scroll - background.Height);
+            DrawSprite(frame, background, 0, scroll);
+            DrawSnapphaneWreckSeaProps(frame, age);
         }
-
-        DrawStars(frame);
+        else
+        {
+            for (int y = 17; y < _height - 12; y++)
+            {
+                int depth = y * 22 / Math.Max(1, _height);
+                uint color = 0xff000000u |
+                    ((uint)(4 + depth / 5) << 16) |
+                    ((uint)(12 + depth) << 8) |
+                    (uint)(15 + depth);
+                DrawLine(frame, 0, y, _width - 1, y, color);
+            }
+            DrawStars(frame);
+        }
         if (_snapphaneWorld is SnapphaneWorldState state)
         {
             for (int layer = 0; layer < 3; layer++)
@@ -12899,6 +12915,27 @@ internal sealed class StormaktGame
             DrawRect(frame, x, y, 168, 42, 0xdd090b10);
             DrawText(frame, x + 16, y + 10, "FLOTTAN FÖLL", 0xffff6b7f);
             DrawText(frame, x + 22, y + 26, "START ÅTERKALLAR", 0xffffd66b);
+        }
+    }
+
+    private void DrawSnapphaneWreckSeaProps(uint[] frame, int age)
+    {
+        int travel = _height + 180;
+        for (int index = 0; index < SnapphaneWreckSeaPropNames.Length; index++)
+        {
+            if (_sprites?.TryGet(SnapphaneWreckSeaPropNames[index], out Sprite prop) != true) continue;
+            int lane = index % 4;
+            int x = lane switch
+            {
+                0 => -prop.Width / 3,
+                1 => Math.Max(4, _width / 5 - prop.Width / 2),
+                2 => _width * 4 / 5 - prop.Width / 2,
+                _ => _width - prop.Width * 2 / 3,
+            };
+            int speed = 1 + index % 3;
+            int y = (index * 97 + age * speed / 5) % travel - 100;
+            uint opacity = (uint)(index % 3 == 0 ? 92 : 122);
+            DrawSpriteAlpha(frame, prop, x, y, opacity);
         }
     }
 
@@ -13002,6 +13039,17 @@ internal sealed class StormaktGame
     {
         int x = (int)Math.Round(mine.X);
         int y = (int)Math.Round(mine.Y);
+        if (mine.BurstAge == 0)
+        {
+            int pulse = mine.Turned ? 12 + mine.Age / 6 % 3 : 10 + mine.Age / 10 % 2;
+            uint ring = mine.Turned ? 0xff65c5ca : 0xff8f2635;
+            DrawCircleOutline(frame, x, y, pulse, ring);
+            if (mine.Turned)
+            {
+                PutPixel(frame, x - pulse - 2, y, 0xffbdf8ff);
+                PutPixel(frame, x + pulse + 2, y, 0xffbdf8ff);
+            }
+        }
         string asset = mine.BurstAge > 0 ? "snapphane_scent_mine_broken" :
             mine.Turned ? "snapphane_scent_mine_turned" : "snapphane_scent_mine";
         if (_sprites?.TryGet(asset, out Sprite sprite) == true)
@@ -13075,6 +13123,12 @@ internal sealed class StormaktGame
 
             int buoyX = x + 24;
             int buoyY = y - 8;
+            if (!rescue.Rescued)
+            {
+                bool channeling = DistanceSquared(_shipX, _shipY, rescue.X, rescue.Y) < 31 * 31;
+                int pulse = 18 + (state.RouteAge / 8 & 1);
+                DrawCircleOutline(frame, buoyX, buoyY, pulse, channeling ? 0xff77e6a0 : 0xffffd66b);
+            }
             string buoyName = rescue.Rescued ? "snapphane_rescue_buoy_broken" : "snapphane_rescue_buoy";
             if ((!rescue.Rescued || rescue.FreedAge < 90) &&
                 _sprites?.TryGet(buoyName, out Sprite buoy) == true)

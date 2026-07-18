@@ -1164,6 +1164,29 @@ def append_snapphane_world_assets(entries: list[tuple[str, Image.Image]], source
         entries.append((name, sprite))
 
 
+def append_snapphane_wreck_sea_props(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    definitions = [
+        ("snapphane_sea_half_hull", 0, 0, (112, 108)),
+        ("snapphane_sea_chain_mast", 1, 0, (98, 116)),
+        ("snapphane_sea_twin_turret", 2, 0, (96, 100)),
+        ("snapphane_sea_engine_ring", 3, 0, (112, 106)),
+        ("snapphane_sea_keel", 0, 1, (86, 116)),
+        ("snapphane_sea_chain_anchor", 1, 1, (96, 112)),
+        ("snapphane_sea_boiler", 2, 1, (96, 104)),
+        ("snapphane_sea_broadside", 3, 1, (106, 96)),
+    ]
+    for name, column, row, target in definitions:
+        cell = source.crop((
+            column * source.width // 4,
+            row * source.height // 2,
+            (column + 1) * source.width // 4,
+            (row + 1) * source.height // 2,
+        )).convert("RGBA")
+        sprite = trim_alpha(cell)
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def append_snapphane_duel_assets(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
     definitions = [
         ("soren_duel_ready", 0, 0, (58, 62)),
@@ -1318,6 +1341,8 @@ def build(
     tithe_weapon_effects_input_path: Path,
     tithe_route_customs_input_path: Path,
     snapphane_world_input_path: Path,
+    snapphane_background_input_path: Path,
+    snapphane_wreck_sea_props_input_path: Path,
     snapphane_duel_input_path: Path,
     snapphane_route_input_path: Path,
     snapphane_red_hounds_input_path: Path,
@@ -1408,6 +1433,8 @@ def build(
     tithe_weapon_effects_source = Image.open(tithe_weapon_effects_input_path).convert("RGBA")
     tithe_route_customs_source = Image.open(tithe_route_customs_input_path).convert("RGBA")
     snapphane_world_source = Image.open(snapphane_world_input_path).convert("RGBA")
+    snapphane_background_source = Image.open(snapphane_background_input_path).convert("RGBA")
+    snapphane_wreck_sea_props_source = Image.open(snapphane_wreck_sea_props_input_path).convert("RGBA")
     snapphane_duel_source = Image.open(snapphane_duel_input_path).convert("RGBA")
     snapphane_route_source = Image.open(snapphane_route_input_path).convert("RGBA")
     snapphane_red_hounds_source = Image.open(snapphane_red_hounds_input_path).convert("RGBA")
@@ -1532,6 +1559,7 @@ def build(
     append_tithe_weapon_assets(entries, tithe_ship_modules_source, tithe_weapon_effects_source)
     append_tithe_route_assets(entries, tithe_route_customs_source)
     append_snapphane_world_assets(entries, snapphane_world_source)
+    append_snapphane_wreck_sea_props(entries, snapphane_wreck_sea_props_source)
     append_snapphane_duel_assets(entries, snapphane_duel_source)
     append_snapphane_route_assets(entries, snapphane_route_source)
     append_snapphane_red_hounds_assets(entries, snapphane_red_hounds_source)
@@ -1577,6 +1605,8 @@ def build(
     entries.append(("skanska_background_wide", mirrored_background(skanska_background_source, 400, 875)))
     entries.append(("oresund_background", mirrored_background(oresund_background_source, 320, 700)))
     entries.append(("oresund_background_wide", mirrored_background(oresund_background_source, 400, 875)))
+    entries.append(("snapphane_background", mirrored_background(snapphane_background_source, 320, 700)))
+    entries.append(("snapphane_background_wide", mirrored_background(snapphane_background_source, 400, 875)))
     logo_wide = logo_source.copy()
     logo_wide.thumbnail((210, 105), Image.Resampling.LANCZOS)
     entries.append(("stormakt_logo_wide", logo_wide))
@@ -1769,6 +1799,8 @@ def main() -> None:
     parser.add_argument("--tithe-weapon-effects-input", type=Path, default=Path("assets/stormakt3020/tithe-weapon-effects-v1.png"))
     parser.add_argument("--tithe-route-customs-input", type=Path, default=Path("assets/stormakt3020/tithe-route-customs-v1.png"))
     parser.add_argument("--snapphane-world-input", type=Path, default=Path("assets/stormakt3020/snapphane-beacons-wrecks-v1.png"))
+    parser.add_argument("--snapphane-background-input", type=Path, default=Path("assets/stormakt3020/snapphane-wreck-sea-background-v1.png"))
+    parser.add_argument("--snapphane-wreck-sea-props-input", type=Path, default=Path("assets/stormakt3020/snapphane-wreck-sea-props-v1.png"))
     parser.add_argument("--snapphane-duel-input", type=Path, default=Path("assets/stormakt3020/snapphane-soren-duel-v1.png"))
     parser.add_argument("--snapphane-route-input", type=Path, default=Path("assets/stormakt3020/snapphane-route-v1.png"))
     parser.add_argument("--snapphane-red-hounds-input", type=Path, default=Path("assets/stormakt3020/snapphane-red-hounds-v1.png"))
@@ -1864,6 +1896,8 @@ def main() -> None:
         args.tithe_weapon_effects_input,
         args.tithe_route_customs_input,
         args.snapphane_world_input,
+        args.snapphane_background_input,
+        args.snapphane_wreck_sea_props_input,
         args.snapphane_duel_input,
         args.snapphane_route_input,
         args.snapphane_red_hounds_input,
