@@ -257,6 +257,7 @@ internal sealed class StormaktGame
     private const int OresundBossCoreHealth = 360;
     private const int OresundServiceCarriageHealth = 144;
     private const int OresundTrainCannonHealth = 72;
+    private const int CopenhagenGateNodeMaxHealth = 180;
     private const int RtsSalvagedSilverGoal = 1_200;
     private const int DungeonFirstSigilMask = 1 << 8;
     private const int DungeonFogdeRescuedMask = 1 << 9;
@@ -318,6 +319,8 @@ internal sealed class StormaktGame
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_RED_HOUNDS_TEST"), "1", StringComparison.Ordinal);
     private readonly bool _redHoundsFinalTestMode = string.Equals(
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_RED_HOUNDS_FINAL_TEST"), "1", StringComparison.Ordinal);
+    private readonly bool _copenhagenGateTestMode = string.Equals(
+        Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_GATE_TEST"), "1", StringComparison.Ordinal);
     private readonly SpritePack? _sprites;
     private readonly StormaktMusicLoop? _audio;
     private Random _random = new(3020);
@@ -523,6 +526,12 @@ internal sealed class StormaktGame
     private static readonly RadioCard OresundBossFallRadio =
         new(0, 390, true, "FOGDE RASMUS", "SLOTTENE FALDER", "SUNDET ER FRIT",
             StormaktVoice.RasmusOresundFall, "portrait_rasmus");
+    private static readonly RadioCard CopenhagenApproachRadio =
+        new(0, 300, false, "EBBA GRIP", "RINGEN ÄR ETT LÅS", "BRYT TRE KRONOR", null, "portrait_ebba");
+    private static readonly RadioCard CopenhagenGateRadio =
+        new(0, 330, true, "TREKRONERS LÅS", "KRONAN HÅLLER", "STADEN FÖRBLIR SLUTEN", null, "rigsregnskabet");
+    private static readonly RadioCard CopenhagenGateFallRadio =
+        new(0, 300, false, "EBBA GRIP", "FÖRSTA LÅSET BRUSTET", "AMIRALITETET VÄNTAR", null, "portrait_ebba");
     private int _shipX;
     private int _shipY;
     private int _cooldown;
@@ -542,6 +551,7 @@ internal sealed class StormaktGame
     private DungeonState? _dungeon;
     private TitheWorldState? _titheWorld;
     private SnapphaneWorldState? _snapphaneWorld;
+    private CopenhagenWorldState? _copenhagenWorld;
     private StormaktLoadout? _activeLoadout;
     private bool _suppressCampaignWrites;
     private bool _stageClear;
@@ -790,6 +800,13 @@ internal sealed class StormaktGame
         }
 
         StepShots();
+        if (_levelId == 6)
+        {
+            StepCopenhagenWorld();
+            StepStars();
+            _previousButtons = buttons;
+            return;
+        }
         if (_levelId == 5)
         {
             StepSnapphaneWorld();
@@ -845,6 +862,11 @@ internal sealed class StormaktGame
         if (_levelId == 5 && !_inLevelSelect && !_inLevelPreview)
         {
             DrawSnapphaneWorld(frame);
+            return;
+        }
+        if (_levelId == 6 && !_inLevelSelect && !_inLevelPreview)
+        {
+            DrawCopenhagenWorld(frame);
             return;
         }
         DrawSky(frame);
@@ -903,7 +925,7 @@ internal sealed class StormaktGame
         _groundTargets.Clear();
         _anchorHazards.Clear();
         _crystalSpears.Clear();
-        _random = new Random(_levelId switch { 1 => 3202, 2 => 3303, 3 => 3404, 4 => 3505, 5 => 3606, _ => 3020 });
+        _random = new Random(_levelId switch { 1 => 3202, 2 => 3303, 3 => 3404, 4 => 3505, 5 => 3606, 6 => 3707, _ => 3020 });
         for (int i = 0; i < _stars.Length; i++)
         {
             _stars[i] = new Star(_random.Next(_width), _random.Next(_height), 1 + _random.Next(3), _random.Next(50, 180));
@@ -937,9 +959,22 @@ internal sealed class StormaktGame
         _dungeon = null;
         _titheWorld = _levelId == 4 ? new TitheWorldState() : null;
         _snapphaneWorld = _levelId == 5 ? new SnapphaneWorldState() : null;
-        _activeLoadout = _levelId is 4 or 5
+        _copenhagenWorld = _levelId == 6 ? new CopenhagenWorldState() : null;
+        _activeLoadout = _levelId is 4 or 5 or 6
             ? previousLoadout?.Clone() ?? new StormaktLoadout()
             : null;
+        if (_copenhagenWorld is CopenhagenWorldState resetCopenhagen)
+        {
+            ResetCopenhagenWorld(resetCopenhagen);
+            if (_copenhagenGateTestMode)
+            {
+                resetCopenhagen.Age = 300;
+                resetCopenhagen.GateActive = true;
+                resetCopenhagen.GateIntroAge = 120;
+                for (int node = 0; node < resetCopenhagen.GateHealth.Length; node++)
+                    resetCopenhagen.GateHealth[node] = 36;
+            }
+        }
         if (_snapphaneWorld is SnapphaneWorldState resetSnapphane)
         {
             ResetSnapphaneWorld(resetSnapphane);
@@ -1076,6 +1111,7 @@ internal sealed class StormaktGame
             2 => StormaktMusicTrack.Oresund,
             3 => StormaktMusicTrack.Rts,
             5 => StormaktMusicTrack.Snapphane,
+            6 => StormaktMusicTrack.Combat,
             _ => StormaktMusicTrack.Combat,
         });
     }
@@ -1086,7 +1122,7 @@ internal sealed class StormaktGame
             _redHoundsFinalTestMode || _snapphaneRescueTestMode;
         _levelId = levelId;
         Reset();
-        if (levelId is 4 or 5)
+        if (levelId is 4 or 5 or 6)
         {
             _activeLoadout = new StormaktLoadout();
             if (!fresh && TryLoadCampaignSave(out StormaktCampaignSave savedCampaign))
@@ -1098,6 +1134,12 @@ internal sealed class StormaktGame
                     snapphane.Route = savedCampaign.SnapphaneRoute;
                     snapphane.SnapphaneAllies = Math.Max(0, savedCampaign.SnapphaneAllies);
                     snapphane.SorenOathComplete = savedCampaign.SorenOathComplete;
+                }
+                if (_copenhagenWorld is CopenhagenWorldState copenhagen)
+                {
+                    copenhagen.IncomingFreedShips = Math.Max(0, savedCampaign.FreedShips);
+                    copenhagen.SnapphaneAllies = Math.Max(0, savedCampaign.SnapphaneAllies);
+                    copenhagen.SorenOathComplete = savedCampaign.SorenOathComplete;
                 }
             }
             if (levelId == 5 && _loadoutTestKit is int testKit)
@@ -1176,7 +1218,7 @@ internal sealed class StormaktGame
                 _previousButtons = buttons;
                 return;
             }
-            if (_levelSelection is 0 or 1 or 2 or 4 || _developerMode && _levelSelection == 5)
+            if (_levelSelection is 0 or 1 or 2 or 4 || _developerMode && _levelSelection is 5 or 6)
             {
                 StartLevel(_levelSelection, fresh: (buttons & Slow) != 0);
             }
@@ -5063,7 +5105,7 @@ internal sealed class StormaktGame
             1 => SkanskaRadioCards,
             2 => OresundRadioCards,
             4 => TitheRadioCards,
-            5 => [],
+            5 or 6 => [],
             _ => RadioCards,
         };
         foreach (RadioCard card in cards)
@@ -5159,6 +5201,172 @@ internal sealed class StormaktGame
             _enemies.Clear();
             _audio?.Trigger(StormaktSound.Deploy);
         }
+    }
+
+    private void ResetCopenhagenWorld(CopenhagenWorldState state)
+    {
+        state.Age = 0;
+        state.GateHealth[0] = CopenhagenGateNodeMaxHealth;
+        state.GateHealth[1] = CopenhagenGateNodeMaxHealth;
+        state.GateHealth[2] = CopenhagenGateNodeMaxHealth;
+    }
+
+    private void StepCopenhagenWorld()
+    {
+        if (_copenhagenWorld is not CopenhagenWorldState state || _stageClear) return;
+
+        state.Age++;
+        if (state.Age == 20) ActivateBossRadio(CopenhagenApproachRadio);
+        if (!state.GateActive && state.Age >= 240)
+        {
+            state.GateActive = true;
+            state.GateIntroAge = 0;
+            _enemyShots.Clear();
+            ActivateBossRadio(CopenhagenGateRadio);
+            _audio?.SwitchMusic(StormaktMusicTrack.Boss);
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+
+        if (!state.GateActive)
+        {
+            StepEnemyShots();
+            return;
+        }
+
+        state.GateIntroAge++;
+        state.HitFlash = Math.Max(0, state.HitFlash - 1);
+        state.RepairFlash = Math.Max(0, state.RepairFlash - 1);
+        state.BarrierFlash = Math.Max(0, state.BarrierFlash - 1);
+        StepCopenhagenGateShots(state);
+        StepCopenhagenGateAttacks(state);
+        StepCopenhagenBarrier(state);
+        StepEnemyShots();
+
+        if (state.GateHealth.Any(health => health > 0)) return;
+
+        state.GateFallAge++;
+        if (state.GateFallAge == 1)
+        {
+            _enemyShots.Clear();
+            _shots.Clear();
+            _score += 2_000;
+            ActivateBossRadio(CopenhagenGateFallRadio);
+            _audio?.Trigger(StormaktSound.Broadside);
+        }
+        if (state.GateFallAge is 24 or 52 or 86)
+            _audio?.Trigger(StormaktSound.EnemyExplosion);
+        if (state.GateFallAge < 240 || _bossRadioCard is not null) return;
+
+        _stageClear = true;
+        _stageClearAge = 0;
+        _audio?.SwitchMusic(StormaktMusicTrack.Combat);
+    }
+
+    private void StepCopenhagenGateShots(CopenhagenWorldState state)
+    {
+        if (state.GateFallAge > 0) return;
+        (double centerX, double centerY) = CopenhagenGateCenter(state);
+        for (int shotIndex = _shots.Count - 1; shotIndex >= 0; shotIndex--)
+        {
+            Shot shot = _shots[shotIndex];
+            int hitNode = -1;
+            for (int node = 0; node < state.GateHealth.Length; node++)
+            {
+                if (state.GateHealth[node] <= 0) continue;
+                (double nodeX, double nodeY) = CopenhagenGateNodePosition(state, node, centerX, centerY);
+                if (DistanceSquared(shot.X, shot.Y, nodeX, nodeY) < 18 * 18)
+                {
+                    hitNode = node;
+                    break;
+                }
+            }
+            if (hitNode < 0) continue;
+
+            state.GateHealth[hitNode] = Math.Max(0, state.GateHealth[hitNode] - shot.Power);
+            state.HitFlash = 5;
+            _shots.RemoveAt(shotIndex);
+            if (state.GateHealth[hitNode] == 0)
+            {
+                state.DestroyedOrder.Add(hitNode);
+                _score += 450;
+                _audio?.Trigger(StormaktSound.EnemyExplosion);
+            }
+        }
+    }
+
+    private void StepCopenhagenGateAttacks(CopenhagenWorldState state)
+    {
+        if (state.GateFallAge > 0 || state.GateIntroAge < 90) return;
+        (double centerX, double centerY) = CopenhagenGateCenter(state);
+        int attackAge = state.GateIntroAge - 90;
+
+        if (state.GateHealth[1] > 0 && attackAge % 54 == 0)
+        {
+            (double x, double y) = CopenhagenGateNodePosition(state, 1, centerX, centerY);
+            double baseAngle = attackAge * 0.027;
+            for (int ray = 0; ray < 4; ray++)
+            {
+                double angle = baseAngle + ray * Math.PI / 2.0;
+                _enemyShots.Add(new EnemyShot(x, y, Math.Cos(angle) * 1.75, Math.Sin(angle) * 1.75, 3));
+            }
+            _audio?.Trigger(StormaktSound.TwinCannon);
+        }
+
+        if (state.GateHealth[0] > 0 && attackAge % 180 == 36 && state.BarrierAge == 0)
+        {
+            state.BarrierAge = 1;
+            state.BarrierY = centerY + 20;
+            int span = Math.Max(72, _width - 150);
+            state.BarrierGapX = 75 + Math.Abs((attackAge * 37 + state.DestroyedOrder.Count * 53) % span);
+            state.BarrierFlash = 12;
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+
+        if (state.GateHealth[2] > 0 && attackAge > 0 && attackAge % 150 == 0)
+        {
+            int target = Enumerable.Range(0, state.GateHealth.Length)
+                .Where(index => index != 2 && state.GateHealth[index] > 0)
+                .OrderBy(index => state.GateHealth[index])
+                .FirstOrDefault(-1);
+            if (target >= 0)
+            {
+                state.GateHealth[target] = Math.Min(CopenhagenGateNodeMaxHealth, state.GateHealth[target] + 18);
+                state.RepairTarget = target;
+                state.RepairFlash = 30;
+                _audio?.Trigger(StormaktSound.TitheUpgradeInstall);
+            }
+        }
+    }
+
+    private void StepCopenhagenBarrier(CopenhagenWorldState state)
+    {
+        if (state.BarrierAge == 0) return;
+        state.BarrierAge++;
+        state.BarrierY += 1.45;
+        const int gapWidth = 66;
+        if (!state.BarrierHitPlayer && Math.Abs(_shipY - state.BarrierY) < 7 &&
+            Math.Abs(_shipX - state.BarrierGapX) > gapWidth / 2)
+        {
+            state.BarrierHitPlayer = true;
+            DamageShip();
+        }
+        if (state.BarrierY <= _height + 12) return;
+        state.BarrierAge = 0;
+        state.BarrierHitPlayer = false;
+    }
+
+    private (double X, double Y) CopenhagenGateCenter(CopenhagenWorldState state)
+    {
+        double entry = Math.Min(1.0, state.GateIntroAge / 90.0);
+        double eased = entry * entry * (3.0 - 2.0 * entry);
+        return (_width / 2.0, -58 + (126 * eased));
+    }
+
+    private static (double X, double Y) CopenhagenGateNodePosition(
+        CopenhagenWorldState state, int node, double centerX, double centerY)
+    {
+        double angle = -Math.PI / 2.0 + node * Math.PI * 2.0 / 3.0 + state.GateIntroAge * 0.004;
+        return (centerX + Math.Cos(angle) * 65.0, centerY + Math.Sin(angle) * 34.0);
     }
 
     private void ResetSnapphaneWorld(SnapphaneWorldState state)
@@ -13128,6 +13336,170 @@ internal sealed class StormaktGame
         }
     }
 
+    private void DrawCopenhagenWorld(uint[] frame)
+    {
+        Clear(frame, 0xff03080f);
+        CopenhagenWorldState? state = _copenhagenWorld;
+        int age = state?.Age ?? 0;
+        DrawCopenhagenBackground(frame, age);
+        if (state is not null)
+        {
+            DrawCopenhagenBarrier(frame, state);
+            if (state.GateActive) DrawCopenhagenGate(frame, state);
+        }
+        DrawShots(frame);
+        DrawEnemyShots(frame);
+        DrawShip(frame);
+        DrawBorder(frame);
+        DrawHud(frame);
+        DrawLoadoutHud(frame);
+        if (state is not null) DrawCopenhagenGateHud(frame, state);
+        DrawCopenhagenMissionTitle(frame, age);
+        DrawRadio(frame);
+        DrawStageClear(frame);
+        DrawPause(frame);
+        if (_gameOver)
+        {
+            int x = (_width - 168) / 2;
+            int y = (_height - 42) / 2;
+            DrawRect(frame, x, y, 168, 42, 0xdd090b10);
+            DrawText(frame, x + 16, y + 10, "FLOTTAN FÖLL", 0xffff6b7f);
+            DrawText(frame, x + 22, y + 26, "START ÅTERKALLAR", 0xffffd66b);
+        }
+    }
+
+    private void DrawCopenhagenBackground(uint[] frame, int age)
+    {
+        for (int y = 17; y < _height - 12; y++)
+        {
+            int depth = y * 24 / Math.Max(1, _height);
+            uint color = 0xff000000u | ((uint)(3 + depth / 5) << 16) |
+                ((uint)(9 + depth / 2) << 8) | (uint)(16 + depth);
+            DrawLine(frame, 0, y, _width - 1, y, color);
+        }
+        DrawStars(frame);
+
+        int farScroll = age / 5;
+        int horizon = 42 + farScroll % 74;
+        for (int index = 0; index < 9; index++)
+        {
+            int x = index * (_width + 40) / 8 - 20;
+            int height = 15 + Math.Abs(index * 17 + 9) % 28;
+            int y = horizon - height / 2;
+            DrawRect(frame, x - 8, y, 17, height, 0xff101923);
+            FillTriangle(frame, x, y - 18, x - 7, y + 1, x + 7, y + 1, 0xff17212a);
+            DrawLine(frame, x, y - 17, x, y + height, 0xff6b552f);
+            if ((index & 1) == 0) PutPixel(frame, x + 3, y + 6, 0xffffd66b);
+        }
+
+        int ringY = 74 + age / 2 % Math.Max(80, _height + 70) - 70;
+        DrawCircleOutline(frame, _width / 2, ringY, Math.Max(82, _width / 3), 0xff493c29);
+        DrawCircleOutline(frame, _width / 2, ringY, Math.Max(75, _width / 3 - 7), 0xff1e3441);
+        for (int spoke = 0; spoke < 8; spoke++)
+        {
+            double angle = spoke * Math.PI / 4.0 + age * 0.002;
+            int x1 = _width / 2 + (int)Math.Round(Math.Cos(angle) * 75);
+            int y1 = ringY + (int)Math.Round(Math.Sin(angle) * 35);
+            int x2 = _width / 2 + (int)Math.Round(Math.Cos(angle) * 112);
+            int y2 = ringY + (int)Math.Round(Math.Sin(angle) * 53);
+            DrawLine(frame, x1, y1, x2, y2, spoke % 2 == 0 ? 0xff8a6b38 : 0xff344d5c);
+        }
+
+        int sealScroll = age % 96;
+        for (int lane = 0; lane < 5; lane++)
+        {
+            int x = 24 + lane * Math.Max(1, (_width - 48) / 4);
+            int y = (lane * 53 + sealScroll) % (_height + 50) - 25;
+            DrawLine(frame, x - 13, y, x + 13, y, 0xff263744);
+            DrawLine(frame, x, y - 7, x, y + 7, 0xff765139);
+            PutPixel(frame, x, y, 0xff9bd4dc);
+        }
+    }
+
+    private void DrawCopenhagenGate(uint[] frame, CopenhagenWorldState state)
+    {
+        (double centerXD, double centerYD) = CopenhagenGateCenter(state);
+        int centerX = (int)Math.Round(centerXD);
+        int centerY = (int)Math.Round(centerYD);
+        uint ring = state.GateFallAge > 0 ? 0xff8f2635 : state.HitFlash > 0 ? 0xffffec9a : 0xffd6b25e;
+        DrawCircleOutline(frame, centerX, centerY, 72, ring);
+        DrawCircleOutline(frame, centerX, centerY, 61, 0xff344d5c);
+        for (int node = 0; node < state.GateHealth.Length; node++)
+        {
+            (double nodeXD, double nodeYD) = CopenhagenGateNodePosition(state, node, centerXD, centerYD);
+            int x = (int)Math.Round(nodeXD);
+            int y = (int)Math.Round(nodeYD);
+            DrawLine(frame, centerX, centerY, x, y, state.GateHealth[node] > 0 ? 0xff765139 : 0xff3b2026);
+            if (state.GateHealth[node] <= 0)
+            {
+                DrawLine(frame, x - 10, y - 10, x + 10, y + 10, 0xff8f2635);
+                DrawLine(frame, x + 10, y - 10, x - 10, y + 10, 0xff8f2635);
+                continue;
+            }
+            uint crownColor = node switch { 0 => 0xff7fc7ff, 1 => 0xffff6b62, _ => 0xff77e6a0 };
+            FillCircle(frame, x, y, 13, 0xff17212a);
+            DrawCircleOutline(frame, x, y, 14, crownColor);
+            DrawCrown(frame, x - 4, y - 3, crownColor);
+            int healthWidth = 22 * state.GateHealth[node] / CopenhagenGateNodeMaxHealth;
+            DrawRect(frame, x - 11, y + 17, 22, 3, 0xff291b20);
+            DrawRect(frame, x - 11, y + 17, healthWidth, 3, crownColor);
+            if (state.RepairFlash > 0 && state.RepairTarget == node)
+            {
+                DrawCircleOutline(frame, x, y, 18 + state.RepairFlash % 5, 0xffbdf8ff);
+                DrawLine(frame, centerX, centerY, x, y, 0xff77e6a0);
+            }
+        }
+        FillCircle(frame, centerX, centerY, 9, 0xff101820);
+        DrawCrown(frame, centerX - 4, centerY - 3, 0xffffd66b);
+        if (state.GateFallAge > 0)
+        {
+            int burst = Math.Min(45, state.GateFallAge / 2);
+            DrawCircleOutline(frame, centerX, centerY, 12 + burst, 0xffff8a4a);
+            DrawCircleOutline(frame, centerX, centerY, 6 + burst * 2, 0xff8f2635);
+        }
+    }
+
+    private void DrawCopenhagenBarrier(uint[] frame, CopenhagenWorldState state)
+    {
+        if (state.BarrierAge == 0) return;
+        int y = (int)Math.Round(state.BarrierY);
+        const int gapWidth = 66;
+        uint edge = state.BarrierFlash > 0 ? 0xffffec9a : 0xff7fc7ff;
+        DrawRect(frame, 0, y - 3, Math.Max(0, state.BarrierGapX - gapWidth / 2), 7, 0xff1b3448);
+        DrawRect(frame, state.BarrierGapX + gapWidth / 2, y - 3,
+            Math.Max(0, _width - state.BarrierGapX - gapWidth / 2), 7, 0xff1b3448);
+        DrawLine(frame, 0, y - 4, state.BarrierGapX - gapWidth / 2, y - 4, edge);
+        DrawLine(frame, state.BarrierGapX + gapWidth / 2, y - 4, _width - 1, y - 4, edge);
+        DrawCrown(frame, state.BarrierGapX - gapWidth / 2 - 5, y - 3, 0xffffd66b);
+        DrawCrown(frame, state.BarrierGapX + gapWidth / 2 + 1, y - 3, 0xffffd66b);
+    }
+
+    private void DrawCopenhagenGateHud(uint[] frame, CopenhagenWorldState state)
+    {
+        if (!state.GateActive || state.GateIntroAge < 45 || state.GateFallAge > 0) return;
+        int alive = state.GateHealth.Count(health => health > 0);
+        int total = state.GateHealth.Sum();
+        int barWidth = Math.Min(184, _width - 96);
+        int x = (_width - barWidth) / 2;
+        DrawRect(frame, x, 21, barWidth, 13, 0xdd080d12);
+        DrawRect(frame, x + 2, 23, (barWidth - 4) * total / (CopenhagenGateNodeMaxHealth * 3), 4, 0xffffd66b);
+        DrawText(frame, x + 4, 28, $"TREKRONERS LÅS  {alive}/3", 0xffbdf8ff);
+    }
+
+    private void DrawCopenhagenMissionTitle(uint[] frame, int age)
+    {
+        if (age >= 210) return;
+        int alphaAge = age < 30 ? age : Math.Min(30, 210 - age);
+        if (alphaAge <= 0) return;
+        int width = Math.Min(286, _width - 30);
+        int x = (_width - width) / 2;
+        int y = _height <= 224 ? 64 : 92;
+        DrawRect(frame, x, y, width, 48, 0xdd080d12);
+        DrawLine(frame, x, y, x + width - 1, y, 0xffffd66b);
+        DrawText(frame, x + (width - 108) / 2, y + 10, "KÖPENHAMNS RING", 0xffffd66b);
+        DrawText(frame, x + (width - 132) / 2, y + 27, "TREKRONERS LÅS", 0xff9bd4dc);
+    }
+
     private void DrawSnapphaneWorld(uint[] frame)
     {
         Clear(frame, 0xff03090b);
@@ -14457,6 +14829,10 @@ internal sealed class StormaktGame
         {
             DrawSnapphaneOathSeal(frame, panelX + 196, 67);
         }
+        else if (_levelId == 6)
+        {
+            DrawCopenhagenLockSeal(frame, panelX + 196, 67);
+        }
         else
         {
             DrawSnapphaneSilhouette(frame, panelX + 196, 67);
@@ -14499,12 +14875,32 @@ internal sealed class StormaktGame
                 else
                     DrawText(frame, panelX + 45, 116, $"KRUTBONUS {_snapphaneWorld?.KrutBonus ?? 0}", 0xffff8a4a);
             }
+            else if (_levelId == 6)
+            {
+                DrawText(frame, panelX + 28, 99, "TREKRONERS LÅS BRUTET", 0xffffd66b);
+                DrawText(frame, panelX + 31, 116, "AMIRALITETET VÄNTAR", 0xff9bd4dc);
+            }
             else
             {
                 DrawText(frame, panelX + 51, 99, "BÄLTET ÄR ÖPPET", 0xffffd66b);
                 DrawText(frame, panelX + 39, 116, "KRONARKIV SÄKRAT", 0xff9bd4dc);
             }
         }
+    }
+
+    private void DrawCopenhagenLockSeal(uint[] frame, int x, int y)
+    {
+        DrawCircleOutline(frame, x, y, 23, 0xffd6b25e);
+        for (int node = 0; node < 3; node++)
+        {
+            double angle = -Math.PI / 2.0 + node * Math.PI * 2.0 / 3.0;
+            int nodeX = x + (int)Math.Round(Math.Cos(angle) * 18);
+            int nodeY = y + (int)Math.Round(Math.Sin(angle) * 12);
+            DrawLine(frame, x, y, nodeX, nodeY, 0xff765139);
+            DrawLine(frame, nodeX - 4, nodeY - 4, nodeX + 4, nodeY + 4, 0xff8f2635);
+            DrawLine(frame, nodeX + 4, nodeY - 4, nodeX - 4, nodeY + 4, 0xff8f2635);
+        }
+        DrawCrown(frame, x - 4, y - 3, 0xffffd66b);
     }
 
     private void DrawSnapphaneOathSeal(uint[] frame, int x, int y)
@@ -15762,6 +16158,27 @@ internal sealed class StormaktGame
             ArmorCharge = ShipModule == TitheShipModule.SeizureArmor ? 1 : 0;
             WeaponIdleAge = 0;
         }
+    }
+
+    private sealed class CopenhagenWorldState
+    {
+        public int Age { get; set; }
+        public int IncomingFreedShips { get; set; }
+        public int SnapphaneAllies { get; set; }
+        public bool SorenOathComplete { get; set; }
+        public bool GateActive { get; set; }
+        public int GateIntroAge { get; set; }
+        public int GateFallAge { get; set; }
+        public int HitFlash { get; set; }
+        public int RepairFlash { get; set; }
+        public int RepairTarget { get; set; } = -1;
+        public int BarrierAge { get; set; }
+        public double BarrierY { get; set; }
+        public int BarrierGapX { get; set; }
+        public int BarrierFlash { get; set; }
+        public bool BarrierHitPlayer { get; set; }
+        public int[] GateHealth { get; } = new int[3];
+        public List<int> DestroyedOrder { get; } = [];
     }
 
     private sealed class SnapphaneWorldState

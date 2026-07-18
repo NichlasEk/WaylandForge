@@ -1,6 +1,18 @@
 # Stormakt 3020 - Bana 7: Köpenhamns ring och Codex Argentum
 
-Status: utvecklingsplan för kampanjens sjunde rad, level id `6`. Banan är ännu låst/developer-preview i runtime. Den här planen ersätter den tidigare idén att Superarmadans reträtt ensam avslutar kampanjen.
+Status: aktiv utvecklingsplan för kampanjens sjunde rad, level id `6`. Första rymdslicen är developer-startbar; hela banan förblir låst i publik kampanj tills båda akterna är färdiga. Den här planen ersätter den tidigare idén att Superarmadans reträtt ensam avslutar kampanjen.
+
+## Nuvarande spelbara checkpoint
+
+Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen render/step-dispatch och kampanjens sparade Bana 5-lastning. Den första yttre ringsektionen leder efter en kort inflygning till **Trekroners lås**:
+
+- murkronan skickar ned tvärgående sigillväggar med en fysisk lucka;
+- eldkronan skjuter roterande korseld;
+- reparationskronan läker den svagaste återstående grannen;
+- förstöringsordningen ändrar därför resten av striden;
+- när alla tre kronorna faller visas checkpointresultatet **Amiralitetet väntar**.
+
+Miljön, låset, HUD, barriärer och resultatkort har kodritade fallbackformer i wide och legacy. `WAYLANDFORGE_STORMAKT_COPENHAGEN_GATE_TEST=1` hoppar direkt till en förkortad låsstrid för determinism- och transporttest. Det är fortfarande en utvecklingscheckpoint: nästa svep ska fortsätta in i De tolv timmarnas amiralitet i stället för att returnera till kampanjmenyn.
 
 ## Kärna
 
