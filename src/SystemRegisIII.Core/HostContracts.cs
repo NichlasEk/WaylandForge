@@ -20,7 +20,11 @@ public enum SaturnButtons : uint
     DeveloperLoad = 1 << 20,
 }
 
-public readonly record struct SaturnInputState(SaturnButtons Buttons)
+public readonly record struct SaturnInputState(
+    SaturnButtons Buttons,
+    SaturnButtons ControllerButtons = SaturnButtons.None,
+    short LeftX = 0,
+    short LeftY = 0)
 {
     public bool Escape => Buttons.HasFlag(SaturnButtons.Escape);
 }

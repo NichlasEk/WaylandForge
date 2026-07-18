@@ -15,6 +15,7 @@ internal sealed class WayControlInput : IDisposable
     private string _deviceSummary = "NONE";
     private int _deviceCount;
     private long _activeControls;
+    private int _leftAxes;
     private long _latestEventSequence;
     private long _latestEventTimestampMicroseconds;
     private WcpControl? _lastActivatedControl;
@@ -115,6 +116,7 @@ internal sealed class WayControlInput : IDisposable
                 {
                     _states.Clear();
                     Interlocked.Exchange(ref _activeControls, 0);
+                    Volatile.Write(ref _leftAxes, 0);
                     _fault = exception.Message;
                 }
                 return;
@@ -124,6 +126,10 @@ internal sealed class WayControlInput : IDisposable
 
     public bool IsActive(WcpControl control) =>
         (ushort)control < 64 && ((ulong)Interlocked.Read(ref _activeControls) & (1UL << (ushort)control)) != 0;
+
+    public short LeftX => unchecked((short)(Volatile.Read(ref _leftAxes) & 0xffff));
+
+    public short LeftY => unchecked((short)((Volatile.Read(ref _leftAxes) >> 16) & 0xffff));
 
     public bool TryGetLatestEvent(ulong observedSequence, out ulong sequence, out long timestampMicroseconds)
     {
@@ -204,6 +210,8 @@ internal sealed class WayControlInput : IDisposable
     private void PublishActiveControls()
     {
         ulong active = 0;
+        short leftX = 0;
+        short leftY = 0;
         foreach (DeviceState state in _states.Values)
         {
             foreach (WcpControl button in state.Buttons)
@@ -212,8 +220,13 @@ internal sealed class WayControlInput : IDisposable
                 if (IsActive(state, control)) AddControl(ref active, control);
             if (IsActive(state, WcpControl.LeftTrigger)) AddControl(ref active, WcpControl.LeftTrigger);
             if (IsActive(state, WcpControl.RightTrigger)) AddControl(ref active, WcpControl.RightTrigger);
+            int stateLeftX = Axis(state, WcpControl.LeftX);
+            int stateLeftY = Axis(state, WcpControl.LeftY);
+            if (Math.Abs(stateLeftX) > Math.Abs((int)leftX)) leftX = (short)Math.Clamp(stateLeftX, short.MinValue, short.MaxValue);
+            if (Math.Abs(stateLeftY) > Math.Abs((int)leftY)) leftY = (short)Math.Clamp(stateLeftY, short.MinValue, short.MaxValue);
         }
         Interlocked.Exchange(ref _activeControls, unchecked((long)active));
+        Volatile.Write(ref _leftAxes, (ushort)leftX | (leftY << 16));
     }
 
     private static void AddControl(ref ulong active, WcpControl control)

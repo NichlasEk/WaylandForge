@@ -11,7 +11,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     private const uint FrameMagic = 0x58454657; // WFEX
     private const uint InputMagic = 0x4e494657; // WFIN
     private const byte StepCommand = (byte)'S';
-    private const byte PointerStepCommand = (byte)'P';
+    private const byte ControllerPointerStepCommand = (byte)'Q';
     private readonly object _logLock = new();
     private readonly object _inputLock = new();
     private readonly Queue<string> _stderrTail = new();
@@ -38,7 +38,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     private uint[] _frame = [];
     private uint[] _pendingFrame = [];
     private readonly byte[] _header = new byte[32];
-    private readonly byte[] _stepCommandBuffer = new byte[21];
+    private readonly byte[] _stepCommandBuffer = new byte[29];
     private readonly byte[] _inputHeader = new byte[48];
     private int _pointerX;
     private int _pointerY;
@@ -185,13 +185,16 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         Stream stdout = _process.StandardOutput.BaseStream;
         if (_pointerDriver == "stormakt_rts")
         {
-            _stepCommandBuffer[0] = PointerStepCommand;
+            _stepCommandBuffer[0] = ControllerPointerStepCommand;
+            BinaryPrimitives.WriteUInt32LittleEndian(_stepCommandBuffer.AsSpan(5), (uint)inputState.ControllerButtons);
+            BinaryPrimitives.WriteInt16LittleEndian(_stepCommandBuffer.AsSpan(9), inputState.LeftX);
+            BinaryPrimitives.WriteInt16LittleEndian(_stepCommandBuffer.AsSpan(11), inputState.LeftY);
             lock (_inputLock)
             {
-                BinaryPrimitives.WriteInt32LittleEndian(_stepCommandBuffer.AsSpan(5), _pointerX);
-                BinaryPrimitives.WriteInt32LittleEndian(_stepCommandBuffer.AsSpan(9), _pointerY);
-                BinaryPrimitives.WriteUInt32LittleEndian(_stepCommandBuffer.AsSpan(13), _pointerButtons);
-                BinaryPrimitives.WriteUInt32LittleEndian(_stepCommandBuffer.AsSpan(17), _pointerInside ? 1u : 0u);
+                BinaryPrimitives.WriteInt32LittleEndian(_stepCommandBuffer.AsSpan(13), _pointerX);
+                BinaryPrimitives.WriteInt32LittleEndian(_stepCommandBuffer.AsSpan(17), _pointerY);
+                BinaryPrimitives.WriteUInt32LittleEndian(_stepCommandBuffer.AsSpan(21), _pointerButtons);
+                BinaryPrimitives.WriteUInt32LittleEndian(_stepCommandBuffer.AsSpan(25), _pointerInside ? 1u : 0u);
             }
             stdin.Write(_stepCommandBuffer);
         }

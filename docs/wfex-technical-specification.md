@@ -175,6 +175,24 @@ The leading marker lets a core determine the exact packet length before reading 
 
 WaylandForge maps pointer coordinates from the scaled viewport back into the core's native framebuffer before writing this packet.
 
+### Controller-aware `Q` step packet
+
+Stormakt 3020 also accepts a 29-byte `Q` packet. It preserves the merged action bitfield while identifying controller-owned actions and carrying WCP's normalized left stick without reducing it to four digital buttons:
+
+| Offset | Size | Type | Field |
+|---:|---:|---|---|
+| 0 | 1 | byte | ASCII `Q` (`0x51`) |
+| 1 | 4 | `uint32` | Merged keyboard/controller action bitfield |
+| 5 | 4 | `uint32` | Actions currently owned by WCP controllers |
+| 9 | 2 | `int16` | Normalized left-stick X, `-32768..32767` |
+| 11 | 2 | `int16` | Normalized left-stick Y, `-32768..32767` |
+| 13 | 4 | `int32` | Pointer X in core framebuffer coordinates |
+| 17 | 4 | `int32` | Pointer Y in core framebuffer coordinates |
+| 21 | 4 | `uint32` | Pointer button bitfield |
+| 25 | 4 | `uint32` | Pointer-inside flag |
+
+The WaylandForge host selects `Q` only for the Stormakt pointer driver. Other stdio cores retain their existing `S` packets, and Stormakt continues accepting old `S` and `P` recordings unchanged.
+
 ## Stdio lockstep behavior
 
 Stdio mode is request/response lockstep:
@@ -342,6 +360,6 @@ A new producer compatible with the current host should:
 7. encode pixels as `0xAARRGGBB` integers;
 8. increment `frameIndex` monotonically;
 9. loop on partial reads and writes;
-10. select `S`, `P` or WFIN according to the configured transport and pointer requirements.
+10. select `S`, `P`, Stormakt's host-side `Q`, or WFIN according to the configured transport and input requirements.
 
 Following those rules is enough to make a software-rendered external core appear as a normal WaylandForge viewport without sharing a graphics context or loading the core into the host process.

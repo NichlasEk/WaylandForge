@@ -124,7 +124,8 @@ internal sealed unsafe class ForgeApp : IDisposable
             MarkConfigDirty();
         }
         ForgeInput hostInput = MapInputFromPressedKeys(_config.Input) | MapInputFromController(_config.Input);
-        ForgeInput coreInput = MapInputFromPressedKeys(ActiveInputProfile()) | MapInputFromController(ActiveInputProfile());
+        ForgeInput controllerCoreInput = MapInputFromController(ActiveInputProfile());
+        ForgeInput coreInput = MapInputFromPressedKeys(ActiveInputProfile()) | controllerCoreInput;
         _lastInput = coreInput;
         _pointer = pointer;
         _textInput = textInput;
@@ -132,7 +133,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         _hostFrameIndex = frameIndex;
         HandleHostShortcuts(hostInput);
 
-        _inputSource.Update(coreInput);
+        _inputSource.Update(coreInput, controllerCoreInput, _wayControlInput.LeftX, _wayControlInput.LeftY);
         SyncExternalPointerState();
         if (!_paused || _stepRequested || _frameStore.Pixels.IsEmpty)
         {
@@ -2724,9 +2725,10 @@ internal sealed unsafe class ForgeApp : IDisposable
 
     private void PushCurrentInputState(uint rawKeyCode = 0, uint rawKeySerial = 0, bool rawKeyPressed = false)
     {
-        ForgeInput mappedInput = MapInputFromPressedKeys(ActiveInputProfile());
+        ForgeInput controllerInput = MapInputFromController(ActiveInputProfile());
+        ForgeInput mappedInput = MapInputFromPressedKeys(ActiveInputProfile()) | controllerInput;
         _lastInput = mappedInput;
-        _inputSource.Update(mappedInput);
+        _inputSource.Update(mappedInput, controllerInput, _wayControlInput.LeftX, _wayControlInput.LeftY);
         SyncExternalPointerState();
         if (_core is ExternalProcessCore external)
         {

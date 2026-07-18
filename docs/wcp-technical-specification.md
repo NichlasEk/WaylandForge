@@ -140,6 +140,8 @@ Defined packet types are `Hello`, `Welcome`, `DeviceConnected`, `DeviceDisconnec
 - The existing input mapper has separate `KEY` and `WCP CONTROL` columns. Either binding can be captured or cleared without changing the other.
 - Controller mappings persist in `[controller]` and `[controller.<core>]` TOML sections and inherit from the host defaults in the same way as keyboard profiles.
 - Axis capture converts a deliberate stick movement into a mappable directional control such as `LeftStickLeft`.
+- The host core state retains controller-owned action bits and normalized left-stick X/Y alongside the merged legacy button field.
+- Stormakt receives these values through the backward-compatible `Q` stdio record: keyboard motion keeps its original speed, D-pad motion uses a two-pixel precision step, and the left stick uses a radial dead zone plus proportional response curve up to the original maximum speed.
 - The input/debug windows show WCP status and the first connected controller.
 - All evdev discovery, hotplug, reads and ioctls run on the dedicated `WayControlProtocol` worker; the WFEX/render thread reads only the published normalized state.
 - The worker blocks in Linux `poll()` until a controller descriptor is readable and wakes only once per second for hotplug discovery when idle. There is no fixed-rate controller polling loop.

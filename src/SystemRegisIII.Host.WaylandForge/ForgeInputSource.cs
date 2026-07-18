@@ -6,7 +6,7 @@ internal sealed class ForgeInputSource : IInputSource
 {
     private SaturnInputState _state;
 
-    public void Update(ForgeInput input)
+    public void Update(ForgeInput input, ForgeInput controllerInput = ForgeInput.None, short leftX = 0, short leftY = 0)
     {
         const ForgeInput coreMask =
             ForgeInput.Escape |
@@ -24,7 +24,11 @@ internal sealed class ForgeInputSource : IInputSource
             ForgeInput.DeveloperSave |
             ForgeInput.DeveloperLoad;
 
-        _state = new SaturnInputState((SaturnButtons)(uint)(input & coreMask));
+        _state = new SaturnInputState(
+            (SaturnButtons)(uint)(input & coreMask),
+            (SaturnButtons)(uint)(controllerInput & coreMask),
+            leftX,
+            leftY);
     }
 
     public SaturnInputState Poll() => _state;

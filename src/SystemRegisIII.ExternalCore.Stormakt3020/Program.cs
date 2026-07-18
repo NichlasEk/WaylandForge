@@ -10,13 +10,14 @@ int Height = legacyResolution ? 224 : 280;
 const uint FrameMagic = 0x58454657; // WFEX
 const byte StepCommand = (byte)'S';
 const byte PointerStepCommand = (byte)'P';
+const byte ControllerPointerStepCommand = (byte)'Q';
 
 var input = Console.OpenStandardInput();
 var output = Console.OpenStandardOutput();
 using var audio = StormaktMusicLoop.TryStartDefault();
 var game = new StormaktGame(Width, Height, SpritePack.LoadDefault(), audio);
 audio?.Trigger(StormaktSound.Deploy);
-var command = new byte[21];
+var command = new byte[29];
 var header = new byte[32];
 var frame = new uint[Width * Height];
 ulong frameIndex = 0;
@@ -29,26 +30,33 @@ while (true)
         break;
     }
     command[0] = (byte)marker;
-    bool pointerProtocol = command[0] == PointerStepCommand;
+    bool controllerProtocol = command[0] == ControllerPointerStepCommand;
+    bool pointerProtocol = command[0] == PointerStepCommand || controllerProtocol;
     if (command[0] != StepCommand && !pointerProtocol)
     {
         break;
     }
-    int commandLength = pointerProtocol ? 21 : 5;
+    int commandLength = controllerProtocol ? 29 : pointerProtocol ? 21 : 5;
     if (!ReadExact(input, command.AsSpan(1, commandLength - 1)))
     {
         break;
     }
 
     uint buttons = BinaryPrimitives.ReadUInt32LittleEndian(command.AsSpan(1));
+    var controller = controllerProtocol
+        ? new ControllerInput(
+            BinaryPrimitives.ReadUInt32LittleEndian(command.AsSpan(5)),
+            BinaryPrimitives.ReadInt16LittleEndian(command.AsSpan(9)),
+            BinaryPrimitives.ReadInt16LittleEndian(command.AsSpan(11)))
+        : default;
     var pointer = pointerProtocol
         ? new RtsPointer(
-            BinaryPrimitives.ReadInt32LittleEndian(command.AsSpan(5)),
-            BinaryPrimitives.ReadInt32LittleEndian(command.AsSpan(9)),
-            BinaryPrimitives.ReadUInt32LittleEndian(command.AsSpan(13)),
-            BinaryPrimitives.ReadUInt32LittleEndian(command.AsSpan(17)) != 0)
+            BinaryPrimitives.ReadInt32LittleEndian(command.AsSpan(controllerProtocol ? 13 : 5)),
+            BinaryPrimitives.ReadInt32LittleEndian(command.AsSpan(controllerProtocol ? 17 : 9)),
+            BinaryPrimitives.ReadUInt32LittleEndian(command.AsSpan(controllerProtocol ? 21 : 13)),
+            BinaryPrimitives.ReadUInt32LittleEndian(command.AsSpan(controllerProtocol ? 25 : 17)) != 0)
         : default;
-    game.Step(buttons, pointer);
+    game.Step(buttons, pointer, controller);
     game.Render(frame, frameIndex);
 
     BinaryPrimitives.WriteUInt32LittleEndian(header.AsSpan(0), FrameMagic);
@@ -82,6 +90,7 @@ static bool ReadExact(Stream stream, Span<byte> buffer)
 }
 
 internal readonly record struct RtsPointer(int X, int Y, uint Buttons, bool Inside);
+internal readonly record struct ControllerInput(uint Buttons, short LeftX, short LeftY);
 
 internal sealed class StormaktGame
 {
@@ -432,7 +441,7 @@ internal sealed class StormaktGame
         _audio?.SwitchMusic(StormaktMusicTrack.Menu);
     }
 
-    public void Step(uint buttons, RtsPointer pointer = default)
+    public void Step(uint buttons, RtsPointer pointer = default, ControllerInput controller = default)
     {
         if (_inSilverkroppenSelect)
         {
@@ -543,10 +552,25 @@ internal sealed class StormaktGame
         StepRadio();
 
         int speed = (buttons & Slow) != 0 ? (_width <= 320 ? 2 : 3) : (_width <= 320 ? 4 : 5);
-        if ((buttons & Left) != 0) _shipX -= speed;
-        if ((buttons & Right) != 0) _shipX += speed;
-        if ((buttons & Up) != 0) _shipY -= speed;
-        if ((buttons & Down) != 0) _shipY += speed;
+        int precisionSpeed = (buttons & Slow) != 0 ? 1 : 2;
+        uint directions = Up | Down | Left | Right;
+        uint controllerDirections = controller.Buttons & directions;
+        uint keyboardDirections = (buttons & directions) & ~controllerDirections;
+        int moveX = ((keyboardDirections & Right) != 0 ? speed : 0) - ((keyboardDirections & Left) != 0 ? speed : 0);
+        int moveY = ((keyboardDirections & Down) != 0 ? speed : 0) - ((keyboardDirections & Up) != 0 ? speed : 0);
+        (int analogX, int analogY, bool analogActive) = ControllerStickMovement(controller.LeftX, controller.LeftY, speed);
+        if (analogActive)
+        {
+            moveX += analogX;
+            moveY += analogY;
+        }
+        else
+        {
+            moveX += ((controllerDirections & Right) != 0 ? precisionSpeed : 0) - ((controllerDirections & Left) != 0 ? precisionSpeed : 0);
+            moveY += ((controllerDirections & Down) != 0 ? precisionSpeed : 0) - ((controllerDirections & Up) != 0 ? precisionSpeed : 0);
+        }
+        _shipX += moveX;
+        _shipY += moveY;
         _shipX = Math.Clamp(_shipX, 22, _width - 22);
         _shipY = Math.Clamp(_shipY, 48, _height - 18);
 
@@ -960,6 +984,25 @@ internal sealed class StormaktGame
         _inLevelPreview = false;
         _inSilverkroppenSelect = false;
         _audio?.Trigger(StormaktSound.Deploy);
+    }
+
+    private static (int X, int Y, bool Active) ControllerStickMovement(short rawX, short rawY, int maximumSpeed)
+    {
+        const double deadZone = 0.18;
+        double x = rawX / 32767.0;
+        double y = rawY / 32767.0;
+        double length = Math.Sqrt(x * x + y * y);
+        if (length <= deadZone) return (0, 0, false);
+        double unitScale = 1.0 / length;
+        x *= unitScale;
+        y *= unitScale;
+        length = Math.Min(1.0, length);
+        double magnitude = Math.Pow((length - deadZone) / (1.0 - deadZone), 1.35);
+        int moveX = (int)Math.Round(x * magnitude * maximumSpeed);
+        int moveY = (int)Math.Round(y * magnitude * maximumSpeed);
+        if (moveX == 0 && Math.Abs(x) > 0.45) moveX = Math.Sign(x);
+        if (moveY == 0 && Math.Abs(y) > 0.45) moveY = Math.Sign(y);
+        return (moveX, moveY, true);
     }
 
     private bool Pressed(uint buttons, uint button) => (buttons & button) != 0 && (_previousButtons & button) == 0;
