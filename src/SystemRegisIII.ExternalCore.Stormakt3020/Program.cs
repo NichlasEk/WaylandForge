@@ -267,6 +267,8 @@ internal sealed class StormaktGame
     private const int CopenhagenEyeMaxHealth = 720;
     private const int CopenhagenEyePhaseTwoHealth = 480;
     private const int CopenhagenEyeLensHealth = 72;
+    private const int CopenhagenDannebrogNodeHealth = 84;
+    private const int CopenhagenDannebrogFormationCount = 3;
     private const int RtsSalvagedSilverGoal = 1_200;
     private const int DungeonFirstSigilMask = 1 << 8;
     private const int DungeonFogdeRescuedMask = 1 << 9;
@@ -336,6 +338,8 @@ internal sealed class StormaktGame
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_FREDERIK_TEST"), "1", StringComparison.Ordinal);
     private readonly bool _copenhagenEyeTestMode = string.Equals(
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_EYE_TEST"), "1", StringComparison.Ordinal);
+    private readonly bool _copenhagenDannebrogTestMode = string.Equals(
+        Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_DANNEBROG_TEST"), "1", StringComparison.Ordinal);
     private readonly SpritePack? _sprites;
     private readonly StormaktMusicLoop? _audio;
     private Random _random = new(3020);
@@ -569,6 +573,12 @@ internal sealed class StormaktGame
         new(0, 270, false, "SÖREN SVARTKRUT", "EN LINS ÄR MIN", "RESTEN ÄR DIN", null, "portrait_soren", true);
     private static readonly RadioCard CopenhagenEyeFallRadio =
         new(0, 300, false, "EBBA GRIP", "ÖGAT HAR BLINDNAT", "PORTEN KOMPILERAR", null, "portrait_ebba");
+    private static readonly RadioCard CopenhagenDannebrogRadio =
+        new(0, 360, true, "KUNG CHRISTIAN", "MARGINALEN LYDER", "MIN FLOTTA MINNS", null, "portrait_christian");
+    private static readonly RadioCard CopenhagenDannebrogGapRadio =
+        new(0, 300, false, "EBBA GRIP", "BRYT ETT HÖRN", "FLYG GENOM ÄRRET", null, "portrait_ebba");
+    private static readonly RadioCard CopenhagenDannebrogFallRadio =
+        new(0, 300, false, "SÖREN SVARTKRUT", "VINGARNA FALLER", "TVÅ FREGATTER KVAR", null, "portrait_soren", true);
     private int _shipX;
     private int _shipY;
     private int _cooldown;
@@ -1046,6 +1056,21 @@ internal sealed class StormaktGame
                 resetCopenhagen.FrederikHealth = 0;
                 resetCopenhagen.FrederikDeathAge = 360;
                 BeginCopenhagenEye(resetCopenhagen, testFixture: true);
+            }
+            if (_copenhagenDannebrogTestMode)
+            {
+                resetCopenhagen.Age = 3_600;
+                resetCopenhagen.GateActive = true;
+                resetCopenhagen.AdmiraltyActive = true;
+                resetCopenhagen.AdmiraltyHealth = 0;
+                resetCopenhagen.AdmiraltyDeathAge = 300;
+                resetCopenhagen.FrederikActive = true;
+                resetCopenhagen.FrederikHealth = 0;
+                resetCopenhagen.FrederikDeathAge = 360;
+                resetCopenhagen.EyeActive = true;
+                resetCopenhagen.EyeHealth = 0;
+                resetCopenhagen.EyeDeathAge = 360;
+                BeginCopenhagenDannebrog(resetCopenhagen, testFixture: true);
             }
         }
         if (_snapphaneWorld is SnapphaneWorldState resetSnapphane)
@@ -5307,6 +5332,13 @@ internal sealed class StormaktGame
             return;
         }
 
+        if (state.DannebrogActive)
+        {
+            StepCopenhagenDannebrog(state);
+            StepEnemyShots();
+            return;
+        }
+
         if (state.EyeActive)
         {
             StepCopenhagenEye(state);
@@ -5839,9 +5871,7 @@ internal sealed class StormaktGame
             if (deathAge is 26 or 63 or 108 or 171 or 236)
                 _audio?.Trigger(StormaktSound.EnemyExplosion);
             if (deathAge < 280 || _bossRadioCard is not null) return;
-            _stageClear = true;
-            _stageClearAge = 0;
-            _audio?.SwitchMusic(StormaktMusicTrack.Combat);
+            BeginCopenhagenDannebrog(state);
             return;
         }
 
@@ -6004,6 +6034,186 @@ internal sealed class StormaktGame
     {
         double angle = lens * Math.PI * 2.0 / 3.0 + state.EyeAge * 0.018;
         return (centerX + Math.Cos(angle) * 68.0, centerY + Math.Sin(angle) * 37.0);
+    }
+
+    private void BeginCopenhagenDannebrog(CopenhagenWorldState state, bool testFixture = false)
+    {
+        state.DannebrogActive = true;
+        state.DannebrogTestFixture = testFixture;
+        state.DannebrogAge = 0;
+        state.DannebrogFormation = 0;
+        state.DannebrogRotation = 0;
+        state.DannebrogDeathAge = 0;
+        state.DannebrogGapRadioPlayed = false;
+        BeginCopenhagenDannebrogFormation(state);
+        _enemyShots.Clear();
+        _shots.Clear();
+        if (testFixture) return;
+        ActivateBossRadio(CopenhagenDannebrogRadio);
+        _audio?.Trigger(StormaktSound.OresundFortressLock);
+    }
+
+    private void BeginCopenhagenDannebrogFormation(CopenhagenWorldState state)
+    {
+        state.DannebrogFormationAge = 0;
+        state.DannebrogEscapeNode = -1;
+        state.DannebrogBreakAge = 0;
+        state.DannebrogChargeAge = 0;
+        state.DannebrogHitFlash = 0;
+        state.DannebrogHitPlayer = false;
+        int health = state.DannebrogTestFixture ? 12 : CopenhagenDannebrogNodeHealth;
+        for (int node = 0; node < state.DannebrogNodeHealth.Length; node++)
+            state.DannebrogNodeHealth[node] = health;
+    }
+
+    private void StepCopenhagenDannebrog(CopenhagenWorldState state)
+    {
+        state.DannebrogAge++;
+        state.DannebrogHitFlash = Math.Max(0, state.DannebrogHitFlash - 1);
+        if (state.DannebrogDeathAge > 0)
+        {
+            _shots.Clear();
+            int deathAge = state.DannebrogDeathAge++;
+            if (deathAge == 1)
+            {
+                _enemyShots.Clear();
+                _score += 4_500;
+                ActivateBossRadio(CopenhagenDannebrogFallRadio);
+                _audio?.Trigger(StormaktSound.Broadside);
+            }
+            if (deathAge is 34 or 82 or 138) _audio?.Trigger(StormaktSound.EnemyExplosion);
+            if (deathAge < 240 || _bossRadioCard is not null) return;
+            _stageClear = true;
+            _stageClearAge = 0;
+            _audio?.SwitchMusic(StormaktMusicTrack.Combat);
+            return;
+        }
+
+        state.DannebrogFormationAge++;
+        if (!state.DannebrogGapRadioPlayed && state.DannebrogAge >= 75 && _bossRadioCard is null)
+        {
+            state.DannebrogGapRadioPlayed = true;
+            ActivateBossRadio(CopenhagenDannebrogGapRadio);
+        }
+
+        if (state.DannebrogChargeAge > 0)
+        {
+            state.DannebrogChargeAge++;
+            StepCopenhagenDannebrogCollision(state);
+            int chargeLimit = state.DannebrogTestFixture ? 115 : 150;
+            if (state.DannebrogChargeAge <= chargeLimit) return;
+            state.DannebrogFormation++;
+            if (state.DannebrogFormation >= CopenhagenDannebrogFormationCount)
+            {
+                state.DannebrogDeathAge = 1;
+                return;
+            }
+            state.DannebrogRotation = (state.DannebrogRotation + state.DannebrogEscapeNode + 1) & 7;
+            BeginCopenhagenDannebrogFormation(state);
+            _enemyShots.Clear();
+            return;
+        }
+
+        StepCopenhagenDannebrogShots(state);
+        if (state.DannebrogFormationAge >= 70 && state.DannebrogFormationAge % 58 == 0)
+        {
+            int start = state.DannebrogFormationAge / 58 + state.DannebrogFormation;
+            for (int offset = 0; offset < state.DannebrogNodeHealth.Length; offset++)
+            {
+                int node = (start + offset) % state.DannebrogNodeHealth.Length;
+                if (state.DannebrogNodeHealth[node] <= 0) continue;
+                (double centerX, double centerY) = CopenhagenDannebrogCenter(state);
+                (double nodeX, double nodeY) = CopenhagenDannebrogNodePosition(state, node, centerX, centerY);
+                FireAimedCopenhagenShot(nodeX, nodeY, 2.15 + state.DannebrogFormation * 0.18, 3);
+                break;
+            }
+        }
+
+        if (state.DannebrogEscapeNode < 0 && state.DannebrogFormationAge >= 220)
+        {
+            state.DannebrogEscapeNode = (state.DannebrogRotation + state.DannebrogFormation) & 3;
+            state.DannebrogNodeHealth[state.DannebrogEscapeNode] = 0;
+            state.DannebrogBreakAge = state.DannebrogFormationAge;
+            DamageShip();
+        }
+        if (state.DannebrogEscapeNode >= 0 &&
+            (state.DannebrogFormationAge >= state.DannebrogBreakAge + 58 || state.DannebrogFormationAge >= 245))
+        {
+            state.DannebrogChargeAge = 1;
+            _enemyShots.Clear();
+            _audio?.Trigger(StormaktSound.Broadside);
+        }
+    }
+
+    private void StepCopenhagenDannebrogShots(CopenhagenWorldState state)
+    {
+        (double centerX, double centerY) = CopenhagenDannebrogCenter(state);
+        for (int shotIndex = _shots.Count - 1; shotIndex >= 0; shotIndex--)
+        {
+            Shot shot = _shots[shotIndex];
+            int hitNode = -1;
+            for (int node = 0; node < state.DannebrogNodeHealth.Length; node++)
+            {
+                if (state.DannebrogNodeHealth[node] <= 0) continue;
+                (double nodeX, double nodeY) = CopenhagenDannebrogNodePosition(state, node, centerX, centerY);
+                if (DistanceSquared(shot.X, shot.Y, nodeX, nodeY) < 15 * 15)
+                {
+                    hitNode = node;
+                    break;
+                }
+            }
+            if (hitNode < 0) continue;
+            state.DannebrogNodeHealth[hitNode] = Math.Max(0, state.DannebrogNodeHealth[hitNode] - shot.Power);
+            state.DannebrogHitFlash = 5;
+            state.DannebrogLastHitNode = hitNode;
+            _shots.RemoveAt(shotIndex);
+            if (state.DannebrogNodeHealth[hitNode] != 0) continue;
+            _score += state.DannebrogEscapeNode < 0 ? 540 : 240;
+            if (state.DannebrogEscapeNode < 0)
+            {
+                state.DannebrogEscapeNode = hitNode;
+                state.DannebrogBreakAge = state.DannebrogFormationAge;
+            }
+            _audio?.Trigger(StormaktSound.OresundSwitchBreak);
+        }
+    }
+
+    private void StepCopenhagenDannebrogCollision(CopenhagenWorldState state)
+    {
+        if (state.DannebrogHitPlayer) return;
+        (double centerX, double centerY) = CopenhagenDannebrogCenter(state);
+        for (int node = 0; node < state.DannebrogNodeHealth.Length; node++)
+        {
+            if (state.DannebrogNodeHealth[node] <= 0) continue;
+            (double nodeX, double nodeY) = CopenhagenDannebrogNodePosition(state, node, centerX, centerY);
+            bool hit = DistancePointToSegmentSquared(_shipX, _shipY, centerX, centerY, nodeX, nodeY) < 9 * 9 ||
+                DistanceSquared(_shipX, _shipY, nodeX, nodeY) < 15 * 15;
+            if (!hit) continue;
+            state.DannebrogHitPlayer = true;
+            DamageShip();
+            return;
+        }
+    }
+
+    private (double X, double Y) CopenhagenDannebrogCenter(CopenhagenWorldState state)
+    {
+        if (state.DannebrogChargeAge > 0)
+        {
+            double speed = state.DannebrogTestFixture ? 3.0 : 2.25;
+            return (_width / 2.0 + Math.Sin((state.DannebrogAge + state.DannebrogFormation * 71) * 0.013) * 18,
+                72 + state.DannebrogChargeAge * speed);
+        }
+        double entry = Math.Min(1.0, state.DannebrogFormationAge / 60.0);
+        double eased = entry * entry * (3.0 - 2.0 * entry);
+        return (_width / 2.0 + Math.Sin((state.DannebrogAge + state.DannebrogFormation * 71) * 0.013) * 18,
+            -58 + 130 * eased);
+    }
+
+    private static (double X, double Y) CopenhagenDannebrogNodePosition(
+        CopenhagenWorldState state, int node, double centerX, double centerY)
+    {
+        double angle = Math.PI / 4.0 + state.DannebrogRotation * Math.PI / 8.0 + node * Math.PI / 2.0;
+        return (centerX + Math.Cos(angle) * 72.0, centerY + Math.Sin(angle) * 48.0);
     }
 
     private void StepCopenhagenGateShots(CopenhagenWorldState state)
@@ -14090,7 +14300,8 @@ internal sealed class StormaktGame
         {
             DrawCopenhagenBarrier(frame, state);
             DrawCopenhagenEyeWalls(frame, state);
-            if (state.EyeActive) DrawCopenhagenEye(frame, state);
+            if (state.DannebrogActive) DrawCopenhagenDannebrog(frame, state);
+            else if (state.EyeActive) DrawCopenhagenEye(frame, state);
             else if (state.FrederikActive) DrawCopenhagenFrederik(frame, state);
             else if (state.AdmiraltyActive) DrawCopenhagenAdmiralty(frame, state);
             else if (state.GateActive) DrawCopenhagenGate(frame, state);
@@ -14107,6 +14318,7 @@ internal sealed class StormaktGame
             DrawCopenhagenAdmiraltyHud(frame, state);
             DrawCopenhagenFrederikHud(frame, state);
             DrawCopenhagenEyeHud(frame, state);
+            DrawCopenhagenDannebrogHud(frame, state);
             DrawCopenhagenCheckpointBanner(frame, state);
         }
         DrawCopenhagenMissionTitle(frame, age);
@@ -14546,6 +14758,103 @@ internal sealed class StormaktGame
         DrawRect(frame, x, 21, barWidth, 14, 0xdd080d12);
         DrawRect(frame, x + 2, 23, (barWidth - 4) * state.EyeHealth / maximum, 4, 0xff7fc7ff);
         DrawText(frame, x + 4, 28, $"ØRESUNDS ØJE  PROGNOS {prediction}", 0xffbdf8ff);
+    }
+
+    private void DrawCopenhagenDannebrog(uint[] frame, CopenhagenWorldState state)
+    {
+        int portalX = _width / 2;
+        int portalY = 67;
+        int pulse = state.DannebrogAge / 5 % 7;
+        DrawCircleOutline(frame, portalX, portalY, 88 + pulse, 0xff765139);
+        DrawCircleOutline(frame, portalX, portalY, 76 - pulse / 2, 0xffd6b25e);
+        for (int ray = 0; ray < 8; ray++)
+        {
+            double angle = ray * Math.PI / 4.0 + state.DannebrogAge * 0.004;
+            int innerX = portalX + (int)Math.Round(Math.Cos(angle) * 77);
+            int innerY = portalY + (int)Math.Round(Math.Sin(angle) * 48);
+            int outerX = portalX + (int)Math.Round(Math.Cos(angle) * 94);
+            int outerY = portalY + (int)Math.Round(Math.Sin(angle) * 59);
+            DrawLine(frame, innerX, innerY, outerX, outerY, ray % 2 == 0 ? 0xff8f2635 : 0xffd8d1b9);
+        }
+
+        if (state.DannebrogDeathAge > 0)
+        {
+            int burst = Math.Min(110, state.DannebrogDeathAge / 2);
+            DrawCircleOutline(frame, portalX, portalY, 28 + burst, 0xffff8a4a);
+            DrawCircleOutline(frame, portalX, portalY, 12 + burst / 2, 0xfff2eee4);
+            for (int wing = 0; wing < 4; wing++)
+            {
+                int dx = (wing % 2 == 0 ? -1 : 1) * (20 + burst);
+                int dy = (wing < 2 ? -1 : 1) * (12 + burst / 2);
+                DrawLine(frame, portalX + dx - 8, portalY + dy - 5,
+                    portalX + dx + 8, portalY + dy + 5, wing % 2 == 0 ? 0xff8f2635 : 0xffd8d1b9);
+            }
+            return;
+        }
+
+        (double centerXD, double centerYD) = CopenhagenDannebrogCenter(state);
+        int centerX = (int)Math.Round(centerXD);
+        int centerY = (int)Math.Round(centerYD);
+        FillCircle(frame, centerX, centerY, 10, 0xff101820);
+        DrawCircleOutline(frame, centerX, centerY, 12, 0xffffd66b);
+        DrawCrown(frame, centerX - 4, centerY - 4, 0xffffd66b);
+        for (int node = 0; node < state.DannebrogNodeHealth.Length; node++)
+        {
+            (double nodeXD, double nodeYD) = CopenhagenDannebrogNodePosition(state, node, centerXD, centerYD);
+            int nodeX = (int)Math.Round(nodeXD);
+            int nodeY = (int)Math.Round(nodeYD);
+            bool broken = state.DannebrogNodeHealth[node] <= 0;
+            bool hit = state.DannebrogHitFlash > 0 && state.DannebrogLastHitNode == node;
+            if (broken)
+            {
+                uint scar = node == state.DannebrogEscapeNode ? 0xff7fc7ff : 0xff315b42;
+                DrawLine(frame, centerX + (nodeX - centerX) / 3, centerY + (nodeY - centerY) / 3,
+                    nodeX, nodeY, scar);
+                DrawLine(frame, nodeX - 7, nodeY - 7, nodeX + 7, nodeY + 7, scar);
+                DrawLine(frame, nodeX + 7, nodeY - 7, nodeX - 7, nodeY + 7, scar);
+                continue;
+            }
+            uint stripe = (node + state.DannebrogFormation) % 2 == 0 ? 0xff8f2635 : 0xffd8d1b9;
+            DrawLine(frame, centerX, centerY, nodeX, nodeY, 0xfff2eee4);
+            DrawLine(frame, centerX + 2, centerY, nodeX + 2, nodeY, 0xff8f2635);
+            FillTriangle(frame, nodeX, nodeY - 11, nodeX - 14, nodeY + 8, nodeX + 14, nodeY + 8,
+                hit ? 0xffffffff : stripe);
+            DrawLine(frame, nodeX - 10, nodeY + 2, nodeX + 10, nodeY + 2,
+                stripe == 0xff8f2635 ? 0xfff2eee4 : 0xff8f2635);
+            FillCircle(frame, nodeX, nodeY, 4, 0xffffd66b);
+            int maximum = state.DannebrogTestFixture ? 12 : CopenhagenDannebrogNodeHealth;
+            DrawRect(frame, nodeX - 12, nodeY + 12, 24, 3, 0xff101820);
+            DrawRect(frame, nodeX - 12, nodeY + 12, 24 * state.DannebrogNodeHealth[node] / maximum, 3, 0xffff8a4a);
+        }
+        if (state.DannebrogChargeAge > 0)
+        {
+            int trail = Math.Min(70, state.DannebrogChargeAge);
+            DrawLine(frame, centerX - 4, centerY - trail, centerX - 4, centerY - 14, 0xff8f2635);
+            DrawLine(frame, centerX + 4, centerY - trail, centerX + 4, centerY - 14, 0xfff2eee4);
+        }
+        if (state.DannebrogAge < 180)
+        {
+            int width = Math.Min(250, _width - 30);
+            int x = (_width - width) / 2;
+            int y = _height <= 224 ? 128 : 159;
+            DrawRect(frame, x, y, width, 29, 0xdd080d12);
+            DrawLine(frame, x, y, x + width - 1, y, 0xff8f2635);
+            DrawText(frame, x + (width - 150) / 2, y + 10, "SUPERARMADAN KOMPILERAS", 0xffffd66b);
+        }
+    }
+
+    private void DrawCopenhagenDannebrogHud(uint[] frame, CopenhagenWorldState state)
+    {
+        if (!state.DannebrogActive || state.DannebrogAge < 35 || state.DannebrogDeathAge > 0) return;
+        int width = Math.Min(214, _width - 82);
+        int x = (_width - width) / 2;
+        string task = state.DannebrogChargeAge > 0 ? "FLYG GENOM ÄRRET" :
+            state.DannebrogEscapeNode >= 0 ? $"ÄRR {state.DannebrogEscapeNode + 1} ÖPPET" : "BRYT ETT HÖRN";
+        DrawRect(frame, x, 21, width, 14, 0xdd080d12);
+        int progress = state.DannebrogFormation * 4 + state.DannebrogNodeHealth.Count(health => health <= 0);
+        DrawRect(frame, x + 2, 23, (width - 4) * Math.Min(12, progress) / 12, 4, 0xff8f2635);
+        DrawText(frame, x + 4, 28,
+            $"DANNEBROG {state.DannebrogFormation + 1}/{CopenhagenDannebrogFormationCount}  {task}", 0xffbdf8ff);
     }
 
     private void DrawCopenhagenCheckpointBanner(uint[] frame, CopenhagenWorldState state)
@@ -15915,7 +16224,7 @@ internal sealed class StormaktGame
         }
         else if (_levelId == 6)
         {
-            DrawCopenhagenEyeSeal(frame, panelX + 196, 67);
+            DrawCopenhagenDannebrogSeal(frame, panelX + 196, 67);
         }
         else
         {
@@ -15961,8 +16270,8 @@ internal sealed class StormaktGame
             }
             else if (_levelId == 6)
             {
-                DrawText(frame, panelX + 33, 99, "ØRESUNDS ØJE BLINDAT", 0xffffd66b);
-                DrawText(frame, panelX + 22, 116, "DANNEBROGSVINGAR VÄNTAR", 0xff9bd4dc);
+                DrawText(frame, panelX + 31, 99, "DANNEBROGSVINGAR BRUTNA", 0xffffd66b);
+                DrawText(frame, panelX + 22, 116, "ABSALON OCH ELEFANTEN", 0xff9bd4dc);
             }
             else
             {
@@ -15980,6 +16289,20 @@ internal sealed class StormaktGame
         FillCircle(frame, x, y, 10, 0xff8f2635);
         DrawLine(frame, x - 24, y - 17, x + 24, y + 17, 0xffff8a4a);
         DrawLine(frame, x + 24, y - 17, x - 24, y + 17, 0xffff8a4a);
+    }
+
+    private void DrawCopenhagenDannebrogSeal(uint[] frame, int x, int y)
+    {
+        int turn = (_stageClearAge / 7) & 1;
+        uint red = turn == 0 ? 0xff8f2635 : 0xffc64a54;
+        uint white = turn == 0 ? 0xfff2eee4 : 0xffd8d1b9;
+        DrawLine(frame, x - 28, y, x + 28, y, red);
+        DrawLine(frame, x, y - 20, x, y + 20, white);
+        DrawLine(frame, x - 22, y - 15, x + 22, y + 15, white);
+        DrawLine(frame, x + 22, y - 15, x - 22, y + 15, red);
+        FillCircle(frame, x, y, 7, 0xff101820);
+        DrawCircleOutline(frame, x, y, 9, 0xffffd66b);
+        DrawLine(frame, x + 15, y - 17, x + 28, y - 25, 0xff7fc7ff);
     }
 
     private void DrawSnapphaneOathSeal(uint[] frame, int x, int y)
@@ -17308,6 +17631,21 @@ internal sealed class StormaktGame
         public int[] EyeDirectionVotes { get; } = new int[4];
         public int[] EyeLensHealth { get; } = new int[3];
         public List<CopenhagenTollWall> EyeWalls { get; } = [];
+        public bool DannebrogActive { get; set; }
+        public bool DannebrogTestFixture { get; set; }
+        public int DannebrogAge { get; set; }
+        public int DannebrogFormation { get; set; }
+        public int DannebrogFormationAge { get; set; }
+        public int DannebrogRotation { get; set; }
+        public int DannebrogEscapeNode { get; set; } = -1;
+        public int DannebrogBreakAge { get; set; }
+        public int DannebrogChargeAge { get; set; }
+        public int DannebrogDeathAge { get; set; }
+        public int DannebrogHitFlash { get; set; }
+        public int DannebrogLastHitNode { get; set; } = -1;
+        public bool DannebrogHitPlayer { get; set; }
+        public bool DannebrogGapRadioPlayed { get; set; }
+        public int[] DannebrogNodeHealth { get; } = new int[4];
     }
 
     private sealed class CopenhagenSeizureChain(int target, int health)

@@ -40,9 +40,19 @@ Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen rende
 - varje tullvägg telegraferas först och lämnar en tydlig lucka vid sidan av den förutsagda rutten, så spelaren kan bryta sitt eget mönster;
 - vid första fasbrottet blir kärnan osårbar och tre roterande linser måste skjutas sönder var för sig;
 - Sörens fullbordade ed slår ut en lins, men Karl måste fortfarande lösa resten av fasen;
-- slutfasen återöppnar kärnan med snabbare prognoser och eld, och segern visar checkpointresultatet **Dannebrogsvingar väntar**.
+- slutfasen återöppnar kärnan med snabbare prognoser och eld;
+- segern öppnar Superarmadans gyllene port utan meny eller levelreset.
 
-Miljön, låset, urtavlan, Frederik, Ögat, HUD, barriärer och resultatkort har kodritade fallbackformer i wide och legacy. `WAYLANDFORGE_STORMAKT_COPENHAGEN_GATE_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_ADMIRALTY_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_FREDERIK_TEST=1` och `WAYLANDFORGE_STORMAKT_COPENHAGEN_EYE_TEST=1` hoppar till förkortade deterministiska stridsfixtures. Det är fortfarande en utvecklingscheckpoint: nästa svep ska ersätta resultatstoppet med Dannebrogsvingarnas Superarmada-port.
+**Dannebrogsvingarna:**
+
+- tre stora rödvita korsformationer fungerar som gemensamma hot i stället för en svärm av individuella kollisionsobjekt;
+- varje formation har fyra separat förstörbara hörnnoder och öppnar en synlig säker söm där den första noden bryts;
+- det valda hörnet vrider nästa formation i halva kvartsvarv, så spelarens lösning ändrar följande våg;
+- efter telegraferingen laddar de återstående armarna genom spelrummet medan den brutna armen förblir den säkra vägen;
+- en missad tidsgräns bryter ett deterministiskt nödhörn men kostar Karl en träff, så porten kan inte mjuklåsa;
+- den tredje genomflygningen visar checkpointresultatet **Absalon och Elefanten**.
+
+Miljön, låset, urtavlan, Frederik, Ögat, Dannebrogsvingarna, HUD, barriärer och resultatkort har kodritade fallbackformer i wide och legacy. `WAYLANDFORGE_STORMAKT_COPENHAGEN_GATE_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_ADMIRALTY_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_FREDERIK_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_EYE_TEST=1` och `WAYLANDFORGE_STORMAKT_COPENHAGEN_DANNEBROG_TEST=1` hoppar till förkortade deterministiska stridsfixtures. Det är fortfarande en utvecklingscheckpoint: nästa svep ska ersätta resultatstoppet med fregattduon Absalon och Elefanten.
 
 ## Kärna
 
