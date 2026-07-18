@@ -1,0 +1,22 @@
+{
+  "prompt": "Instrumental relentless Nordic baroque-techno pursuit loop for Snapphanens ed, a dark Swedish retro-futurist vertical shoot-em-up chase through wrecked fleets and false beacons. D minor, 120 BPM, circular twenty-four-bar form. A memorable three-note outlaw hunt motif passes between bowed nyckelharpa, clipped chamber strings and dry harpsichord, locked to a deep analog sequencer bass, tight four-on-the-floor iron kick, restrained breakbeat ghost notes, field snare and metallic chain percussion. Cold sea fog, black powder, copper lanterns and fast evasive flight. Classical counterpoint and physical seventeenth-century timbres must stay equal to the sleek techno propulsion. Immediate forward motion, stable arcade pulse, no breakdown, no drop, no quiet intro, no final cadence and no fade. No vocals, no choir, no festival EDM, no supersaw lead, no pop, no rock guitar, no trailer braams, no comedy, no cheerful major-key release.",
+  "lyrics": "[Instrumental]",
+  "vocal_language": "unknown",
+  "audio_duration": 48,
+  "audio_format": "wav",
+  "task_type": "text2music",
+  "batch_size": 1,
+  "thinking": false,
+  "use_format": false,
+  "bpm": 120,
+  "key_scale": "D minor",
+  "time_signature": "4/4",
+  "inference_steps": 8,
+  "guidance_scale": 8.0,
+  "use_random_seed": false,
+  "seed": 30201801,
+  "constrained_decoding": true,
+  "use_cot_caption": false,
+  "use_cot_language": false,
+  "lm_negative_prompt": "vocals, choir, singing, festival EDM, big-room drop, supersaw, pop, rock guitar, trailer braams, comedy, cheerful, breakdown, quiet intro, final cadence, fade"
+}

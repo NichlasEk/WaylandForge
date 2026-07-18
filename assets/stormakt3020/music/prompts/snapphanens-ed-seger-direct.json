@@ -1,0 +1,22 @@
+{
+  "prompt": "Instrumental short hard-won victory and onward-flight cue for Snapphanens ed in a dark Swedish retro-futurist shoot-em-up. F major colored by a persistent D minor shadow, 120 BPM, circular twelve-bar form. The three-note outlaw hunt motif finally opens upward on warm nyckelharpa and noble natural horns while the analog bass pulse, softer iron kick, field snare and copper chain percussion keep the ship moving toward Copenhagen. Soren's rough copper motif and Karl's restrained Carolean brass answer each other as equals. Relief, oath fulfilled and dangerous friendship, not a cheerful fanfare or ending jingle. Begin immediately after the boss explosion, rise once, then settle into forward motion without a terminal cadence or fade. No vocals, no choir, no festival EDM, no supersaw, no pop, no rock guitar, no sentimental cinema strings, no comedy, no applause.",
+  "lyrics": "[Instrumental]",
+  "vocal_language": "unknown",
+  "audio_duration": 24,
+  "audio_format": "wav",
+  "task_type": "text2music",
+  "batch_size": 1,
+  "thinking": false,
+  "use_format": false,
+  "bpm": 120,
+  "key_scale": "F major",
+  "time_signature": "4/4",
+  "inference_steps": 8,
+  "guidance_scale": 8.0,
+  "use_random_seed": false,
+  "seed": 30201803,
+  "constrained_decoding": true,
+  "use_cot_caption": false,
+  "use_cot_language": false,
+  "lm_negative_prompt": "vocals, choir, singing, festival EDM, supersaw, pop, rock guitar, sentimental strings, comedy, applause, victory jingle, terminal cadence, fade"
+}

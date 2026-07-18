@@ -175,6 +175,12 @@ Additional scored roles live under `music/`:
 - `kronans-sista-salva-v1.wav`: monumental boss loop.
 - `music/rigsregnskabet-boss-v1.wav`: bevarad 64-sekunders lokal ACE-Step-generation för Bana 5-finalen.
 - `music/rigsregnskabet-boss-loop-v1.wav`: aktiv tystnadsfri 12-takters, 90 BPM-maskinfuga för Rigsregnskabet.
+- `music/snapphanens-jakt-v1.wav`: bevarad 48-sekunders klassisk-techno-generation för Bana 6 med fast seed `30201801`.
+- `music/snapphanens-jakt-loop-v1.wav`: aktiv tystnadsfri 22-takters, 120 BPM-jaktloop för vrakhav, duell, ed och rutt.
+- `music/rode-hunde-drev-v1.wav`: bevarad 48-sekunders tredelad jaktfuga för De Røde Hunde med fast seed `30201802`.
+- `music/rode-hunde-drev-loop-v1.wav`: aktiv tystnadsfri 22-takters, 120 BPM-bossloop.
+- `music/snapphanens-ed-seger-v1.wav`: bevarad 24-sekunders segergeneration med fast seed `30201803`.
+- `music/snapphanens-ed-seger-loop-v1.wav`: aktiv tystnadsfri 8-takters, 120 BPM-segerloop som ligger kvar över resultatkortet.
 
 `kronans-sista-salva-v1.wav` is the preserved 60-second generation; its final 12.09 seconds are effectively silent. `kronans-sista-salva-loop-v2.wav` is the active non-destructive edit: 40.000 seconds, exactly 14 four-beat bars at 84 BPM, cut before the generated fade. Rebuild it with `python tools/stormakt3020/build_music_loops.py`.
 

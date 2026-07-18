@@ -1,0 +1,22 @@
+{
+  "prompt": "Instrumental savage Nordic classical-techno boss loop for De Roede Hunde, three red Danish admiral sisters hunting one Swedish warship through a storm of chains, scent locks and a mechanical hound mask. D minor, 120 BPM, circular twenty-four-bar form. Transform the same three-note outlaw hunt motif into three interlocking predatory voices: huge pipe organ pedals, furious low string fugue and a cutting analog arpeggiator. Relentless iron kick and tom engine, syncopated distorted bass, field snare volleys, chain-clamp impacts, brass hunting calls and brief hard-edged harpsichord flashes. The arrangement feels like one three-headed machine tightening a leash: regal Danish menace, controlled fury and accelerating pressure, never chaotic. Full battle presence from the first beat, continuous pulse through every bar, no breakdown, no drop, no silence, no final cadence and no fade. No vocals, no choir, no festival EDM, no supersaw anthem, no pop, no rock guitar, no trailer braams, no comedy, no triumphant ending.",
+  "lyrics": "[Instrumental]",
+  "vocal_language": "unknown",
+  "audio_duration": 48,
+  "audio_format": "wav",
+  "task_type": "text2music",
+  "batch_size": 1,
+  "thinking": false,
+  "use_format": false,
+  "bpm": 120,
+  "key_scale": "D minor",
+  "time_signature": "4/4",
+  "inference_steps": 8,
+  "guidance_scale": 8.0,
+  "use_random_seed": false,
+  "seed": 30201802,
+  "constrained_decoding": true,
+  "use_cot_caption": false,
+  "use_cot_language": false,
+  "lm_negative_prompt": "vocals, choir, singing, festival EDM, big-room drop, supersaw anthem, pop, rock guitar, trailer braams, comedy, triumphant ending, breakdown, silence, final cadence, fade"
+}

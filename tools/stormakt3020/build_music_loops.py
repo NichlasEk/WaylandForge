@@ -54,6 +54,27 @@ EDITS = [
         beats_per_bar=4,
         bars=14,
     ),
+    LoopEdit(
+        source=Path("assets/stormakt3020/music/snapphanens-jakt-v1.wav"),
+        output=Path("assets/stormakt3020/music/snapphanens-jakt-loop-v1.wav"),
+        bpm=120,
+        beats_per_bar=4,
+        bars=22,
+    ),
+    LoopEdit(
+        source=Path("assets/stormakt3020/music/rode-hunde-drev-v1.wav"),
+        output=Path("assets/stormakt3020/music/rode-hunde-drev-loop-v1.wav"),
+        bpm=120,
+        beats_per_bar=4,
+        bars=22,
+    ),
+    LoopEdit(
+        source=Path("assets/stormakt3020/music/snapphanens-ed-seger-v1.wav"),
+        output=Path("assets/stormakt3020/music/snapphanens-ed-seger-loop-v1.wav"),
+        bpm=120,
+        beats_per_bar=4,
+        bars=8,
+    ),
 ]
 
 

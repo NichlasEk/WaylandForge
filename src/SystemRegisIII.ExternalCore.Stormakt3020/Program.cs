@@ -870,6 +870,7 @@ internal sealed class StormaktGame
             1 => StormaktMusicTrack.Skanska,
             2 => StormaktMusicTrack.Oresund,
             3 => StormaktMusicTrack.Rts,
+            5 => StormaktMusicTrack.Snapphane,
             _ => StormaktMusicTrack.Combat,
         });
     }
@@ -5212,7 +5213,7 @@ internal sealed class StormaktGame
         ActivateBossRadio(RedHoundsBodilRadio);
         ActivateBossRadio(RedHoundsDagmarRadio);
         ActivateBossRadio(RedHoundsTripletsRadio);
-        _audio?.SwitchMusic(StormaktMusicTrack.Boss);
+        _audio?.SwitchMusic(StormaktMusicTrack.RedHoundsBoss);
         _audio?.Trigger(StormaktSound.Deploy);
     }
 
@@ -5505,6 +5506,7 @@ internal sealed class StormaktGame
         boss.Health = 0;
         boss.Shots.Clear();
         _audio?.DuckMusic(2_400);
+        _audio?.SwitchMusic(StormaktMusicTrack.SnapphaneVictory);
     }
 
     private void BeginSorenDuel(SnapphaneWorldState state)
@@ -5522,7 +5524,7 @@ internal sealed class StormaktGame
         foreach (SnapphaneWreck wreck in state.Wrecks.Where(wreck => wreck.Physical))
             ResetSnapphaneWreck(state, wreck);
         ActivateBossRadio(SnapphaneDuelChallengeRadio);
-        _audio?.SwitchMusic(StormaktMusicTrack.Boss);
+        _audio?.SwitchMusic(StormaktMusicTrack.Snapphane);
         _audio?.Trigger(StormaktSound.Deploy);
     }
 
@@ -5675,7 +5677,7 @@ internal sealed class StormaktGame
         _shots.Clear();
         ActivateBossRadio(SnapphaneOathRadio);
         ActivateBossRadio(SnapphaneEbbaOathRadio);
-        _audio?.SwitchMusic(StormaktMusicTrack.Combat);
+        _audio?.SwitchMusic(StormaktMusicTrack.Snapphane);
         _audio?.Trigger(StormaktSound.Deploy);
     }
 

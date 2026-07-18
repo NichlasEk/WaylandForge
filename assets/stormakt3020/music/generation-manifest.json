@@ -131,6 +131,36 @@
       "seed": "30201706",
       "duration_seconds": 64,
       "thinking": false
+    },
+    {
+      "role": "level_06_snapphanens_jakt",
+      "file": "snapphanens-jakt-v1.wav",
+      "request": "prompts/snapphanens-jakt-direct.json",
+      "task_id": "a5d9c396-4011-4f15-99a5-f0ebf66e77c8",
+      "seed": "30201801",
+      "duration_seconds": 48,
+      "thinking": false,
+      "sha256": "846224dc52a03648d8669889f6310eca6847fffb7f02807f68b01ef6174d12b3"
+    },
+    {
+      "role": "level_06_rode_hunde_boss",
+      "file": "rode-hunde-drev-v1.wav",
+      "request": "prompts/rode-hunde-drev-direct.json",
+      "task_id": "113dac26-f913-4cf7-a790-80e71dadd472",
+      "seed": "30201802",
+      "duration_seconds": 48,
+      "thinking": false,
+      "sha256": "5fe379d5ed22cbbbf996674a1faea0908bebb69bb42d8f8f43ecf0a160cb8c5c"
+    },
+    {
+      "role": "level_06_snapphanens_ed_victory",
+      "file": "snapphanens-ed-seger-v1.wav",
+      "request": "prompts/snapphanens-ed-seger-direct.json",
+      "task_id": "67f9b722-2ce4-4de1-a264-b586e03735a9",
+      "seed": "30201803",
+      "duration_seconds": 24,
+      "thinking": false,
+      "sha256": "a527b7e623af92ae8ceacb68a6ca109b976c35318d84885d4df72197acab8ad1"
     }
   ],
   "derived": [
@@ -187,6 +217,39 @@
       "duration_seconds": 32,
       "runtime_crossfade_seconds": 0.5,
       "sha256": "9d8cc7c6c399c733f533516c4b36de662e3b8be001c5e7d5ad35c83e5aa472c8"
+    },
+    {
+      "role": "level_06_snapphanens_jakt_runtime_loop",
+      "file": "snapphanens-jakt-loop-v1.wav",
+      "source": "snapphanens-jakt-v1.wav",
+      "tool": "../../../tools/stormakt3020/build_music_loops.py",
+      "bpm": 120,
+      "bars": 22,
+      "duration_seconds": 44,
+      "runtime_crossfade_seconds": 0.5,
+      "sha256": "8c6fcf7a9d85706607e034997c1905c3dbb65a22af8c4d0c1228da6d84efb079"
+    },
+    {
+      "role": "level_06_rode_hunde_boss_runtime_loop",
+      "file": "rode-hunde-drev-loop-v1.wav",
+      "source": "rode-hunde-drev-v1.wav",
+      "tool": "../../../tools/stormakt3020/build_music_loops.py",
+      "bpm": 120,
+      "bars": 22,
+      "duration_seconds": 44,
+      "runtime_crossfade_seconds": 0.5,
+      "sha256": "da7950d8f36f866c8bcbb1d61b2414e8a7d994729a48f4cf434838a911847556"
+    },
+    {
+      "role": "level_06_snapphanens_ed_victory_runtime_loop",
+      "file": "snapphanens-ed-seger-loop-v1.wav",
+      "source": "snapphanens-ed-seger-v1.wav",
+      "tool": "../../../tools/stormakt3020/build_music_loops.py",
+      "bpm": 120,
+      "bars": 8,
+      "duration_seconds": 16,
+      "runtime_crossfade_seconds": 0.5,
+      "sha256": "266461e479046a080a074e972e439770698ecd89c87a981c79a1fb9d5c920a07"
     }
   ],
   "rejected": [
