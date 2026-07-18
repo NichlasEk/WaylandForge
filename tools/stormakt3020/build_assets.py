@@ -1211,22 +1211,22 @@ def append_snapphane_route_assets(entries: list[tuple[str, Image.Image]], source
 
 
 def append_snapphane_red_hounds_assets(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
-    grid_definitions = [
-        ("red_hound_sporet", 0, 0, (58, 72)),
-        ("red_hound_biddet", 1, 0, (66, 74)),
-        ("red_hound_koblet", 2, 0, (70, 78)),
-        ("red_hound_chain_link", 3, 0, (28, 42)),
-        ("red_hound_sporet_damaged", 0, 1, (58, 72)),
-        ("red_hound_biddet_damaged", 1, 1, (66, 74)),
-        ("red_hound_koblet_damaged", 2, 1, (70, 78)),
+    # The generated subjects are arranged like a grid, but the broad Koblet
+    # hull crosses the nominal quarter boundary. Content-aware source bounds
+    # keep every mast, side engine and chain intact before the alpha trim.
+    ship_definitions = [
+        ("red_hound_sporet", (0.06, 0.01, 0.23, 0.50), (58, 72)),
+        ("red_hound_biddet", (0.24, 0.01, 0.45, 0.50), (66, 74)),
+        ("red_hound_koblet", (0.47, 0.01, 0.69, 0.51), (70, 78)),
+        ("red_hound_chain_link", (0.75, 0.01, 0.89, 0.50), (28, 42)),
+        ("red_hound_sporet_damaged", (0.06, 0.51, 0.23, 0.99), (58, 72)),
+        ("red_hound_biddet_damaged", (0.24, 0.51, 0.45, 0.99), (66, 74)),
+        ("red_hound_koblet_damaged", (0.46, 0.51, 0.68, 0.99), (70, 78)),
     ]
-    for name, column, row, target in grid_definitions:
-        cell = source.crop((
-            column * source.width // 4,
-            row * source.height // 2,
-            (column + 1) * source.width // 4,
-            (row + 1) * source.height // 2,
-        )).convert("RGBA")
+    for name, bounds, target in ship_definitions:
+        x0, y0, x1, y1 = bounds
+        cell = source.crop((int(source.width * x0), int(source.height * y0),
+                            int(source.width * x1), int(source.height * y1))).convert("RGBA")
         sprite = trim_alpha(cell)
         sprite.thumbnail(target, Image.Resampling.LANCZOS)
         entries.append((name, sprite))
