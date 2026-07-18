@@ -1,0 +1,13 @@
+{
+  "text": "Koblet lukker om den blå. Ingen af jer slipper linen.",
+  "language": "da",
+  "model_backend": "dots.tts-soar",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Jeg er Dagmar Rød, og koblet adlyder min hånd. Sporet løber foran mig, biddet følger mit tegn, og Fyns røde jagt sejler som ét dyr. Når jeg strammer linen, findes der ingen åbning og ingen nåde.",
+  "voice_instruction": "An adult Danish female grand admiral and fanatical command sister, regal resonant upper mezzo with an ornate cutting cadence, commanding natural Danish diction, ceremonious confidence rising to fierce naval zeal, clearly distinct from her sisters, never girlish, breathy, seductive, comic, shrill or Swedish.",
+  "seed": 302132,
+  "dots_num_steps": 4,
+  "dots_guidance_scale": 1.2,
+  "dots_speaker_scale": 1.5
+}

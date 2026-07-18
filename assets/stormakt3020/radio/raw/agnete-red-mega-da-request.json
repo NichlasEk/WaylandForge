@@ -1,0 +1,13 @@
+{
+  "text": "Skyd! Skyd! Skyd! Giv ham hele Fyns sol!",
+  "language": "da",
+  "model_backend": "dots.tts-soar",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Jeg er Agnete Rød. En fjende kan skjule sit flag og slukke sine lanterner, men han kan ikke skjule sin kurs. Jeg finder sporet i krudtrøgen, låser hans sidste drejning og fører jagten, indtil havet selv lukker sig bag ham.",
+  "voice_instruction": "An adult Danish female corsair admiral and cold scent-tracker, lean incisive mezzo-contralto, quiet predatory focus, clipped exact natural Danish diction, controlled and calculating rather than theatrical, clearly distinct from her sisters, never soft, breathy, seductive, comic or Swedish.",
+  "seed": 302130,
+  "dots_num_steps": 4,
+  "dots_guidance_scale": 1.2,
+  "dots_speaker_scale": 1.5
+}

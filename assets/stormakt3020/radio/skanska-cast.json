@@ -93,6 +93,33 @@
       "reference_text": "Jag har burit bergets minne sedan solen ännu hade ett namn. Varje silveråder känner min hand, varje mörk sjö min röst. Den som öppnar mina portar kommer inte som segrare. Han kommer som den sista raden i en mycket gammal bok.",
       "reference_seed": 302026,
       "dialogue_seed": 302126
+    },
+    {
+      "id": "agnete-red",
+      "speaker": "ADMIRAL AGNETE RØD",
+      "language": "da",
+      "voice_instruction": "An adult Danish female corsair admiral and cold scent-tracker, lean incisive mezzo-contralto, quiet predatory focus, clipped exact natural Danish diction, controlled and calculating rather than theatrical, clearly distinct from her sisters, never soft, breathy, seductive, comic or Swedish.",
+      "reference_text": "Jeg er Agnete Rød. En fjende kan skjule sit flag og slukke sine lanterner, men han kan ikke skjule sin kurs. Jeg finder sporet i krudtrøgen, låser hans sidste drejning og fører jagten, indtil havet selv lukker sig bag ham.",
+      "reference_seed": 302030,
+      "dialogue_seed": 302130
+    },
+    {
+      "id": "bodil-red",
+      "speaker": "ADMIRAL BODIL RØD",
+      "language": "da",
+      "voice_instruction": "An adult Danish female corsair admiral and brutal attack commander, broad muscular low contralto with rough chest resonance, forceful explosive battlefield projection, crisp natural Danish diction, impatient controlled fury, clearly distinct from her sisters, never shrill, soft, breathy, seductive, comic or Swedish.",
+      "reference_text": "Jeg er Bodil Rød. Når Agnete finder sporet, bider mine kanoner sig fast. Hold fregatterne tæt, spænd kæderne og giv mig den korteste vej gennem fjendens skrog. Jeg slipper først, når hele linjen knækker.",
+      "reference_seed": 302031,
+      "dialogue_seed": 302131
+    },
+    {
+      "id": "dagmar-red",
+      "speaker": "STORADMIRAL DAGMAR RØD",
+      "language": "da",
+      "voice_instruction": "An adult Danish female grand admiral and fanatical command sister, regal resonant upper mezzo with an ornate cutting cadence, commanding natural Danish diction, ceremonious confidence rising to fierce naval zeal, clearly distinct from her sisters, never girlish, breathy, seductive, comic, shrill or Swedish.",
+      "reference_text": "Jeg er Dagmar Rød, og koblet adlyder min hånd. Sporet løber foran mig, biddet følger mit tegn, og Fyns røde jagt sejler som ét dyr. Når jeg strammer linen, findes der ingen åbning og ingen nåde.",
+      "reference_seed": 302032,
+      "dialogue_seed": 302132
     }
   ],
   "lines": [
@@ -856,6 +883,83 @@
       "subtitle_lines": ["HUVUDBOKEN", "KAN INTE SLUTA"],
       "seed": 302129,
       "model_backend": "voxcpm2"
+    },
+    {
+      "id": "agnete-red-scent",
+      "role": "agnete-red",
+      "level": 5,
+      "frame": -1,
+      "cue": "red_hounds_agnete_intro",
+      "text": "Jeg har færten af svenskeren. Han drejer mod styrbord.",
+      "subtitle_lines": ["JEG HAR FÆRTEN", "AF SVENSKEREN"],
+      "seed": 302130,
+      "model_backend": "dots.tts-soar"
+    },
+    {
+      "id": "bodil-red-bite",
+      "role": "bodil-red",
+      "level": 5,
+      "frame": -1,
+      "cue": "red_hounds_bodil_intro",
+      "text": "Jeg har biddet i hans køl. Giv mig ét skud mere.",
+      "subtitle_lines": ["JEG HAR BIDDET", "I HANS KØL"],
+      "seed": 302131,
+      "model_backend": "dots.tts-soar"
+    },
+    {
+      "id": "dagmar-red-leash",
+      "role": "dagmar-red",
+      "level": 5,
+      "frame": -1,
+      "cue": "red_hounds_dagmar_intro",
+      "text": "Koblet lukker om den blå. Ingen af jer slipper linen.",
+      "subtitle_lines": ["KOBLET LUKKER", "OM DEN BLÅ"],
+      "seed": 302132,
+      "model_backend": "dots.tts-soar"
+    },
+    {
+      "id": "dagmar-red-hunt",
+      "role": "dagmar-red",
+      "level": 5,
+      "frame": -1,
+      "cue": "red_hounds_triplets_intro",
+      "text": "Fyn jager samlet. Søstre, riv ham i tre!",
+      "subtitle_lines": ["FYN JAGER SAMLET", "RIV HAM I TRE"],
+      "seed": 302132,
+      "model_backend": "dots.tts-soar"
+    },
+    {
+      "id": "bodil-red-chain",
+      "role": "bodil-red",
+      "level": 5,
+      "frame": -1,
+      "cue": "red_hounds_chain",
+      "text": "Stram koblet! En, to, træk!",
+      "subtitle_lines": ["STRAM KOPPLET", "EN TO TRÆK"],
+      "seed": 302131,
+      "model_backend": "dots.tts-soar"
+    },
+    {
+      "id": "dagmar-red-mask",
+      "role": "dagmar-red",
+      "level": 5,
+      "frame": -1,
+      "cue": "red_hounds_mask",
+      "text": "Lugtventiler åbne. Lad jagtmasken vise tænder.",
+      "subtitle_lines": ["LUKTVENTILER", "ÅBNER KÆFTEN"],
+      "seed": 302132,
+      "model_backend": "dots.tts-soar"
+    },
+    {
+      "id": "agnete-red-mega",
+      "role": "agnete-red",
+      "level": 5,
+      "frame": -1,
+      "cue": "red_hounds_mega",
+      "text": "Skyd! Skyd! Skyd! Giv ham hele Fyns sol!",
+      "subtitle_lines": ["SKYD SKYD SKYD", "HELE FYNS SOL"],
+      "seed": 302130,
+      "model_backend": "dots.tts-soar"
     }
   ]
 }

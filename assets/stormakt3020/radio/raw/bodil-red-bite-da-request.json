@@ -1,0 +1,13 @@
+{
+  "text": "Jeg har biddet i hans køl. Giv mig ét skud mere.",
+  "language": "da",
+  "model_backend": "dots.tts-soar",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Jeg er Bodil Rød. Når Agnete finder sporet, bider mine kanoner sig fast. Hold fregatterne tæt, spænd kæderne og giv mig den korteste vej gennem fjendens skrog. Jeg slipper først, når hele linjen knækker.",
+  "voice_instruction": "An adult Danish female corsair admiral and brutal attack commander, broad muscular low contralto with rough chest resonance, forceful explosive battlefield projection, crisp natural Danish diction, impatient controlled fury, clearly distinct from her sisters, never shrill, soft, breathy, seductive, comic or Swedish.",
+  "seed": 302131,
+  "dots_num_steps": 4,
+  "dots_guidance_scale": 1.2,
+  "dots_speaker_scale": 1.5
+}

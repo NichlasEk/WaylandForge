@@ -839,6 +839,124 @@
       "sha256": "7e17bd663de15591611d8f9d0b6f59d7291c10ef6917ad5cf40708058286d1a5",
       "request": "assets/stormakt3020/radio/raw/ebba-tithe-seal-press-sv-request.json",
       "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "reference",
+      "role": "agnete-red",
+      "job_id": "9415bdf4b4cf4e2095dc093e7ad0b3b3",
+      "file": "assets/stormakt3020/radio/references/agnete-red-reference.wav",
+      "sha256": "c457baf10d9d669d09fc5305230f35128321cd1dcfaeb17a3d9989c801b5c1f6",
+      "request": {
+        "text": "Jeg er Agnete Rød. En fjende kan skjule sit flag og slukke sine lanterner, men han kan ikke skjule sin kurs. Jeg finder sporet i krudtrøgen, låser hans sidste drejning og fører jagten, indtil havet selv lukker sig bag ham.",
+        "language": "da",
+        "voice_instruction": "An adult Danish female corsair admiral and cold scent-tracker, lean incisive mezzo-contralto, quiet predatory focus, clipped exact natural Danish diction, controlled and calculating rather than theatrical, clearly distinct from her sisters, never soft, breathy, seductive, comic or Swedish.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302030
+      }
+    },
+    {
+      "kind": "reference",
+      "role": "bodil-red",
+      "job_id": "5a58c69a6ed74749a29b0328ef4464bc",
+      "file": "assets/stormakt3020/radio/references/bodil-red-reference.wav",
+      "sha256": "214499a341aeb8df5c402178754481e13c9223afcbfb132a541cddcb96b30b19",
+      "request": {
+        "text": "Jeg er Bodil Rød. Når Agnete finder sporet, bider mine kanoner sig fast. Hold fregatterne tæt, spænd kæderne og giv mig den korteste vej gennem fjendens skrog. Jeg slipper først, når hele linjen knækker.",
+        "language": "da",
+        "voice_instruction": "An adult Danish female corsair admiral and brutal attack commander, broad muscular low contralto with rough chest resonance, forceful explosive battlefield projection, crisp natural Danish diction, impatient controlled fury, clearly distinct from her sisters, never shrill, soft, breathy, seductive, comic or Swedish.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302031
+      }
+    },
+    {
+      "kind": "reference",
+      "role": "dagmar-red",
+      "job_id": "de3b79b4455d44c2acd0d5a35ce7a3f3",
+      "file": "assets/stormakt3020/radio/references/dagmar-red-reference.wav",
+      "sha256": "066293cf4ed4454e82337aa3d1f1a274beac9fd34423b4489b683f8aed2d34e1",
+      "request": {
+        "text": "Jeg er Dagmar Rød, og koblet adlyder min hånd. Sporet løber foran mig, biddet følger mit tegn, og Fyns røde jagt sejler som ét dyr. Når jeg strammer linen, findes der ingen åbning og ingen nåde.",
+        "language": "da",
+        "voice_instruction": "An adult Danish female grand admiral and fanatical command sister, regal resonant upper mezzo with an ornate cutting cadence, commanding natural Danish diction, ceremonious confidence rising to fierce naval zeal, clearly distinct from her sisters, never girlish, breathy, seductive, comic, shrill or Swedish.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302032
+      }
+    },
+    {
+      "kind": "line",
+      "line": "agnete-red-scent",
+      "role": "agnete-red",
+      "job_id": "f02929fe48954cd58a1ce61b91481ce4",
+      "file": "assets/stormakt3020/radio/raw/agnete-red-scent-da-raw.wav",
+      "sha256": "0e8087047972ad4e623732f753fa8a2663b28ea37a48f9cdec1bd0276b812d9d",
+      "request": "assets/stormakt3020/radio/raw/agnete-red-scent-da-request.json",
+      "reference_sha256": "c457baf10d9d669d09fc5305230f35128321cd1dcfaeb17a3d9989c801b5c1f6"
+    },
+    {
+      "kind": "line",
+      "line": "bodil-red-bite",
+      "role": "bodil-red",
+      "job_id": "9e569291c2564fa5ae68e09e60360fe1",
+      "file": "assets/stormakt3020/radio/raw/bodil-red-bite-da-raw.wav",
+      "sha256": "f9ec6db596d2f1af18276ffe888cab8d72def9aed320a1e5374d3730f2e76a2b",
+      "request": "assets/stormakt3020/radio/raw/bodil-red-bite-da-request.json",
+      "reference_sha256": "214499a341aeb8df5c402178754481e13c9223afcbfb132a541cddcb96b30b19"
+    },
+    {
+      "kind": "line",
+      "line": "dagmar-red-leash",
+      "role": "dagmar-red",
+      "job_id": "4b77fb5c84f445c8a17b48ac290ad58e",
+      "file": "assets/stormakt3020/radio/raw/dagmar-red-leash-da-raw.wav",
+      "sha256": "5fd99f957b64f59bd62e6f1e4e95ebf5ce4144d0b741c6b9ac2bfad7e4241188",
+      "request": "assets/stormakt3020/radio/raw/dagmar-red-leash-da-request.json",
+      "reference_sha256": "066293cf4ed4454e82337aa3d1f1a274beac9fd34423b4489b683f8aed2d34e1"
+    },
+    {
+      "kind": "line",
+      "line": "dagmar-red-hunt",
+      "role": "dagmar-red",
+      "job_id": "f0462f3dcb144939b8036bf014257201",
+      "file": "assets/stormakt3020/radio/raw/dagmar-red-hunt-da-raw.wav",
+      "sha256": "0bbf773f1aec6a155a7296e2576a8a5a23eda48d334389373fec1685226ae1da",
+      "request": "assets/stormakt3020/radio/raw/dagmar-red-hunt-da-request.json",
+      "reference_sha256": "066293cf4ed4454e82337aa3d1f1a274beac9fd34423b4489b683f8aed2d34e1"
+    },
+    {
+      "kind": "line",
+      "line": "bodil-red-chain",
+      "role": "bodil-red",
+      "job_id": "d62af090b3df488f90839093c3224e82",
+      "file": "assets/stormakt3020/radio/raw/bodil-red-chain-da-raw.wav",
+      "sha256": "889249d77fe0469de4341353085528234fb037d52a546dd75c0c17006e1876ad",
+      "request": "assets/stormakt3020/radio/raw/bodil-red-chain-da-request.json",
+      "reference_sha256": "214499a341aeb8df5c402178754481e13c9223afcbfb132a541cddcb96b30b19"
+    },
+    {
+      "kind": "line",
+      "line": "dagmar-red-mask",
+      "role": "dagmar-red",
+      "job_id": "bd6bc6ca6f7a4cde9183896fe3a49b0e",
+      "file": "assets/stormakt3020/radio/raw/dagmar-red-mask-da-raw.wav",
+      "sha256": "b621c1ab4d6f69cebc65a01c43ba21391f7d939d712bcbbe2d4aad6d43ce5869",
+      "request": "assets/stormakt3020/radio/raw/dagmar-red-mask-da-request.json",
+      "reference_sha256": "066293cf4ed4454e82337aa3d1f1a274beac9fd34423b4489b683f8aed2d34e1"
+    },
+    {
+      "kind": "line",
+      "line": "agnete-red-mega",
+      "role": "agnete-red",
+      "job_id": "67119800d0d34d98a0acf12b03a86434",
+      "file": "assets/stormakt3020/radio/raw/agnete-red-mega-da-raw.wav",
+      "sha256": "33dad3ca5aa0575001c9ae1d05dcd51e6367dc9f2391c69722b0b911223d5945",
+      "request": "assets/stormakt3020/radio/raw/agnete-red-mega-da-request.json",
+      "reference_sha256": "c457baf10d9d669d09fc5305230f35128321cd1dcfaeb17a3d9989c801b5c1f6"
     }
   ],
   "service": "http://127.0.0.1:8765",

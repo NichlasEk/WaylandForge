@@ -326,12 +326,24 @@ internal sealed class StormaktGame
         new(0, 330, true, "SÖREN SVARTKRUT", "NI TAR BOJARNA", "JAG TAR ELDEN", null, "portrait_soren", true);
     private static readonly RadioCard SnapphaneKrutRouteRadio =
         new(0, 330, true, "SÖREN SVARTKRUT", "RÄTT FRAM", "LÅT JÄRNET GÅ", null, "portrait_soren", true);
-    private static readonly RadioCard RedHoundsIntroRadio =
-        new(0, 360, true, "DE RØDE HUNDE", "VI HAR DIN LUKT", "KOBLET SLUTER", null, "rigsregnskabet");
+    private static readonly RadioCard RedHoundsAgneteRadio =
+        new(0, 180, true, "AGNETE RØD", "JEG HAR FÆRTEN", "AF SVENSKEREN", StormaktVoice.AgneteRedScent, "portrait_agnete_red");
+    private static readonly RadioCard RedHoundsBodilRadio =
+        new(0, 180, true, "BODIL RØD", "JEG HAR BIDDET", "I HANS KØL", StormaktVoice.BodilRedBite, "portrait_bodil_red");
+    private static readonly RadioCard RedHoundsDagmarRadio =
+        new(0, 180, true, "DAGMAR RØD", "KOBLET LUKKER", "OM DEN BLÅ", StormaktVoice.DagmarRedLeash, "portrait_dagmar_red");
+    private static readonly RadioCard RedHoundsTripletsRadio =
+        new(0, 210, true, "RØD-SØSTRENE", "FYN JAGER SAMLET", "RIV HAM I TRE", StormaktVoice.DagmarRedHunt, "portrait_red_triplets");
+    private static readonly RadioCard RedHoundsChainTripletsRadio =
+        new(0, 180, true, "RØD-SØSTRENE", "STRAM KOPPLET", "EN TO TRÆK", StormaktVoice.BodilRedChain, "portrait_red_triplets");
     private static readonly RadioCard RedHoundsChainRadio =
-        new(0, 330, true, "SÖREN SVARTKRUT", "BRYT KOPPLET", "JAG TAR MITTEN", null, "portrait_soren", true);
+        new(0, 210, true, "SÖREN SVARTKRUT", "BRYT KOPPLET", "JAG TAR MITTEN", null, "portrait_soren", true);
+    private static readonly RadioCard RedHoundsDagmarMaskRadio =
+        new(0, 180, true, "DAGMAR RØD", "LUKTVENTILER", "ÅBNER KÆFTEN", StormaktVoice.DagmarRedMask, "portrait_dagmar_red");
     private static readonly RadioCard RedHoundsMaskRadio =
-        new(0, 330, false, "EBBA GRIP", "TRE LUKTVENTILER", "ÖPPNA KÄRNAN", null, "portrait_ebba");
+        new(0, 210, false, "EBBA GRIP", "TRE LUKTVENTILER", "ÖPPNA KÄRNAN", null, "portrait_ebba");
+    private static readonly RadioCard RedHoundsMegaRadio =
+        new(0, 180, true, "RØD-SØSTRENE", "SKYD SKYD SKYD", "HELE FYNS SOL", StormaktVoice.AgneteRedMega, "portrait_red_triplets");
     private static readonly RadioCard RedHoundsVictoryRadio =
         new(0, 330, true, "SÖREN SVARTKRUT", "EDEN HÅLLER", "KÖPENHAMN NÄSTA", null, "portrait_soren", true);
     private static readonly RadioCard RigsregnskabetIntroRadio =
@@ -4974,6 +4986,7 @@ internal sealed class StormaktGame
         StepSnapphaneHuntShots(state);
         StepSorenDuel(state);
         StepSnapphaneRoute(state);
+        if (state.RouteComplete) StepDepartingSnapphaneRescues(state);
         StepRedHoundsBoss(state);
         StepSnapphanePlayerShots(state);
 
@@ -5158,10 +5171,32 @@ internal sealed class StormaktGame
         _audio?.Trigger(StormaktSound.Deploy);
     }
 
+    private void StepDepartingSnapphaneRescues(SnapphaneWorldState state)
+    {
+        for (int index = state.Rescues.Count - 1; index >= 0; index--)
+        {
+            SnapphaneRescueShip rescue = state.Rescues[index];
+            rescue.FreedAge++;
+            if (rescue.Rescued)
+            {
+                rescue.X += (rescue.Serial - 1) * 0.18;
+                rescue.Y -= Math.Min(2.05, 0.82 + rescue.FreedAge * 0.009);
+            }
+            else
+            {
+                rescue.X += rescue.Serial == 1 ? 0.12 : -0.12;
+                rescue.Y += 0.78;
+            }
+            if (rescue.Y < -54 || rescue.Y > _height + 54 || rescue.X < -54 || rescue.X > _width + 54)
+                state.Rescues.RemoveAt(index);
+        }
+    }
+
     private void BeginRedHoundsBoss(SnapphaneWorldState state)
     {
         _shots.Clear();
         state.HuntShots.Clear();
+        state.Rescues.Clear();
         foreach (SnapphaneWreck wreck in state.Wrecks.Where(wreck => wreck.Physical))
             ResetSnapphaneWreck(state, wreck);
         var boss = new RedHoundsBossState
@@ -5173,7 +5208,10 @@ internal sealed class StormaktGame
         boss.Ships.Add(new RedHoundShip(RedHoundKind.Biddet, _width * 0.78, -104, _width * 0.78, 76));
         boss.Ships.Add(new RedHoundShip(RedHoundKind.Koblet, _width * 0.50, -132, _width * 0.50, 50));
         state.RedHounds = boss;
-        ActivateBossRadio(RedHoundsIntroRadio);
+        ActivateBossRadio(RedHoundsAgneteRadio);
+        ActivateBossRadio(RedHoundsBodilRadio);
+        ActivateBossRadio(RedHoundsDagmarRadio);
+        ActivateBossRadio(RedHoundsTripletsRadio);
         _audio?.SwitchMusic(StormaktMusicTrack.Boss);
         _audio?.Trigger(StormaktSound.Deploy);
     }
@@ -5217,21 +5255,65 @@ internal sealed class StormaktGame
             StepRedHoundSearchLock(boss);
             FireRedHoundFleet(boss, 96);
             StepRedHoundSupport(state, boss);
-            if (boss.Health <= 700 || boss.PhaseAge >= 1_050)
+            if (boss.PhaseAge >= 760 && (boss.Health <= 700 || boss.PhaseAge >= 1_050))
                 BeginRedHoundsChains(boss);
         }
         else if (boss.Phase == 2)
         {
             FireRedHoundFleet(boss, 118);
             StepRedHoundSupport(state, boss);
-            if (boss.Chains.Count == 2 && boss.Chains.All(chain => chain.Broken))
+            if (boss.PhaseAge >= 400 && boss.Chains.Count == 2 && boss.Chains.All(chain => chain.Broken))
                 BeginRedHoundsMask(boss);
         }
         else
         {
-            boss.MaskOpen = boss.PhaseAge >= 120;
+            boss.MaskOpen = boss.PhaseAge >= 400;
             FireRedHoundFleet(boss, 86);
+            StepRedHoundMegaWeapon(boss);
             StepRedHoundSupport(state, boss);
+        }
+    }
+
+    private void StepRedHoundMegaWeapon(RedHoundsBossState boss)
+    {
+        if (!boss.MaskOpen || boss.VentHealth.All(health => health <= 0)) return;
+        int cycle = (boss.PhaseAge - 400) % 270;
+        if (cycle == 0)
+        {
+            boss.MegaTargetX = _shipX;
+            boss.MegaHit = false;
+            if (!boss.MegaRadioPlayed)
+            {
+                boss.MegaRadioPlayed = true;
+                ActivateBossRadio(RedHoundsMegaRadio);
+            }
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        if (cycle == 108)
+        {
+            RedHoundShip leader = boss.Ships[2];
+            double originY = leader.Y + 24;
+            for (int lane = -2; lane <= 2; lane++)
+            {
+                double targetX = boss.MegaTargetX + lane * 34;
+                double dx = targetX - leader.X;
+                double dy = _height + 20 - originY;
+                double length = Math.Max(1, Math.Sqrt(dx * dx + dy * dy));
+                boss.Shots.Add(new RedHoundShot(leader.X, originY,
+                    dx / length * 2.75, dy / length * 2.75, 2));
+            }
+            _audio?.Trigger(StormaktSound.Broadside);
+        }
+        if (cycle is >= 108 and < 154 && !boss.MegaHit)
+        {
+            RedHoundShip leader = boss.Ships[2];
+            double distance = DistancePointToSegmentSquared(_shipX, _shipY,
+                leader.X, leader.Y + 22, boss.MegaTargetX, _height + 8);
+            if (distance < 14 * 14)
+            {
+                boss.MegaHit = true;
+                DamageShip();
+            }
         }
     }
 
@@ -5381,6 +5463,7 @@ internal sealed class StormaktGame
         boss.Chains.Add(new RedHoundChain(0, 2));
         boss.Chains.Add(new RedHoundChain(2, 1));
         boss.Shots.Clear();
+        ActivateBossRadio(RedHoundsChainTripletsRadio);
         ActivateBossRadio(RedHoundsChainRadio);
         _audio?.Trigger(StormaktSound.TitheChainCanister);
     }
@@ -5392,6 +5475,7 @@ internal sealed class StormaktGame
         boss.Health = Math.Min(boss.Health, 420);
         boss.Shots.Clear();
         boss.MaskOpen = false;
+        ActivateBossRadio(RedHoundsDagmarMaskRadio);
         ActivateBossRadio(RedHoundsMaskRadio);
         _audio?.Trigger(StormaktSound.Deploy);
     }
@@ -12865,7 +12949,8 @@ internal sealed class StormaktGame
             int buoyX = x + 24;
             int buoyY = y - 8;
             string buoyName = rescue.Rescued ? "snapphane_rescue_buoy_broken" : "snapphane_rescue_buoy";
-            if (_sprites?.TryGet(buoyName, out Sprite buoy) == true)
+            if ((!rescue.Rescued || rescue.FreedAge < 90) &&
+                _sprites?.TryGet(buoyName, out Sprite buoy) == true)
                 DrawSprite(frame, buoy, buoyX - buoy.Width / 2, buoyY - buoy.Height / 2);
             if (!rescue.Rescued)
             {
@@ -12955,6 +13040,8 @@ internal sealed class StormaktGame
         for (int index = 0; index < boss.Ships.Count; index++)
             DrawRedHoundShip(frame, boss, boss.Ships[index], index);
 
+        DrawRedHoundMegaWeapon(frame, boss);
+
         int allies = Math.Min(3, state.SnapphaneAllies);
         for (int index = 0; index < allies; index++)
         {
@@ -12963,6 +13050,53 @@ internal sealed class StormaktGame
             int y = _height - 42 - index * 5;
             if (_sprites?.TryGet(asset, out Sprite ally) == true)
                 DrawSpriteScaled(frame, ally, x - 12, y - 14, 24, 28);
+        }
+    }
+
+    private void DrawRedHoundMegaWeapon(uint[] frame, RedHoundsBossState boss)
+    {
+        if (boss.Phase != 3 || !boss.MaskOpen || boss.VentHealth.All(health => health <= 0)) return;
+        int cycle = (boss.PhaseAge - 400) % 270;
+        RedHoundShip leader = boss.Ships[2];
+        int originX = (int)Math.Round(leader.X);
+        int originY = (int)Math.Round(leader.Y + 22);
+        int targetX = (int)Math.Round(boss.MegaTargetX);
+        int targetY = _height + 8;
+
+        if (cycle < 108)
+        {
+            uint warning = cycle < 72 ? 0xff6b3526 : 0xffff8a4a;
+            for (int y = originY + cycle % 5; y < _height; y += 7)
+            {
+                double t = (y - originY) / Math.Max(1.0, targetY - originY);
+                int x = (int)Math.Round(originX + (targetX - originX) * t);
+                FillCircle(frame, x, y, cycle < 72 ? 1 : 2, warning);
+            }
+            int chargeRadius = 5 + cycle / 18;
+            DrawCircleOutline(frame, originX, originY, chargeRadius, warning);
+            DrawCircleOutline(frame, originX, originY, Math.Max(3, chargeRadius - 4), 0xffffd66b);
+            DrawLine(frame, targetX - 9, _height - 19, targetX + 9, _height - 19, warning);
+            DrawLine(frame, targetX, _height - 25, targetX, _height - 13, warning);
+            return;
+        }
+        if (cycle >= 154) return;
+
+        int pulse = (cycle - 108) % 6;
+        for (int offset = -7; offset <= 7; offset++)
+        {
+            uint color = Math.Abs(offset) <= 2
+                ? (pulse < 3 ? 0xffffffff : 0xffffd66b)
+                : (Math.Abs(offset) <= 5 ? 0xffff8a4a : 0xffc92f42);
+            DrawLine(frame, originX + offset, originY, targetX + offset / 2, targetY, color);
+        }
+        FillCircle(frame, originX, originY, 11 + pulse / 2, 0xffff8a4a);
+        FillCircle(frame, originX, originY, 6, 0xffffffff);
+        for (int y = originY + 13; y < _height; y += 16)
+        {
+            double t = (y - originY) / Math.Max(1.0, targetY - originY);
+            int x = (int)Math.Round(originX + (targetX - originX) * t);
+            FillCircle(frame, x - 11 - pulse, y, 2, 0xffffd66b);
+            FillCircle(frame, x + 11 + pulse, y + 6, 2, 0xffff8a4a);
         }
     }
 
@@ -15314,6 +15448,9 @@ internal sealed class StormaktGame
         public double SearchTargetX { get; set; }
         public bool SearchHit { get; set; }
         public bool MaskOpen { get; set; }
+        public double MegaTargetX { get; set; }
+        public bool MegaHit { get; set; }
+        public bool MegaRadioPlayed { get; set; }
         public int[] VentHealth { get; } = [54, 54, 54];
         public List<RedHoundShip> Ships { get; } = [];
         public List<RedHoundChain> Chains { get; } = [];

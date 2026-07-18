@@ -704,6 +704,13 @@ internal sealed class StormaktMusicLoop : IDisposable
             (StormaktVoice.RigsregnskabetInterest, "rigsregnskabet-interest-da-radio.wav", 0.90f),
             (StormaktVoice.RigsregnskabetCore, "rigsregnskabet-core-da-radio.wav", 0.92f),
             (StormaktVoice.RigsregnskabetDeath, "rigsregnskabet-death-da-radio.wav", 0.96f),
+            (StormaktVoice.AgneteRedScent, "agnete-red-scent-da-radio.wav", 0.90f),
+            (StormaktVoice.BodilRedBite, "bodil-red-bite-da-radio.wav", 0.98f),
+            (StormaktVoice.DagmarRedLeash, "dagmar-red-leash-da-radio.wav", 0.92f),
+            (StormaktVoice.DagmarRedHunt, "dagmar-red-hunt-da-radio.wav", 0.96f),
+            (StormaktVoice.BodilRedChain, "bodil-red-chain-da-radio.wav", 1.0f),
+            (StormaktVoice.DagmarRedMask, "dagmar-red-mask-da-radio.wav", 0.96f),
+            (StormaktVoice.AgneteRedMega, "agnete-red-mega-da-radio.wav", 1.0f),
         ];
         Dictionary<StormaktVoice, LoadedEffect> voices = [];
         foreach ((StormaktVoice voice, string file, float gain) in entries)
@@ -903,6 +910,13 @@ internal enum StormaktVoice
     RigsregnskabetInterest,
     RigsregnskabetCore,
     RigsregnskabetDeath,
+    AgneteRedScent,
+    BodilRedBite,
+    DagmarRedLeash,
+    DagmarRedHunt,
+    BodilRedChain,
+    DagmarRedMask,
+    AgneteRedMega,
 }
 
 internal enum StormaktMusicTrack

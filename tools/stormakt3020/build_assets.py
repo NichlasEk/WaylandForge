@@ -1244,6 +1244,26 @@ def append_snapphane_red_hounds_assets(entries: list[tuple[str, Image.Image]], s
         entries.append((name, sprite))
 
 
+def append_red_hound_admiral_portraits(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    definitions = [
+        ("portrait_agnete_red_neutral", (0.00, 0.00, 0.25, 0.50)),
+        ("portrait_bodil_red_neutral", (0.25, 0.00, 0.50, 0.50)),
+        ("portrait_dagmar_red_neutral", (0.50, 0.00, 0.72, 0.50)),
+        ("portrait_red_triplets_neutral", (0.70, 0.00, 1.00, 0.50)),
+        ("portrait_agnete_red_speak", (0.00, 0.50, 0.25, 1.00)),
+        ("portrait_bodil_red_speak", (0.25, 0.50, 0.50, 1.00)),
+        ("portrait_dagmar_red_speak", (0.50, 0.50, 0.72, 1.00)),
+        ("portrait_red_triplets_speak", (0.70, 0.50, 1.00, 1.00)),
+    ]
+    for name, bounds in definitions:
+        x0, y0, x1, y1 = bounds
+        cell = source.crop((int(source.width * x0), int(source.height * y0),
+                            int(source.width * x1), int(source.height * y1))).convert("RGBA")
+        sprite = trim_alpha(cell)
+        sprite.thumbnail((38, 38), Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def build(
     input_path: Path,
     danish_input_path: Path,
@@ -1301,6 +1321,7 @@ def build(
     snapphane_duel_input_path: Path,
     snapphane_route_input_path: Path,
     snapphane_red_hounds_input_path: Path,
+    red_hound_admirals_input_path: Path,
     rts_road_input_path: Path,
     dungeon_karl_input_path: Path,
     dungeon_mine_input_path: Path,
@@ -1390,6 +1411,7 @@ def build(
     snapphane_duel_source = Image.open(snapphane_duel_input_path).convert("RGBA")
     snapphane_route_source = Image.open(snapphane_route_input_path).convert("RGBA")
     snapphane_red_hounds_source = Image.open(snapphane_red_hounds_input_path).convert("RGBA")
+    red_hound_admirals_source = Image.open(red_hound_admirals_input_path).convert("RGBA")
     rts_road_source = Image.open(rts_road_input_path).convert("RGBA")
     dungeon_karl_source = Image.open(dungeon_karl_input_path).convert("RGBA")
     dungeon_mine_source = Image.open(dungeon_mine_input_path).convert("RGBA")
@@ -1513,6 +1535,7 @@ def build(
     append_snapphane_duel_assets(entries, snapphane_duel_source)
     append_snapphane_route_assets(entries, snapphane_route_source)
     append_snapphane_red_hounds_assets(entries, snapphane_red_hounds_source)
+    append_red_hound_admiral_portraits(entries, red_hound_admirals_source)
     append_rts_frontier_road(entries, rts_road_source)
     append_dungeon_assets(entries, dungeon_karl_source, dungeon_mine_source)
     append_dungeon_loot(entries, dungeon_loot_source)
@@ -1749,6 +1772,7 @@ def main() -> None:
     parser.add_argument("--snapphane-duel-input", type=Path, default=Path("assets/stormakt3020/snapphane-soren-duel-v1.png"))
     parser.add_argument("--snapphane-route-input", type=Path, default=Path("assets/stormakt3020/snapphane-route-v1.png"))
     parser.add_argument("--snapphane-red-hounds-input", type=Path, default=Path("assets/stormakt3020/snapphane-red-hounds-v1.png"))
+    parser.add_argument("--red-hound-admirals-input", type=Path, default=Path("assets/stormakt3020/red-hound-admiral-triplets-v1.png"))
     parser.add_argument("--rts-road-input", type=Path, default=Path("assets/stormakt3020/rts-danish-frontier-road-v1.png"))
     parser.add_argument("--dungeon-karl-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-v1.png"))
     parser.add_argument("--dungeon-mine-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva1-environment-v1.png"))
@@ -1843,6 +1867,7 @@ def main() -> None:
         args.snapphane_duel_input,
         args.snapphane_route_input,
         args.snapphane_red_hounds_input,
+        args.red_hound_admirals_input,
         args.rts_road_input,
         args.dungeon_karl_input,
         args.dungeon_mine_input,
