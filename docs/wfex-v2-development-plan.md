@@ -1,6 +1,6 @@
 # WFEX v2 development plan
 
-Status: planned, not started
+Status: active; Checkpoint 0 completed 2026-07-18
 
 Scope: WaylandForge host and process-isolated desktop cores
 
@@ -90,6 +90,8 @@ This mode needs bounded queues and an explicit drop counter. It may drop present
 ## Development checkpoints
 
 ### Checkpoint 0 - Baseline and safety limits
+
+Completed. Results and measurement method are recorded in [WFEX v2 Checkpoint 0 baseline](wfex-v2-checkpoint-0-baseline.md). Supported tightly packed v1 producers retain the same wire format and deterministic output; the former half-supported padded-stride case is now explicitly rejected.
 
 1. Record current v1 throughput, allocations, copy count and frame latency for the dummy core and Stormakt at 320x224 and 400x280.
 2. Add checked arithmetic for `width * height * sizeof(uint)`.
@@ -192,4 +194,4 @@ Shared memory is considered successful only if it reduces framebuffer copying wi
 
 Start with Checkpoint 0 and commit it independently. Then land handshake plus raw v2 before shared memory so negotiation and error handling can be tested without debugging two new mechanisms at once. Shared memory is the first expected performance feature. Presentation decoupling follows after frame ownership is proven. Compression remains optional and measurement-driven.
 
-Until this plan is explicitly resumed, WFEX v1 remains the production protocol and Stormakt development continues against the existing deterministic path.
+Until Checkpoint 1 lands, WFEX v1 remains the production protocol and Stormakt continues against the existing deterministic path.

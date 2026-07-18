@@ -60,7 +60,7 @@ Each record consists of a fixed 32-byte header followed immediately by one compl
 | 0 | 4 | `uint32` | `magic` | Must be `0x58454657` (`WFEX`). |
 | 4 | 4 | `int32` | `width` | Visible width in pixels; must be positive. |
 | 8 | 4 | `int32` | `height` | Visible height in pixels; must be positive. |
-| 12 | 4 | `int32` | `stridePixels` | Row stride expressed in pixels; must be at least `width`. |
+| 12 | 4 | `int32` | `stridePixels` | Row stride expressed in pixels; WFEX v1 requires exactly `width`. |
 | 16 | 8 | `uint64` | `frameIndex` | Producer-owned monotonically increasing frame identifier. |
 | 24 | 4 | `int32` | `byteCount` | Pixel payload length. The current host requires `width * height * 4`. |
 | 28 | 4 | `int32` | `reserved` | Written as zero by current producers and ignored by the host. |
@@ -73,7 +73,7 @@ The record length implemented today is therefore:
 
 ### Effective stride restriction
 
-The header has a stride field and the host accepts `stridePixels >= width`, but the current host also requires `byteCount == width * height * 4` and allocates exactly `width * height` pixels. A padded payload using `stridePixels * height` is consequently not supported end to end.
+WFEX v1 formally requires tightly packed rows. Before the v2 safety checkpoint the host accepted a padded stride in the header while still allocating and reading only `width * height` pixels. That half-supported state has been removed: the common v1 parser now rejects `stridePixels != width` before allocation.
 
 Current producers must use tightly packed rows:
 
@@ -81,7 +81,7 @@ Current producers must use tightly packed rows:
 stridePixels == width
 ```
 
-Supporting padded rows in the future requires the host to validate and allocate against `stridePixels * height`, while still copying only `width` visible pixels per row.
+Supporting padded rows in the future requires an explicitly negotiated v2 capability and validation against `stridePixels * height`, while still copying only `width` visible pixels per row.
 
 ## Pixel format
 
@@ -271,19 +271,23 @@ Input is not carried by the WFEX file itself. A producer that needs interactive 
 
 ## Host validation and failure behavior
 
-For each record, `ExternalProcessCore` currently validates:
+All stdio, file/FIFO and Unix-socket readers use the same `WfexFrameHeader` parser. For each record it validates, before framebuffer allocation:
 
 - the `WFEX` magic;
 - positive width and height;
-- `stridePixels >= width`;
-- `byteCount == width * height * sizeof(uint)`;
+- configurable maximum width and height, defaulting to 8192 by 8192;
+- `stridePixels == width`;
+- checked `width * height * sizeof(uint)` arithmetic;
+- `byteCount == width * height * sizeof(uint)` and a configurable payload ceiling, defaulting to 256 MiB;
 - successful reading of the complete payload.
+
+The limits are configured independently under each `external_core` section with `max_frame_width`, `max_frame_height` and `max_frame_bytes`. The shared record reader handles fragmented reads, rejects a truncated synchronous record and gives non-blocking file-like streams a bounded no-data retry window. A transport whose underlying `Read` blocks must still supply its own timeout, as the Unix-socket path does.
 
 In synchronous stdio and socket reads, a short stream is an error. File/FIFO mode may retain and present the last complete frame while waiting for more data.
 
 On an invalid header, invalid dimensions or transport exception, the host records the message as `LastError`, adds it to the external core's stderr/status tail, stops the core and propagates the error to the host UI. If the process exits, automatic relaunch is blocked until the user explicitly requests restart.
 
-The current checks are sufficient for trusted local cores but are not a hardened parser for untrusted data. In particular, a future hardened version should impose explicit maximum dimensions and payload sizes before allocating memory.
+These checks prevent malformed headers from causing arithmetic wraparound or an unbounded framebuffer allocation. WFEX remains a trusted local protocol: it does not authenticate a producer, resynchronize a damaged byte stream or impose a universal execution deadline on a producer blocked inside simulation.
 
 ## Deterministic capture and testing
 
@@ -334,7 +338,6 @@ WFEX currently has no:
 - dirty rectangles or partial frame updates;
 - checksum or corruption recovery;
 - stream resynchronization after an invalid or dropped byte;
-- formal maximum width, height or allocation limit;
 - audio payload;
 - network authentication, encryption or congestion control;
 - endianness negotiation.
@@ -343,7 +346,7 @@ The reserved header word creates room for a limited compatible extension, but su
 
 ## Security and deployment boundary
 
-WFEX should presently be treated as a trusted local IPC format. A malformed producer can request large allocations, block while withholding payload bytes or continuously force process restarts. The Unix socket must remain local and access-controlled.
+WFEX should presently be treated as a trusted local IPC format. Frame allocations are bounded before allocation and sockets use transport read timeouts, but a producer can still stall its own stdio or blocking-FIFO exchange or continuously force process restarts. The Unix socket must remain local and access-controlled.
 
 For remote play, browser delivery or internet transport, a separate host-facing layer should provide validation, pacing, authentication and an appropriate compressed media or application protocol. Stormakt's planned WebAssembly host would bypass WFEX serialization entirely and call the shared simulation/rendering core directly, while retaining WFEX for desktop compatibility and deterministic parity tests.
 

@@ -6,6 +6,7 @@
     <Project Path="src/SystemRegisIII.Host.WaylandForge/SystemRegisIII.Host.WaylandForge.csproj" />
     <Project Path="src/SystemRegisIII.WayControlProtocol/SystemRegisIII.WayControlProtocol.csproj" />
     <Project Path="src/SystemRegisIII.WayControlProbe/SystemRegisIII.WayControlProbe.csproj" />
+    <Project Path="src/SystemRegisIII.WfexConformance/SystemRegisIII.WfexConformance.csproj" />
     <Project Path="src/SystemRegisIII.WaylandForge.Ui/SystemRegisIII.WaylandForge.Ui.csproj" />
   </Folder>
 </Solution>

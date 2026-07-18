@@ -1,4 +1,5 @@
 using System.Globalization;
+using SystemRegisIII.Core;
 using SystemRegisIII.WaylandForge.Ui;
 
 namespace SystemRegisIII.Host.WaylandForge;
@@ -108,6 +109,7 @@ internal sealed class UiConfig
         writer.WriteLine($"wfex_path = \"{Escape(ExternalCore.WfexPath)}\"");
         writer.WriteLine($"pointer_driver = \"{Escape(ExternalCore.PointerDriver)}\"");
         writer.WriteLine($"socket_path = \"{Escape(ExternalCore.SocketPath)}\"");
+        WriteWfexLimits(writer, ExternalCore);
         writer.WriteLine();
         writer.WriteLine("[external_core2]");
         writer.WriteLine($"mode = \"{Escape(ExternalCore2.Mode)}\"");
@@ -118,6 +120,7 @@ internal sealed class UiConfig
         writer.WriteLine($"wfex_path = \"{Escape(ExternalCore2.WfexPath)}\"");
         writer.WriteLine($"pointer_driver = \"{Escape(ExternalCore2.PointerDriver)}\"");
         writer.WriteLine($"socket_path = \"{Escape(ExternalCore2.SocketPath)}\"");
+        WriteWfexLimits(writer, ExternalCore2);
         writer.WriteLine();
         writer.WriteLine("[external_core3]");
         writer.WriteLine($"mode = \"{Escape(ExternalCore3.Mode)}\"");
@@ -128,6 +131,7 @@ internal sealed class UiConfig
         writer.WriteLine($"wfex_path = \"{Escape(ExternalCore3.WfexPath)}\"");
         writer.WriteLine($"pointer_driver = \"{Escape(ExternalCore3.PointerDriver)}\"");
         writer.WriteLine($"socket_path = \"{Escape(ExternalCore3.SocketPath)}\"");
+        WriteWfexLimits(writer, ExternalCore3);
         writer.WriteLine();
 
         foreach (KeyValuePair<string, UiWindowConfig> pair in Windows.OrderBy(static pair => pair.Value.Order).ThenBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase))
@@ -333,6 +337,15 @@ internal sealed class UiConfig
                 case "socket_path":
                     externalCore.SocketPath = value;
                     break;
+                case "max_frame_width":
+                    externalCore.MaximumFrameWidth = Math.Clamp(ParseInt(value, externalCore.MaximumFrameWidth), 1, 32_768);
+                    break;
+                case "max_frame_height":
+                    externalCore.MaximumFrameHeight = Math.Clamp(ParseInt(value, externalCore.MaximumFrameHeight), 1, 32_768);
+                    break;
+                case "max_frame_bytes":
+                    externalCore.MaximumFrameBytes = Math.Clamp(ParseInt(value, externalCore.MaximumFrameBytes), 4, 1_073_741_824);
+                    break;
             }
             return;
         }
@@ -457,6 +470,13 @@ internal sealed class UiConfig
     private static string Escape(string value)
     {
         return value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
+    }
+
+    private static void WriteWfexLimits(StreamWriter writer, UiExternalCoreConfig config)
+    {
+        writer.WriteLine($"max_frame_width = {config.MaximumFrameWidth.ToString(CultureInfo.InvariantCulture)}");
+        writer.WriteLine($"max_frame_height = {config.MaximumFrameHeight.ToString(CultureInfo.InvariantCulture)}");
+        writer.WriteLine($"max_frame_bytes = {config.MaximumFrameBytes.ToString(CultureInfo.InvariantCulture)}");
     }
 }
 
@@ -590,4 +610,7 @@ internal sealed class UiExternalCoreConfig
     public string WfexPath { get; set; } = string.Empty;
     public string PointerDriver { get; set; } = "absolute";
     public string SocketPath { get; set; } = string.Empty;
+    public int MaximumFrameWidth { get; set; } = WfexLimits.Default.MaximumWidth;
+    public int MaximumFrameHeight { get; set; } = WfexLimits.Default.MaximumHeight;
+    public int MaximumFrameBytes { get; set; } = WfexLimits.Default.MaximumPayloadBytes;
 }

@@ -8,7 +8,6 @@ namespace SystemRegisIII.Host.WaylandForge;
 
 internal sealed class ExternalProcessCore : ISystemCore, IDisposable
 {
-    private const uint FrameMagic = 0x58454657; // WFEX
     private const uint InputMagic = 0x4e494657; // WFIN
     private const byte StepCommand = (byte)'S';
     private const byte ControllerPointerStepCommand = (byte)'Q';
@@ -24,6 +23,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     private string _socketPath = string.Empty;
     private string _pointerDriver = "absolute";
     private string _fallbackDllPath = string.Empty;
+    private WfexLimits _wfexLimits = WfexLimits.Default;
     private Process? _process;
     private Stream? _wfexStream;
     private Socket? _socketListener;
@@ -102,6 +102,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         _wfexPath = config.WfexPath.Trim();
         _socketPath = config.SocketPath.Trim();
         _pointerDriver = string.IsNullOrWhiteSpace(config.PointerDriver) ? "absolute" : config.PointerDriver.Trim().ToLowerInvariant();
+        _wfexLimits = new WfexLimits(config.MaximumFrameWidth, config.MaximumFrameHeight, config.MaximumFrameBytes);
         _fallbackDllPath = fallbackDllPath;
         _startBlockedAfterExit = false;
     }
@@ -339,80 +340,51 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
 
     private void ReadWfexFrame(Stream stream, IFrameSink frameSink)
     {
-        ReadExact(stream, _header);
-        uint magic = BinaryPrimitives.ReadUInt32LittleEndian(_header.AsSpan(0));
-        if (magic != FrameMagic)
+        WfexStreamReader.ReadExactly(stream, _header);
+        WfexFrameHeader frameHeader = WfexFrameHeader.Parse(_header, _wfexLimits);
+        FrameIndex = frameHeader.FrameIndex;
+
+        if (_frame.Length != frameHeader.PixelCount)
         {
-            throw new InvalidOperationException("External core returned an invalid frame header.");
+            _frame = new uint[frameHeader.PixelCount];
         }
 
-        int width = BinaryPrimitives.ReadInt32LittleEndian(_header.AsSpan(4));
-        int height = BinaryPrimitives.ReadInt32LittleEndian(_header.AsSpan(8));
-        int stride = BinaryPrimitives.ReadInt32LittleEndian(_header.AsSpan(12));
-        FrameIndex = BinaryPrimitives.ReadUInt64LittleEndian(_header.AsSpan(16));
-        int byteCount = BinaryPrimitives.ReadInt32LittleEndian(_header.AsSpan(24));
-
-        if (width <= 0 || height <= 0 || stride < width || byteCount != width * height * sizeof(uint))
-        {
-            throw new InvalidOperationException("External core returned invalid frame dimensions.");
-        }
-
-        if (_frame.Length != width * height)
-        {
-            _frame = new uint[width * height];
-        }
-
-        ReadExact(stream, MemoryMarshal.AsBytes(_frame.AsSpan()));
-        _lastWidth = width;
-        _lastHeight = height;
-        _lastStride = stride;
-        frameSink.Present(_frame, width, height, stride);
+        WfexStreamReader.ReadExactly(stream, MemoryMarshal.AsBytes(_frame.AsSpan()));
+        _lastWidth = frameHeader.Width;
+        _lastHeight = frameHeader.Height;
+        _lastStride = frameHeader.StridePixels;
+        frameSink.Present(_frame, frameHeader.Width, frameHeader.Height, frameHeader.StridePixels);
     }
 
     private bool TryReadWfexFrame(Stream stream, IFrameSink frameSink)
     {
         long startPosition = stream.CanSeek ? stream.Position : -1;
         int waitMs = _frame.Length == 0 ? 2000 : 2;
-        if (!TryReadExact(stream, _header, waitMs))
+        if (!WfexStreamReader.TryReadExactly(stream, _header, waitMs))
         {
             ResetStreamPosition(stream, startPosition);
             return false;
         }
 
-        uint magic = BinaryPrimitives.ReadUInt32LittleEndian(_header.AsSpan(0));
-        if (magic != FrameMagic)
+        WfexFrameHeader frameHeader = WfexFrameHeader.Parse(_header, _wfexLimits);
+
+        if (_pendingFrame.Length != frameHeader.PixelCount)
         {
-            throw new InvalidOperationException("External core returned an invalid frame header.");
+            _pendingFrame = new uint[frameHeader.PixelCount];
         }
 
-        int width = BinaryPrimitives.ReadInt32LittleEndian(_header.AsSpan(4));
-        int height = BinaryPrimitives.ReadInt32LittleEndian(_header.AsSpan(8));
-        int stride = BinaryPrimitives.ReadInt32LittleEndian(_header.AsSpan(12));
-        ulong frameIndex = BinaryPrimitives.ReadUInt64LittleEndian(_header.AsSpan(16));
-        int byteCount = BinaryPrimitives.ReadInt32LittleEndian(_header.AsSpan(24));
-
-        if (width <= 0 || height <= 0 || stride < width || byteCount != width * height * sizeof(uint))
-        {
-            throw new InvalidOperationException("External core returned invalid frame dimensions.");
-        }
-
-        if (_pendingFrame.Length != width * height)
-        {
-            _pendingFrame = new uint[width * height];
-        }
-
-        if (!TryReadExact(stream, MemoryMarshal.AsBytes(_pendingFrame.AsSpan()), 200))
+        if (!WfexStreamReader.TryReadExactly(stream, MemoryMarshal.AsBytes(_pendingFrame.AsSpan()), 200))
         {
             ResetStreamPosition(stream, startPosition);
             return false;
         }
 
         (_frame, _pendingFrame) = (_pendingFrame, _frame);
-        FrameIndex = frameIndex;
-        _lastWidth = width;
-        _lastHeight = height;
-        _lastStride = stride;
-        frameSink.Present(_frame, width, height, stride);
+        FrameIndex = frameHeader.FrameIndex;
+        _lastWidth = frameHeader.Width;
+        _lastHeight = frameHeader.Height;
+        _lastStride = frameHeader.StridePixels;
+        frameSink.Present(_frame, frameHeader.Width, frameHeader.Height, frameHeader.StridePixels);
         return true;
     }
 
@@ -577,41 +549,6 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         {
             frameSink.Present(_pendingFrame, _lastWidth, _lastHeight, _lastStride);
         }
-    }
-
-    private static void ReadExact(Stream stream, Span<byte> buffer)
-    {
-        int offset = 0;
-        while (offset < buffer.Length)
-        {
-            int read = stream.Read(buffer[offset..]);
-            if (read == 0)
-            {
-                throw new EndOfStreamException("External core process ended before a full frame was received.");
-            }
-            offset += read;
-        }
-    }
-
-    private static bool TryReadExact(Stream stream, Span<byte> buffer, int timeoutMs)
-    {
-        Stopwatch wait = Stopwatch.StartNew();
-        int offset = 0;
-        while (offset < buffer.Length)
-        {
-            int read = stream.Read(buffer[offset..]);
-            if (read == 0)
-            {
-                if (wait.ElapsedMilliseconds >= timeoutMs)
-                {
-                    return false;
-                }
-                Thread.Sleep(1);
-                continue;
-            }
-            offset += read;
-        }
-        return true;
     }
 
     private static void ResetStreamPosition(Stream stream, long position)
