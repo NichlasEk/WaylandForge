@@ -4,7 +4,7 @@ Status: aktiv utvecklingsplan för kampanjens sjunde rad, level id `6`. Första 
 
 ## Nuvarande spelbara checkpoint
 
-Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen render/step-dispatch och kampanjens sparade Bana 5-lastning. Den spelbara rymdöppningen leder efter en kort inflygning genom två sammanhängande bossportar och den första fullstora bossen.
+Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen render/step-dispatch och kampanjens sparade Bana 5-lastning. Den spelbara rymdöppningen leder efter en kort inflygning genom två sammanhängande bossportar och två fullstora bossar.
 
 **Trekroners lås:**
 
@@ -31,9 +31,18 @@ Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen rende
 - registerbladen gör växelvisa rusningar ned i spelrummet, har egna träffytor och måste förstöras var för sig;
 - fas 3 väljer en av tre bokföringsnoder som aktiv reparationspost medan de andra fungerar som straffande lockbeten;
 - om rätt nod överlever till stämpeln återförs en del av Frederiks rustning; cykeln väljer därefter en ny korrekt nod;
-- segern visar checkpointresultatet **Øresunds Øje väntar**.
+- segern låter tullkärnan fly in i kronringen och öppnar Øresunds Øje utan meny eller levelreset.
 
-Miljön, låset, urtavlan, Frederik, HUD, barriärer och resultatkort har kodritade fallbackformer i wide och legacy. `WAYLANDFORGE_STORMAKT_COPENHAGEN_GATE_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_ADMIRALTY_TEST=1` och `WAYLANDFORGE_STORMAKT_COPENHAGEN_FREDERIK_TEST=1` hoppar till förkortade deterministiska stridsfixtures. Det är fortfarande en utvecklingscheckpoint: nästa svep ska låta Frederiks tullkärna fly in i kronringen och bli Øresunds Øje i stället för att returnera till kampanjmenyn.
+**Øresunds Øje:**
+
+- Ögat samplar Karls verkliga rörelsehistoria och röstar deterministiskt fram riktningen upp, ned, vänster eller höger;
+- HUD:en visar den nuvarande prognosen innan en tullvägg låser den beräknade framtida positionen;
+- varje tullvägg telegraferas först och lämnar en tydlig lucka vid sidan av den förutsagda rutten, så spelaren kan bryta sitt eget mönster;
+- vid första fasbrottet blir kärnan osårbar och tre roterande linser måste skjutas sönder var för sig;
+- Sörens fullbordade ed slår ut en lins, men Karl måste fortfarande lösa resten av fasen;
+- slutfasen återöppnar kärnan med snabbare prognoser och eld, och segern visar checkpointresultatet **Dannebrogsvingar väntar**.
+
+Miljön, låset, urtavlan, Frederik, Ögat, HUD, barriärer och resultatkort har kodritade fallbackformer i wide och legacy. `WAYLANDFORGE_STORMAKT_COPENHAGEN_GATE_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_ADMIRALTY_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_FREDERIK_TEST=1` och `WAYLANDFORGE_STORMAKT_COPENHAGEN_EYE_TEST=1` hoppar till förkortade deterministiska stridsfixtures. Det är fortfarande en utvecklingscheckpoint: nästa svep ska ersätta resultatstoppet med Dannebrogsvingarnas Superarmada-port.
 
 ## Kärna
 

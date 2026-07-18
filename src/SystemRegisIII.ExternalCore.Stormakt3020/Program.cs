@@ -264,6 +264,9 @@ internal sealed class StormaktGame
     private const int CopenhagenFrederikPhaseTwoHealth = 600;
     private const int CopenhagenFrederikBladeHealth = 150;
     private const int CopenhagenFrederikRepairNodeHealth = 42;
+    private const int CopenhagenEyeMaxHealth = 720;
+    private const int CopenhagenEyePhaseTwoHealth = 480;
+    private const int CopenhagenEyeLensHealth = 72;
     private const int RtsSalvagedSilverGoal = 1_200;
     private const int DungeonFirstSigilMask = 1 << 8;
     private const int DungeonFogdeRescuedMask = 1 << 9;
@@ -331,6 +334,8 @@ internal sealed class StormaktGame
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_ADMIRALTY_TEST"), "1", StringComparison.Ordinal);
     private readonly bool _copenhagenFrederikTestMode = string.Equals(
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_FREDERIK_TEST"), "1", StringComparison.Ordinal);
+    private readonly bool _copenhagenEyeTestMode = string.Equals(
+        Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_EYE_TEST"), "1", StringComparison.Ordinal);
     private readonly SpritePack? _sprites;
     private readonly StormaktMusicLoop? _audio;
     private Random _random = new(3020);
@@ -556,6 +561,14 @@ internal sealed class StormaktGame
         new(0, 300, true, "FREDERIK NULL", "REGNSKABET LUKKER", "RUSTNING ÅTERFÖRS", null, "rigsregnskabet");
     private static readonly RadioCard CopenhagenFrederikFallRadio =
         new(0, 300, true, "FREDERIK NULL", "NUL KAN EJ VARA", "EN SKULD", null, "rigsregnskabet");
+    private static readonly RadioCard CopenhagenEyeRadio =
+        new(0, 330, false, "EBBA GRIP", "TULLKÄRNAN SER OSS", "BRYT DIN EGEN KURS", null, "portrait_ebba");
+    private static readonly RadioCard CopenhagenEyeLensRadio =
+        new(0, 300, true, "ØRESUNDS ØJE", "RÖRELSE REGISTRERAD", "FRAMTID BESKATTAS", null, "rigsregnskabet");
+    private static readonly RadioCard CopenhagenEyeSorenRadio =
+        new(0, 270, false, "SÖREN SVARTKRUT", "EN LINS ÄR MIN", "RESTEN ÄR DIN", null, "portrait_soren", true);
+    private static readonly RadioCard CopenhagenEyeFallRadio =
+        new(0, 300, false, "EBBA GRIP", "ÖGAT HAR BLINDNAT", "PORTEN KOMPILERAR", null, "portrait_ebba");
     private int _shipX;
     private int _shipY;
     private int _cooldown;
@@ -1021,6 +1034,18 @@ internal sealed class StormaktGame
                 for (int node = 0; node < resetCopenhagen.GateHealth.Length; node++)
                     resetCopenhagen.GateHealth[node] = 0;
                 BeginCopenhagenFrederik(resetCopenhagen, testFixture: true);
+            }
+            if (_copenhagenEyeTestMode)
+            {
+                resetCopenhagen.Age = 2_700;
+                resetCopenhagen.GateActive = true;
+                resetCopenhagen.AdmiraltyActive = true;
+                resetCopenhagen.AdmiraltyHealth = 0;
+                resetCopenhagen.AdmiraltyDeathAge = 300;
+                resetCopenhagen.FrederikActive = true;
+                resetCopenhagen.FrederikHealth = 0;
+                resetCopenhagen.FrederikDeathAge = 360;
+                BeginCopenhagenEye(resetCopenhagen, testFixture: true);
             }
         }
         if (_snapphaneWorld is SnapphaneWorldState resetSnapphane)
@@ -5282,6 +5307,13 @@ internal sealed class StormaktGame
             return;
         }
 
+        if (state.EyeActive)
+        {
+            StepCopenhagenEye(state);
+            StepEnemyShots();
+            return;
+        }
+
         if (state.FrederikActive)
         {
             StepCopenhagenFrederik(state);
@@ -5510,9 +5542,7 @@ internal sealed class StormaktGame
             if (deathAge is 28 or 61 or 103 or 158 or 220)
                 _audio?.Trigger(StormaktSound.EnemyExplosion);
             if (deathAge < 280 || _bossRadioCard is not null) return;
-            _stageClear = true;
-            _stageClearAge = 0;
-            _audio?.SwitchMusic(StormaktMusicTrack.Combat);
+            BeginCopenhagenEye(state);
             return;
         }
 
@@ -5759,6 +5789,221 @@ internal sealed class StormaktGame
         double dy = _shipY - y;
         double length = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
         _enemyShots.Add(new EnemyShot(x, y, dx / length * speed, dy / length * speed, kind));
+    }
+
+    private void BeginCopenhagenEye(CopenhagenWorldState state, bool testFixture = false)
+    {
+        state.EyeActive = true;
+        state.EyeTestFixture = testFixture;
+        state.EyeAge = 0;
+        state.EyePhase = 1;
+        state.EyePhaseAge = 0;
+        state.EyeHealth = testFixture ? 180 : CopenhagenEyeMaxHealth;
+        state.EyeDeathAge = 0;
+        state.EyeHitFlash = 0;
+        state.EyeLastShipX = _shipX;
+        state.EyeLastShipY = _shipY;
+        state.EyePredictedX = _shipX;
+        state.EyePredictedY = _shipY;
+        state.EyeWalls.Clear();
+        Array.Clear(state.EyeDirectionVotes);
+        Array.Clear(state.EyeLensHealth);
+        _enemyShots.Clear();
+        _shots.Clear();
+        if (testFixture) return;
+        ActivateBossRadio(CopenhagenEyeRadio);
+        _audio?.Trigger(StormaktSound.OresundCrownCoreOpen);
+    }
+
+    private void StepCopenhagenEye(CopenhagenWorldState state)
+    {
+        state.EyeAge++;
+        state.EyePhaseAge++;
+        state.EyeHitFlash = Math.Max(0, state.EyeHitFlash - 1);
+        state.EyePredictionFlash = Math.Max(0, state.EyePredictionFlash - 1);
+        state.EyeLensHitFlash = Math.Max(0, state.EyeLensHitFlash - 1);
+        StepCopenhagenEyePrediction(state);
+
+        if (state.EyeDeathAge > 0)
+        {
+            _shots.Clear();
+            int deathAge = state.EyeDeathAge++;
+            if (deathAge == 1)
+            {
+                _enemyShots.Clear();
+                state.EyeWalls.Clear();
+                _score += 7_500;
+                ActivateBossRadio(CopenhagenEyeFallRadio);
+                _audio?.Trigger(StormaktSound.Broadside);
+            }
+            if (deathAge is 26 or 63 or 108 or 171 or 236)
+                _audio?.Trigger(StormaktSound.EnemyExplosion);
+            if (deathAge < 280 || _bossRadioCard is not null) return;
+            _stageClear = true;
+            _stageClearAge = 0;
+            _audio?.SwitchMusic(StormaktMusicTrack.Combat);
+            return;
+        }
+
+        StepCopenhagenEyeShots(state);
+        StepCopenhagenEyeWalls(state);
+        StepCopenhagenEyeAttacks(state);
+
+        int phaseTwoHealth = state.EyeTestFixture ? 120 : CopenhagenEyePhaseTwoHealth;
+        if (state.EyePhase == 1 && state.EyeHealth <= phaseTwoHealth)
+        {
+            state.EyeHealth = phaseTwoHealth;
+            state.EyePhase = 2;
+            state.EyePhaseAge = 0;
+            int lensHealth = state.EyeTestFixture ? 12 : CopenhagenEyeLensHealth;
+            for (int lens = 0; lens < state.EyeLensHealth.Length; lens++) state.EyeLensHealth[lens] = lensHealth;
+            _enemyShots.Clear();
+            state.EyeWalls.Clear();
+            ActivateBossRadio(CopenhagenEyeLensRadio);
+            _audio?.Trigger(StormaktSound.OresundFortressLock);
+        }
+        if (state.EyePhase == 2 && state.SorenOathComplete && !state.EyeSorenLensBroken && state.EyePhaseAge >= 90)
+        {
+            state.EyeSorenLensBroken = true;
+            state.EyeLensHealth[0] = 0;
+            _score += 240;
+            ActivateBossRadio(CopenhagenEyeSorenRadio);
+            _audio?.Trigger(StormaktSound.OresundSwitchBreak);
+        }
+        if (state.EyePhase == 2 && state.EyeLensHealth.All(health => health <= 0))
+        {
+            state.EyePhase = 3;
+            state.EyePhaseAge = 0;
+            state.EyeWalls.Clear();
+            _enemyShots.Clear();
+            _audio?.Trigger(StormaktSound.TitheBossPhaseBreak);
+        }
+        if (state.EyePhase == 3 && state.EyeHealth <= 0)
+        {
+            state.EyeHealth = 0;
+            state.EyeDeathAge = 1;
+        }
+    }
+
+    private void StepCopenhagenEyePrediction(CopenhagenWorldState state)
+    {
+        if (state.EyeAge % 10 != 0) return;
+        int dx = _shipX - state.EyeLastShipX;
+        int dy = _shipY - state.EyeLastShipY;
+        for (int index = 0; index < state.EyeDirectionVotes.Length; index++)
+            state.EyeDirectionVotes[index] = Math.Max(0, state.EyeDirectionVotes[index] - 1);
+        if (Math.Abs(dx) >= Math.Abs(dy) && Math.Abs(dx) >= 3)
+            state.EyeDirectionVotes[dx < 0 ? (int)CopenhagenPrediction.Left : (int)CopenhagenPrediction.Right] += 4;
+        else if (Math.Abs(dy) >= 3)
+            state.EyeDirectionVotes[dy < 0 ? (int)CopenhagenPrediction.Up : (int)CopenhagenPrediction.Down] += 4;
+        state.EyeLastShipX = _shipX;
+        state.EyeLastShipY = _shipY;
+        state.EyePrediction = (CopenhagenPrediction)Enumerable.Range(0, state.EyeDirectionVotes.Length)
+            .OrderByDescending(index => state.EyeDirectionVotes[index]).ThenBy(index => index).First();
+    }
+
+    private void StepCopenhagenEyeShots(CopenhagenWorldState state)
+    {
+        (double centerX, double centerY) = CopenhagenEyeCenter(state);
+        for (int shotIndex = _shots.Count - 1; shotIndex >= 0; shotIndex--)
+        {
+            Shot shot = _shots[shotIndex];
+            int hitLens = -1;
+            if (state.EyePhase == 2)
+            {
+                for (int lens = 0; lens < state.EyeLensHealth.Length; lens++)
+                {
+                    if (state.EyeLensHealth[lens] <= 0) continue;
+                    (double lensX, double lensY) = CopenhagenEyeLensPosition(state, lens, centerX, centerY);
+                    if (DistanceSquared(shot.X, shot.Y, lensX, lensY) < 15 * 15)
+                    {
+                        hitLens = lens;
+                        break;
+                    }
+                }
+            }
+            if (hitLens >= 0)
+            {
+                state.EyeLensHealth[hitLens] = Math.Max(0, state.EyeLensHealth[hitLens] - shot.Power);
+                state.EyeLensHitFlash = 5;
+                state.EyeLastHitLens = hitLens;
+                _shots.RemoveAt(shotIndex);
+                if (state.EyeLensHealth[hitLens] == 0)
+                {
+                    _score += 360;
+                    _audio?.Trigger(StormaktSound.OresundCrownCoreBreak);
+                }
+                continue;
+            }
+            if (state.EyePhase == 2 || DistanceSquared(shot.X, shot.Y, centerX, centerY) >= 29 * 29) continue;
+            state.EyeHealth = Math.Max(0, state.EyeHealth - shot.Power);
+            state.EyeHitFlash = 5;
+            _shots.RemoveAt(shotIndex);
+        }
+    }
+
+    private void StepCopenhagenEyeWalls(CopenhagenWorldState state)
+    {
+        int interval = state.EyePhase == 3 ? 105 : 150;
+        if (state.EyeAge > 105 && state.EyeAge % interval == 0)
+        {
+            bool vertical = state.EyePrediction is CopenhagenPrediction.Left or CopenhagenPrediction.Right;
+            int futureX = Math.Clamp(_shipX + (state.EyePrediction == CopenhagenPrediction.Left ? -58 :
+                state.EyePrediction == CopenhagenPrediction.Right ? 58 : 0), 34, _width - 34);
+            int futureY = Math.Clamp(_shipY + (state.EyePrediction == CopenhagenPrediction.Up ? -54 :
+                state.EyePrediction == CopenhagenPrediction.Down ? 54 : 0), 46, _height - 34);
+            int gap = vertical
+                ? Math.Clamp(futureY + (state.EyeWallSerial % 2 == 0 ? 42 : -42), 52, _height - 44)
+                : Math.Clamp(futureX + (state.EyeWallSerial % 2 == 0 ? 52 : -52), 46, _width - 46);
+            state.EyeWalls.Add(new CopenhagenTollWall(vertical, vertical ? futureX : futureY, gap, state.EyeWallSerial++));
+            state.EyePredictedX = futureX;
+            state.EyePredictedY = futureY;
+            state.EyePredictionFlash = 45;
+            _audio?.Trigger(StormaktSound.TitheCustomsGate);
+        }
+        foreach (CopenhagenTollWall wall in state.EyeWalls)
+        {
+            wall.Age++;
+            if (wall.Age < 45 || wall.Age > 130 || wall.HitPlayer) continue;
+            bool hit = wall.Vertical
+                ? Math.Abs(_shipX - wall.Coordinate) < 6 && Math.Abs(_shipY - wall.Gap) > 31
+                : Math.Abs(_shipY - wall.Coordinate) < 6 && Math.Abs(_shipX - wall.Gap) > 37;
+            if (!hit) continue;
+            wall.HitPlayer = true;
+            DamageShip();
+        }
+        state.EyeWalls.RemoveAll(wall => wall.Age > 150);
+    }
+
+    private void StepCopenhagenEyeAttacks(CopenhagenWorldState state)
+    {
+        if (state.EyeAge < 90) return;
+        (double centerX, double centerY) = CopenhagenEyeCenter(state);
+        int aimedInterval = state.EyePhase == 3 ? 42 : 66;
+        if (state.EyeAge % aimedInterval == 0)
+            FireAimedCopenhagenShot(centerX, centerY + 12, state.EyePhase == 3 ? 2.55 : 2.15, 2);
+        if (state.EyePhase != 2 || state.EyeAge % 105 != 0) return;
+        for (int lens = 0; lens < state.EyeLensHealth.Length; lens++)
+        {
+            if (state.EyeLensHealth[lens] <= 0) continue;
+            (double lensX, double lensY) = CopenhagenEyeLensPosition(state, lens, centerX, centerY);
+            FireAimedCopenhagenShot(lensX, lensY, 2.0, 3);
+        }
+    }
+
+    private (double X, double Y) CopenhagenEyeCenter(CopenhagenWorldState state)
+    {
+        double entry = Math.Min(1.0, state.EyeAge / 100.0);
+        double eased = entry * entry * (3.0 - 2.0 * entry);
+        double sway = state.EyeAge < 100 ? 0 : Math.Sin(state.EyeAge * 0.009) * 42;
+        return (_width / 2.0 + sway, -52 + 126 * eased);
+    }
+
+    private static (double X, double Y) CopenhagenEyeLensPosition(
+        CopenhagenWorldState state, int lens, double centerX, double centerY)
+    {
+        double angle = lens * Math.PI * 2.0 / 3.0 + state.EyeAge * 0.018;
+        return (centerX + Math.Cos(angle) * 68.0, centerY + Math.Sin(angle) * 37.0);
     }
 
     private void StepCopenhagenGateShots(CopenhagenWorldState state)
@@ -13844,7 +14089,9 @@ internal sealed class StormaktGame
         if (state is not null)
         {
             DrawCopenhagenBarrier(frame, state);
-            if (state.FrederikActive) DrawCopenhagenFrederik(frame, state);
+            DrawCopenhagenEyeWalls(frame, state);
+            if (state.EyeActive) DrawCopenhagenEye(frame, state);
+            else if (state.FrederikActive) DrawCopenhagenFrederik(frame, state);
             else if (state.AdmiraltyActive) DrawCopenhagenAdmiralty(frame, state);
             else if (state.GateActive) DrawCopenhagenGate(frame, state);
         }
@@ -13859,6 +14106,7 @@ internal sealed class StormaktGame
             DrawCopenhagenGateHud(frame, state);
             DrawCopenhagenAdmiraltyHud(frame, state);
             DrawCopenhagenFrederikHud(frame, state);
+            DrawCopenhagenEyeHud(frame, state);
             DrawCopenhagenCheckpointBanner(frame, state);
         }
         DrawCopenhagenMissionTitle(frame, age);
@@ -14183,20 +14431,141 @@ internal sealed class StormaktGame
         DrawText(frame, x + 4, 28, $"FREDERIK NULL  {phase}", 0xffbdf8ff);
     }
 
+    private void DrawCopenhagenEyeWalls(uint[] frame, CopenhagenWorldState state)
+    {
+        if (!state.EyeActive) return;
+        foreach (CopenhagenTollWall wall in state.EyeWalls)
+        {
+            bool telegraph = wall.Age < 45;
+            bool active = wall.Age is >= 45 and <= 130;
+            if (!telegraph && !active) continue;
+            uint color = telegraph ? ((wall.Age / 5 & 1) == 0 ? 0xff493c29 : 0xff765139) :
+                wall.HitPlayer ? 0xff8f2635 : 0xff7fc7ff;
+            if (wall.Vertical)
+            {
+                DrawLine(frame, wall.Coordinate, 17, wall.Coordinate, wall.Gap - 31, color);
+                DrawLine(frame, wall.Coordinate, wall.Gap + 31, wall.Coordinate, _height - 13, color);
+                if (active)
+                {
+                    DrawLine(frame, wall.Coordinate - 2, 17, wall.Coordinate - 2, wall.Gap - 31, 0xff1b3448);
+                    DrawLine(frame, wall.Coordinate - 2, wall.Gap + 31, wall.Coordinate - 2, _height - 13, 0xff1b3448);
+                }
+            }
+            else
+            {
+                DrawLine(frame, 0, wall.Coordinate, wall.Gap - 37, wall.Coordinate, color);
+                DrawLine(frame, wall.Gap + 37, wall.Coordinate, _width - 1, wall.Coordinate, color);
+                if (active)
+                {
+                    DrawLine(frame, 0, wall.Coordinate - 2, wall.Gap - 37, wall.Coordinate - 2, 0xff1b3448);
+                    DrawLine(frame, wall.Gap + 37, wall.Coordinate - 2, _width - 1, wall.Coordinate - 2, 0xff1b3448);
+                }
+            }
+        }
+        if (state.EyePredictionFlash > 0)
+        {
+            int radius = 8 + state.EyePredictionFlash / 6;
+            uint color = (state.EyePredictionFlash / 4 & 1) == 0 ? 0xffff6b62 : 0xffffd66b;
+            DrawCircleOutline(frame, state.EyePredictedX, state.EyePredictedY, radius, color);
+            DrawLine(frame, state.EyePredictedX - radius - 4, state.EyePredictedY,
+                state.EyePredictedX + radius + 4, state.EyePredictedY, color);
+            DrawLine(frame, state.EyePredictedX, state.EyePredictedY - radius - 4,
+                state.EyePredictedX, state.EyePredictedY + radius + 4, color);
+        }
+    }
+
+    private void DrawCopenhagenEye(uint[] frame, CopenhagenWorldState state)
+    {
+        (double centerXD, double centerYD) = CopenhagenEyeCenter(state);
+        int centerX = (int)Math.Round(centerXD);
+        int centerY = (int)Math.Round(centerYD);
+        uint shell = state.EyeDeathAge > 0 ? 0xff8f2635 : state.EyeHitFlash > 0 ? 0xffffec9a : 0xff29343a;
+        FillTriangle(frame, centerX, centerY - 48, centerX - 88, centerY + 4, centerX, centerY + 50, shell);
+        FillTriangle(frame, centerX, centerY - 48, centerX + 88, centerY + 4, centerX, centerY + 50, shell);
+        DrawLine(frame, centerX - 84, centerY + 3, centerX, centerY - 45, 0xffd6b25e);
+        DrawLine(frame, centerX, centerY - 45, centerX + 84, centerY + 3, 0xffd6b25e);
+        DrawLine(frame, centerX - 84, centerY + 3, centerX, centerY + 47, 0xff765139);
+        DrawLine(frame, centerX, centerY + 47, centerX + 84, centerY + 3, 0xff765139);
+        FillCircle(frame, centerX, centerY, 31, 0xff101820);
+        DrawCircleOutline(frame, centerX, centerY, 33, 0xff9bd4dc);
+        DrawCircleOutline(frame, centerX, centerY, 25, 0xffd6b25e);
+        double dx = state.EyePredictedX - centerXD;
+        double dy = state.EyePredictedY - centerYD;
+        double length = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
+        int pupilX = centerX + (int)Math.Round(dx / length * 10);
+        int pupilY = centerY + (int)Math.Round(dy / length * 7);
+        FillCircle(frame, pupilX, pupilY, 9, state.EyePhase == 3 ? 0xffff6b62 : 0xff7fc7ff);
+        FillCircle(frame, pupilX, pupilY, 4, 0xff03080f);
+        PutPixel(frame, pupilX - 2, pupilY - 2, 0xffffffff);
+
+        if (state.EyePhase == 2)
+        {
+            for (int lens = 0; lens < state.EyeLensHealth.Length; lens++)
+            {
+                (double lensXD, double lensYD) = CopenhagenEyeLensPosition(state, lens, centerXD, centerYD);
+                int x = (int)Math.Round(lensXD);
+                int y = (int)Math.Round(lensYD);
+                bool broken = state.EyeLensHealth[lens] <= 0;
+                bool hit = state.EyeLensHitFlash > 0 && state.EyeLastHitLens == lens;
+                uint color = broken ? 0xff315b42 : hit ? 0xffffffff : 0xffff8a4a;
+                DrawLine(frame, centerX, centerY, x, y, broken ? 0xff263744 : 0xff765139);
+                if (broken)
+                {
+                    DrawLine(frame, x - 7, y - 7, x + 7, y + 7, color);
+                    DrawLine(frame, x + 7, y - 7, x - 7, y + 7, color);
+                }
+                else
+                {
+                    FillCircle(frame, x, y, 10, 0xff101820);
+                    DrawCircleOutline(frame, x, y, 12, color);
+                    FillCircle(frame, x, y, 3, 0xff7fc7ff);
+                }
+            }
+        }
+        if (state.EyeDeathAge > 0)
+        {
+            int burst = Math.Min(96, state.EyeDeathAge / 2);
+            DrawCircleOutline(frame, centerX, centerY, 35 + burst, 0xffff8a4a);
+            DrawCircleOutline(frame, centerX, centerY, 18 + burst / 2, 0xff8f2635);
+        }
+    }
+
+    private void DrawCopenhagenEyeHud(uint[] frame, CopenhagenWorldState state)
+    {
+        if (!state.EyeActive || state.EyeAge < 45 || state.EyeDeathAge > 0) return;
+        int maximum = state.EyeTestFixture ? 180 : CopenhagenEyeMaxHealth;
+        int barWidth = Math.Min(210, _width - 80);
+        int x = (_width - barWidth) / 2;
+        string prediction = state.EyePrediction switch
+        {
+            CopenhagenPrediction.Up => "UPP",
+            CopenhagenPrediction.Down => "NED",
+            CopenhagenPrediction.Left => "VÄNSTER",
+            _ => "HÖGER",
+        };
+        DrawRect(frame, x, 21, barWidth, 14, 0xdd080d12);
+        DrawRect(frame, x + 2, 23, (barWidth - 4) * state.EyeHealth / maximum, 4, 0xff7fc7ff);
+        DrawText(frame, x + 4, 28, $"ØRESUNDS ØJE  PROGNOS {prediction}", 0xffbdf8ff);
+    }
+
     private void DrawCopenhagenCheckpointBanner(uint[] frame, CopenhagenWorldState state)
     {
         bool gateCheckpoint = !state.AdmiraltyActive && state.GateFallAge is >= 70 and < 230;
         bool admiralCheckpoint = state.AdmiraltyActive && !state.FrederikActive &&
             state.AdmiraltyDeathAge is >= 70 and < 230;
-        if (!gateCheckpoint && !admiralCheckpoint) return;
+        bool frederikCheckpoint = state.FrederikActive && !state.EyeActive &&
+            state.FrederikDeathAge is >= 70 and < 250;
+        if (!gateCheckpoint && !admiralCheckpoint && !frederikCheckpoint) return;
         int width = Math.Min(232, _width - 32);
         int x = (_width - width) / 2;
         int y = _height <= 224 ? 80 : 103;
         DrawRect(frame, x, y, width, 43, 0xee080d12);
         DrawLine(frame, x, y, x + width - 1, y, 0xffffd66b);
         DrawLine(frame, x, y + 42, x + width - 1, y + 42, 0xff2f74c9);
-        string line1 = gateCheckpoint ? "TREKRONERS LÅS BRUTET" : "AMIRALITETET BRUSTET";
-        string line2 = gateCheckpoint ? "AMIRALITETET ÖPPNAS" : "FREDERIK NULL ANLÄNDER";
+        string line1 = gateCheckpoint ? "TREKRONERS LÅS BRUTET" :
+            admiralCheckpoint ? "AMIRALITETET BRUSTET" : "FREDERIK NULL BRUTEN";
+        string line2 = gateCheckpoint ? "AMIRALITETET ÖPPNAS" :
+            admiralCheckpoint ? "FREDERIK NULL ANLÄNDER" : "TULLKÄRNAN FLYR";
         DrawText(frame, x + (width - line1.Length * 6) / 2, y + 9, line1, 0xffffd66b);
         DrawText(frame, x + (width - line2.Length * 6) / 2, y + 26, line2, 0xff9bd4dc);
     }
@@ -15546,7 +15915,7 @@ internal sealed class StormaktGame
         }
         else if (_levelId == 6)
         {
-            DrawCopenhagenFrederikSeal(frame, panelX + 196, 67);
+            DrawCopenhagenEyeSeal(frame, panelX + 196, 67);
         }
         else
         {
@@ -15592,8 +15961,8 @@ internal sealed class StormaktGame
             }
             else if (_levelId == 6)
             {
-                DrawText(frame, panelX + 29, 99, "FREDERIK NULL BRUTEN", 0xffffd66b);
-                DrawText(frame, panelX + 28, 116, "ØRESUNDS ØJE VÄNTAR", 0xff9bd4dc);
+                DrawText(frame, panelX + 33, 99, "ØRESUNDS ØJE BLINDAT", 0xffffd66b);
+                DrawText(frame, panelX + 22, 116, "DANNEBROGSVINGAR VÄNTAR", 0xff9bd4dc);
             }
             else
             {
@@ -15603,19 +15972,14 @@ internal sealed class StormaktGame
         }
     }
 
-    private void DrawCopenhagenFrederikSeal(uint[] frame, int x, int y)
+    private void DrawCopenhagenEyeSeal(uint[] frame, int x, int y)
     {
-        FillTriangle(frame, x, y - 24, x - 27, y + 18, x + 27, y + 18, 0xff29343a);
-        DrawLine(frame, x - 25, y + 17, x + 25, y + 17, 0xffd6b25e);
-        DrawRect(frame, x - 15, y - 12, 30, 22, 0xff4b2530);
-        DrawCrown(frame, x - 4, y - 7, 0xffffd66b);
-        for (int receipt = 0; receipt < 3; receipt++)
-        {
-            int rx = x - 18 + receipt * 18;
-            DrawRect(frame, rx, y + 8, 9, 6, 0xffd8d1b9);
-        }
-        DrawLine(frame, x - 18, y - 18, x + 19, y + 13, 0xff8f2635);
-        DrawLine(frame, x + 18, y - 18, x - 19, y + 13, 0xff8f2635);
+        FillTriangle(frame, x, y - 22, x - 31, y, x, y + 22, 0xff29343a);
+        FillTriangle(frame, x, y - 22, x + 31, y, x, y + 22, 0xff29343a);
+        DrawCircleOutline(frame, x, y, 18, 0xffd6b25e);
+        FillCircle(frame, x, y, 10, 0xff8f2635);
+        DrawLine(frame, x - 24, y - 17, x + 24, y + 17, 0xffff8a4a);
+        DrawLine(frame, x + 24, y - 17, x - 24, y + 17, 0xffff8a4a);
     }
 
     private void DrawSnapphaneOathSeal(uint[] frame, int x, int y)
@@ -16923,6 +17287,27 @@ internal sealed class StormaktGame
         public int FrederikRepairFlash { get; set; }
         public int[] FrederikRepairHealth { get; } = new int[3];
         public List<CopenhagenSeizureChain> FrederikChains { get; } = [];
+        public bool EyeActive { get; set; }
+        public bool EyeTestFixture { get; set; }
+        public int EyeAge { get; set; }
+        public int EyePhase { get; set; }
+        public int EyePhaseAge { get; set; }
+        public int EyeHealth { get; set; }
+        public int EyeDeathAge { get; set; }
+        public int EyeHitFlash { get; set; }
+        public int EyeLensHitFlash { get; set; }
+        public int EyeLastHitLens { get; set; } = -1;
+        public int EyeLastShipX { get; set; }
+        public int EyeLastShipY { get; set; }
+        public CopenhagenPrediction EyePrediction { get; set; }
+        public int EyePredictionFlash { get; set; }
+        public int EyePredictedX { get; set; }
+        public int EyePredictedY { get; set; }
+        public int EyeWallSerial { get; set; }
+        public bool EyeSorenLensBroken { get; set; }
+        public int[] EyeDirectionVotes { get; } = new int[4];
+        public int[] EyeLensHealth { get; } = new int[3];
+        public List<CopenhagenTollWall> EyeWalls { get; } = [];
     }
 
     private sealed class CopenhagenSeizureChain(int target, int health)
@@ -16931,6 +17316,18 @@ internal sealed class StormaktGame
         public int Health { get; set; } = health;
         public int Age { get; set; }
         public bool Completed { get; set; }
+    }
+
+    private enum CopenhagenPrediction { Up, Down, Left, Right }
+
+    private sealed class CopenhagenTollWall(bool vertical, int coordinate, int gap, int serial)
+    {
+        public bool Vertical { get; } = vertical;
+        public int Coordinate { get; } = coordinate;
+        public int Gap { get; } = gap;
+        public int Serial { get; } = serial;
+        public int Age { get; set; }
+        public bool HitPlayer { get; set; }
     }
 
     private sealed class SnapphaneWorldState
