@@ -1,6 +1,6 @@
 # WFEX v2 development plan
 
-Status: active; Checkpoints 0 and 1 completed 2026-07-18
+Status: active; Checkpoints 0, 1 and 2 completed 2026-07-18
 
 Scope: WaylandForge host and process-isolated desktop cores
 
@@ -116,6 +116,8 @@ Acceptance: an unchanged v1 producer works under `prefer-v2`; a v2 producer nego
 
 ### Checkpoint 2 - Versioned raw-frame records
 
+Completed. Wire layout, sequence policy and parity evidence are recorded in [WFEX v2 Checkpoint 2 frame records](wfex-v2-checkpoint-2-frame-records.md). Negotiated Dummy and Stormakt sessions now emit `WFF2`; v1 and fallback sessions remain byte-for-byte unchanged.
+
 1. Add frame timestamp, nominal duration, visible dimensions, stride, payload codec and flags.
 2. Support unknown optional record extensions through declared record size.
 3. Add sequence validation, clean reconnect behavior and diagnostic counters.
@@ -196,4 +198,4 @@ Shared memory is considered successful only if it reduces framebuffer copying wi
 
 Start with Checkpoint 0 and commit it independently. Then land handshake plus raw v2 before shared memory so negotiation and error handling can be tested without debugging two new mechanisms at once. Shared memory is the first expected performance feature. Presentation decoupling follows after frame ownership is proven. Compression remains optional and measurement-driven.
 
-Until Checkpoint 2 lands, negotiated sessions continue using the production v1 frame-record layout while Stormakt retains the same deterministic rendering path.
+Until Checkpoint 3 lands, negotiated sessions use the production v2 raw-record layout while shared memory remains unimplemented. Stormakt retains the same deterministic rendering path and v1 fallback.

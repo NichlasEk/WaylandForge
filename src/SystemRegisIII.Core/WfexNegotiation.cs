@@ -7,6 +7,7 @@ public enum WfexCapabilities : ulong
 {
     None = 0,
     RawFrameRecords = 1UL << 0,
+    VersionedFrameRecords = 1UL << 1,
 }
 
 [Flags]
@@ -44,8 +45,8 @@ public readonly record struct WfexHandshakeRecord(
         ProducerMagic,
         CurrentMajorVersion,
         CurrentMinorVersion,
-        WfexCapabilities.RawFrameRecords,
-        WfexCapabilities.RawFrameRecords,
+        WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords,
+        WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords,
         limits,
         WfexPixelFormats.Argb8888,
         WfexPresentationModes.DeterministicLockstep);
@@ -116,7 +117,8 @@ public readonly record struct WfexNegotiatedSession(
 public static class WfexNegotiation
 {
     public const string PolicyEnvironmentVariable = "WAYLANDFORGE_WFEX_POLICY";
-    public static WfexCapabilities HostCapabilities => WfexCapabilities.RawFrameRecords;
+    public static WfexCapabilities HostCapabilities =>
+        WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords;
 
     public static WfexNegotiatedSession AcceptProducerHello(
         WfexHandshakeRecord hello,
@@ -127,7 +129,8 @@ public static class WfexNegotiation
         if (unknownRequired != WfexCapabilities.None)
             throw new InvalidDataException($"WFEX producer requires unsupported capabilities: {unknownRequired}.");
         WfexCapabilities selectedCapabilities = hello.Capabilities & HostCapabilities;
-        if ((selectedCapabilities & WfexCapabilities.RawFrameRecords) == 0 ||
+        WfexCapabilities mandatoryBaseline = WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords;
+        if ((selectedCapabilities & mandatoryBaseline) != mandatoryBaseline ||
             (hello.PixelFormats & WfexPixelFormats.Argb8888) == 0 ||
             (hello.PresentationModes & WfexPresentationModes.DeterministicLockstep) == 0)
             throw new InvalidDataException("WFEX producer does not offer the mandatory raw ARGB8888 lockstep baseline.");
@@ -166,7 +169,8 @@ public static class WfexNegotiation
         output.Flush();
         WfexStreamReader.ReadExactly(input, buffer);
         WfexHandshakeRecord accept = WfexHandshakeRecord.Parse(buffer, WfexHandshakeRecord.HostMagic);
-        if ((accept.Capabilities & WfexCapabilities.RawFrameRecords) == 0 ||
+        WfexCapabilities mandatoryBaseline = WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords;
+        if ((accept.Capabilities & mandatoryBaseline) != mandatoryBaseline ||
             accept.PixelFormats != WfexPixelFormats.Argb8888 ||
             accept.PresentationModes != WfexPresentationModes.DeterministicLockstep)
             throw new InvalidDataException("WFEX host selected an unsupported baseline.");

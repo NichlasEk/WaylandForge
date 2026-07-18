@@ -455,7 +455,7 @@ internal sealed unsafe class ForgeApp : IDisposable
                     DrawSaturnCoreStatus(saturnSection);
                 }
             }
-            else if (_ui.Collapsible(new UiId("debug.external"), ref column, "EXT CORE", 230, out RectI externalSection))
+            else if (_ui.Collapsible(new UiId("debug.external"), ref column, "EXT CORE", 266, out RectI externalSection))
             {
                 int x = externalSection.X;
                 int y = externalSection.Y;
@@ -464,6 +464,8 @@ internal sealed unsafe class ForgeApp : IDisposable
                 DrawMetric(x, y, "MODE", external.Mode.ToUpperInvariant()); y += 18;
                 DrawMetric(x, y, "WFEX", external.ProtocolStatus); y += 18;
                 DrawMetric(x, y, "LIMIT", external.ProtocolLimits); y += 18;
+                DrawMetric(x, y, "RECORD", external.ProtocolFrameStatus); y += 18;
+                DrawMetric(x, y, "MEDIA", external.ProtocolTiming); y += 18;
                 DrawMetric(x, y, "CMD", ExternalCommandLabel()); y += 18;
                 DrawMetric(x, y, "FAULT", string.IsNullOrEmpty(_coreFault) ? "-" : TruncateMiddle(_coreFault, 18)); y += 20;
                 RectI restartRect = new(x, y, 86, 18);

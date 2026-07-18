@@ -80,7 +80,43 @@ static void RunSelfTest()
     byte[] afterTimeout = new byte[4];
     WfexStreamReader.ReadExactly(pipeIn, afterTimeout);
     Require(afterTimeout.AsSpan().SequenceEqual(new byte[] { 1, 2, 3, 4 }), "pipe was poisoned after handshake timeout");
-    Console.WriteLine("WFEX CONFORMANCE OK · 23 CASES");
+
+    byte[] v2 = new byte[WfexV2FrameHeader.BaseHeaderSize];
+    WfexV2FrameHeader expectedV2 = WfexV2FrameHeader.CreateRaw(400, 280, 42, 700_000_014, 16_666_667);
+    expectedV2.Write(v2);
+    Require(WfexV2FrameHeader.Parse(v2) == expectedV2, "v2 frame header did not roundtrip");
+    byte[] fragmentedV2 = new byte[v2.Length];
+    WfexStreamReader.ReadExactly(new FragmentedStream(v2, 5), fragmentedV2);
+    Require(WfexV2FrameHeader.Parse(fragmentedV2) == expectedV2, "fragmented v2 header changed in transit");
+    byte[] extended = new byte[72];
+    (expectedV2 with { HeaderSize = 72, RecordBytes = 72UL + (uint)expectedV2.PayloadBytes }).Write(extended);
+    extended[64] = 0xa5;
+    Require(WfexV2FrameHeader.Parse(extended).HeaderSize == 72, "optional v2 header extension was rejected");
+
+    ExpectV2Mutation(v2, bytes => bytes[0] ^= 0xff, WfexV2FrameValidationError.InvalidMagic);
+    ExpectV2Mutation(v2, bytes => BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(4), 3), WfexV2FrameValidationError.UnsupportedMajorVersion);
+    ExpectV2Mutation(v2, bytes => BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(8), 63), WfexV2FrameValidationError.InvalidHeaderSize);
+    ExpectV2Mutation(v2, bytes => BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(12), 99), WfexV2FrameValidationError.UnsupportedCodec);
+    ExpectV2Mutation(v2, bytes => BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(10), 0), WfexV2FrameValidationError.MissingFullFrameFlag);
+    ExpectV2Mutation(v2, bytes => BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(16), 0), WfexV2FrameValidationError.InvalidWidth);
+    ExpectV2Mutation(v2, bytes => BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(20), -1), WfexV2FrameValidationError.InvalidHeight);
+    ExpectV2Mutation(v2, bytes => BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(16), 8_193), WfexV2FrameValidationError.DimensionLimitExceeded);
+    ExpectV2Mutation(v2, bytes => BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(24), 404), WfexV2FrameValidationError.UnsupportedStride);
+    ExpectV2Mutation(v2, bytes => BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(28), 447_996), WfexV2FrameValidationError.InvalidPayloadLength);
+    ExpectV2(v2, WfexV2FrameValidationError.PayloadLimitExceeded, new WfexLimits(400, 280, 1_000));
+    ExpectV2Mutation(v2, bytes => BinaryPrimitives.WriteUInt64LittleEndian(bytes.AsSpan(56), 1), WfexV2FrameValidationError.InvalidRecordLength);
+    ExpectV2Mutation(v2, bytes => BinaryPrimitives.WriteUInt64LittleEndian(bytes.AsSpan(48), 0), WfexV2FrameValidationError.InvalidNominalDuration);
+    byte[] overflowV2 = (byte[])v2.Clone();
+    BinaryPrimitives.WriteInt32LittleEndian(overflowV2.AsSpan(16), int.MaxValue);
+    BinaryPrimitives.WriteInt32LittleEndian(overflowV2.AsSpan(20), 2);
+    BinaryPrimitives.WriteInt32LittleEndian(overflowV2.AsSpan(24), int.MaxValue);
+    ExpectV2(overflowV2, WfexV2FrameValidationError.ArithmeticOverflow, new WfexLimits(int.MaxValue, int.MaxValue, int.MaxValue));
+
+    Require(WfexV2Sequence.IsExpected(false, 0, 77, out ulong sequenceExpected) && sequenceExpected == 77, "first v2 sequence was rejected");
+    Require(WfexV2Sequence.IsExpected(true, 77, 78, out sequenceExpected) && sequenceExpected == 78, "next v2 sequence was rejected");
+    Require(!WfexV2Sequence.IsExpected(true, 77, 77, out sequenceExpected) && sequenceExpected == 78, "duplicate v2 sequence was accepted");
+    Require(WfexV2Sequence.IsExpected(true, ulong.MaxValue, 0, out sequenceExpected) && sequenceExpected == 0, "v2 sequence wrap policy changed");
+    Console.WriteLine("WFEX CONFORMANCE OK · 44 CASES");
 }
 
 static void RunBenchmark()
@@ -142,6 +178,19 @@ static void ExpectHandshakeFailure(byte[] record, uint expectedMagic, string des
     try { WfexHandshakeRecord.Parse(record, expectedMagic); }
     catch (InvalidDataException) { threw = true; }
     Require(threw, description);
+}
+
+static void ExpectV2Mutation(byte[] valid, Action<byte[]> mutate, WfexV2FrameValidationError expected)
+{
+    byte[] changed = (byte[])valid.Clone();
+    mutate(changed);
+    ExpectV2(changed, expected);
+}
+
+static void ExpectV2(ReadOnlySpan<byte> header, WfexV2FrameValidationError expected, WfexLimits? limits = null)
+{
+    bool accepted = WfexV2FrameHeader.TryParse(header, out _, out WfexV2FrameValidationError actual, limits);
+    Require(!accepted && actual == expected, $"expected v2 {expected}, got {(accepted ? "accepted" : actual)}");
 }
 
 sealed class FragmentedStream(byte[] source, int fragmentSize) : MemoryStream(source, false)

@@ -15,13 +15,13 @@ const byte ControllerPointerStepCommand = (byte)'Q';
 
 var input = Console.OpenStandardInput();
 var output = Console.OpenStandardOutput();
-WfexNegotiation.NegotiateProducerFromEnvironment(
+WfexNegotiatedSession negotiatedSession = WfexNegotiation.NegotiateProducerFromEnvironment(
     input, output, new WfexLimits(Width, Height, Width * Height * sizeof(uint)));
 using var audio = StormaktMusicLoop.TryStartDefault();
 var game = new StormaktGame(Width, Height, SpritePack.LoadDefault(), audio);
 audio?.Trigger(StormaktSound.Deploy);
 var command = new byte[29];
-var header = new byte[32];
+var header = new byte[WfexV2FrameHeader.BaseHeaderSize];
 var frame = new uint[Width * Height];
 ulong frameIndex = 0;
 
@@ -62,14 +62,24 @@ while (true)
     game.Step(buttons, pointer, controller);
     game.Render(frame, frameIndex);
 
-    BinaryPrimitives.WriteUInt32LittleEndian(header.AsSpan(0), FrameMagic);
-    BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(4), Width);
-    BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(8), Height);
-    BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(12), Width);
-    BinaryPrimitives.WriteUInt64LittleEndian(header.AsSpan(16), frameIndex);
-    BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(24), frame.Length * sizeof(uint));
-    BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(28), 0);
-    output.Write(header);
+    int headerSize;
+    if (negotiatedSession.MajorVersion >= 2)
+    {
+        WfexV2FrameHeader.CreateRaw(Width, Height, frameIndex, frameIndex * 16_666_667UL, 16_666_667UL).Write(header);
+        headerSize = WfexV2FrameHeader.BaseHeaderSize;
+    }
+    else
+    {
+        BinaryPrimitives.WriteUInt32LittleEndian(header.AsSpan(0), FrameMagic);
+        BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(4), Width);
+        BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(8), Height);
+        BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(12), Width);
+        BinaryPrimitives.WriteUInt64LittleEndian(header.AsSpan(16), frameIndex);
+        BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(24), frame.Length * sizeof(uint));
+        BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(28), 0);
+        headerSize = WfexFrameHeader.Size;
+    }
+    output.Write(header.AsSpan(0, headerSize));
     output.Write(MemoryMarshal.AsBytes(frame.AsSpan()));
     output.Flush();
     frameIndex++;

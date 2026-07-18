@@ -43,12 +43,19 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     private uint[] _frame = [];
     private uint[] _pendingFrame = [];
     private readonly byte[] _header = new byte[32];
+    private readonly byte[] _v2Header = new byte[WfexV2FrameHeader.MaximumHeaderSize];
     private readonly byte[] _stepCommandBuffer = new byte[29];
     private readonly byte[] _inputHeader = new byte[48];
     private int _pointerX;
     private int _pointerY;
     private uint _pointerButtons;
     private bool _pointerInside;
+    private bool _hasV2Sequence;
+    private ulong _lastV2FrameIndex;
+    private ulong _v2FramesReceived;
+    private ulong _v2SequenceErrors;
+    private ulong _lastPresentationTimestampNanoseconds;
+    private ulong _lastNominalDurationNanoseconds;
 
     public ExternalProcessCore(UiExternalCoreConfig config, string fallbackDllPath)
     {
@@ -66,6 +73,12 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
             ? "V1 RAW LOCKSTEP · FALLBACK"
             : _negotiatedSession.DiagnosticLabel;
     public string ProtocolLimits => $"{_wfexLimits.MaximumWidth}X{_wfexLimits.MaximumHeight} · {_wfexLimits.MaximumPayloadBytes / (1024 * 1024)} MIB";
+    public string ProtocolFrameStatus => _negotiatedSession.MajorVersion < 2
+        ? $"V1 · FRAME {FrameIndex}"
+        : $"V2 · RX {_v2FramesReceived} · SEQERR {_v2SequenceErrors}";
+    public string ProtocolTiming => _negotiatedSession.MajorVersion < 2 || _v2FramesReceived == 0
+        ? "-"
+        : $"{_lastPresentationTimestampNanoseconds / 1_000_000.0:0.000} MS · {_lastNominalDurationNanoseconds / 1_000_000.0:0.000} MS";
     public bool IsRunning => _process is { HasExited: false };
     public int? ExitCode => _process is { HasExited: true } process ? process.ExitCode : _lastExitCode;
     public string Status => IsRunning ? "RUNNING" : ExitCode is int code ? $"EXIT {code}" : "STOPPED";
@@ -363,9 +376,9 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
 
     private void ReadWfexFrame(Stream stream, IFrameSink frameSink)
     {
-        WfexStreamReader.ReadExactly(stream, _header);
-        WfexFrameHeader frameHeader = WfexFrameHeader.Parse(_header, _wfexLimits);
-        FrameIndex = frameHeader.FrameIndex;
+        FrameRecordInfo frameHeader = _negotiatedSession.MajorVersion >= 2
+            ? ReadV2FrameHeader(stream)
+            : ReadV1FrameHeader(stream);
 
         if (_frame.Length != frameHeader.PixelCount)
         {
@@ -373,10 +386,60 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         }
 
         WfexStreamReader.ReadExactly(stream, MemoryMarshal.AsBytes(_frame.AsSpan()));
+        if (frameHeader.IsV2) CommitV2Sequence(frameHeader);
+        FrameIndex = frameHeader.FrameIndex;
         _lastWidth = frameHeader.Width;
         _lastHeight = frameHeader.Height;
         _lastStride = frameHeader.StridePixels;
         frameSink.Present(_frame, frameHeader.Width, frameHeader.Height, frameHeader.StridePixels);
+    }
+
+    private FrameRecordInfo ReadV1FrameHeader(Stream stream)
+    {
+        WfexStreamReader.ReadExactly(stream, _header);
+        WfexFrameHeader header = WfexFrameHeader.Parse(_header, _wfexLimits);
+        return new FrameRecordInfo(
+            header.Width, header.Height, header.StridePixels, header.FrameIndex,
+            header.PayloadBytes, false, 0, 0);
+    }
+
+    private FrameRecordInfo ReadV2FrameHeader(Stream stream)
+    {
+        WfexStreamReader.ReadExactly(stream, _v2Header.AsSpan(0, WfexV2FrameHeader.BaseHeaderSize));
+        ushort headerSize = BinaryPrimitives.ReadUInt16LittleEndian(_v2Header.AsSpan(8));
+        bool hasSupportedExtendedHeader = headerSize > WfexV2FrameHeader.BaseHeaderSize &&
+            headerSize <= WfexV2FrameHeader.MaximumHeaderSize &&
+            (headerSize & 7) == 0;
+        if (hasSupportedExtendedHeader)
+        {
+            WfexStreamReader.ReadExactly(
+                stream,
+                _v2Header.AsSpan(WfexV2FrameHeader.BaseHeaderSize, headerSize - WfexV2FrameHeader.BaseHeaderSize));
+        }
+        WfexV2FrameHeader header = WfexV2FrameHeader.Parse(
+            _v2Header.AsSpan(0, hasSupportedExtendedHeader ? headerSize : WfexV2FrameHeader.BaseHeaderSize),
+            _wfexLimits);
+        ValidateV2Sequence(header.FrameIndex);
+        return new FrameRecordInfo(
+            header.Width, header.Height, header.StridePixels, header.FrameIndex,
+            header.PayloadBytes, true, header.PresentationTimestampNanoseconds,
+            header.NominalDurationNanoseconds);
+    }
+
+    private void ValidateV2Sequence(ulong frameIndex)
+    {
+        if (WfexV2Sequence.IsExpected(_hasV2Sequence, _lastV2FrameIndex, frameIndex, out ulong expected)) return;
+        _v2SequenceErrors++;
+        throw new InvalidDataException($"WFEX v2 frame sequence error: expected {expected}, received {frameIndex}.");
+    }
+
+    private void CommitV2Sequence(FrameRecordInfo frame)
+    {
+        _hasV2Sequence = true;
+        _lastV2FrameIndex = frame.FrameIndex;
+        _v2FramesReceived++;
+        _lastPresentationTimestampNanoseconds = frame.PresentationTimestampNanoseconds;
+        _lastNominalDurationNanoseconds = frame.NominalDurationNanoseconds;
     }
 
     private bool TryReadWfexFrame(Stream stream, IFrameSink frameSink)
@@ -545,6 +608,12 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         _negotiatedSession = WfexNegotiatedSession.Version1(_configuredWfexLimits);
         _protocolNegotiated = false;
         _protocolFallback = false;
+        _hasV2Sequence = false;
+        _lastV2FrameIndex = 0;
+        _v2FramesReceived = 0;
+        _v2SequenceErrors = 0;
+        _lastPresentationTimestampNanoseconds = 0;
+        _lastNominalDurationNanoseconds = 0;
     }
 
     private void EnsureFileProtocolPolicy()
@@ -616,6 +685,19 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         _startBlockedAfterExit = true;
         PresentLastFrame(frameSink);
         return true;
+    }
+
+    private readonly record struct FrameRecordInfo(
+        int Width,
+        int Height,
+        int StridePixels,
+        ulong FrameIndex,
+        int PayloadBytes,
+        bool IsV2,
+        ulong PresentationTimestampNanoseconds,
+        ulong NominalDurationNanoseconds)
+    {
+        public int PixelCount => PayloadBytes / sizeof(uint);
     }
 
     private void PresentLastFrame(IFrameSink frameSink)

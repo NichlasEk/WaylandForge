@@ -42,7 +42,7 @@ The socket input magic is `0x4e494657`, serialized as:
 
 ## WFEX v2 negotiation
 
-WFEX v2 begins with an optional producer-initiated handshake on an interactive stdio or Unix-socket channel. File/FIFO mode remains v1 because it has no bidirectional control channel. After a successful Checkpoint 1 handshake, frames deliberately remain ordinary v1 `WFEX` records; versioned frame records are introduced separately in Checkpoint 2.
+WFEX v2 begins with an optional producer-initiated handshake on an interactive stdio or Unix-socket channel. File/FIFO mode remains v1 because it has no bidirectional control channel. A current successful negotiation selects versioned `WFF2` frame records; a v1 policy or fallback continues using ordinary `WFEX` records.
 
 The host policy is configured per external core through `protocol_policy`:
 
@@ -62,7 +62,7 @@ WaylandForge                         v2-aware producer
      |--- 48-byte WFA2 host accept -------->|
      |                                      |
      |--- S, P, Q or WFIN input ----------->|
-     |<-- WFEX v1 frame record -------------|
+     |<-- WFF2 v2 frame record -------------|
 ```
 
 Both records are exactly 48 bytes and little-endian:
@@ -82,11 +82,11 @@ Both records are exactly 48 bytes and little-endian:
 | 40 | 4 | `uint32` | `pixelFormats` | Offered or selected pixel-format bits. |
 | 44 | 4 | `uint32` | `presentationModes` | Offered or selected presentation-mode bits. |
 
-Capability bit 0 is `RAW_FRAME_RECORDS`; all other capability bits are currently unknown. Pixel-format bit 0 is `ARGB8888`. Presentation bit 0 is `DETERMINISTIC_LOCKSTEP`; bit 1 is reserved for `LATEST_FRAME` but is not yet selected. Unknown required capability bits fail negotiation. Unknown optional bits are masked out.
+Capability bit 0 is `RAW_FRAME_RECORDS` and bit 1 is `VERSIONED_FRAME_RECORDS`; both are mandatory for the current v2 baseline. The second bit prevents a Checkpoint 1-era producer that still emits v1 headers after negotiation from being silently misparsed. Pixel-format bit 0 is `ARGB8888`. Presentation bit 0 is `DETERMINISTIC_LOCKSTEP`; bit 1 is reserved for `LATEST_FRAME` but is not yet selected. Unknown required capability bits fail negotiation. Unknown optional bits are masked out.
 
 The selected maximums are the component-wise minimum of the producer offer and host configuration. The mandatory Checkpoint 1 baseline is raw ARGB8888 in deterministic lockstep. The raw stream transport is therefore explicitly confirmed by capability while the already-open stdio or Unix socket determines the control transport.
 
-## WFEX frame record
+## WFEX v1 frame record
 
 Each record consists of a fixed 32-byte header followed immediately by one complete pixel payload.
 
@@ -128,6 +128,31 @@ stridePixels == width
 ```
 
 Supporting padded rows in the future requires an explicitly negotiated v2 capability and validation against `stridePixels * height`, while still copying only `width` visible pixels per row.
+
+## WFEX v2 frame record
+
+After a successful v2 handshake, Checkpoint 2 producers emit a 64-byte `WFF2` header followed by the same tightly packed raw ARGB8888 payload used by v1. The pixels therefore remain byte-identical while metadata becomes explicit and extensible.
+
+| Offset | Size | Type | Field | Meaning |
+|---:|---:|---|---|---|
+| 0 | 4 | `uint32` | `magic` | `0x32464657` (`WFF2`). |
+| 4 | 2 | `uint16` | `majorVersion` | Must be 2. |
+| 6 | 2 | `uint16` | `minorVersion` | Currently 0. |
+| 8 | 2 | `uint16` | `headerSize` | 64 through 4096, divisible by 8. |
+| 10 | 2 | `uint16` | `flags` | Bit 0 `FULL_FRAME` is mandatory. |
+| 12 | 4 | `uint32` | `payloadCodec` | 1 is raw ARGB8888. |
+| 16 | 4 | `int32` | `width` | Positive visible width within negotiated limits. |
+| 20 | 4 | `int32` | `height` | Positive visible height within negotiated limits. |
+| 24 | 4 | `int32` | `stridePixels` | Currently must equal `width`. |
+| 28 | 4 | `int32` | `payloadBytes` | Must equal `width * height * 4`. |
+| 32 | 8 | `uint64` | `frameIndex` | Monotonic frame sequence, modulo `uint64`. |
+| 40 | 8 | `uint64` | `presentationTimestampNs` | Producer media time in nanoseconds. |
+| 48 | 8 | `uint64` | `nominalDurationNs` | Positive nominal frame duration. |
+| 56 | 8 | `uint64` | `recordBytes` | Must equal `headerSize + payloadBytes`. |
+
+Bytes from offset 64 through `headerSize - 1` are optional header extensions. A minor-version reader validates the bounded declared size, reads the complete header and skips unknown extension bytes before consuming the payload. Unknown extensions therefore cannot be confused with pixels. The current producers use `headerSize == 64`, logical timestamps `frameIndex * 16,666,667 ns` and a nominal 60 Hz duration of `16,666,667 ns`.
+
+The host validates codec, flags, dimensions, checked payload arithmetic, negotiated limits, declared record length and nominal duration before allocation. It accepts the first frame index of a new connection, then requires each complete record to increment by one. Wrap from `uint64.MaxValue` to zero is valid. Duplicates, gaps and out-of-order indices stop the core with the expected and received values; reconnect/reset starts a new sequence.
 
 ## Pixel format
 
@@ -249,7 +274,7 @@ WaylandForge                         external core
      |--- S or P input packet ---------->|
      |                                   | simulate one step
      |                                   | render one frame
-     |<-- 32-byte WFEX header -----------|
+     |<-- 32-byte v1 or 64-byte v2 header|
      |<-- complete pixel payload --------|
      |                                   |
      |--- next input packet ------------>|
@@ -273,7 +298,7 @@ Stormakt 3020 currently uses `stdio` with the pointer driver `stormakt_rts`. Its
 2. Decode keyboard/controller actions, analog stick and pointer state.
 3. Call `StormaktGame.Step(buttons, pointer, controller)` once.
 4. Call `StormaktGame.Render(frame, frameIndex)` once.
-5. Populate the 32-byte WFEX header.
+5. Populate the 32-byte v1 or 64-byte v2 WFEX header selected by negotiation.
 6. Write the complete header and framebuffer to stdout.
 7. Flush stdout and increment `frameIndex`.
 
@@ -317,7 +342,7 @@ Input is not carried by the WFEX file itself. A producer that needs interactive 
 
 ## Host validation and failure behavior
 
-All stdio, file/FIFO and Unix-socket readers use the same `WfexFrameHeader` parser. For each record it validates, before framebuffer allocation:
+All v1 stdio, file/FIFO and Unix-socket readers use the same `WfexFrameHeader` parser. Negotiated v2 streams use `WfexV2FrameHeader`; both paths validate before framebuffer allocation:
 
 - the `WFEX` magic;
 - positive width and height;
@@ -326,6 +351,8 @@ All stdio, file/FIFO and Unix-socket readers use the same `WfexFrameHeader` pars
 - checked `width * height * sizeof(uint)` arithmetic;
 - `byteCount == width * height * sizeof(uint)` and a configurable payload ceiling, defaulting to 256 MiB;
 - successful reading of the complete payload.
+
+The v2 path additionally validates its declared header/record size, payload codec, full-frame flag, nominal duration and frame sequence. Diagnostics expose received v2 records, sequence errors, last media timestamp and nominal duration.
 
 The limits are configured independently under each `external_core` section with `max_frame_width`, `max_frame_height` and `max_frame_bytes`. The shared record reader handles fragmented reads, rejects a truncated synchronous record and gives non-blocking file-like streams a bounded no-data retry window. A transport whose underlying `Read` blocks must still supply its own timeout, as the Unix-socket path does.
 
@@ -379,7 +406,6 @@ WFEX currently has no:
 
 - pixel format other than ARGB8888;
 - compression or delta-frame encoding;
-- timestamps, durations or refresh-rate declaration;
 - dirty rectangles or partial frame updates;
 - checksum or corruption recovery;
 - stream resynchronization after an invalid or dropped byte;
@@ -387,7 +413,7 @@ WFEX currently has no:
 - network authentication, encryption or congestion control;
 - endianness negotiation.
 
-The reserved header word creates room for a limited compatible extension, but substantial changes should introduce an explicit versioned header rather than silently changing the existing 32-byte contract.
+The v1 reserved header word creates room for a limited compatible extension, but substantial changes use the explicit versioned v2 header rather than silently changing the existing 32-byte contract.
 
 ## Security and deployment boundary
 
