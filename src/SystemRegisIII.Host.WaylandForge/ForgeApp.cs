@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net.Sockets;
 using System.Text;
 using SystemRegisIII.Core;
+using SystemRegisIII.WayControlProtocol;
 
 namespace SystemRegisIII.Host.WaylandForge;
 
@@ -25,6 +26,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     private readonly ExternalProcessCore _externalCore3;
     private ISystemCore _core;
     private readonly ForgeInputSource _inputSource = new();
+    private readonly WayControlInput _wayControlInput = new();
     private readonly FrameStore _frameStore = new();
     private readonly EmulatorViewport _viewport = new();
     private readonly FrameClock _clock = new();
@@ -52,6 +54,7 @@ internal sealed unsafe class ForgeApp : IDisposable
     private AppWindow _focusedTile = AppWindow.Viewport;
     private AppWindow? _fullscreenTile;
     private InputBinding? _capturingBinding;
+    private InputBinding? _capturingControllerBinding;
     private uint _handledKeySerial;
     private int _themeIndex;
     private bool _configDirty;
@@ -110,8 +113,15 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         _clock.Tick();
         ProcessRawKey(textInput);
-        ForgeInput hostInput = MapInputFromPressedKeys(_config.Input);
-        ForgeInput coreInput = MapInputFromPressedKeys(ActiveInputProfile());
+        _wayControlInput.Poll();
+        if (_capturingControllerBinding is InputBinding capture && _wayControlInput.TryConsumeActivatedControl(out WcpControl control))
+        {
+            ActiveInputProfile().ControllerBindings[capture.Id] = FormatControllerControl(control);
+            _capturingControllerBinding = null;
+            MarkConfigDirty();
+        }
+        ForgeInput hostInput = MapInputFromPressedKeys(_config.Input) | MapInputFromController(_config.Input);
+        ForgeInput coreInput = MapInputFromPressedKeys(ActiveInputProfile()) | MapInputFromController(ActiveInputProfile());
         _lastInput = coreInput;
         _pointer = pointer;
         _textInput = textInput;
@@ -210,6 +220,23 @@ internal sealed unsafe class ForgeApp : IDisposable
         return input;
     }
 
+    private ForgeInput MapInputFromController(UiInputConfig inputConfig)
+    {
+        ForgeInput input = ForgeInput.None;
+        foreach (InputBinding binding in InputBindings)
+        {
+            foreach (WcpControl control in BoundControllerControls(binding.Id, inputConfig))
+            {
+                if (_wayControlInput.IsActive(control))
+                {
+                    input |= binding.Bit;
+                    break;
+                }
+            }
+        }
+        return input;
+    }
+
     public void Dispose()
     {
         SaveConfig(force: false);
@@ -217,6 +244,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         _externalCore.Dispose();
         _externalCore2.Dispose();
         _externalCore3.Dispose();
+        _wayControlInput.Dispose();
     }
 
     private void DrawChrome(ForgeLayout layout)
@@ -462,6 +490,7 @@ internal sealed unsafe class ForgeApp : IDisposable
                 DrawMetric(x, y, "PTR", _pointer.IsInside ? $"{_pointer.X},{_pointer.Y}" : "OUT"); y += 18;
                 DrawMetric(x, y, "MBTN", _pointer.Buttons.ToString().ToUpperInvariant()); y += 18;
                 DrawMetric(x, y, "MAP", profileLabel); y += 20;
+                DrawMetric(x, y, "WCP", _wayControlInput.Status); y += 18;
                 DrawInputLamp(x, y, "UP", ForgeInput.Up, inputProfile); y += 16;
                 DrawInputLamp(x, y, "DOWN", ForgeInput.Down, inputProfile); y += 16;
                 DrawInputLamp(x, y, "LEFT", ForgeInput.Left, inputProfile); y += 16;
@@ -874,6 +903,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         if (!window.IsOpen || window.Closed)
         {
             _capturingBinding = null;
+            _capturingControllerBinding = null;
             MarkConfigDirty();
             return;
         }
@@ -881,7 +911,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         using IDisposable inputScope = _ui.PushInputEnabled(inputEnabled);
         RectI content = window.Content;
         _ui.Panel(content);
-        int contentHeight = 104 + InputBindings.Length * 24;
+        int contentHeight = 140 + InputBindings.Length * 24;
         using UiScrollArea scroll = _ui.BeginScrollArea(new UiId("input.scroll"), content, contentHeight);
         var column = new UiColumn(scroll.Content.X + 10, scroll.Content.Y + 10, Math.Max(1, scroll.Content.Width - 20), 6);
 
@@ -891,38 +921,65 @@ internal sealed unsafe class ForgeApp : IDisposable
         _ui.Text(column.X, column.NextY, "PROFILE", UiTextKind.Muted);
         _ui.Text(column.X + 72, column.NextY, profileLabel, UiTextKind.Accent);
         column = column with { NextY = column.NextY + 18 };
-        _ui.Text(column.X, column.NextY, "MAPS THE ACTIVE CORE. GAMEPAD CAN FEED THE SAME ACTIONS LATER.", UiTextKind.Muted);
+        _ui.Text(column.X, column.NextY, "KEYBOARD + WCP GAMEPAD FEED THE SAME CORE ACTIONS.", UiTextKind.Muted);
         column = column with { NextY = column.NextY + 24 };
 
-        int actionWidth = Math.Min(96, Math.Max(58, column.Width / 4));
-        int keyWidth = Math.Min(168, Math.Max(92, column.Width - actionWidth - 116));
+        _ui.Text(column.X, column.NextY, "WCP", UiTextKind.Muted);
+        _ui.Text(column.X + 72, column.NextY, TruncateMiddle(_wayControlInput.DeviceSummary, Math.Max(12, (column.Width - 80) / 6)), UiTextKind.Accent);
+        column = column with { NextY = column.NextY + 18 };
+
+        int actionWidth = Math.Min(104, Math.Max(58, column.Width / 5));
+        int laneWidth = Math.Max(132, (column.Width - actionWidth - 8) / 2);
+        int keyLaneX = column.X + actionWidth + 8;
+        int controllerLaneX = keyLaneX + laneWidth;
         _ui.Text(column.X, column.NextY, "ACTION", UiTextKind.Muted);
-        _ui.Text(column.X + actionWidth + 8, column.NextY, "KEY", UiTextKind.Muted);
+        _ui.Text(keyLaneX, column.NextY, "KEY", UiTextKind.Muted);
+        _ui.Text(controllerLaneX, column.NextY, "WCP CONTROL", UiTextKind.Muted);
         column = column with { NextY = column.NextY + 16 };
 
         foreach (InputBinding binding in InputBindings)
         {
-            bool capturing = _capturingBinding?.Id == binding.Id;
+            bool capturingKey = _capturingBinding?.Id == binding.Id;
+            bool capturingController = _capturingControllerBinding?.Id == binding.Id;
             bool activeBinding = (_lastInput & binding.Bit) != 0;
             RectI rowRect = new(column.X, column.NextY - 2, Math.Max(1, column.Width - 8), 20);
-            uint border = capturing ? _ui.Theme.Button.Colors.Accent : activeBinding ? _ui.Theme.Button.Colors.BorderHot : _ui.Theme.Button.Colors.Border;
+            uint border = capturingKey || capturingController ? _ui.Theme.Button.Colors.Accent : activeBinding ? _ui.Theme.Button.Colors.BorderHot : _ui.Theme.Button.Colors.Border;
             _canvas.DrawRect(rowRect.X, rowRect.Y, rowRect.Width, rowRect.Height, border);
             _ui.Text(column.X + 6, column.NextY + 3, InputBindingLabel(binding), activeBinding ? UiTextKind.Accent : UiTextKind.Normal);
-            string keyText = capturing ? "PRESS KEY" : TruncateMiddle(BindingDisplay(binding.Id, inputProfile), Math.Max(8, keyWidth / 6));
-            _ui.Text(column.X + actionWidth + 8, column.NextY + 3, keyText, capturing ? UiTextKind.Accent : UiTextKind.Muted);
+            int keyButtonX = keyLaneX + laneWidth - 96;
+            int controllerButtonX = controllerLaneX + laneWidth - 96;
+            int keyChars = Math.Max(5, (keyButtonX - keyLaneX - 8) / 6);
+            int controllerChars = Math.Max(5, (controllerButtonX - controllerLaneX - 8) / 6);
+            string keyText = capturingKey ? "PRESS KEY" : TruncateMiddle(BindingDisplay(binding.Id, inputProfile), keyChars);
+            string controllerText = capturingController ? "PRESS CONTROL" : TruncateMiddle(ControllerBindingDisplay(binding.Id, inputProfile), controllerChars);
+            _ui.Text(keyLaneX, column.NextY + 3, keyText, capturingKey ? UiTextKind.Accent : UiTextKind.Muted);
+            _ui.Text(controllerLaneX, column.NextY + 3, controllerText, capturingController ? UiTextKind.Accent : UiTextKind.Muted);
 
-            int buttonX = column.X + actionWidth + keyWidth + 18;
-            if (_ui.Button(new UiId("input.map." + binding.Id), new RectI(buttonX, column.NextY, 46, 17), capturing ? "..." : "MAP", capturing).Clicked)
+            if (_ui.Button(new UiId("input.map." + binding.Id), new RectI(keyButtonX, column.NextY, 40, 17), capturingKey ? "..." : "MAP", capturingKey).Clicked)
             {
-                _capturingBinding = capturing ? null : binding;
+                _capturingBinding = capturingKey ? null : binding;
+                _capturingControllerBinding = null;
             }
-            if (_ui.Button(new UiId("input.clear." + binding.Id), new RectI(buttonX + 52, column.NextY, 52, 17), "CLEAR").Clicked)
+            if (_ui.Button(new UiId("input.clear." + binding.Id), new RectI(keyButtonX + 44, column.NextY, 48, 17), "CLEAR").Clicked)
             {
                 inputProfile.Bindings[binding.Id] = string.Empty;
                 if (_capturingBinding?.Id == binding.Id)
                 {
                     _capturingBinding = null;
                 }
+                MarkConfigDirty();
+            }
+            if (_ui.Button(new UiId("controller.map." + binding.Id), new RectI(controllerButtonX, column.NextY, 40, 17), capturingController ? "..." : "MAP", capturingController).Clicked)
+            {
+                _capturingControllerBinding = capturingController ? null : binding;
+                _capturingBinding = null;
+                if (!capturingController) _wayControlInput.BeginCapture();
+            }
+            if (_ui.Button(new UiId("controller.clear." + binding.Id), new RectI(controllerButtonX + 44, column.NextY, 48, 17), "CLEAR").Clicked)
+            {
+                inputProfile.ControllerBindings[binding.Id] = string.Empty;
+                if (_capturingControllerBinding?.Id == binding.Id)
+                    _capturingControllerBinding = null;
                 MarkConfigDirty();
             }
             column = column with { NextY = column.NextY + 24 };
@@ -2466,6 +2523,34 @@ internal sealed unsafe class ForgeApp : IDisposable
         }
         return value.ToUpperInvariant();
     }
+
+    private IEnumerable<WcpControl> BoundControllerControls(string actionId, UiInputConfig inputConfig)
+    {
+        bool hasBinding = inputConfig.ControllerBindings.TryGetValue(actionId, out string? value);
+        if (!hasBinding && !ReferenceEquals(inputConfig, _config.Input))
+        {
+            hasBinding = _config.Input.ControllerBindings.TryGetValue(actionId, out value);
+        }
+        if (!hasBinding || string.IsNullOrWhiteSpace(value)) yield break;
+
+        foreach (string token in value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (Enum.TryParse(token, ignoreCase: true, out WcpControl control) && control != WcpControl.None)
+                yield return control;
+        }
+    }
+
+    private string ControllerBindingDisplay(string actionId, UiInputConfig inputConfig)
+    {
+        bool hasBinding = inputConfig.ControllerBindings.TryGetValue(actionId, out string? value);
+        if (!hasBinding && !ReferenceEquals(inputConfig, _config.Input))
+        {
+            hasBinding = _config.Input.ControllerBindings.TryGetValue(actionId, out value);
+        }
+        return !hasBinding || string.IsNullOrWhiteSpace(value) ? "-" : value.ToUpperInvariant();
+    }
+
+    private static string FormatControllerControl(WcpControl control) => control.ToString().ToLowerInvariant();
 
     private void SetInputBinding(InputBinding binding, uint keyCode)
     {

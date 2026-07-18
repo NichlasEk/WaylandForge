@@ -1,6 +1,6 @@
 # WayControlProtocol technical specification
 
-Status: WCP 1.0 foundation implemented; host mapping not yet connected
+Status: WCP 1.0 foundation and generic WaylandForge host mapping implemented
 
 ## Purpose
 
@@ -131,14 +131,18 @@ Defined packet types are `Hello`, `Welcome`, `DeviceConnected`, `DeviceDisconnec
 - Standalone live probe.
 - No external packages or controller libraries.
 
-### Checkpoint 2 - WaylandForge mapper
+### Checkpoint 2 - WaylandForge mapper (generic path implemented)
 
-- Add WCP as an input source beside the existing keyboard path.
-- Merge device states deterministically without stuck buttons on disconnect.
-- Map D-pad and left stick to directional actions with configurable threshold.
-- Add per-core button profiles and a safe generic default.
-- Show connected device, bus, ids and live controls in the existing input window.
-- Preserve every current keyboard mapping and deterministic WFEX input trace.
+- WCP is an input source beside the existing keyboard path.
+- Device states merge without clearing keyboard or other controller state; disconnect and sync loss clear the affected device.
+- D-pad and left stick feed directions through a conservative fixed threshold.
+- The generic Saturn-style layout maps face buttons to A/B/X/Y and shoulders/triggers to C/Z.
+- The existing input mapper has separate `KEY` and `WCP CONTROL` columns. Either binding can be captured or cleared without changing the other.
+- Controller mappings persist in `[controller]` and `[controller.<core>]` TOML sections and inherit from the host defaults in the same way as keyboard profiles.
+- Axis capture converts a deliberate stick movement into a mappable directional control such as `LeftStickLeft`.
+- The input/debug windows show WCP status and the first connected controller.
+- Device-specific presets, configurable axis thresholds and hardware validation remain.
+- Every current keyboard mapping and deterministic WFEX input path remains intact.
 
 ### Checkpoint 3 - Real controller matrix
 
@@ -166,4 +170,4 @@ Each optional family must be capability-driven. An ordinary digital/analog gamep
 
 ## Immediate next step
 
-Run the probe with real hardware, correct any raw mapping differences exposed by the attached controllers, then connect WCP to the existing WaylandForge input mapper as Checkpoint 2. Protocol transport, rumble and pairing remain out of that first gameplay path.
+Run the probe and WaylandForge with real hardware, correct any raw mapping differences exposed by the attached controllers, then add per-core controller profiles and configurable thresholds. Protocol transport, rumble and pairing remain outside the first gameplay path.

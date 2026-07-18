@@ -17,6 +17,7 @@
     <ProjectReference Include="../SystemRegisIII.ExternalCore.Dummy/SystemRegisIII.ExternalCore.Dummy.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../SystemRegisIII.ExternalCore.Stormakt3020/SystemRegisIII.ExternalCore.Stormakt3020.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../SystemRegisIII.Core/SystemRegisIII.Core.csproj" Aliases="global" />
+    <ProjectReference Include="../SystemRegisIII.WayControlProtocol/SystemRegisIII.WayControlProtocol.csproj" />
     <ProjectReference Include="../SystemRegisIII.WaylandForge.Ui/SystemRegisIII.WaylandForge.Ui.csproj" />
     <ProjectReference Include="../../../SystemRegisIII/src/SystemRegisIII.Core/SystemRegisIII.Core.csproj" Aliases="SaturnEmulator" />
   </ItemGroup>

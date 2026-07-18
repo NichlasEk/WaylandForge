@@ -75,10 +75,22 @@ internal sealed class UiConfig
             writer.WriteLine($"{pair.Key} = \"{Escape(pair.Value)}\"");
         }
         writer.WriteLine();
+        writer.WriteLine("[controller]");
+        foreach (KeyValuePair<string, string> pair in Input.ControllerBindings.OrderBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            writer.WriteLine($"{pair.Key} = \"{Escape(pair.Value)}\"");
+        }
+        writer.WriteLine();
         foreach (KeyValuePair<string, UiInputConfig> profile in CoreInputs.OrderBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase))
         {
             writer.WriteLine($"[input.{profile.Key}]");
             foreach (KeyValuePair<string, string> pair in profile.Value.Bindings.OrderBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase))
+            {
+                writer.WriteLine($"{pair.Key} = \"{Escape(pair.Value)}\"");
+            }
+            writer.WriteLine();
+            writer.WriteLine($"[controller.{profile.Key}]");
+            foreach (KeyValuePair<string, string> pair in profile.Value.ControllerBindings.OrderBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase))
             {
                 writer.WriteLine($"{pair.Key} = \"{Escape(pair.Value)}\"");
             }
@@ -255,6 +267,12 @@ internal sealed class UiConfig
             return;
         }
 
+        if (string.Equals(section, "controller", StringComparison.OrdinalIgnoreCase))
+        {
+            Input.ControllerBindings[key.Trim().ToLowerInvariant()] = value.Trim();
+            return;
+        }
+
         const string inputPrefix = "input.";
         if (section.StartsWith(inputPrefix, StringComparison.OrdinalIgnoreCase))
         {
@@ -264,6 +282,18 @@ internal sealed class UiConfig
                 return;
             }
             CoreInput(profileName).Bindings[key.Trim().ToLowerInvariant()] = value.Trim();
+            return;
+        }
+
+        const string controllerPrefix = "controller.";
+        if (section.StartsWith(controllerPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            string profileName = section[controllerPrefix.Length..].Trim().ToLowerInvariant();
+            if (profileName.Length == 0)
+            {
+                return;
+            }
+            CoreInput(profileName).ControllerBindings[key.Trim().ToLowerInvariant()] = value.Trim();
             return;
         }
 
@@ -494,9 +524,14 @@ internal sealed class UiInputConfig
         {
             Bindings[pair.Key] = pair.Value;
         }
+        foreach (KeyValuePair<string, string> pair in DefaultControllerBindings)
+        {
+            ControllerBindings[pair.Key] = pair.Value;
+        }
     }
 
     public Dictionary<string, string> Bindings { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, string> ControllerBindings { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     private static readonly Dictionary<string, string> DefaultBindings = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -521,6 +556,22 @@ internal sealed class UiInputConfig
         ["tile_fullscreen"] = "f11",
         ["shift"] = "leftshift,rightshift",
         ["super"] = "leftmeta,rightmeta",
+    };
+
+    private static readonly Dictionary<string, string> DefaultControllerBindings = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["escape"] = "guide",
+        ["up"] = "dpadup,leftstickup",
+        ["down"] = "dpaddown,leftstickdown",
+        ["left"] = "dpadleft,leftstickleft",
+        ["right"] = "dpadright,leftstickright",
+        ["start"] = "start",
+        ["a"] = "south",
+        ["b"] = "east",
+        ["c"] = "rightshoulder,righttriggerbutton",
+        ["x"] = "west",
+        ["y"] = "north",
+        ["z"] = "leftshoulder,lefttriggerbutton",
     };
 }
 

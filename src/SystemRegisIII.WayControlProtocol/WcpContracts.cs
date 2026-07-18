@@ -34,6 +34,14 @@ public enum WcpControl : ushort
     RightY = 35,
     LeftTrigger = 36,
     RightTrigger = 37,
+    LeftStickUp = 48,
+    LeftStickDown = 49,
+    LeftStickLeft = 50,
+    LeftStickRight = 51,
+    RightStickUp = 52,
+    RightStickDown = 53,
+    RightStickLeft = 54,
+    RightStickRight = 55,
 }
 
 public enum WcpEventKind : ushort
