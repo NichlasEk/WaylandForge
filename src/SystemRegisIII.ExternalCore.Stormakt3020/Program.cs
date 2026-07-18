@@ -165,6 +165,8 @@ internal sealed class StormaktGame
             : null;
     private readonly bool _snapphaneEmergenceTestMode = string.Equals(
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_EMERGENCE_TEST"), "1", StringComparison.Ordinal);
+    private readonly bool _snapphaneRescueTestMode = string.Equals(
+        Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_SNAPPHANE_RESCUE_TEST"), "1", StringComparison.Ordinal);
     private readonly bool _redHoundsTestMode = string.Equals(
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_RED_HOUNDS_TEST"), "1", StringComparison.Ordinal);
     private readonly SpritePack? _sprites;
@@ -802,6 +804,23 @@ internal sealed class StormaktGame
                     Y = _height - 86,
                 };
             }
+            if (_snapphaneRescueTestMode)
+            {
+                resetSnapphane.RouteStarted = true;
+                resetSnapphane.Route = SnapphaneRoute.Kaparleden;
+                resetSnapphane.SorenOathComplete = true;
+                resetSnapphane.Duel = new SorenDuelState
+                {
+                    Phase = 3,
+                    OathAge = 900,
+                    X = _width - 68,
+                    Y = 82,
+                };
+                double laneX = Math.Max(48, _width * 0.28);
+                resetSnapphane.Rescues.Add(new SnapphaneRescueShip(laneX - 8, 72, 0));
+                resetSnapphane.Rescues.Add(new SnapphaneRescueShip(laneX + 13, 126, 1));
+                resetSnapphane.Rescues.Add(new SnapphaneRescueShip(laneX - 3, Math.Min(_height - 42, 180), 2));
+            }
         }
         if (_rts is RtsState resetRts)
         {
@@ -877,7 +896,7 @@ internal sealed class StormaktGame
 
     private void StartLevel(int levelId, bool fresh = false)
     {
-        _suppressCampaignWrites = fresh || _loadoutTestKit is not null || _redHoundsTestMode;
+        _suppressCampaignWrites = fresh || _loadoutTestKit is not null || _redHoundsTestMode || _snapphaneRescueTestMode;
         _levelId = levelId;
         Reset();
         if (levelId is 4 or 5)
@@ -5074,6 +5093,11 @@ internal sealed class StormaktGame
 
     private void StepSnapphaneKaparRoute(SnapphaneWorldState state)
     {
+        if (state.RouteAge is 45 or 145 or 255 or 375 or 510 or 670 or 850 or 1_060 or 1_300 or 1_580 or 1_860)
+            SpawnSnapphaneRescueHunter(state);
+        if (state.RouteAge is 210 or 500 or 820 or 1_180)
+            SpawnSnapphaneScentMine(state);
+
         for (int index = 0; index < state.Rescues.Count; index++)
         {
             SnapphaneRescueShip rescue = state.Rescues[index];
@@ -5101,6 +5125,17 @@ internal sealed class StormaktGame
 
         if ((state.Rescues.Count > 0 && state.Rescues.All(rescue => rescue.Rescued)) || state.RouteAge >= 2_100)
             CompleteSnapphaneRoute(state);
+    }
+
+    private void SpawnSnapphaneRescueHunter(SnapphaneWorldState state)
+    {
+        int serial = 2_000 + state.RescueAttackSerial++;
+        bool right = (serial & 1) == 0;
+        state.Hunters.Add(new SnapphaneHunter(right ? _width - 54 : 54, -28, serial)
+        {
+            Health = serial % 5 == 0 ? 52 : 30,
+            Elite = serial % 5 == 0,
+        });
     }
 
     private void StepSnapphaneKrutRoute(SnapphaneWorldState state)
@@ -5542,10 +5577,16 @@ internal sealed class StormaktGame
         if (duel.Phase == 3)
         {
             duel.OathAge++;
-            double oathX = Math.Clamp(_shipX + (_shipX < _width / 2 ? 68 : -68), 42, _width - 42);
-            double oathY = Math.Clamp(_shipY - 42, 54, _height - 70);
-            duel.X += (oathX - duel.X) * 0.035;
-            duel.Y += (oathY - duel.Y) * 0.035;
+            if (state.Route == SnapphaneRoute.Kaparleden && state.RouteStarted && !state.RouteComplete)
+                StepSorenRescueCombat(state, duel);
+            else
+            {
+                double oathX = Math.Clamp(_shipX + (_shipX < _width / 2 ? 68 : -68), 42, _width - 42);
+                double oathY = Math.Clamp(_shipY - 42, 54, _height - 70);
+                duel.X += (oathX - duel.X) * 0.035;
+                duel.Y += (oathY - duel.Y) * 0.035;
+                duel.Shots.Clear();
+            }
             if (duel.OathAge == 180) state.SorenOathComplete = true;
             return;
         }
@@ -5591,6 +5632,76 @@ internal sealed class StormaktGame
         StepSorenCopperShots(duel);
         StepSorenHooks(duel);
         if (DistanceSquared(duel.X, duel.Y, _shipX, _shipY) < 24 * 24) DamageShip();
+    }
+
+    private void StepSorenRescueCombat(SnapphaneWorldState state, SorenDuelState duel)
+    {
+        SnapphaneRescueShip? activeRescue = state.Rescues
+            .Where(rescue => !rescue.Rescued && state.RouteAge >= rescue.Serial * 180)
+            .OrderBy(rescue => rescue.Serial)
+            .FirstOrDefault();
+        double guardX = activeRescue is null
+            ? Math.Clamp(_shipX + (_shipX < _width / 2 ? 76 : -76), 44, _width - 44)
+            : Math.Clamp(activeRescue.X + 92 + Math.Sin(state.RouteAge * 0.055) * 34, 44, _width - 44);
+        double guardY = activeRescue is null
+            ? Math.Clamp(_shipY - 48, 50, _height - 64)
+            : Math.Clamp(activeRescue.Y - 32 + Math.Cos(state.RouteAge * 0.041) * 22, 50, _height - 64);
+        duel.X += (guardX - duel.X) * 0.095;
+        duel.Y += (guardY - duel.Y) * 0.095;
+        duel.DashAge = Math.Max(0, duel.DashAge - 1);
+        if (state.RouteAge % 96 == 18)
+        {
+            duel.DashAge = 28;
+            duel.Afterimages.Add(new SorenAfterimage(duel.X, duel.Y));
+        }
+
+        SnapphaneHunter? target = state.Hunters
+            .Where(hunter => hunter.BurstAge == 0)
+            .OrderBy(hunter => DistanceSquared(duel.X, duel.Y, hunter.X, hunter.Y))
+            .FirstOrDefault();
+        if (target is not null && state.RouteAge % 46 == 12)
+        {
+            double baseAngle = Math.Atan2(target.Y - duel.Y, target.X - duel.X);
+            for (int index = 0; index < 2; index++)
+            {
+                double angle = baseAngle + (index == 0 ? -0.08 : 0.08);
+                duel.Shots.Add(new SorenCopperShot(duel.X, duel.Y - 12,
+                    Math.Cos(angle) * 2.9, Math.Sin(angle) * 2.9));
+            }
+            _audio?.Trigger(StormaktSound.Broadside);
+        }
+
+        for (int index = duel.Shots.Count - 1; index >= 0; index--)
+        {
+            SorenCopperShot shot = duel.Shots[index];
+            shot.Age++;
+            SnapphaneHunter? shotTarget = state.Hunters
+                .Where(hunter => hunter.BurstAge == 0)
+                .OrderBy(hunter => DistanceSquared(shot.X, shot.Y, hunter.X, hunter.Y))
+                .FirstOrDefault();
+            if (shotTarget is null)
+            {
+                duel.Shots.RemoveAt(index);
+                continue;
+            }
+            double dx = shotTarget.X - shot.X;
+            double dy = shotTarget.Y - shot.Y;
+            double length = Math.Max(1, Math.Sqrt(dx * dx + dy * dy));
+            shot.Vx = shot.Vx * 0.91 + dx / length * 0.34;
+            shot.Vy = shot.Vy * 0.91 + dy / length * 0.34;
+            shot.X += shot.Vx;
+            shot.Y += shot.Vy;
+            if (DistanceSquared(shot.X, shot.Y, shotTarget.X, shotTarget.Y) < 10 * 10)
+            {
+                shotTarget.Health -= 16;
+                if (shotTarget.Health <= 0) shotTarget.BurstAge = 1;
+                duel.Shots.RemoveAt(index);
+            }
+            else if (shot.Age > 180 || shot.X < -18 || shot.X > _width + 18 || shot.Y < -18 || shot.Y > _height + 18)
+            {
+                duel.Shots.RemoveAt(index);
+            }
+        }
     }
 
     private void FireSorenCopperSalvo(SorenDuelState duel, int count)
@@ -5783,14 +5894,18 @@ internal sealed class StormaktGame
             int firingInterval = hunter.Elite ? 72 : 105;
             if (hunter.Age % firingInterval == 42)
             {
-                double dx = _shipX - hunter.X;
-                double dy = _shipY - hunter.Y;
+                bool targetsSoren = state.Route == SnapphaneRoute.Kaparleden && !state.RouteComplete &&
+                    state.Duel is { Phase: 3 } && hunter.Serial % 3 != 0;
+                double targetX = targetsSoren ? state.Duel!.X : _shipX;
+                double targetY = targetsSoren ? state.Duel!.Y : _shipY;
+                double dx = targetX - hunter.X;
+                double dy = targetY - hunter.Y;
                 double length = Math.Max(1, Math.Sqrt(dx * dx + dy * dy));
                 state.HuntShots.Add(new SnapphaneHuntShot(hunter.X, hunter.Y + 10,
-                    dx / length * 1.8, dy / length * 1.8, hunter.Serial));
+                    dx / length * 1.8, dy / length * 1.8, hunter.Serial) { TargetsSoren = targetsSoren });
                 if (hunter.Elite)
                     state.HuntShots.Add(new SnapphaneHuntShot(hunter.X, hunter.Y + 10,
-                        dx / length * 1.65 + 0.32, dy / length * 1.65, hunter.Serial));
+                        dx / length * 1.65 + 0.32, dy / length * 1.65, hunter.Serial) { TargetsSoren = targetsSoren });
             }
             if (DistanceSquared(hunter.X, hunter.Y, _shipX, _shipY) < 18 * 18) DamageShip();
         }
@@ -5806,8 +5921,10 @@ internal sealed class StormaktGame
                 .Where(mine => mine.Turned && mine.BurstAge == 0)
                 .OrderBy(mine => DistanceSquared(shot.X, shot.Y, mine.X, mine.Y))
                 .FirstOrDefault();
-            double targetX = lure?.X ?? _shipX;
-            double targetY = lure?.Y ?? _shipY;
+            bool targetsSoren = lure is null && shot.TargetsSoren &&
+                state.Route == SnapphaneRoute.Kaparleden && !state.RouteComplete && state.Duel is { Phase: 3 };
+            double targetX = lure?.X ?? (targetsSoren ? state.Duel!.X : _shipX);
+            double targetY = lure?.Y ?? (targetsSoren ? state.Duel!.Y : _shipY);
             double dx = targetX - shot.X;
             double dy = targetY - shot.Y;
             double length = Math.Max(1, Math.Sqrt(dx * dx + dy * dy));
@@ -5827,7 +5944,15 @@ internal sealed class StormaktGame
                 state.HuntShots.RemoveAt(index);
                 continue;
             }
-            if (lure is null && DistanceSquared(shot.X, shot.Y, _shipX, _shipY) < 7 * 7)
+            if (targetsSoren && DistanceSquared(shot.X, shot.Y, state.Duel!.X, state.Duel.Y) < 9 * 9)
+            {
+                state.Duel.HitFlash = 8;
+                state.Duel.DashAge = Math.Max(state.Duel.DashAge, 18);
+                state.Duel.Afterimages.Add(new SorenAfterimage(state.Duel.X, state.Duel.Y));
+                state.HuntShots.RemoveAt(index);
+                continue;
+            }
+            if (!targetsSoren && lure is null && DistanceSquared(shot.X, shot.Y, _shipX, _shipY) < 7 * 7)
             {
                 DamageShip();
                 state.HuntShots.RemoveAt(index);
@@ -12993,8 +13118,10 @@ internal sealed class StormaktGame
         {
             bool channeling = IsSnapphaneRescueChanneling();
             text = channeling
-                ? $"KANALISERAR  {state.SnapphaneAllies}/3  ELD HALVERAD  X SPÄRRAD"
-                : $"KAPARLEDEN  BEFRIADE {state.SnapphaneAllies}/3";
+                ? $"BEFRIAR {state.SnapphaneAllies}/3  SÖREN TÄCKER"
+                : state.ScentMines.Any(mine => mine.Turned && mine.BurstAge == 0)
+                    ? "VÄND MINA LOCKAR JÄGARELD"
+                    : $"SÖREN TÄCKER  BEFRIADE {state.SnapphaneAllies}/3";
             color = channeling ? 0xffffd66b : 0xff77e6a0;
         }
         else
@@ -13255,7 +13382,9 @@ internal sealed class StormaktGame
 
         int sorenX = (int)Math.Round(duel.X);
         int sorenY = (int)Math.Round(duel.Y);
-        string asset = duel.Phase == 3 ? "soren_duel_oath" :
+        bool rescueCombat = duel.Phase == 3 && state.Route == SnapphaneRoute.Kaparleden && !state.RouteComplete;
+        string asset = rescueCombat ? duel.DashAge > 0 ? "soren_duel_dash" : "soren_duel_ready" :
+            duel.Phase == 3 ? "soren_duel_oath" :
             duel.Phase == 2 && duel.Hooks.Any(hook => hook.BrokenAge == 0) ? "soren_duel_hooks" :
             duel.DashAge > 0 ? "soren_duel_dash" : "soren_duel_ready";
         if (_sprites?.TryGet(asset, out Sprite ship) == true)
@@ -15298,6 +15427,7 @@ internal sealed class StormaktGame
         public int RouteAge { get; set; }
         public bool RouteComplete { get; set; }
         public int RouteTargetsDestroyed { get; set; }
+        public int RescueAttackSerial { get; set; }
         public int KrutBonus { get; set; }
         public int PostRouteAge { get; set; }
         public bool RedHoundsDefeated { get; set; }
@@ -15507,6 +15637,7 @@ internal sealed class StormaktGame
         public double Vy { get; set; } = vy;
         public int Serial { get; } = serial;
         public int Age { get; set; }
+        public bool TargetsSoren { get; set; }
     }
 
     private sealed class TitheWorldState
