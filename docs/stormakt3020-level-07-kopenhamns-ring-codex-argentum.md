@@ -4,7 +4,7 @@ Status: aktiv utvecklingsplan för kampanjens sjunde rad, level id `6`. Första 
 
 ## Nuvarande spelbara checkpoint
 
-Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen render/step-dispatch och kampanjens sparade Bana 5-lastning. Den spelbara rymdöppningen leder efter en kort inflygning genom två sammanhängande bossportar och två fullstora bossar.
+Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen render/step-dispatch och kampanjens sparade Bana 5-lastning. Den spelbara rymdöppningen leder efter en kort inflygning genom tre bossportar, två fullstora bossar och en fregattduo.
 
 **Trekroners lås:**
 
@@ -50,9 +50,19 @@ Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen rende
 - det valda hörnet vrider nästa formation i halva kvartsvarv, så spelarens lösning ändrar följande våg;
 - efter telegraferingen laddar de återstående armarna genom spelrummet medan den brutna armen förblir den säkra vägen;
 - en missad tidsgräns bryter ett deterministiskt nödhörn men kostar Karl en träff, så porten kan inte mjuklåsa;
-- den tredje genomflygningen visar checkpointresultatet **Absalon och Elefanten**.
+- den tredje genomflygningen släpper fram Absalon och Elefanten utan meny eller levelreset.
 
-Miljön, låset, urtavlan, Frederik, Ögat, Dannebrogsvingarna, HUD, barriärer och resultatkort har kodritade fallbackformer i wide och legacy. `WAYLANDFORGE_STORMAKT_COPENHAGEN_GATE_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_ADMIRALTY_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_FREDERIK_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_EYE_TEST=1` och `WAYLANDFORGE_STORMAKT_COPENHAGEN_DANNEBROG_TEST=1` hoppar till förkortade deterministiska stridsfixtures. Det är fortfarande en utvecklingscheckpoint: nästa svep ska ersätta resultatstoppet med fregattduon Absalon och Elefanten.
+**Absalon och Elefanten:**
+
+- Absalon bygger skottblockerande murar av sju skölddrönare med en verklig öppen lucka;
+- spelaren kan skjuta sönder ytterligare drönare, men Elefanten telegraferar och laddar genom murens ursprungliga lucka;
+- båda fregatterna har egna skrov och två separat förstörbara kanontorn, så utslagna torn minskar kommande bredsidor;
+- reparationsdrönaren kan återställa ett utslaget torn till halv styrka men aldrig laga skrov eller återuppliva en fregatt;
+- Sörens ed bryter en extra sköldnod, frigivna skepp skadar torn och fler snapphaneallierade fördröjer reparationen;
+- om den ena fregatten faller fortsätter den andra med ett tätare eget anfallsmönster;
+- segern lämnar båda vraken i spelrummet och visar checkpointresultatet **Superfregatten väntar**.
+
+Miljön, låset, urtavlan, Frederik, Ögat, Dannebrogsvingarna, fregattduon, HUD, barriärer och resultatkort har kodritade fallbackformer i wide och legacy. `WAYLANDFORGE_STORMAKT_COPENHAGEN_GATE_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_ADMIRALTY_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_FREDERIK_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_EYE_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_DANNEBROG_TEST=1` och `WAYLANDFORGE_STORMAKT_COPENHAGEN_DUO_TEST=1` hoppar till förkortade deterministiska stridsfixtures. Det är fortfarande en utvecklingscheckpoint: nästa svep ska ersätta resultatstoppet med Kong Christians sektionsägda Superfregatt.
 
 ## Kärna
 

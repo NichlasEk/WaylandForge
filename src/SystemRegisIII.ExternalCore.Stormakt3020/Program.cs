@@ -269,6 +269,9 @@ internal sealed class StormaktGame
     private const int CopenhagenEyeLensHealth = 72;
     private const int CopenhagenDannebrogNodeHealth = 84;
     private const int CopenhagenDannebrogFormationCount = 3;
+    private const int CopenhagenDuoMaxHealth = 480;
+    private const int CopenhagenDuoTurretHealth = 54;
+    private const int CopenhagenDuoShieldHealth = 30;
     private const int RtsSalvagedSilverGoal = 1_200;
     private const int DungeonFirstSigilMask = 1 << 8;
     private const int DungeonFogdeRescuedMask = 1 << 9;
@@ -340,6 +343,8 @@ internal sealed class StormaktGame
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_EYE_TEST"), "1", StringComparison.Ordinal);
     private readonly bool _copenhagenDannebrogTestMode = string.Equals(
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_DANNEBROG_TEST"), "1", StringComparison.Ordinal);
+    private readonly bool _copenhagenDuoTestMode = string.Equals(
+        Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_DUO_TEST"), "1", StringComparison.Ordinal);
     private readonly SpritePack? _sprites;
     private readonly StormaktMusicLoop? _audio;
     private Random _random = new(3020);
@@ -579,6 +584,14 @@ internal sealed class StormaktGame
         new(0, 300, false, "EBBA GRIP", "BRYT ETT HÖRN", "FLYG GENOM ÄRRET", null, "portrait_ebba");
     private static readonly RadioCard CopenhagenDannebrogFallRadio =
         new(0, 300, false, "SÖREN SVARTKRUT", "VINGARNA FALLER", "TVÅ FREGATTER KVAR", null, "portrait_soren", true);
+    private static readonly RadioCard CopenhagenDuoRadio =
+        new(0, 330, false, "EBBA GRIP", "TVÅ SKÄRMFREGATTER", "MUREN OCH BETEN", null, "portrait_ebba");
+    private static readonly RadioCard CopenhagenAbsalonWallRadio =
+        new(0, 270, true, "ABSALON", "SKJOLDMUR FREM", "LUK HIMLEN", null, "rigsregnskabet");
+    private static readonly RadioCard CopenhagenElefantenChargeRadio =
+        new(0, 270, true, "ELEFANTEN", "JEG TAGER ÅBNINGEN", "FLYT JER", null, "rigsregnskabet");
+    private static readonly RadioCard CopenhagenDuoFallRadio =
+        new(0, 300, true, "KUNG CHRISTIAN", "MINE SKÆRME FALDER", "FLAGSKIB FREM", null, "portrait_christian");
     private int _shipX;
     private int _shipY;
     private int _cooldown;
@@ -1071,6 +1084,23 @@ internal sealed class StormaktGame
                 resetCopenhagen.EyeHealth = 0;
                 resetCopenhagen.EyeDeathAge = 360;
                 BeginCopenhagenDannebrog(resetCopenhagen, testFixture: true);
+            }
+            if (_copenhagenDuoTestMode)
+            {
+                resetCopenhagen.Age = 4_500;
+                resetCopenhagen.GateActive = true;
+                resetCopenhagen.AdmiraltyActive = true;
+                resetCopenhagen.AdmiraltyHealth = 0;
+                resetCopenhagen.AdmiraltyDeathAge = 300;
+                resetCopenhagen.FrederikActive = true;
+                resetCopenhagen.FrederikHealth = 0;
+                resetCopenhagen.FrederikDeathAge = 360;
+                resetCopenhagen.EyeActive = true;
+                resetCopenhagen.EyeHealth = 0;
+                resetCopenhagen.EyeDeathAge = 360;
+                resetCopenhagen.DannebrogActive = true;
+                resetCopenhagen.DannebrogDeathAge = 320;
+                BeginCopenhagenDuo(resetCopenhagen, testFixture: true);
             }
         }
         if (_snapphaneWorld is SnapphaneWorldState resetSnapphane)
@@ -5332,6 +5362,13 @@ internal sealed class StormaktGame
             return;
         }
 
+        if (state.DuoActive)
+        {
+            StepCopenhagenDuo(state);
+            StepEnemyShots();
+            return;
+        }
+
         if (state.DannebrogActive)
         {
             StepCopenhagenDannebrog(state);
@@ -6083,9 +6120,7 @@ internal sealed class StormaktGame
             }
             if (deathAge is 34 or 82 or 138) _audio?.Trigger(StormaktSound.EnemyExplosion);
             if (deathAge < 240 || _bossRadioCard is not null) return;
-            _stageClear = true;
-            _stageClearAge = 0;
-            _audio?.SwitchMusic(StormaktMusicTrack.Combat);
+            BeginCopenhagenDuo(state);
             return;
         }
 
@@ -6214,6 +6249,296 @@ internal sealed class StormaktGame
     {
         double angle = Math.PI / 4.0 + state.DannebrogRotation * Math.PI / 8.0 + node * Math.PI / 2.0;
         return (centerX + Math.Cos(angle) * 72.0, centerY + Math.Sin(angle) * 48.0);
+    }
+
+    private void BeginCopenhagenDuo(CopenhagenWorldState state, bool testFixture = false)
+    {
+        state.DuoActive = true;
+        state.DuoTestFixture = testFixture;
+        state.DuoAge = 0;
+        state.DuoCycleAge = 0;
+        state.DuoDeathAge = 0;
+        state.DuoWallRadioPlayed = false;
+        state.DuoChargeRadioPlayed = false;
+        state.DuoSupportApplied = false;
+        state.DuoShieldWall = null;
+        state.DuoElefantenChargeAge = 0;
+        state.DuoElefantenChargeX = _width / 2;
+        int health = testFixture ? 72 : CopenhagenDuoMaxHealth;
+        state.DuoHealth[0] = health;
+        state.DuoHealth[1] = health;
+        int turretHealth = testFixture ? 12 : CopenhagenDuoTurretHealth;
+        for (int turret = 0; turret < state.DuoTurretHealth.Length; turret++)
+            state.DuoTurretHealth[turret] = turretHealth;
+        Array.Clear(state.DuoShipFallAge);
+        _enemyShots.Clear();
+        _shots.Clear();
+        if (testFixture) return;
+        ActivateBossRadio(CopenhagenDuoRadio);
+        _audio?.Trigger(StormaktSound.Deploy);
+    }
+
+    private void StepCopenhagenDuo(CopenhagenWorldState state)
+    {
+        state.DuoAge++;
+        state.DuoCycleAge++;
+        state.DuoHitFlash = Math.Max(0, state.DuoHitFlash - 1);
+        state.DuoRepairFlash = Math.Max(0, state.DuoRepairFlash - 1);
+        for (int ship = 0; ship < state.DuoShipFallAge.Length; ship++)
+            if (state.DuoShipFallAge[ship] > 0) state.DuoShipFallAge[ship]++;
+
+        if (state.DuoDeathAge > 0)
+        {
+            _shots.Clear();
+            int deathAge = state.DuoDeathAge++;
+            if (deathAge == 1)
+            {
+                _enemyShots.Clear();
+                state.DuoShieldWall = null;
+                _score += 8_000;
+                ActivateBossRadio(CopenhagenDuoFallRadio);
+                _audio?.Trigger(StormaktSound.Broadside);
+            }
+            if (deathAge is 28 or 66 or 112 or 174 or 226)
+                _audio?.Trigger(StormaktSound.EnemyExplosion);
+            if (deathAge < 270 || _bossRadioCard is not null) return;
+            _stageClear = true;
+            _stageClearAge = 0;
+            _audio?.SwitchMusic(StormaktMusicTrack.Combat);
+            return;
+        }
+
+        if (state.DuoCycleAge == 1 && state.DuoHealth[0] > 0)
+            SpawnCopenhagenDuoWall(state);
+        if (state.DuoShieldWall is CopenhagenShieldWall wall)
+        {
+            wall.Age++;
+            if (wall.Age == 55 && state.SorenOathComplete && !wall.SorenBreakApplied)
+            {
+                wall.SorenBreakApplied = true;
+                int supportNode = (wall.GapIndex + 2) % wall.Health.Length;
+                wall.Health[supportNode] = 0;
+                _score += 180;
+                _audio?.Trigger(StormaktSound.OresundSwitchBreak);
+            }
+            if (wall.Age > 250) state.DuoShieldWall = null;
+        }
+
+        if (!state.DuoWallRadioPlayed && state.DuoAge >= 75 && _bossRadioCard is null)
+        {
+            state.DuoWallRadioPlayed = true;
+            ActivateBossRadio(CopenhagenAbsalonWallRadio);
+        }
+
+        if (state.DuoCycleAge == 112 && state.DuoHealth[1] > 0)
+        {
+            CopenhagenShieldWall? activeWall = state.DuoShieldWall;
+            state.DuoElefantenChargeX = activeWall is null
+                ? Math.Clamp(_shipX, 38, _width - 38)
+                : CopenhagenDuoWallNodeX(activeWall.GapIndex);
+            state.DuoElefantenChargeAge = 1;
+            state.DuoElefantenHitPlayer = false;
+            _audio?.Trigger(StormaktSound.Broadside);
+        }
+        if (state.DuoElefantenChargeAge > 0)
+        {
+            state.DuoElefantenChargeAge++;
+            (double chargeX, double chargeY) = CopenhagenDuoShipPosition(state, 1);
+            if (!state.DuoElefantenHitPlayer &&
+                DistanceSquared(_shipX, _shipY, chargeX, chargeY) < 25 * 25)
+            {
+                state.DuoElefantenHitPlayer = true;
+                DamageShip();
+            }
+            if (chargeY > _height + 48) state.DuoElefantenChargeAge = 0;
+        }
+        if (!state.DuoChargeRadioPlayed && state.DuoElefantenChargeAge > 0 && _bossRadioCard is null)
+        {
+            state.DuoChargeRadioPlayed = true;
+            ActivateBossRadio(CopenhagenElefantenChargeRadio);
+        }
+
+        StepCopenhagenDuoShots(state);
+        StepCopenhagenDuoAttacks(state);
+        StepCopenhagenDuoRepair(state);
+        if (!state.DuoSupportApplied && state.DuoAge >= 100 && state.IncomingFreedShips > 0)
+        {
+            state.DuoSupportApplied = true;
+            int supportHits = Math.Min(3, state.IncomingFreedShips);
+            for (int hit = 0; hit < supportHits; hit++)
+            {
+                int turret = (hit * 3 + 1) % state.DuoTurretHealth.Length;
+                state.DuoTurretHealth[turret] = Math.Max(0, state.DuoTurretHealth[turret] - 18);
+            }
+            state.DuoRepairFlash = 30;
+            _audio?.Trigger(StormaktSound.TwinCannon);
+        }
+        if (state.DuoCycleAge >= 300) state.DuoCycleAge = 0;
+    }
+
+    private void SpawnCopenhagenDuoWall(CopenhagenWorldState state)
+    {
+        int gap = Math.Clamp((_shipX - 28) * 7 / Math.Max(1, _width - 56), 0, 6);
+        int nodeHealth = state.DuoTestFixture ? 8 : CopenhagenDuoShieldHealth;
+        state.DuoShieldWall = new CopenhagenShieldWall(gap, nodeHealth);
+        _audio?.Trigger(StormaktSound.OresundFortressLock);
+    }
+
+    private void StepCopenhagenDuoShots(CopenhagenWorldState state)
+    {
+        for (int shotIndex = _shots.Count - 1; shotIndex >= 0; shotIndex--)
+        {
+            Shot shot = _shots[shotIndex];
+            if (TryHitCopenhagenDuoWall(state, shot))
+            {
+                _shots.RemoveAt(shotIndex);
+                continue;
+            }
+
+            bool consumed = false;
+            for (int ship = 0; ship < state.DuoHealth.Length && !consumed; ship++)
+            {
+                if (state.DuoHealth[ship] <= 0) continue;
+                (double shipX, double shipY) = CopenhagenDuoShipPosition(state, ship);
+                for (int side = 0; side < 2; side++)
+                {
+                    int turret = ship * 2 + side;
+                    if (state.DuoTurretHealth[turret] <= 0) continue;
+                    (double turretX, double turretY) = CopenhagenDuoTurretPosition(shipX, shipY, side);
+                    if (DistanceSquared(shot.X, shot.Y, turretX, turretY) >= 11 * 11) continue;
+                    state.DuoTurretHealth[turret] = Math.Max(0, state.DuoTurretHealth[turret] - shot.Power);
+                    state.DuoHitFlash = 5;
+                    state.DuoLastHitShip = ship;
+                    state.DuoLastHitTurret = turret;
+                    consumed = true;
+                    if (state.DuoTurretHealth[turret] == 0)
+                    {
+                        _score += 420;
+                        _audio?.Trigger(StormaktSound.EnemyExplosion);
+                    }
+                    break;
+                }
+                if (consumed) break;
+                double dx = (shot.X - shipX) / 43.0;
+                double dy = (shot.Y - shipY) / 27.0;
+                if (dx * dx + dy * dy >= 1.0) continue;
+                state.DuoHealth[ship] = Math.Max(0, state.DuoHealth[ship] - shot.Power);
+                state.DuoHitFlash = 5;
+                state.DuoLastHitShip = ship;
+                state.DuoLastHitTurret = -1;
+                consumed = true;
+                if (state.DuoHealth[ship] == 0) FallCopenhagenDuoShip(state, ship);
+            }
+            if (consumed) _shots.RemoveAt(shotIndex);
+        }
+    }
+
+    private bool TryHitCopenhagenDuoWall(CopenhagenWorldState state, Shot shot)
+    {
+        if (state.DuoShieldWall is not CopenhagenShieldWall wall) return false;
+        double wallY = CopenhagenDuoWallY(wall);
+        for (int node = 0; node < wall.Health.Length; node++)
+        {
+            if (wall.Health[node] <= 0) continue;
+            double nodeX = CopenhagenDuoWallNodeX(node);
+            if (DistanceSquared(shot.X, shot.Y, nodeX, wallY) >= 13 * 13) continue;
+            wall.Health[node] = Math.Max(0, wall.Health[node] - shot.Power);
+            state.DuoHitFlash = 4;
+            state.DuoLastHitShip = -1;
+            if (wall.Health[node] == 0)
+            {
+                _score += 150;
+                _audio?.Trigger(StormaktSound.OresundSwitchBreak);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private void StepCopenhagenDuoAttacks(CopenhagenWorldState state)
+    {
+        if (state.DuoCycleAge == 58 && state.DuoHealth[0] > 0)
+            FireCopenhagenDuoBroadside(state, 0);
+        if (state.DuoCycleAge == 228 && state.DuoHealth[1] > 0 && state.DuoElefantenChargeAge == 0)
+            FireCopenhagenDuoBroadside(state, 1);
+        if (state.DuoCycleAge == 168)
+        {
+            if (state.DuoHealth[0] <= 0 && state.DuoHealth[1] > 0) FireCopenhagenDuoBroadside(state, 1);
+            else if (state.DuoHealth[1] <= 0 && state.DuoHealth[0] > 0) FireCopenhagenDuoBroadside(state, 0);
+        }
+    }
+
+    private void FireCopenhagenDuoBroadside(CopenhagenWorldState state, int ship)
+    {
+        (double shipX, double shipY) = CopenhagenDuoShipPosition(state, ship);
+        for (int side = 0; side < 2; side++)
+        {
+            int turret = ship * 2 + side;
+            if (state.DuoTurretHealth[turret] <= 0) continue;
+            (double turretX, double turretY) = CopenhagenDuoTurretPosition(shipX, shipY, side);
+            for (int lane = -1; lane <= 1; lane++)
+            {
+                double targetX = _shipX + lane * 34;
+                double targetY = _height + 12;
+                double dx = targetX - turretX;
+                double dy = targetY - turretY;
+                double length = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
+                _enemyShots.Add(new EnemyShot(turretX, turretY, dx / length * 2.25, dy / length * 2.25, 2));
+            }
+        }
+        _audio?.Trigger(StormaktSound.Broadside);
+    }
+
+    private void StepCopenhagenDuoRepair(CopenhagenWorldState state)
+    {
+        int interval = 420 + Math.Max(0, state.SnapphaneAllies) * 90 + Math.Min(3, state.IncomingFreedShips) * 30;
+        if (state.DuoAge == 0 || state.DuoAge % interval != 0) return;
+        int maximum = state.DuoTestFixture ? 12 : CopenhagenDuoTurretHealth;
+        for (int turret = 0; turret < state.DuoTurretHealth.Length; turret++)
+        {
+            int ship = turret / 2;
+            if (state.DuoHealth[ship] <= 0 || state.DuoTurretHealth[turret] > 0) continue;
+            state.DuoTurretHealth[turret] = Math.Max(1, maximum / 2);
+            state.DuoRepairFlash = 75;
+            state.DuoRepairTurret = turret;
+            _audio?.Trigger(StormaktSound.TitheUpgradeInstall);
+            return;
+        }
+    }
+
+    private void FallCopenhagenDuoShip(CopenhagenWorldState state, int ship)
+    {
+        state.DuoShipFallAge[ship] = 1;
+        state.DuoTurretHealth[ship * 2] = 0;
+        state.DuoTurretHealth[ship * 2 + 1] = 0;
+        if (ship == 0) state.DuoShieldWall = null;
+        if (ship == 1) state.DuoElefantenChargeAge = 0;
+        _score += 2_800;
+        _enemyShots.Clear();
+        _audio?.Trigger(StormaktSound.EnemyExplosion);
+        if (state.DuoHealth.All(health => health <= 0)) state.DuoDeathAge = 1;
+    }
+
+    private (double X, double Y) CopenhagenDuoShipPosition(CopenhagenWorldState state, int ship)
+    {
+        if (ship == 1 && state.DuoElefantenChargeAge > 0)
+            return (state.DuoElefantenChargeX, -38 + state.DuoElefantenChargeAge * 3.15);
+        double entry = Math.Min(1.0, state.DuoAge / 90.0);
+        double eased = entry * entry * (3.0 - 2.0 * entry);
+        double baseX = _width / 2.0 + (ship == 0 ? -82 : 82);
+        double sway = Math.Sin((state.DuoAge + ship * 95) * 0.012) * 13;
+        return (baseX + sway, -52 + 118 * eased + Math.Sin((state.DuoAge + ship * 47) * 0.018) * 5);
+    }
+
+    private static (double X, double Y) CopenhagenDuoTurretPosition(double shipX, double shipY, int side) =>
+        (shipX + (side == 0 ? -24 : 24), shipY + 9);
+
+    private double CopenhagenDuoWallNodeX(int node) => 28 + node * (_width - 56) / 6.0;
+
+    private static double CopenhagenDuoWallY(CopenhagenShieldWall wall)
+    {
+        double entry = Math.Min(1.0, wall.Age / 45.0);
+        return -18 + 122 * entry;
     }
 
     private void StepCopenhagenGateShots(CopenhagenWorldState state)
@@ -14300,7 +14625,8 @@ internal sealed class StormaktGame
         {
             DrawCopenhagenBarrier(frame, state);
             DrawCopenhagenEyeWalls(frame, state);
-            if (state.DannebrogActive) DrawCopenhagenDannebrog(frame, state);
+            if (state.DuoActive) DrawCopenhagenDuo(frame, state);
+            else if (state.DannebrogActive) DrawCopenhagenDannebrog(frame, state);
             else if (state.EyeActive) DrawCopenhagenEye(frame, state);
             else if (state.FrederikActive) DrawCopenhagenFrederik(frame, state);
             else if (state.AdmiraltyActive) DrawCopenhagenAdmiralty(frame, state);
@@ -14319,6 +14645,7 @@ internal sealed class StormaktGame
             DrawCopenhagenFrederikHud(frame, state);
             DrawCopenhagenEyeHud(frame, state);
             DrawCopenhagenDannebrogHud(frame, state);
+            DrawCopenhagenDuoHud(frame, state);
             DrawCopenhagenCheckpointBanner(frame, state);
         }
         DrawCopenhagenMissionTitle(frame, age);
@@ -14855,6 +15182,133 @@ internal sealed class StormaktGame
         DrawRect(frame, x + 2, 23, (width - 4) * Math.Min(12, progress) / 12, 4, 0xff8f2635);
         DrawText(frame, x + 4, 28,
             $"DANNEBROG {state.DannebrogFormation + 1}/{CopenhagenDannebrogFormationCount}  {task}", 0xffbdf8ff);
+    }
+
+    private void DrawCopenhagenDuo(uint[] frame, CopenhagenWorldState state)
+    {
+        if (state.DuoShieldWall is CopenhagenShieldWall wall)
+        {
+            int wallY = (int)Math.Round(CopenhagenDuoWallY(wall));
+            for (int node = 0; node < wall.Health.Length; node++)
+            {
+                int nodeX = (int)Math.Round(CopenhagenDuoWallNodeX(node));
+                if (wall.Health[node] <= 0)
+                {
+                    uint gap = node == wall.GapIndex ? 0xff7fc7ff : 0xff315b42;
+                    DrawLine(frame, nodeX - 8, wallY - 6, nodeX + 8, wallY + 6, gap);
+                    DrawLine(frame, nodeX + 8, wallY - 6, nodeX - 8, wallY + 6, gap);
+                    continue;
+                }
+                if (node > 0 && wall.Health[node - 1] > 0)
+                    DrawLine(frame, (int)Math.Round(CopenhagenDuoWallNodeX(node - 1)) + 11, wallY,
+                        nodeX - 11, wallY, 0xff9bd4dc);
+                FillCircle(frame, nodeX, wallY, 9, 0xff172734);
+                DrawCircleOutline(frame, nodeX, wallY, 11, node % 2 == 0 ? 0xfff2eee4 : 0xff8f2635);
+                DrawLine(frame, nodeX - 6, wallY, nodeX + 6, wallY, 0xffd6b25e);
+                int maximum = state.DuoTestFixture ? 8 : CopenhagenDuoShieldHealth;
+                DrawRect(frame, nodeX - 9, wallY + 13, 18 * wall.Health[node] / maximum, 2, 0xff7fc7ff);
+            }
+        }
+
+        int chargeX = (int)Math.Round(state.DuoShieldWall is CopenhagenShieldWall activeWall
+            ? CopenhagenDuoWallNodeX(activeWall.GapIndex)
+            : state.DuoElefantenChargeX);
+        bool chargeWarning = state.DuoCycleAge is >= 82 and < 112 && state.DuoHealth[1] > 0;
+        if (chargeWarning || state.DuoElefantenChargeAge > 0)
+        {
+            uint warning = chargeWarning && (state.DuoCycleAge / 5 & 1) == 0 ? 0xffffd66b : 0xff8f2635;
+            DrawLine(frame, chargeX - 20, 18, chargeX - 20, _height - 13, warning);
+            DrawLine(frame, chargeX + 20, 18, chargeX + 20, _height - 13, warning);
+            if (chargeWarning) DrawText(frame, chargeX - 15, _height - 33, "FLYT", warning);
+        }
+
+        DrawCopenhagenDuoShip(frame, state, 0);
+        DrawCopenhagenDuoShip(frame, state, 1);
+        if (state.DuoRepairFlash > 0 && state.DuoRepairTurret >= 0)
+        {
+            int ship = state.DuoRepairTurret / 2;
+            int side = state.DuoRepairTurret % 2;
+            if (state.DuoHealth[ship] > 0)
+            {
+                (double shipX, double shipY) = CopenhagenDuoShipPosition(state, ship);
+                (double turretX, double turretY) = CopenhagenDuoTurretPosition(shipX, shipY, side);
+                int droneX = (int)Math.Round(turretX + Math.Sin(state.DuoAge * 0.08) * 18);
+                int droneY = (int)Math.Round(turretY - 24);
+                FillCircle(frame, droneX, droneY, 4, 0xff77e6a0);
+                DrawLine(frame, droneX, droneY, (int)Math.Round(turretX), (int)Math.Round(turretY), 0xff77e6a0);
+            }
+        }
+        if (state.DuoAge < 180)
+        {
+            int width = Math.Min(244, _width - 30);
+            int x = (_width - width) / 2;
+            int y = _height <= 224 ? 132 : 164;
+            DrawRect(frame, x, y, width, 29, 0xdd080d12);
+            DrawLine(frame, x, y, x + width - 1, y, 0xffd6b25e);
+            DrawText(frame, x + (width - 126) / 2, y + 10, "ABSALON · ELEFANTEN", 0xffffd66b);
+        }
+    }
+
+    private void DrawCopenhagenDuoShip(uint[] frame, CopenhagenWorldState state, int ship)
+    {
+        (double shipXD, double shipYD) = CopenhagenDuoShipPosition(state, ship);
+        int x = (int)Math.Round(shipXD);
+        int y = (int)Math.Round(shipYD);
+        bool dead = state.DuoHealth[ship] <= 0;
+        int fall = state.DuoShipFallAge[ship];
+        if (dead) y += Math.Min(95, fall / 2);
+        bool hit = state.DuoHitFlash > 0 && state.DuoLastHitShip == ship && state.DuoLastHitTurret < 0;
+        uint hull = dead ? 0xff592531 : hit ? 0xffffffff : ship == 0 ? 0xff263744 : 0xff4b3030;
+        uint trim = ship == 0 ? 0xff9bd4dc : 0xffff8a4a;
+        if (ship == 0)
+        {
+            FillTriangle(frame, x, y - 29, x - 45, y + 22, x + 45, y + 22, hull);
+            DrawLine(frame, x - 39, y + 18, x + 39, y + 18, trim);
+            DrawLine(frame, x - 31, y + 4, x + 31, y + 4, 0xfff2eee4);
+            DrawCircleOutline(frame, x, y - 2, 13, 0xff7fc7ff);
+        }
+        else
+        {
+            FillTriangle(frame, x, y + 31, x - 39, y - 21, x + 39, y - 21, hull);
+            FillTriangle(frame, x, y - 30, x - 15, y + 7, x + 15, y + 7, 0xff765139);
+            DrawLine(frame, x - 34, y - 17, x + 34, y - 17, trim);
+            FillCircle(frame, x, y - 5, 8, 0xffffd66b);
+        }
+        DrawText(frame, x - (ship == 0 ? 21 : 27), y + 27, ship == 0 ? "ABSALON" : "ELEFANTEN", trim);
+        for (int side = 0; side < 2; side++)
+        {
+            int turret = ship * 2 + side;
+            (double turretXD, double turretYD) = CopenhagenDuoTurretPosition(x, y, side);
+            int turretX = (int)Math.Round(turretXD);
+            int turretY = (int)Math.Round(turretYD);
+            bool turretHit = state.DuoHitFlash > 0 && state.DuoLastHitTurret == turret;
+            if (state.DuoTurretHealth[turret] <= 0)
+            {
+                DrawLine(frame, turretX - 6, turretY - 5, turretX + 6, turretY + 5, 0xff8f2635);
+                continue;
+            }
+            FillCircle(frame, turretX, turretY, 6, 0xff101820);
+            DrawCircleOutline(frame, turretX, turretY, 7, turretHit ? 0xffffffff : 0xffffd66b);
+            DrawLine(frame, turretX, turretY, turretX, turretY + 11, trim);
+        }
+        if (dead)
+        {
+            int burst = Math.Min(58, fall / 2);
+            DrawCircleOutline(frame, x, y, 18 + burst, 0xffff8a4a);
+        }
+    }
+
+    private void DrawCopenhagenDuoHud(uint[] frame, CopenhagenWorldState state)
+    {
+        if (!state.DuoActive || state.DuoAge < 35 || state.DuoDeathAge > 0) return;
+        int width = Math.Min(220, _width - 74);
+        int x = (_width - width) / 2;
+        int maximum = state.DuoTestFixture ? 72 : CopenhagenDuoMaxHealth;
+        DrawRect(frame, x, 20, width, 25, 0xdd080d12);
+        DrawRect(frame, x + 2, 22, (width - 4) * state.DuoHealth[0] / maximum, 4, 0xff7fc7ff);
+        DrawText(frame, x + 4, 28, "ABSALON", state.DuoHealth[0] > 0 ? 0xffbdf8ff : 0xff8f2635);
+        DrawRect(frame, x + 2, 35, (width - 4) * state.DuoHealth[1] / maximum, 4, 0xffff8a4a);
+        DrawText(frame, x + width - 58, 41, "ELEFANTEN", state.DuoHealth[1] > 0 ? 0xffffd66b : 0xff8f2635);
     }
 
     private void DrawCopenhagenCheckpointBanner(uint[] frame, CopenhagenWorldState state)
@@ -16224,7 +16678,7 @@ internal sealed class StormaktGame
         }
         else if (_levelId == 6)
         {
-            DrawCopenhagenDannebrogSeal(frame, panelX + 196, 67);
+            DrawCopenhagenDuoSeal(frame, panelX + 196, 67);
         }
         else
         {
@@ -16270,8 +16724,8 @@ internal sealed class StormaktGame
             }
             else if (_levelId == 6)
             {
-                DrawText(frame, panelX + 31, 99, "DANNEBROGSVINGAR BRUTNA", 0xffffd66b);
-                DrawText(frame, panelX + 22, 116, "ABSALON OCH ELEFANTEN", 0xff9bd4dc);
+                DrawText(frame, panelX + 31, 99, "SKÄRMFREGATTER BRUTNA", 0xffffd66b);
+                DrawText(frame, panelX + 31, 116, "SUPERFREGATTEN VÄNTAR", 0xff9bd4dc);
             }
             else
             {
@@ -16303,6 +16757,16 @@ internal sealed class StormaktGame
         FillCircle(frame, x, y, 7, 0xff101820);
         DrawCircleOutline(frame, x, y, 9, 0xffffd66b);
         DrawLine(frame, x + 15, y - 17, x + 28, y - 25, 0xff7fc7ff);
+    }
+
+    private void DrawCopenhagenDuoSeal(uint[] frame, int x, int y)
+    {
+        int split = Math.Min(16, _stageClearAge / 8);
+        FillTriangle(frame, x - split, y - 20, x - 34 - split, y + 17, x + 1 - split, y + 17, 0xff263744);
+        FillTriangle(frame, x + split, y + 21, x - 1 + split, y - 17, x + 34 + split, y - 17, 0xff4b3030);
+        DrawLine(frame, x - 29 - split, y + 12, x - 3 - split, y + 12, 0xff7fc7ff);
+        DrawLine(frame, x + 3 + split, y - 12, x + 29 + split, y - 12, 0xffff8a4a);
+        FillCircle(frame, x, y, 7 + (_stageClearAge / 6 & 1), 0xffffd66b);
     }
 
     private void DrawSnapphaneOathSeal(uint[] frame, int x, int y)
@@ -17646,6 +18110,26 @@ internal sealed class StormaktGame
         public bool DannebrogHitPlayer { get; set; }
         public bool DannebrogGapRadioPlayed { get; set; }
         public int[] DannebrogNodeHealth { get; } = new int[4];
+        public bool DuoActive { get; set; }
+        public bool DuoTestFixture { get; set; }
+        public int DuoAge { get; set; }
+        public int DuoCycleAge { get; set; }
+        public int DuoDeathAge { get; set; }
+        public int DuoHitFlash { get; set; }
+        public int DuoLastHitShip { get; set; } = -1;
+        public int DuoLastHitTurret { get; set; } = -1;
+        public int DuoElefantenChargeAge { get; set; }
+        public double DuoElefantenChargeX { get; set; }
+        public bool DuoElefantenHitPlayer { get; set; }
+        public bool DuoWallRadioPlayed { get; set; }
+        public bool DuoChargeRadioPlayed { get; set; }
+        public bool DuoSupportApplied { get; set; }
+        public int DuoRepairFlash { get; set; }
+        public int DuoRepairTurret { get; set; } = -1;
+        public int[] DuoHealth { get; } = new int[2];
+        public int[] DuoTurretHealth { get; } = new int[4];
+        public int[] DuoShipFallAge { get; } = new int[2];
+        public CopenhagenShieldWall? DuoShieldWall { get; set; }
     }
 
     private sealed class CopenhagenSeizureChain(int target, int health)
@@ -17666,6 +18150,15 @@ internal sealed class StormaktGame
         public int Serial { get; } = serial;
         public int Age { get; set; }
         public bool HitPlayer { get; set; }
+    }
+
+    private sealed class CopenhagenShieldWall(int gapIndex, int nodeHealth)
+    {
+        public int GapIndex { get; } = gapIndex;
+        public int Age { get; set; }
+        public bool SorenBreakApplied { get; set; }
+        public int[] Health { get; } = Enumerable.Range(0, 7)
+            .Select(index => index == gapIndex ? 0 : nodeHealth).ToArray();
     }
 
     private sealed class SnapphaneWorldState
