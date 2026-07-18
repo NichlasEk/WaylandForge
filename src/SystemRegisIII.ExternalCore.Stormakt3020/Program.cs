@@ -175,6 +175,8 @@ internal sealed class StormaktGame
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_SNAPPHANE_RESCUE_TEST"), "1", StringComparison.Ordinal);
     private readonly bool _redHoundsTestMode = string.Equals(
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_RED_HOUNDS_TEST"), "1", StringComparison.Ordinal);
+    private readonly bool _redHoundsFinalTestMode = string.Equals(
+        Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_RED_HOUNDS_FINAL_TEST"), "1", StringComparison.Ordinal);
     private readonly SpritePack? _sprites;
     private readonly StormaktMusicLoop? _audio;
     private Random _random = new(3020);
@@ -810,6 +812,28 @@ internal sealed class StormaktGame
                     Y = _height - 86,
                 };
             }
+            if (_redHoundsFinalTestMode)
+            {
+                resetSnapphane.RouteStarted = true;
+                resetSnapphane.Route = SnapphaneRoute.Kaparleden;
+                resetSnapphane.RouteComplete = true;
+                resetSnapphane.SnapphaneAllies = 2;
+                resetSnapphane.SorenOathComplete = true;
+                resetSnapphane.Duel = new SorenDuelState
+                {
+                    Phase = 3,
+                    OathAge = 900,
+                    X = _width / 2.0 + 70,
+                    Y = _height - 86,
+                };
+                RedHoundsBossState finalBoss = CreateRedHoundsBossState();
+                finalBoss.Phase = 3;
+                finalBoss.PhaseAge = 400;
+                finalBoss.Health = 420;
+                finalBoss.MaskOpen = true;
+                for (int index = 0; index < finalBoss.VentHealth.Length; index++) finalBoss.VentHealth[index] = 0;
+                resetSnapphane.RedHounds = finalBoss;
+            }
             if (_snapphaneRescueTestMode)
             {
                 resetSnapphane.RouteStarted = true;
@@ -902,7 +926,8 @@ internal sealed class StormaktGame
 
     private void StartLevel(int levelId, bool fresh = false)
     {
-        _suppressCampaignWrites = fresh || _loadoutTestKit is not null || _redHoundsTestMode || _snapphaneRescueTestMode;
+        _suppressCampaignWrites = fresh || _loadoutTestKit is not null || _redHoundsTestMode ||
+            _redHoundsFinalTestMode || _snapphaneRescueTestMode;
         _levelId = levelId;
         Reset();
         if (levelId is 4 or 5)
@@ -930,6 +955,7 @@ internal sealed class StormaktGame
             ClearBossRadio();
             _audio?.SwitchMusic(StormaktMusicTrack.Dungeon);
         }
+        if (levelId == 5 && _redHoundsFinalTestMode) _audio?.SwitchMusic(StormaktMusicTrack.RedHoundsBoss);
         _inLevelSelect = false;
         _inLevelPreview = false;
         _inSilverkroppenSelect = false;
@@ -5241,6 +5267,18 @@ internal sealed class StormaktGame
         state.Rescues.Clear();
         foreach (SnapphaneWreck wreck in state.Wrecks.Where(wreck => wreck.Physical))
             ResetSnapphaneWreck(state, wreck);
+        RedHoundsBossState boss = CreateRedHoundsBossState();
+        state.RedHounds = boss;
+        ActivateBossRadio(RedHoundsAgneteRadio);
+        ActivateBossRadio(RedHoundsBodilRadio);
+        ActivateBossRadio(RedHoundsDagmarRadio);
+        ActivateBossRadio(RedHoundsTripletsRadio);
+        _audio?.SwitchMusic(StormaktMusicTrack.RedHoundsBoss);
+        _audio?.Trigger(StormaktSound.Deploy);
+    }
+
+    private RedHoundsBossState CreateRedHoundsBossState()
+    {
         var boss = new RedHoundsBossState
         {
             Health = RedHoundsBossState.MaxHealth,
@@ -5249,13 +5287,7 @@ internal sealed class StormaktGame
         boss.Ships.Add(new RedHoundShip(RedHoundKind.Sporet, _width * 0.22, -82, _width * 0.22, 62));
         boss.Ships.Add(new RedHoundShip(RedHoundKind.Biddet, _width * 0.78, -104, _width * 0.78, 76));
         boss.Ships.Add(new RedHoundShip(RedHoundKind.Koblet, _width * 0.50, -132, _width * 0.50, 50));
-        state.RedHounds = boss;
-        ActivateBossRadio(RedHoundsAgneteRadio);
-        ActivateBossRadio(RedHoundsBodilRadio);
-        ActivateBossRadio(RedHoundsDagmarRadio);
-        ActivateBossRadio(RedHoundsTripletsRadio);
-        _audio?.SwitchMusic(StormaktMusicTrack.RedHoundsBoss);
-        _audio?.Trigger(StormaktSound.Deploy);
+        return boss;
     }
 
     private void StepRedHoundsBoss(SnapphaneWorldState state)
@@ -5295,14 +5327,14 @@ internal sealed class StormaktGame
         if (boss.Phase == 1)
         {
             StepRedHoundSearchLock(boss);
-            FireRedHoundFleet(boss, 96);
+            FireRedHoundFleet(boss, 82);
             StepRedHoundSupport(state, boss);
             if (boss.PhaseAge >= 760 && (boss.Health <= 700 || boss.PhaseAge >= 1_050))
                 BeginRedHoundsChains(boss);
         }
         else if (boss.Phase == 2)
         {
-            FireRedHoundFleet(boss, 118);
+            FireRedHoundFleet(boss, 98);
             StepRedHoundSupport(state, boss);
             if (boss.PhaseAge >= 400 && boss.Chains.Count == 2 && boss.Chains.All(chain => chain.Broken))
                 BeginRedHoundsMask(boss);
@@ -5310,9 +5342,72 @@ internal sealed class StormaktGame
         else
         {
             boss.MaskOpen = boss.PhaseAge >= 400;
-            FireRedHoundFleet(boss, 86);
+            bool desperation = boss.MaskOpen && boss.VentHealth.All(health => health <= 0);
+            FireRedHoundFleet(boss, desperation ? 58 : 68);
             StepRedHoundMegaWeapon(boss);
+            StepRedHoundFrenzy(boss);
             StepRedHoundSupport(state, boss);
+        }
+    }
+
+    private void StepRedHoundFrenzy(RedHoundsBossState boss)
+    {
+        if (!boss.MaskOpen) return;
+        bool desperation = boss.VentHealth.All(health => health <= 0);
+        if (!desperation)
+        {
+            if (boss.PhaseAge % 88 != 38) return;
+            for (int index = 0; index < 2; index++)
+            {
+                RedHoundShip ship = boss.Ships[index];
+                if (ship.CannonHealth <= 0) continue;
+                FireRedHoundAimedFan(boss, ship, index, 3, 0.17, 2.48, 1);
+            }
+            _audio?.Trigger(StormaktSound.Broadside);
+            return;
+        }
+
+        boss.DesperationAge++;
+        RedHoundShip leader = boss.Ships[2];
+        if (boss.DesperationAge % 44 == 8)
+        {
+            FireRedHoundAimedFan(boss, leader, 2, 5, 0.14, 2.78, 1);
+            _audio?.Trigger(StormaktSound.Broadside);
+        }
+        if (boss.DesperationAge % 86 == 30)
+        {
+            int gap = boss.DesperationAge / 86 % 7;
+            double originY = leader.Y + 24;
+            for (int lane = 0; lane < 7; lane++)
+            {
+                if (lane == gap) continue;
+                double targetX = 24 + lane * (_width - 48) / 6.0;
+                double dx = targetX - leader.X;
+                double dy = _height + 18 - originY;
+                double length = Math.Max(1, Math.Sqrt(dx * dx + dy * dy));
+                boss.Shots.Add(new RedHoundShot(leader.X, originY,
+                    dx / length * 2.62, dy / length * 2.62, 2, 2));
+            }
+            _audio?.Trigger(StormaktSound.Broadside);
+        }
+        if (boss.DesperationAge % 72 == 52)
+        {
+            int shipIndex = boss.DesperationAge / 72 & 1;
+            RedHoundShip ship = boss.Ships[shipIndex];
+            if (ship.CannonHealth > 0)
+                FireRedHoundAimedFan(boss, ship, shipIndex, 3, 0.11, 2.88, 1);
+        }
+    }
+
+    private void FireRedHoundAimedFan(RedHoundsBossState boss, RedHoundShip ship, int source,
+        int count, double spread, double speed, int style)
+    {
+        double baseAngle = Math.Atan2(_shipY - ship.Y, _shipX - ship.X);
+        for (int index = 0; index < count; index++)
+        {
+            double angle = baseAngle + (index - (count - 1) / 2.0) * spread;
+            boss.Shots.Add(new RedHoundShot(ship.X, ship.Y + 17,
+                Math.Cos(angle) * speed, Math.Sin(angle) * speed, source, style));
         }
     }
 
@@ -5378,6 +5473,12 @@ internal sealed class StormaktGame
             {
                 ship.TargetX = index switch { 0 => 48, 1 => _width - 48, _ => _width * 0.50 };
                 ship.TargetY = index == 2 ? 54 : 88;
+                if (boss.DesperationAge > 0)
+                {
+                    double sweep = index == 2 ? _width * 0.14 : 24;
+                    ship.TargetX += Math.Sin((boss.DesperationAge + index * 47) * 0.045) * sweep;
+                    ship.TargetY += Math.Cos((boss.DesperationAge + index * 31) * 0.037) * (index == 2 ? 13 : 8);
+                }
             }
             ship.X += (ship.TargetX - ship.X) * 0.035;
             ship.Y += (ship.TargetY - ship.Y) * 0.035;
@@ -12967,6 +13068,20 @@ internal sealed class StormaktGame
                 return;
             }
         }
+        else if (_sprites is not null)
+        {
+            int propIndex = Math.Abs(wreck.Kind * 3 + wreck.Phase / 19) % SnapphaneWreckSeaPropNames.Length;
+            if (_sprites.TryGet(SnapphaneWreckSeaPropNames[propIndex], out Sprite debris))
+            {
+                int longestEdge = wreck.Layer == 0 ? 24 : 42;
+                double ratio = longestEdge / (double)Math.Max(debris.Width, debris.Height);
+                int width = Math.Max(8, (int)Math.Round(debris.Width * ratio));
+                int height = Math.Max(8, (int)Math.Round(debris.Height * ratio));
+                uint opacity = wreck.Layer == 0 ? 82u : 148u;
+                DrawSpriteScaledAlpha(frame, debris, x - width / 2, y - height / 2, width, height, opacity);
+                return;
+            }
+        }
         uint shadow = wreck.Layer switch { 0 => 0xff0c1718, 1 => 0xff142322, _ => 0xff1e2926 };
         uint edge = wreck.Layer switch { 0 => 0xff243131, 1 => 0xff465047, _ => 0xff725a3b };
         uint scar = wreck.Layer == 2 ? 0xff315b42 : 0xff263b35;
@@ -13215,8 +13330,11 @@ internal sealed class StormaktGame
         {
             int x = (int)Math.Round(shot.X);
             int y = (int)Math.Round(shot.Y);
-            FillCircle(frame, x, y, 4, 0xff8f2635);
-            DrawCircleOutline(frame, x, y, 4, 0xffff8a4a);
+            int radius = shot.Style == 2 ? 5 : shot.Style == 1 ? 3 : 4;
+            uint core = shot.Style == 2 ? 0xffffd66b : 0xff8f2635;
+            uint edge = shot.Style == 1 ? 0xffffffff : 0xffff8a4a;
+            FillCircle(frame, x, y, radius, core);
+            DrawCircleOutline(frame, x, y, radius, edge);
             PutPixel(frame, x, y, 0xffffffff);
         }
 
@@ -13389,7 +13507,13 @@ internal sealed class StormaktGame
         int width = Math.Min(270, _width - 22);
         int x = (_width - width) / 2;
         int y = _bossRadioCard is null ? 18 : 68;
-        string phase = boss.Phase switch { 1 => "DREVET", 2 => "KOPPLET", _ => "SISTA JAKTEN" };
+        string phase = boss.Phase switch
+        {
+            1 => "DREVET",
+            2 => "KOPPLET",
+            _ when boss.DesperationAge > 0 => "SISTA BETTET",
+            _ => "SISTA JAKTEN",
+        };
         DrawRect(frame, x, y, width, 17, 0xee100b0b);
         DrawText(frame, x + 7, y + 3, $"DE RØDE HUNDE  {phase}", 0xfff4f1e8);
         DrawRect(frame, x + width - 106, y + 6, 98, 5, 0xff302326);
@@ -15637,6 +15761,7 @@ internal sealed class StormaktGame
         public double MegaTargetX { get; set; }
         public bool MegaHit { get; set; }
         public bool MegaRadioPlayed { get; set; }
+        public int DesperationAge { get; set; }
         public int[] VentHealth { get; } = [54, 54, 54];
         public List<RedHoundShip> Ships { get; } = [];
         public List<RedHoundChain> Chains { get; } = [];
@@ -15663,13 +15788,14 @@ internal sealed class StormaktGame
         public int BreakAge { get; set; }
     }
 
-    private sealed class RedHoundShot(double x, double y, double vx, double vy, int source)
+    private sealed class RedHoundShot(double x, double y, double vx, double vy, int source, int style = 0)
     {
         public double X { get; set; } = x;
         public double Y { get; set; } = y;
         public double Vx { get; } = vx;
         public double Vy { get; } = vy;
         public int Source { get; } = source;
+        public int Style { get; } = style;
         public int Age { get; set; }
     }
 
