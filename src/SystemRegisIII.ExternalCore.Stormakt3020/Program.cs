@@ -260,6 +260,10 @@ internal sealed class StormaktGame
     private const int CopenhagenGateNodeMaxHealth = 180;
     private const int CopenhagenAdmiraltyMaxHealth = 540;
     private const int CopenhagenHourMarkMaxHealth = 30;
+    private const int CopenhagenFrederikMaxHealth = 900;
+    private const int CopenhagenFrederikPhaseTwoHealth = 600;
+    private const int CopenhagenFrederikBladeHealth = 150;
+    private const int CopenhagenFrederikRepairNodeHealth = 42;
     private const int RtsSalvagedSilverGoal = 1_200;
     private const int DungeonFirstSigilMask = 1 << 8;
     private const int DungeonFogdeRescuedMask = 1 << 9;
@@ -325,6 +329,8 @@ internal sealed class StormaktGame
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_GATE_TEST"), "1", StringComparison.Ordinal);
     private readonly bool _copenhagenAdmiraltyTestMode = string.Equals(
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_ADMIRALTY_TEST"), "1", StringComparison.Ordinal);
+    private readonly bool _copenhagenFrederikTestMode = string.Equals(
+        Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_FREDERIK_TEST"), "1", StringComparison.Ordinal);
     private readonly SpritePack? _sprites;
     private readonly StormaktMusicLoop? _audio;
     private Random _random = new(3020);
@@ -542,6 +548,14 @@ internal sealed class StormaktGame
         new(0, 270, false, "EBBA GRIP", "URTAVLAN EXEKVERAR", "SÖK EN BRUTEN TIMME", null, "portrait_ebba");
     private static readonly RadioCard CopenhagenAdmiraltyFallRadio =
         new(0, 300, false, "EBBA GRIP", "AMIRALITETET BRUSTET", "FREDERIK NULL VÄNTAR", null, "portrait_ebba");
+    private static readonly RadioCard CopenhagenFrederikRadio =
+        new(0, 360, true, "FREDERIK NULL", "ALLE SKIBE BESLAGT", "JEG NULSTILLER JER", null, "rigsregnskabet");
+    private static readonly RadioCard CopenhagenFrederikBladesRadio =
+        new(0, 300, false, "EBBA GRIP", "TRONEN SLÄPPER", "REGISTERBLAD IN", null, "portrait_ebba");
+    private static readonly RadioCard CopenhagenFrederikRepairRadio =
+        new(0, 300, true, "FREDERIK NULL", "REGNSKABET LUKKER", "RUSTNING ÅTERFÖRS", null, "rigsregnskabet");
+    private static readonly RadioCard CopenhagenFrederikFallRadio =
+        new(0, 300, true, "FREDERIK NULL", "NUL KAN EJ VARA", "EN SKULD", null, "rigsregnskabet");
     private int _shipX;
     private int _shipY;
     private int _cooldown;
@@ -993,6 +1007,20 @@ internal sealed class StormaktGame
                 for (int node = 0; node < resetCopenhagen.GateHealth.Length; node++)
                     resetCopenhagen.GateHealth[node] = 0;
                 BeginCopenhagenAdmiralty(resetCopenhagen, testFixture: true);
+            }
+            if (_copenhagenFrederikTestMode)
+            {
+                resetCopenhagen.Age = 1_800;
+                resetCopenhagen.GateActive = true;
+                resetCopenhagen.GateIntroAge = 500;
+                resetCopenhagen.GateFallAge = 240;
+                resetCopenhagen.AdmiraltyActive = true;
+                resetCopenhagen.AdmiraltyAge = 1_200;
+                resetCopenhagen.AdmiraltyHealth = 0;
+                resetCopenhagen.AdmiraltyDeathAge = 300;
+                for (int node = 0; node < resetCopenhagen.GateHealth.Length; node++)
+                    resetCopenhagen.GateHealth[node] = 0;
+                BeginCopenhagenFrederik(resetCopenhagen, testFixture: true);
             }
         }
         if (_snapphaneWorld is SnapphaneWorldState resetSnapphane)
@@ -5254,6 +5282,13 @@ internal sealed class StormaktGame
             return;
         }
 
+        if (state.FrederikActive)
+        {
+            StepCopenhagenFrederik(state);
+            StepEnemyShots();
+            return;
+        }
+
         if (state.AdmiraltyActive)
         {
             StepCopenhagenAdmiralty(state);
@@ -5316,6 +5351,7 @@ internal sealed class StormaktGame
 
         if (state.AdmiraltyDeathAge > 0)
         {
+            _shots.Clear();
             int deathAge = state.AdmiraltyDeathAge++;
             if (deathAge is 24 or 58 or 96 or 144)
                 _audio?.Trigger(StormaktSound.EnemyExplosion);
@@ -5328,9 +5364,7 @@ internal sealed class StormaktGame
                 _audio?.Trigger(StormaktSound.Broadside);
             }
             if (deathAge < 240 || _bossRadioCard is not null) return;
-            _stageClear = true;
-            _stageClearAge = 0;
-            _audio?.SwitchMusic(StormaktMusicTrack.Combat);
+            BeginCopenhagenFrederik(state);
             return;
         }
 
@@ -5432,6 +5466,299 @@ internal sealed class StormaktGame
     {
         double angle = -Math.PI / 2.0 + hour * Math.PI * 2.0 / 12.0;
         return (centerX + Math.Cos(angle) * 102.0, centerY + Math.Sin(angle) * 50.0);
+    }
+
+    private void BeginCopenhagenFrederik(CopenhagenWorldState state, bool testFixture = false)
+    {
+        state.FrederikActive = true;
+        state.FrederikTestFixture = testFixture;
+        state.FrederikAge = 0;
+        state.FrederikPhase = 1;
+        state.FrederikPhaseAge = 0;
+        state.FrederikHealth = testFixture ? 180 : CopenhagenFrederikMaxHealth;
+        state.FrederikDeathAge = 0;
+        state.FrederikHitFlash = 0;
+        state.FrederikSeizedMask = 0;
+        state.FrederikChains.Clear();
+        _enemyShots.Clear();
+        _shots.Clear();
+        if (testFixture) return;
+        ActivateBossRadio(CopenhagenFrederikRadio);
+        _audio?.Trigger(StormaktSound.OresundFortressLock);
+    }
+
+    private void StepCopenhagenFrederik(CopenhagenWorldState state)
+    {
+        state.FrederikAge++;
+        state.FrederikPhaseAge++;
+        state.FrederikHitFlash = Math.Max(0, state.FrederikHitFlash - 1);
+        state.FrederikRepairFlash = Math.Max(0, state.FrederikRepairFlash - 1);
+
+        if (state.FrederikDeathAge > 0)
+        {
+            _shots.Clear();
+            int deathAge = state.FrederikDeathAge++;
+            if (deathAge == 1)
+            {
+                _enemyShots.Clear();
+                _shots.Clear();
+                state.FrederikChains.Clear();
+                _score += 6_000;
+                ActivateBossRadio(CopenhagenFrederikFallRadio);
+                _audio?.Trigger(StormaktSound.Broadside);
+            }
+            if (deathAge is 28 or 61 or 103 or 158 or 220)
+                _audio?.Trigger(StormaktSound.EnemyExplosion);
+            if (deathAge < 280 || _bossRadioCard is not null) return;
+            _stageClear = true;
+            _stageClearAge = 0;
+            _audio?.SwitchMusic(StormaktMusicTrack.Combat);
+            return;
+        }
+
+        StepCopenhagenFrederikShots(state);
+        if (state.FrederikPhase == 1) StepCopenhagenFrederikSeizure(state);
+        else if (state.FrederikPhase == 2) StepCopenhagenFrederikBlades(state);
+        else StepCopenhagenFrederikRepair(state);
+
+        int phaseTwoHealth = state.FrederikTestFixture ? 120 : CopenhagenFrederikPhaseTwoHealth;
+        if (state.FrederikPhase == 1 && state.FrederikHealth <= phaseTwoHealth)
+        {
+            state.FrederikHealth = phaseTwoHealth;
+            state.FrederikPhase = 2;
+            state.FrederikPhaseAge = 0;
+            state.FrederikLeftBladeHealth = state.FrederikTestFixture ? 18 : CopenhagenFrederikBladeHealth;
+            state.FrederikRightBladeHealth = state.FrederikTestFixture ? 18 : CopenhagenFrederikBladeHealth;
+            state.FrederikChains.Clear();
+            _enemyShots.Clear();
+            ActivateBossRadio(CopenhagenFrederikBladesRadio);
+            _audio?.Trigger(StormaktSound.TitheBossPhaseBreak);
+        }
+        if (state.FrederikPhase == 2 && state.FrederikLeftBladeHealth <= 0 && state.FrederikRightBladeHealth <= 0)
+        {
+            state.FrederikPhase = 3;
+            state.FrederikPhaseAge = 0;
+            ResetCopenhagenFrederikRepairCycle(state);
+            _enemyShots.Clear();
+            ActivateBossRadio(CopenhagenFrederikRepairRadio);
+            _audio?.Trigger(StormaktSound.TitheLedgerShatter);
+        }
+        if (state.FrederikPhase == 3 && state.FrederikHealth <= 0)
+        {
+            state.FrederikHealth = 0;
+            state.FrederikDeathAge = 1;
+        }
+    }
+
+    private void StepCopenhagenFrederikShots(CopenhagenWorldState state)
+    {
+        (double centerX, double centerY) = CopenhagenFrederikCenter(state);
+        for (int shotIndex = _shots.Count - 1; shotIndex >= 0; shotIndex--)
+        {
+            Shot shot = _shots[shotIndex];
+            CopenhagenSeizureChain? chain = state.FrederikChains.FirstOrDefault(candidate =>
+                candidate.Health > 0 && !candidate.Completed &&
+                DistanceSquared(shot.X, shot.Y, CopenhagenFrederikChainTipX(state, candidate, centerX),
+                    CopenhagenFrederikChainTipY(state, candidate, centerY)) < 12 * 12);
+            if (chain is not null)
+            {
+                chain.Health -= shot.Power;
+                _shots.RemoveAt(shotIndex);
+                if (chain.Health <= 0)
+                {
+                    _score += 240;
+                    _audio?.Trigger(StormaktSound.TitheChainLockBreak);
+                }
+                continue;
+            }
+
+            if (state.FrederikPhase == 2)
+            {
+                (double leftX, double leftY) = CopenhagenFrederikBladePosition(state, false, centerX, centerY);
+                (double rightX, double rightY) = CopenhagenFrederikBladePosition(state, true, centerX, centerY);
+                bool leftHit = state.FrederikLeftBladeHealth > 0 && DistanceSquared(shot.X, shot.Y, leftX, leftY) < 19 * 19;
+                bool rightHit = state.FrederikRightBladeHealth > 0 && DistanceSquared(shot.X, shot.Y, rightX, rightY) < 19 * 19;
+                if (leftHit || rightHit)
+                {
+                    if (leftHit) state.FrederikLeftBladeHealth = Math.Max(0, state.FrederikLeftBladeHealth - shot.Power);
+                    else state.FrederikRightBladeHealth = Math.Max(0, state.FrederikRightBladeHealth - shot.Power);
+                    _shots.RemoveAt(shotIndex);
+                    state.FrederikHitFlash = 5;
+                    continue;
+                }
+                continue;
+            }
+
+            if (state.FrederikPhase == 3)
+            {
+                int hitNode = CopenhagenFrederikHitRepairNode(state, shot.X, shot.Y, centerX, centerY);
+                if (hitNode >= 0)
+                {
+                    _shots.RemoveAt(shotIndex);
+                    if (hitNode == state.FrederikActiveRepairNode)
+                    {
+                        state.FrederikRepairHealth[hitNode] = Math.Max(0,
+                            state.FrederikRepairHealth[hitNode] - shot.Power);
+                        if (state.FrederikRepairHealth[hitNode] == 0)
+                        {
+                            _score += 300;
+                            _audio?.Trigger(StormaktSound.TitheRegisterSwitch);
+                        }
+                    }
+                    else
+                    {
+                        FireAimedCopenhagenShot(centerX + (hitNode - 1) * 54, centerY + 40, 2.35, 3);
+                    }
+                    continue;
+                }
+            }
+
+            if (DistanceSquared(shot.X, shot.Y, centerX, centerY) >= 43 * 43) continue;
+            state.FrederikHealth = Math.Max(0, state.FrederikHealth - shot.Power);
+            state.FrederikHitFlash = 5;
+            _shots.RemoveAt(shotIndex);
+        }
+    }
+
+    private void StepCopenhagenFrederikSeizure(CopenhagenWorldState state)
+    {
+        (double centerX, double centerY) = CopenhagenFrederikCenter(state);
+        int supportCount = Math.Clamp(Math.Max(1, state.IncomingFreedShips), 1, 3);
+        if (state.FrederikPhaseAge > 90 && state.FrederikPhaseAge % 180 == 30)
+        {
+            int target = state.FrederikChainSerial++ % supportCount;
+            bool alreadySeized = (state.FrederikSeizedMask & (1 << target)) != 0;
+            bool alreadyChained = state.FrederikChains.Any(chain => chain.Target == target && chain.Health > 0 && !chain.Completed);
+            if (!alreadySeized && !alreadyChained)
+                state.FrederikChains.Add(new CopenhagenSeizureChain(target,
+                    state.FrederikTestFixture ? 9 : 36));
+        }
+        foreach (CopenhagenSeizureChain chain in state.FrederikChains)
+        {
+            if (chain.Health <= 0 || chain.Completed) continue;
+            chain.Age++;
+            if (chain.Age < 120) continue;
+            chain.Completed = true;
+            state.FrederikSeizedMask |= 1 << chain.Target;
+            _audio?.Trigger(StormaktSound.TitheCustomsGate);
+        }
+        state.FrederikChains.RemoveAll(chain => chain.Health <= 0 && chain.Age++ > 45);
+
+        if (state.FrederikPhaseAge > 90 && state.FrederikPhaseAge % 72 == 0)
+            FireAimedCopenhagenShot(centerX, centerY + 28, 2.15, 2);
+        for (int support = 0; support < supportCount; support++)
+        {
+            if ((state.FrederikSeizedMask & (1 << support)) == 0 ||
+                (state.FrederikPhaseAge + support * 21) % 96 != 0) continue;
+            (double supportX, double supportY) = CopenhagenFrederikSupportPosition(support, supportCount);
+            FireAimedCopenhagenShot(supportX, supportY, 2.0, 4);
+        }
+    }
+
+    private void StepCopenhagenFrederikBlades(CopenhagenWorldState state)
+    {
+        (double centerX, double centerY) = CopenhagenFrederikCenter(state);
+        (double leftX, double leftY) = CopenhagenFrederikBladePosition(state, false, centerX, centerY);
+        (double rightX, double rightY) = CopenhagenFrederikBladePosition(state, true, centerX, centerY);
+        if (state.FrederikLeftBladeHealth > 0 && DistanceSquared(_shipX, _shipY, leftX, leftY) < 23 * 23) DamageShip();
+        if (state.FrederikRightBladeHealth > 0 && DistanceSquared(_shipX, _shipY, rightX, rightY) < 23 * 23) DamageShip();
+        if (state.FrederikPhaseAge % 105 == 0)
+        {
+            if (state.FrederikLeftBladeHealth > 0) FireAimedCopenhagenShot(leftX, leftY, 2.2, 3);
+            if (state.FrederikRightBladeHealth > 0) FireAimedCopenhagenShot(rightX, rightY, 2.2, 3);
+        }
+    }
+
+    private void StepCopenhagenFrederikRepair(CopenhagenWorldState state)
+    {
+        int cycle = state.FrederikPhaseAge % 240;
+        if (cycle == 0) ResetCopenhagenFrederikRepairCycle(state);
+        if (cycle == 180 && state.FrederikRepairHealth[state.FrederikActiveRepairNode] > 0)
+        {
+            int heal = state.FrederikTestFixture ? 24 : 105;
+            int ceiling = state.FrederikTestFixture ? 120 : CopenhagenFrederikPhaseTwoHealth;
+            state.FrederikHealth = Math.Min(ceiling, state.FrederikHealth + heal);
+            state.FrederikRepairFlash = 45;
+            _audio?.Trigger(StormaktSound.TitheUpgradeInstall);
+        }
+        if (cycle is 72 or 84 or 96)
+        {
+            (double centerX, double centerY) = CopenhagenFrederikCenter(state);
+            int node = state.FrederikActiveRepairNode;
+            FireAimedCopenhagenShot(centerX + (node - 1) * 54, centerY + 40, 2.0, 2);
+        }
+    }
+
+    private void ResetCopenhagenFrederikRepairCycle(CopenhagenWorldState state)
+    {
+        state.FrederikRepairCycle++;
+        state.FrederikActiveRepairNode = state.FrederikRepairCycle * 2 % 3;
+        int health = state.FrederikTestFixture ? 9 : CopenhagenFrederikRepairNodeHealth;
+        for (int node = 0; node < state.FrederikRepairHealth.Length; node++)
+            state.FrederikRepairHealth[node] = health;
+    }
+
+    private int CopenhagenFrederikHitRepairNode(
+        CopenhagenWorldState state, double shotX, double shotY, double centerX, double centerY)
+    {
+        for (int node = 0; node < state.FrederikRepairHealth.Length; node++)
+        {
+            if (node == state.FrederikActiveRepairNode && state.FrederikRepairHealth[node] <= 0) continue;
+            double x = centerX + (node - 1) * 54;
+            double y = centerY + 40;
+            if (DistanceSquared(shotX, shotY, x, y) < 13 * 13) return node;
+        }
+        return -1;
+    }
+
+    private (double X, double Y) CopenhagenFrederikCenter(CopenhagenWorldState state)
+    {
+        double entry = Math.Min(1.0, state.FrederikAge / 105.0);
+        double eased = entry * entry * (3.0 - 2.0 * entry);
+        double sway = state.FrederikAge < 105 ? 0 : Math.Sin(state.FrederikAge * 0.011) * 31;
+        return (_width / 2.0 + sway, -72 + 150 * eased);
+    }
+
+    private static (double X, double Y) CopenhagenFrederikBladePosition(
+        CopenhagenWorldState state, bool right, double centerX, double centerY)
+    {
+        int offset = right ? 90 : 0;
+        int cycle = (state.FrederikPhaseAge + offset) % 180;
+        double thrust = cycle < 60 ? cycle / 60.0 : cycle < 105 ? 1.0 - (cycle - 60) / 45.0 : 0;
+        double side = right ? 1 : -1;
+        return (centerX + side * (62 - thrust * 24), centerY + 22 + thrust * 118);
+    }
+
+    private (double X, double Y) CopenhagenFrederikSupportPosition(int support, int count)
+    {
+        double spacing = Math.Min(74, (_width - 100.0) / Math.Max(1, count));
+        return (_width / 2.0 + (support - (count - 1) / 2.0) * spacing, 42 + support % 2 * 23);
+    }
+
+    private double CopenhagenFrederikChainTipX(
+        CopenhagenWorldState state, CopenhagenSeizureChain chain, double centerX)
+    {
+        int count = Math.Clamp(Math.Max(1, state.IncomingFreedShips), 1, 3);
+        (double targetX, _) = CopenhagenFrederikSupportPosition(chain.Target, count);
+        double progress = Math.Min(1.0, chain.Age / 120.0);
+        return centerX + (targetX - centerX) * progress;
+    }
+
+    private double CopenhagenFrederikChainTipY(
+        CopenhagenWorldState state, CopenhagenSeizureChain chain, double centerY)
+    {
+        int count = Math.Clamp(Math.Max(1, state.IncomingFreedShips), 1, 3);
+        (_, double targetY) = CopenhagenFrederikSupportPosition(chain.Target, count);
+        double progress = Math.Min(1.0, chain.Age / 120.0);
+        return centerY + (targetY - centerY) * progress;
+    }
+
+    private void FireAimedCopenhagenShot(double x, double y, double speed, int kind)
+    {
+        double dx = _shipX - x;
+        double dy = _shipY - y;
+        double length = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
+        _enemyShots.Add(new EnemyShot(x, y, dx / length * speed, dy / length * speed, kind));
     }
 
     private void StepCopenhagenGateShots(CopenhagenWorldState state)
@@ -13517,7 +13844,8 @@ internal sealed class StormaktGame
         if (state is not null)
         {
             DrawCopenhagenBarrier(frame, state);
-            if (state.AdmiraltyActive) DrawCopenhagenAdmiralty(frame, state);
+            if (state.FrederikActive) DrawCopenhagenFrederik(frame, state);
+            else if (state.AdmiraltyActive) DrawCopenhagenAdmiralty(frame, state);
             else if (state.GateActive) DrawCopenhagenGate(frame, state);
         }
         DrawShots(frame);
@@ -13530,6 +13858,7 @@ internal sealed class StormaktGame
         {
             DrawCopenhagenGateHud(frame, state);
             DrawCopenhagenAdmiraltyHud(frame, state);
+            DrawCopenhagenFrederikHud(frame, state);
             DrawCopenhagenCheckpointBanner(frame, state);
         }
         DrawCopenhagenMissionTitle(frame, age);
@@ -13732,17 +14061,144 @@ internal sealed class StormaktGame
         DrawText(frame, x + 4, 28, $"AMIRALITETET  {state.CurrentHour + 1:00}  LUCKOR {safeHours}", 0xffbdf8ff);
     }
 
+    private void DrawCopenhagenFrederik(uint[] frame, CopenhagenWorldState state)
+    {
+        (double centerXD, double centerYD) = CopenhagenFrederikCenter(state);
+        int centerX = (int)Math.Round(centerXD);
+        int centerY = (int)Math.Round(centerYD);
+        int supportCount = Math.Clamp(Math.Max(1, state.IncomingFreedShips), 1, 3);
+        if (state.FrederikPhase == 1)
+        {
+            for (int support = 0; support < supportCount; support++)
+            {
+                (double supportXD, double supportYD) = CopenhagenFrederikSupportPosition(support, supportCount);
+                int supportX = (int)Math.Round(supportXD);
+                int supportY = (int)Math.Round(supportYD);
+                bool seized = (state.FrederikSeizedMask & (1 << support)) != 0;
+                FillTriangle(frame, supportX, supportY - 10, supportX - 12, supportY + 8,
+                    supportX + 12, supportY + 8, seized ? 0xff8f2635 : 0xff315b42);
+                DrawLine(frame, supportX - 9, supportY + 5, supportX + 9, supportY + 5,
+                    seized ? 0xffff6b62 : 0xff77e6a0);
+                if (seized) DrawCrown(frame, supportX - 4, supportY - 1, 0xffffd66b);
+            }
+            foreach (CopenhagenSeizureChain chain in state.FrederikChains)
+            {
+                if (chain.Health <= 0) continue;
+                int tipX = (int)Math.Round(CopenhagenFrederikChainTipX(state, chain, centerXD));
+                int tipY = (int)Math.Round(CopenhagenFrederikChainTipY(state, chain, centerYD));
+                uint chainColor = chain.Completed ? 0xffff6b62 : 0xffd6b25e;
+                DrawLine(frame, centerX, centerY + 22, tipX, tipY, chainColor);
+                for (int link = 1; link < 5; link++)
+                {
+                    int x = centerX + (tipX - centerX) * link / 5;
+                    int y = centerY + 22 + (tipY - centerY - 22) * link / 5;
+                    FillCircle(frame, x, y, 2, chainColor);
+                }
+                if (!chain.Completed) DrawCircleOutline(frame, tipX, tipY, 8, 0xffbdf8ff);
+            }
+        }
+
+        uint hull = state.FrederikDeathAge > 0 ? 0xff8f2635 :
+            state.FrederikHitFlash > 0 ? 0xffffec9a : 0xff29343a;
+        FillTriangle(frame, centerX, centerY - 42, centerX - 78, centerY + 36, centerX + 78, centerY + 36, hull);
+        DrawLine(frame, centerX - 74, centerY + 33, centerX + 74, centerY + 33, 0xffd6b25e);
+        DrawLine(frame, centerX - 58, centerY + 18, centerX + 58, centerY + 18, 0xff765139);
+        DrawRect(frame, centerX - 24, centerY - 22, 48, 36,
+            state.FrederikPhase == 1 ? 0xff4b2530 : 0xff1b242b);
+        FillTriangle(frame, centerX, centerY - 48, centerX - 20, centerY - 13,
+            centerX + 20, centerY - 13, 0xff6b3a31);
+        DrawCrown(frame, centerX - 4, centerY - 25, 0xffffd66b);
+        for (int receipt = 0; receipt < 5; receipt++)
+        {
+            int x = centerX - 54 + receipt * 27;
+            DrawRect(frame, x, centerY + 21, 13, 8, 0xffd8d1b9);
+            DrawLine(frame, x + 2, centerY + 24, x + 10, centerY + 24, 0xff765139);
+        }
+
+        if (state.FrederikPhase == 2)
+        {
+            DrawCopenhagenFrederikBlade(frame, state, false, centerXD, centerYD);
+            DrawCopenhagenFrederikBlade(frame, state, true, centerXD, centerYD);
+            DrawLine(frame, centerX - 22, centerY - 20, centerX + 22, centerY + 13, 0xff8f2635);
+            DrawLine(frame, centerX + 22, centerY - 20, centerX - 22, centerY + 13, 0xff8f2635);
+        }
+        else if (state.FrederikPhase == 3)
+        {
+            for (int node = 0; node < state.FrederikRepairHealth.Length; node++)
+            {
+                int x = centerX + (node - 1) * 54;
+                int y = centerY + 40;
+                bool active = node == state.FrederikActiveRepairNode;
+                bool broken = state.FrederikRepairHealth[node] <= 0;
+                uint color = broken ? 0xff263744 : active ? 0xff77e6a0 : 0xff8f2635;
+                FillCircle(frame, x, y, 9, 0xff101820);
+                DrawCircleOutline(frame, x, y, 11, color);
+                DrawText(frame, x - 3, y - 3, $"{node}", color);
+                if (active && !broken)
+                {
+                    int cycle = state.FrederikPhaseAge % 240;
+                    DrawCircleOutline(frame, x, y, 14 + cycle / 30 % 5,
+                        state.FrederikRepairFlash > 0 ? 0xffffffff : 0xffbdf8ff);
+                    DrawLine(frame, x, y - 12, centerX, centerY, 0xff77e6a0);
+                }
+            }
+        }
+
+        if (state.FrederikDeathAge > 0)
+        {
+            int burst = Math.Min(92, state.FrederikDeathAge / 2);
+            DrawCircleOutline(frame, centerX, centerY, 38 + burst, 0xffff8a4a);
+            DrawCircleOutline(frame, centerX, centerY, 18 + burst / 2, 0xff8f2635);
+        }
+    }
+
+    private void DrawCopenhagenFrederikBlade(
+        uint[] frame, CopenhagenWorldState state, bool right, double centerX, double centerY)
+    {
+        int health = right ? state.FrederikRightBladeHealth : state.FrederikLeftBladeHealth;
+        (double xD, double yD) = CopenhagenFrederikBladePosition(state, right, centerX, centerY);
+        int x = (int)Math.Round(xD);
+        int y = (int)Math.Round(yD);
+        if (health <= 0)
+        {
+            DrawLine(frame, x - 13, y - 13, x + 13, y + 13, 0xff8f2635);
+            return;
+        }
+        double side = right ? 1 : -1;
+        FillTriangle(frame, x, y + 24, x - (int)(side * 10) - 7, y - 20,
+            x - (int)(side * 10) + 7, y - 20, 0xffb7c7d6);
+        DrawLine(frame, x, y + 23, x - (int)(side * 10), y - 20, 0xffffd66b);
+        DrawRect(frame, x - 10, y + 27, 20 * health / CopenhagenFrederikBladeHealth, 3, 0xffff8a4a);
+    }
+
+    private void DrawCopenhagenFrederikHud(uint[] frame, CopenhagenWorldState state)
+    {
+        if (!state.FrederikActive || state.FrederikAge < 45 || state.FrederikDeathAge > 0) return;
+        int maximum = state.FrederikTestFixture ? 180 : CopenhagenFrederikMaxHealth;
+        int barWidth = Math.Min(204, _width - 86);
+        int x = (_width - barWidth) / 2;
+        string phase = state.FrederikPhase switch { 1 => "BESLAG", 2 => "REGISTERBLAD", _ => "NOLLSTÄLLNING" };
+        DrawRect(frame, x, 21, barWidth, 14, 0xdd080d12);
+        DrawRect(frame, x + 2, 23, (barWidth - 4) * state.FrederikHealth / maximum, 4, 0xffff8a4a);
+        DrawText(frame, x + 4, 28, $"FREDERIK NULL  {phase}", 0xffbdf8ff);
+    }
+
     private void DrawCopenhagenCheckpointBanner(uint[] frame, CopenhagenWorldState state)
     {
-        if (state.AdmiraltyActive || state.GateFallAge is < 70 or >= 230) return;
+        bool gateCheckpoint = !state.AdmiraltyActive && state.GateFallAge is >= 70 and < 230;
+        bool admiralCheckpoint = state.AdmiraltyActive && !state.FrederikActive &&
+            state.AdmiraltyDeathAge is >= 70 and < 230;
+        if (!gateCheckpoint && !admiralCheckpoint) return;
         int width = Math.Min(232, _width - 32);
         int x = (_width - width) / 2;
         int y = _height <= 224 ? 80 : 103;
         DrawRect(frame, x, y, width, 43, 0xee080d12);
         DrawLine(frame, x, y, x + width - 1, y, 0xffffd66b);
         DrawLine(frame, x, y + 42, x + width - 1, y + 42, 0xff2f74c9);
-        DrawText(frame, x + (width - 126) / 2, y + 9, "TREKRONERS LÅS BRUTET", 0xffffd66b);
-        DrawText(frame, x + (width - 120) / 2, y + 26, "AMIRALITETET ÖPPNAS", 0xff9bd4dc);
+        string line1 = gateCheckpoint ? "TREKRONERS LÅS BRUTET" : "AMIRALITETET BRUSTET";
+        string line2 = gateCheckpoint ? "AMIRALITETET ÖPPNAS" : "FREDERIK NULL ANLÄNDER";
+        DrawText(frame, x + (width - line1.Length * 6) / 2, y + 9, line1, 0xffffd66b);
+        DrawText(frame, x + (width - line2.Length * 6) / 2, y + 26, line2, 0xff9bd4dc);
     }
 
     private void DrawCopenhagenMissionTitle(uint[] frame, int age)
@@ -15090,7 +15546,7 @@ internal sealed class StormaktGame
         }
         else if (_levelId == 6)
         {
-            DrawCopenhagenAdmiraltySeal(frame, panelX + 196, 67);
+            DrawCopenhagenFrederikSeal(frame, panelX + 196, 67);
         }
         else
         {
@@ -15136,8 +15592,8 @@ internal sealed class StormaktGame
             }
             else if (_levelId == 6)
             {
-                DrawText(frame, panelX + 28, 99, "AMIRALITETET BRUSTET", 0xffffd66b);
-                DrawText(frame, panelX + 28, 116, "FREDERIK NULL VÄNTAR", 0xff9bd4dc);
+                DrawText(frame, panelX + 29, 99, "FREDERIK NULL BRUTEN", 0xffffd66b);
+                DrawText(frame, panelX + 28, 116, "ØRESUNDS ØJE VÄNTAR", 0xff9bd4dc);
             }
             else
             {
@@ -15147,19 +15603,19 @@ internal sealed class StormaktGame
         }
     }
 
-    private void DrawCopenhagenAdmiraltySeal(uint[] frame, int x, int y)
+    private void DrawCopenhagenFrederikSeal(uint[] frame, int x, int y)
     {
-        DrawCircleOutline(frame, x, y, 23, 0xffd6b25e);
-        for (int hour = 0; hour < 12; hour++)
+        FillTriangle(frame, x, y - 24, x - 27, y + 18, x + 27, y + 18, 0xff29343a);
+        DrawLine(frame, x - 25, y + 17, x + 25, y + 17, 0xffd6b25e);
+        DrawRect(frame, x - 15, y - 12, 30, 22, 0xff4b2530);
+        DrawCrown(frame, x - 4, y - 7, 0xffffd66b);
+        for (int receipt = 0; receipt < 3; receipt++)
         {
-            double angle = -Math.PI / 2.0 + hour * Math.PI * 2.0 / 12.0;
-            int hourX = x + (int)Math.Round(Math.Cos(angle) * 19);
-            int hourY = y + (int)Math.Round(Math.Sin(angle) * 13);
-            PutPixel(frame, hourX, hourY, hour % 3 == 0 ? 0xff8f2635 : 0xff344d5c);
+            int rx = x - 18 + receipt * 18;
+            DrawRect(frame, rx, y + 8, 9, 6, 0xffd8d1b9);
         }
-        DrawLine(frame, x, y, x + 14, y + 7, 0xff8f2635);
-        DrawLine(frame, x, y, x - 8, y - 11, 0xff8f2635);
-        DrawCrown(frame, x - 4, y - 3, 0xffffd66b);
+        DrawLine(frame, x - 18, y - 18, x + 19, y + 13, 0xff8f2635);
+        DrawLine(frame, x + 18, y - 18, x - 19, y + 13, 0xff8f2635);
     }
 
     private void DrawSnapphaneOathSeal(uint[] frame, int x, int y)
@@ -16450,6 +16906,31 @@ internal sealed class StormaktGame
         public int NoonFlash { get; set; }
         public int[] HourHealth { get; } = new int[12];
         public bool[] HourArmed { get; } = new bool[12];
+        public bool FrederikActive { get; set; }
+        public bool FrederikTestFixture { get; set; }
+        public int FrederikAge { get; set; }
+        public int FrederikPhase { get; set; }
+        public int FrederikPhaseAge { get; set; }
+        public int FrederikHealth { get; set; }
+        public int FrederikDeathAge { get; set; }
+        public int FrederikHitFlash { get; set; }
+        public int FrederikSeizedMask { get; set; }
+        public int FrederikChainSerial { get; set; }
+        public int FrederikLeftBladeHealth { get; set; }
+        public int FrederikRightBladeHealth { get; set; }
+        public int FrederikRepairCycle { get; set; }
+        public int FrederikActiveRepairNode { get; set; }
+        public int FrederikRepairFlash { get; set; }
+        public int[] FrederikRepairHealth { get; } = new int[3];
+        public List<CopenhagenSeizureChain> FrederikChains { get; } = [];
+    }
+
+    private sealed class CopenhagenSeizureChain(int target, int health)
+    {
+        public int Target { get; } = target;
+        public int Health { get; set; } = health;
+        public int Age { get; set; }
+        public bool Completed { get; set; }
     }
 
     private sealed class SnapphaneWorldState

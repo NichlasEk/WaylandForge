@@ -4,7 +4,7 @@ Status: aktiv utvecklingsplan för kampanjens sjunde rad, level id `6`. Första 
 
 ## Nuvarande spelbara checkpoint
 
-Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen render/step-dispatch och kampanjens sparade Bana 5-lastning. Den spelbara rymdöppningen leder efter en kort inflygning genom två sammanhängande bossportar.
+Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen render/step-dispatch och kampanjens sparade Bana 5-lastning. Den spelbara rymdöppningen leder efter en kort inflygning genom två sammanhängande bossportar och den första fullstora bossen.
 
 **Trekroners lås:**
 
@@ -21,9 +21,19 @@ Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen rende
 - markeringar kan skjutas sönder för poäng och blir permanenta säkra luckor;
 - efter tolv slag exekveras alla återstående registrerade timmar samtidigt;
 - den centrala amiralskärnan kan skadas under hela striden;
-- segern visar checkpointresultatet **Frederik Null väntar**.
+- segern leder utan meny vidare till Överfogde Frederik Null.
 
-Miljön, låset, urtavlan, HUD, barriärer och resultatkort har kodritade fallbackformer i wide och legacy. `WAYLANDFORGE_STORMAKT_COPENHAGEN_GATE_TEST=1` hoppar direkt till en förkortad låsstrid och `WAYLANDFORGE_STORMAKT_COPENHAGEN_ADMIRALTY_TEST=1` till en förkortad Amiralitetsstrid för determinism- och transporttest. Det är fortfarande en utvecklingscheckpoint: nästa svep ska fortsätta från Amiralitetet till Frederik Null i stället för att returnera till kampanjmenyn.
+**Överfogde Frederik Null:**
+
+- fas 1 skickar skjutbara indrivningskedjor mot upp till tre tidigare frigivna stödskepp; en obruten kedja beslagtar skeppet och vänder dess eld mot Karl;
+- utan tidigare stödskepp finns fortfarande ett kroneskort som gör mekaniken spelbar men inte blockerar banan;
+- vid första fasbrottet låser kärnan sin hälsa och tronen släpper två separata registerblad;
+- registerbladen gör växelvisa rusningar ned i spelrummet, har egna träffytor och måste förstöras var för sig;
+- fas 3 väljer en av tre bokföringsnoder som aktiv reparationspost medan de andra fungerar som straffande lockbeten;
+- om rätt nod överlever till stämpeln återförs en del av Frederiks rustning; cykeln väljer därefter en ny korrekt nod;
+- segern visar checkpointresultatet **Øresunds Øje väntar**.
+
+Miljön, låset, urtavlan, Frederik, HUD, barriärer och resultatkort har kodritade fallbackformer i wide och legacy. `WAYLANDFORGE_STORMAKT_COPENHAGEN_GATE_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_ADMIRALTY_TEST=1` och `WAYLANDFORGE_STORMAKT_COPENHAGEN_FREDERIK_TEST=1` hoppar till förkortade deterministiska stridsfixtures. Det är fortfarande en utvecklingscheckpoint: nästa svep ska låta Frederiks tullkärna fly in i kronringen och bli Øresunds Øje i stället för att returnera till kampanjmenyn.
 
 ## Kärna
 

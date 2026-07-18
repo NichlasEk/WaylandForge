@@ -149,11 +149,13 @@ Campaign row 6 owns level id `5`, reset seed `3606` and a separate `SnapphaneWor
 
 `DrawSnapphaneWorld` is a separate render stack with three state-owned wreck depths, the physical silhouette of Sören's uneven green double-blink and its own mission title. The temporary one-minute checkpoint result remains in combat music until Start, then opens the campaign menu with row 7 selected. Seven-row menu spacing is verified in 400x280 and 320x224 without overlapping the footer. Repeated wide WFEX traces matched at the title, result and campaign handoff frames; a separate legacy trace covered the same three states.
 
-## Köpenhamn dispatch - checkpoint 2 playable
+## Köpenhamn dispatch - checkpoint 3 playable
 
 Campaign row 7 owns developer-startable level id `6`, reset seed `3707` and a separate `CopenhagenWorldState`. Checkpoint 1 added the independent render/step dispatch, persistent Bana 5 loadout and previous campaign support, approach and Trekroners lock. Checkpoint 2 replaces the temporary result stop with a menu-free transition into De tolv timmarnas amiralitet. Twelve destructible hour marks accumulate attack patterns; the twelve-stroke volley executes only surviving registered hours, so destroyed marks become deterministic safe gaps. Defeating the clock core reaches a Frederik Null checkpoint card.
 
-`WAYLANDFORGE_STORMAKT_COPENHAGEN_GATE_TEST=1` and `WAYLANDFORGE_STORMAKT_COPENHAGEN_ADMIRALTY_TEST=1` provide shortened deterministic fixtures for the two current encounters. Repeated wide and legacy result runs matched within each resolution. Checkpoint 2 also decoded the same tested Amiralitet frame from v2 raw, PACKRLE and shared memory; transport parity remains a gate for every later slice.
+Checkpoint 3 replaces that card with a second menu-free transition into full boss Frederik Null. His phase-1 seizure chains can turn campaign support against Karl, his phase-2 register blades own separate health/collision and his phase-3 active repair node can restore armor at the next accounting stamp. Wrong repair nodes retaliate instead of accepting damage. Defeating him reaches an Øresunds Øje checkpoint card.
+
+`WAYLANDFORGE_STORMAKT_COPENHAGEN_GATE_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_ADMIRALTY_TEST=1` and `WAYLANDFORGE_STORMAKT_COPENHAGEN_FREDERIK_TEST=1` provide shortened deterministic fixtures for the three current encounters. Repeated wide and legacy Frederik result runs matched within each resolution. Raw, PACKRLE and shared-memory parity remains a gate for every slice.
 
 The intended complete level remains a two-act final: a level-owned shmup boss chain through Köpenhamns ring followed by a direct, menu-free landing into a separate top-down hack-and-slash state under the city. The ground act may reuse proven dungeon movement/combat helpers, but it must use its own save namespace and may not mutate Silverkroppen's `DungeonState` or autosave. Full design: `docs/stormakt3020-level-07-kopenhamns-ring-codex-argentum.md`.
 
