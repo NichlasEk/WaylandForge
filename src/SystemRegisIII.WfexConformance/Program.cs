@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Diagnostics;
+using System.IO.Pipes;
 using SystemRegisIII.Core;
 
 RunSelfTest();
@@ -47,7 +48,39 @@ static void RunSelfTest()
     Stopwatch stalled = Stopwatch.StartNew();
     Require(!WfexStreamReader.TryReadExactly(new EmptyStream(), new byte[4], 5), "stalled producer was accepted");
     Require(stalled.ElapsedMilliseconds < 250, "stalled producer timeout was not bounded");
-    Console.WriteLine("WFEX CONFORMANCE OK · 15 CASES");
+
+    byte[] handshake = new byte[WfexHandshakeRecord.Size];
+    WfexHandshakeRecord.CreateProducerHello(new WfexLimits(400, 280, 448_000)).Write(handshake);
+    WfexHandshakeRecord hello = WfexHandshakeRecord.Parse(handshake, WfexHandshakeRecord.ProducerMagic);
+    Require(hello.MajorVersion == 2 && hello.PixelFormats == WfexPixelFormats.Argb8888, "producer hello changed");
+    WfexNegotiatedSession session = WfexNegotiation.AcceptProducerHello(
+        hello, new WfexLimits(320, 240, 307_200), out WfexHandshakeRecord accept);
+    Require(session.Limits == new WfexLimits(320, 240, 307_200), "negotiated limits were not intersected");
+    accept.Write(handshake);
+    Require(WfexHandshakeRecord.Parse(handshake, WfexHandshakeRecord.HostMagic) == accept, "host accept did not roundtrip");
+
+    byte[] badVersion = (byte[])handshake.Clone();
+    BinaryPrimitives.WriteUInt16LittleEndian(badVersion.AsSpan(4), 3);
+    ExpectHandshakeFailure(badVersion, WfexHandshakeRecord.HostMagic, "unsupported major version");
+    byte[] badSize = (byte[])handshake.Clone();
+    BinaryPrimitives.WriteUInt16LittleEndian(badSize.AsSpan(8), 47);
+    ExpectHandshakeFailure(badSize, WfexHandshakeRecord.HostMagic, "unsupported record size");
+    WfexHandshakeRecord incompatible = hello with { RequiredCapabilities = (WfexCapabilities)(1UL << 63) };
+    threw = false;
+    try { WfexNegotiation.AcceptProducerHello(incompatible, WfexLimits.Default, out _); }
+    catch (InvalidDataException) { threw = true; }
+    Require(threw, "unknown mandatory capability was accepted");
+
+    using var pipeOut = new AnonymousPipeServerStream(PipeDirection.Out, HandleInheritability.None);
+    using var pipeIn = new AnonymousPipeClientStream(PipeDirection.In, pipeOut.ClientSafePipeHandle);
+    Require(WfexStreamReader.ReadUpToWithTimeoutAsync(pipeIn, new byte[4], 10).GetAwaiter().GetResult() == 0,
+        "pipe handshake timeout was not bounded");
+    pipeOut.Write([1, 2, 3, 4]);
+    pipeOut.Flush();
+    byte[] afterTimeout = new byte[4];
+    WfexStreamReader.ReadExactly(pipeIn, afterTimeout);
+    Require(afterTimeout.AsSpan().SequenceEqual(new byte[] { 1, 2, 3, 4 }), "pipe was poisoned after handshake timeout");
+    Console.WriteLine("WFEX CONFORMANCE OK · 23 CASES");
 }
 
 static void RunBenchmark()
@@ -101,6 +134,14 @@ static void Expect(ReadOnlySpan<byte> header, WfexValidationError expected, Wfex
 static void Require(bool condition, string message)
 {
     if (!condition) throw new InvalidOperationException(message);
+}
+
+static void ExpectHandshakeFailure(byte[] record, uint expectedMagic, string description)
+{
+    bool threw = false;
+    try { WfexHandshakeRecord.Parse(record, expectedMagic); }
+    catch (InvalidDataException) { threw = true; }
+    Require(threw, description);
 }
 
 sealed class FragmentedStream(byte[] source, int fragmentSize) : MemoryStream(source, false)

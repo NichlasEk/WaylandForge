@@ -1,6 +1,6 @@
 # WFEX v2 development plan
 
-Status: active; Checkpoint 0 completed 2026-07-18
+Status: active; Checkpoints 0 and 1 completed 2026-07-18
 
 Scope: WaylandForge host and process-isolated desktop cores
 
@@ -104,6 +104,8 @@ Acceptance: all existing v1 cores and deterministic hashes remain unchanged, inv
 
 ### Checkpoint 1 - Version and capability handshake
 
+Completed. The exact wire layout, policy behavior and compatibility evidence are recorded in [WFEX v2 Checkpoint 1 handshake](wfex-v2-checkpoint-1-handshake.md). Checkpoint 1 negotiates the raw ARGB8888 lockstep baseline and continues with v1 frame records until Checkpoint 2.
+
 1. Specify the exact handshake and capability bit layout in the technical specification.
 2. Implement `v1`, `prefer-v2` and `require-v2` host policies.
 3. Add producer and host negotiation state machines with bounded timeouts.
@@ -194,4 +196,4 @@ Shared memory is considered successful only if it reduces framebuffer copying wi
 
 Start with Checkpoint 0 and commit it independently. Then land handshake plus raw v2 before shared memory so negotiation and error handling can be tested without debugging two new mechanisms at once. Shared memory is the first expected performance feature. Presentation decoupling follows after frame ownership is proven. Compression remains optional and measurement-driven.
 
-Until Checkpoint 1 lands, WFEX v1 remains the production protocol and Stormakt continues against the existing deterministic path.
+Until Checkpoint 2 lands, negotiated sessions continue using the production v1 frame-record layout while Stormakt retains the same deterministic rendering path.

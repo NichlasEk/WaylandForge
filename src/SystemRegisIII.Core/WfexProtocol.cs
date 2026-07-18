@@ -149,4 +149,29 @@ public static class WfexStreamReader
         }
         return true;
     }
+
+    public static async Task<int> ReadUpToWithTimeoutAsync(
+        Stream stream,
+        Memory<byte> buffer,
+        int timeoutMilliseconds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(timeoutMilliseconds);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(timeoutMilliseconds);
+        int offset = 0;
+        try
+        {
+            while (offset < buffer.Length)
+            {
+                int read = await stream.ReadAsync(buffer[offset..], timeout.Token).ConfigureAwait(false);
+                if (read == 0) break;
+                offset += read;
+            }
+        }
+        catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+        }
+        return offset;
+    }
 }

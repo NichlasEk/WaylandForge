@@ -22,8 +22,13 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     private string _wfexPath = string.Empty;
     private string _socketPath = string.Empty;
     private string _pointerDriver = "absolute";
+    private string _protocolPolicy = "v1";
     private string _fallbackDllPath = string.Empty;
+    private WfexLimits _configuredWfexLimits = WfexLimits.Default;
     private WfexLimits _wfexLimits = WfexLimits.Default;
+    private WfexNegotiatedSession _negotiatedSession = WfexNegotiatedSession.Version1(WfexLimits.Default);
+    private bool _protocolNegotiated;
+    private bool _protocolFallback;
     private Process? _process;
     private Stream? _wfexStream;
     private Socket? _socketListener;
@@ -54,6 +59,13 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     public string Name => string.IsNullOrWhiteSpace(_command) ? "EXTERNAL DUMMY" : ExternalName();
     public string Mode => _mode;
     public string PointerDriver => _pointerDriver;
+    public string ProtocolPolicy => _protocolPolicy;
+    public string ProtocolStatus => !_protocolNegotiated
+        ? $"{_protocolPolicy.ToUpperInvariant()} · PENDING"
+        : _protocolFallback
+            ? "V1 RAW LOCKSTEP · FALLBACK"
+            : _negotiatedSession.DiagnosticLabel;
+    public string ProtocolLimits => $"{_wfexLimits.MaximumWidth}X{_wfexLimits.MaximumHeight} · {_wfexLimits.MaximumPayloadBytes / (1024 * 1024)} MIB";
     public bool IsRunning => _process is { HasExited: false };
     public int? ExitCode => _process is { HasExited: true } process ? process.ExitCode : _lastExitCode;
     public string Status => IsRunning ? "RUNNING" : ExitCode is int code ? $"EXIT {code}" : "STOPPED";
@@ -102,7 +114,14 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         _wfexPath = config.WfexPath.Trim();
         _socketPath = config.SocketPath.Trim();
         _pointerDriver = string.IsNullOrWhiteSpace(config.PointerDriver) ? "absolute" : config.PointerDriver.Trim().ToLowerInvariant();
-        _wfexLimits = new WfexLimits(config.MaximumFrameWidth, config.MaximumFrameHeight, config.MaximumFrameBytes);
+        _protocolPolicy = config.ProtocolPolicy.Trim().ToLowerInvariant() switch
+        {
+            "prefer-v2" => "prefer-v2",
+            "require-v2" => "require-v2",
+            _ => "v1",
+        };
+        _configuredWfexLimits = new WfexLimits(config.MaximumFrameWidth, config.MaximumFrameHeight, config.MaximumFrameBytes);
+        ResetProtocolNegotiation();
         _fallbackDllPath = fallbackDllPath;
         _startBlockedAfterExit = false;
     }
@@ -115,6 +134,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         _startBlockedAfterExit = false;
         LastError = string.Empty;
         Array.Clear(_frame);
+        ResetProtocolNegotiation();
     }
 
     public void StepFrame(IInputSource input, IFrameSink frameSink)
@@ -184,6 +204,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
 
         Stream stdin = _process!.StandardInput.BaseStream;
         Stream stdout = _process.StandardOutput.BaseStream;
+        EnsureProtocolNegotiated(stdout, stdin);
         if (_pointerDriver == "stormakt_rts")
         {
             _stepCommandBuffer[0] = ControllerPointerStepCommand;
@@ -212,6 +233,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     private void StepWfexFile(IFrameSink frameSink)
     {
         EnsureStarted();
+        EnsureFileProtocolPolicy();
         _wfexStream ??= OpenWfexReadStream();
         try
         {
@@ -235,6 +257,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     {
         EnsureStarted();
         _socketStream ??= OpenWfCoreSocketStream();
+        EnsureProtocolNegotiated(_socketStream, _socketStream);
 
         SaturnInputState inputState = input.Poll();
         SendInputState(inputState);
@@ -448,6 +471,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         {
             startInfo.Environment[key] = value;
         }
+        startInfo.Environment[WfexNegotiation.PolicyEnvironmentVariable] = _protocolPolicy;
         if (!string.IsNullOrWhiteSpace(_workingDirectory))
         {
             startInfo.WorkingDirectory = _workingDirectory;
@@ -459,6 +483,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
 
         _startedAtUtc = DateTime.UtcNow;
         _process = Process.Start(startInfo) ?? throw new InvalidOperationException("Failed to start external core process.");
+        ResetProtocolNegotiation();
         _process.ErrorDataReceived += (_, e) =>
         {
             if (!string.IsNullOrEmpty(e.Data))
@@ -512,6 +537,61 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         _socketListener?.Dispose();
         _socketListener = null;
         DeleteSocketPath();
+    }
+
+    private void ResetProtocolNegotiation()
+    {
+        _wfexLimits = _configuredWfexLimits;
+        _negotiatedSession = WfexNegotiatedSession.Version1(_configuredWfexLimits);
+        _protocolNegotiated = false;
+        _protocolFallback = false;
+    }
+
+    private void EnsureFileProtocolPolicy()
+    {
+        if (_protocolNegotiated) return;
+        if (_protocolPolicy == "require-v2")
+            throw new InvalidOperationException("WFEX v2 negotiation requires an interactive stdio or Unix-socket control channel.");
+        _protocolFallback = _protocolPolicy == "prefer-v2";
+        _protocolNegotiated = true;
+    }
+
+    private void EnsureProtocolNegotiated(Stream producerOutput, Stream producerInput)
+    {
+        if (_protocolNegotiated) return;
+        if (_protocolPolicy == "v1")
+        {
+            _protocolNegotiated = true;
+            return;
+        }
+
+        byte[] buffer = new byte[WfexHandshakeRecord.Size];
+        int received = ReadHandshakeWithTimeout(producerOutput, buffer, 2000);
+        if (received == 0 && _protocolPolicy == "prefer-v2")
+        {
+            _protocolFallback = true;
+            _protocolNegotiated = true;
+            AddStderrLine("HOST: WFEX v2 hello not offered; using v1 fallback.");
+            return;
+        }
+        if (received == 0)
+            throw new TimeoutException("WFEX v2 was required but the producer did not send a handshake within 2000 ms.");
+        if (received != buffer.Length)
+            throw new InvalidDataException($"WFEX v2 producer sent a truncated handshake ({received}/{buffer.Length} bytes).");
+
+        WfexHandshakeRecord hello = WfexHandshakeRecord.Parse(buffer, WfexHandshakeRecord.ProducerMagic);
+        _negotiatedSession = WfexNegotiation.AcceptProducerHello(hello, _configuredWfexLimits, out WfexHandshakeRecord response);
+        response.Write(buffer);
+        producerInput.Write(buffer);
+        producerInput.Flush();
+        _wfexLimits = _negotiatedSession.Limits;
+        _protocolNegotiated = true;
+        AddStderrLine($"HOST: negotiated {_negotiatedSession.DiagnosticLabel}.");
+    }
+
+    private static int ReadHandshakeWithTimeout(Stream stream, byte[] buffer, int timeoutMilliseconds)
+    {
+        return WfexStreamReader.ReadUpToWithTimeoutAsync(stream, buffer, timeoutMilliseconds).GetAwaiter().GetResult();
     }
 
     private bool TryHoldExitedProcessFrame(IFrameSink frameSink)

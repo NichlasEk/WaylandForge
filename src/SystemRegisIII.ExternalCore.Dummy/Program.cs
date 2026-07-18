@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using SystemRegisIII.Core;
 
 const int frameWidth = 320;
 const int frameHeight = 224;
@@ -7,6 +8,8 @@ const byte stepCommand = (byte)'S';
 
 Stream input = Console.OpenStandardInput();
 Stream output = Console.OpenStandardOutput();
+WfexNegotiation.NegotiateProducerFromEnvironment(
+    input, output, new WfexLimits(frameWidth, frameHeight, frameWidth * frameHeight * sizeof(uint)));
 var frame = new uint[frameWidth * frameHeight];
 var header = new byte[32];
 var command = new byte[5];

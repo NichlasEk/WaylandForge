@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Text;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using SystemRegisIII.Core;
 
 bool legacyResolution = string.Equals(
     Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_LEGACY_320"), "1", StringComparison.Ordinal);
@@ -14,6 +15,8 @@ const byte ControllerPointerStepCommand = (byte)'Q';
 
 var input = Console.OpenStandardInput();
 var output = Console.OpenStandardOutput();
+WfexNegotiation.NegotiateProducerFromEnvironment(
+    input, output, new WfexLimits(Width, Height, Width * Height * sizeof(uint)));
 using var audio = StormaktMusicLoop.TryStartDefault();
 var game = new StormaktGame(Width, Height, SpritePack.LoadDefault(), audio);
 audio?.Trigger(StormaktSound.Deploy);

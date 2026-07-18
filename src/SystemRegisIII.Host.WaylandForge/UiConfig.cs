@@ -109,6 +109,7 @@ internal sealed class UiConfig
         writer.WriteLine($"wfex_path = \"{Escape(ExternalCore.WfexPath)}\"");
         writer.WriteLine($"pointer_driver = \"{Escape(ExternalCore.PointerDriver)}\"");
         writer.WriteLine($"socket_path = \"{Escape(ExternalCore.SocketPath)}\"");
+        writer.WriteLine($"protocol_policy = \"{Escape(ExternalCore.ProtocolPolicy)}\"");
         WriteWfexLimits(writer, ExternalCore);
         writer.WriteLine();
         writer.WriteLine("[external_core2]");
@@ -120,6 +121,7 @@ internal sealed class UiConfig
         writer.WriteLine($"wfex_path = \"{Escape(ExternalCore2.WfexPath)}\"");
         writer.WriteLine($"pointer_driver = \"{Escape(ExternalCore2.PointerDriver)}\"");
         writer.WriteLine($"socket_path = \"{Escape(ExternalCore2.SocketPath)}\"");
+        writer.WriteLine($"protocol_policy = \"{Escape(ExternalCore2.ProtocolPolicy)}\"");
         WriteWfexLimits(writer, ExternalCore2);
         writer.WriteLine();
         writer.WriteLine("[external_core3]");
@@ -131,6 +133,7 @@ internal sealed class UiConfig
         writer.WriteLine($"wfex_path = \"{Escape(ExternalCore3.WfexPath)}\"");
         writer.WriteLine($"pointer_driver = \"{Escape(ExternalCore3.PointerDriver)}\"");
         writer.WriteLine($"socket_path = \"{Escape(ExternalCore3.SocketPath)}\"");
+        writer.WriteLine($"protocol_policy = \"{Escape(ExternalCore3.ProtocolPolicy)}\"");
         WriteWfexLimits(writer, ExternalCore3);
         writer.WriteLine();
 
@@ -337,6 +340,9 @@ internal sealed class UiConfig
                 case "socket_path":
                     externalCore.SocketPath = value;
                     break;
+                case "protocol_policy":
+                    externalCore.ProtocolPolicy = ParseProtocolPolicy(value, externalCore.ProtocolPolicy);
+                    break;
                 case "max_frame_width":
                     externalCore.MaximumFrameWidth = Math.Clamp(ParseInt(value, externalCore.MaximumFrameWidth), 1, 32_768);
                     break;
@@ -440,6 +446,17 @@ internal sealed class UiConfig
             "raptor" => "raptor",
             "stormakt_rts" => "stormakt_rts",
             "none" => "none",
+            _ => fallback,
+        };
+    }
+
+    private static string ParseProtocolPolicy(string value, string fallback)
+    {
+        return value.Trim().ToLowerInvariant() switch
+        {
+            "v1" => "v1",
+            "prefer-v2" => "prefer-v2",
+            "require-v2" => "require-v2",
             _ => fallback,
         };
     }
@@ -610,6 +627,7 @@ internal sealed class UiExternalCoreConfig
     public string WfexPath { get; set; } = string.Empty;
     public string PointerDriver { get; set; } = "absolute";
     public string SocketPath { get; set; } = string.Empty;
+    public string ProtocolPolicy { get; set; } = "v1";
     public int MaximumFrameWidth { get; set; } = WfexLimits.Default.MaximumWidth;
     public int MaximumFrameHeight { get; set; } = WfexLimits.Default.MaximumHeight;
     public int MaximumFrameBytes { get; set; } = WfexLimits.Default.MaximumPayloadBytes;

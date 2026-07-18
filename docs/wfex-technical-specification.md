@@ -40,6 +40,52 @@ The socket input magic is `0x4e494657`, serialized as:
 57 46 49 4e    W F I N
 ```
 
+## WFEX v2 negotiation
+
+WFEX v2 begins with an optional producer-initiated handshake on an interactive stdio or Unix-socket channel. File/FIFO mode remains v1 because it has no bidirectional control channel. After a successful Checkpoint 1 handshake, frames deliberately remain ordinary v1 `WFEX` records; versioned frame records are introduced separately in Checkpoint 2.
+
+The host policy is configured per external core through `protocol_policy`:
+
+- `v1` sends input immediately and never waits for a hello;
+- `prefer-v2` waits up to 2000 ms for a producer hello, then falls back to v1 only when no hello byte was received;
+- `require-v2` fails with an actionable timeout when no hello arrives and never falls back.
+
+The host exports the selected policy to a child process as `WAYLANDFORGE_WFEX_POLICY`. A v2-aware producer emits a hello only for `prefer-v2` or `require-v2`; an unchanged v1 producer ignores the variable and continues waiting for its normal first input packet. A partial, malformed or incompatible hello is always an error rather than a v1 fallback.
+
+### Handshake sequence
+
+```text
+WaylandForge                         v2-aware producer
+     |                                      |
+     |<-- 48-byte WFX2 producer hello ------|
+     | validate version/capabilities/limits |
+     |--- 48-byte WFA2 host accept -------->|
+     |                                      |
+     |--- S, P, Q or WFIN input ----------->|
+     |<-- WFEX v1 frame record -------------|
+```
+
+Both records are exactly 48 bytes and little-endian:
+
+| Offset | Size | Type | Field | Meaning |
+|---:|---:|---|---|---|
+| 0 | 4 | `uint32` | `magic` | Producer hello `0x32584657` (`WFX2`) or host accept `0x32414657` (`WFA2`). |
+| 4 | 2 | `uint16` | `majorVersion` | Must be 2. |
+| 6 | 2 | `uint16` | `minorVersion` | Currently 0; the host selects the lower supported minor. |
+| 8 | 2 | `uint16` | `recordSize` | Must be 48. |
+| 10 | 2 | `uint16` | `reserved` | Must be written as zero and ignored on read. |
+| 12 | 8 | `uint64` | `requiredCapabilities` | Producer requirements; zero in the host response. |
+| 20 | 8 | `uint64` | `capabilities` | Producer offer or host-selected intersection. |
+| 28 | 4 | `uint32` | `maximumWidth` | Offered or selected positive maximum width. |
+| 32 | 4 | `uint32` | `maximumHeight` | Offered or selected positive maximum height. |
+| 36 | 4 | `uint32` | `maximumPayloadBytes` | Offered or selected positive decompressed payload ceiling. |
+| 40 | 4 | `uint32` | `pixelFormats` | Offered or selected pixel-format bits. |
+| 44 | 4 | `uint32` | `presentationModes` | Offered or selected presentation-mode bits. |
+
+Capability bit 0 is `RAW_FRAME_RECORDS`; all other capability bits are currently unknown. Pixel-format bit 0 is `ARGB8888`. Presentation bit 0 is `DETERMINISTIC_LOCKSTEP`; bit 1 is reserved for `LATEST_FRAME` but is not yet selected. Unknown required capability bits fail negotiation. Unknown optional bits are masked out.
+
+The selected maximums are the component-wise minimum of the producer offer and host configuration. The mandatory Checkpoint 1 baseline is raw ARGB8888 in deterministic lockstep. The raw stream transport is therefore explicitly confirmed by capability while the already-open stdio or Unix socket determines the control transport.
+
 ## WFEX frame record
 
 Each record consists of a fixed 32-byte header followed immediately by one complete pixel payload.
@@ -105,7 +151,7 @@ Examples:
 
 Because integers are serialized little-endian, the bytes of `0xAARRGGBB` appear on the wire as `BB GG RR AA`. A producer should construct 32-bit ARGB values and serialize them little-endian rather than assuming a platform-native byte layout on a big-endian system.
 
-The current protocol has no pixel-format negotiation. ARGB8888 is mandatory.
+WFEX v1 has no pixel-format negotiation. A v2 handshake confirms ARGB8888, which remains the only supported format.
 
 ## Frame sizes and bandwidth
 
@@ -221,11 +267,11 @@ The corresponding limitation is that a core stalled in simulation or rendering s
 
 ## Stormakt 3020 exchange
 
-Stormakt 3020 currently uses `stdio` with the pointer driver `stormakt_rts`. Its loop performs the following work for every `P` packet:
+Stormakt 3020 currently uses `stdio` with the pointer driver `stormakt_rts`. Its loop performs the following work for every `Q` packet (and retains old `S`/`P` decoding):
 
-1. Read the marker and then the remaining 20 bytes exactly.
-2. Decode buttons and pointer state.
-3. Call `StormaktGame.Step(buttons, pointer)` once.
+1. Read the marker and then the remaining 28 bytes exactly.
+2. Decode keyboard/controller actions, analog stick and pointer state.
+3. Call `StormaktGame.Step(buttons, pointer, controller)` once.
 4. Call `StormaktGame.Render(frame, frameIndex)` once.
 5. Populate the 32-byte WFEX header.
 6. Write the complete header and framebuffer to stdout.
@@ -331,7 +377,6 @@ A correct implementation must handle partial reads and writes. A single stream c
 
 WFEX currently has no:
 
-- protocol version or capability negotiation;
 - pixel format other than ARGB8888;
 - compression or delta-frame encoding;
 - timestamps, durations or refresh-rate declaration;
