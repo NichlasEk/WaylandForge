@@ -71,6 +71,8 @@ internal sealed unsafe class ForgeApp : IDisposable
     private int _lastSentAudioVolume = -1;
     private double _lastAudioVolumeAttemptSeconds;
     private double _lastAudioStatusAttemptSeconds;
+    private ulong _observedWcpSequence;
+    private double _wcpToFrameMilliseconds = -1;
     private string _audioStatus = "OFFLINE";
     private bool _externalPointerInitialized;
     private int _externalPointerX;
@@ -113,6 +115,8 @@ internal sealed unsafe class ForgeApp : IDisposable
     {
         _clock.Tick();
         ProcessRawKey(textInput);
+        bool newWcpEvent = _wayControlInput.TryGetLatestEvent(_observedWcpSequence, out ulong wcpSequence, out long wcpTimestampMicroseconds);
+        if (newWcpEvent) _observedWcpSequence = wcpSequence;
         if (_capturingControllerBinding is InputBinding capture && _wayControlInput.TryConsumeActivatedControl(out WcpControl control))
         {
             ActiveInputProfile().ControllerBindings[capture.Id] = FormatControllerControl(control);
@@ -133,6 +137,8 @@ internal sealed unsafe class ForgeApp : IDisposable
         if (!_paused || _stepRequested || _frameStore.Pixels.IsEmpty)
         {
             StepActiveCore();
+            if (newWcpEvent)
+                _wcpToFrameMilliseconds = Math.Max(0, (StopwatchMicroseconds() - wcpTimestampMicroseconds) / 1_000.0);
             _stepRequested = false;
         }
 
@@ -480,7 +486,7 @@ internal sealed unsafe class ForgeApp : IDisposable
                 DrawMetric(x, y, "SYNC", _lastSentAudioVolume == _config.Audio.Volume ? "OK" : "PENDING"); y += 18;
             }
 
-            if (_ui.Collapsible(new UiId("debug.input"), ref column, "INPUT", 198, out RectI inputSection))
+            if (_ui.Collapsible(new UiId("debug.input"), ref column, "INPUT", 216, out RectI inputSection))
             {
                 int x = inputSection.X;
                 int y = inputSection.Y;
@@ -490,6 +496,7 @@ internal sealed unsafe class ForgeApp : IDisposable
                 DrawMetric(x, y, "MBTN", _pointer.Buttons.ToString().ToUpperInvariant()); y += 18;
                 DrawMetric(x, y, "MAP", profileLabel); y += 20;
                 DrawMetric(x, y, "WCP", _wayControlInput.Status); y += 18;
+                DrawMetric(x, y, "WCP>FRAME", _wcpToFrameMilliseconds < 0 ? "-" : $"{_wcpToFrameMilliseconds:0.0} MS"); y += 18;
                 DrawInputLamp(x, y, "UP", ForgeInput.Up, inputProfile); y += 16;
                 DrawInputLamp(x, y, "DOWN", ForgeInput.Down, inputProfile); y += 16;
                 DrawInputLamp(x, y, "LEFT", ForgeInput.Left, inputProfile); y += 16;
@@ -3140,6 +3147,13 @@ internal sealed unsafe class ForgeApp : IDisposable
 
         int keep = Math.Max(2, (maxChars - 3) / 2);
         return text[..keep] + "..." + text[^keep..];
+    }
+
+    private static long StopwatchMicroseconds()
+    {
+        long timestamp = Stopwatch.GetTimestamp();
+        return timestamp / Stopwatch.Frequency * 1_000_000 +
+            timestamp % Stopwatch.Frequency * 1_000_000 / Stopwatch.Frequency;
     }
 
 

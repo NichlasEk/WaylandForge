@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using SystemRegisIII.WayControlProtocol;
 
 if (args.Contains("--self-test", StringComparer.Ordinal))
@@ -9,6 +10,16 @@ if (args.Contains("--self-test", StringComparer.Ordinal))
     packet[0] ^= 0xff;
     if (WcpPacketHeader.TryRead(packet, out _))
         throw new InvalidOperationException("WCP accepted an invalid magic value.");
+    using (var backend = new LinuxEvdevBackend("/tmp/wcp-self-test-no-devices", "/tmp/wcp-self-test-no-sysfs"))
+    {
+        var events = new List<WcpEvent>();
+        backend.Poll(events);
+        if (events.Count != 0 || backend.WaitForEvents(0))
+            throw new InvalidOperationException("WCP empty poll self-test failed.");
+        Stopwatch wait = Stopwatch.StartNew();
+        if (backend.WaitForEvents(20) || wait.ElapsedMilliseconds < 10)
+            throw new InvalidOperationException("WCP kernel wait did not block.");
+    }
     Console.WriteLine("WCP SELF-TEST OK");
     return;
 }

@@ -6,6 +6,7 @@ internal sealed class WayControlInput : IDisposable
 {
     private const int StickThreshold = 12_000;
     private readonly WayControlHub _hub = new();
+    private readonly IWayControlWaitBackend? _waitBackend;
     private readonly object _gate = new();
     private readonly Dictionary<string, DeviceState> _states = new(StringComparer.Ordinal);
     private Thread? _worker;
@@ -14,6 +15,8 @@ internal sealed class WayControlInput : IDisposable
     private string _deviceSummary = "NONE";
     private int _deviceCount;
     private long _activeControls;
+    private long _latestEventSequence;
+    private long _latestEventTimestampMicroseconds;
     private WcpControl? _lastActivatedControl;
 
     public WayControlInput()
@@ -21,7 +24,9 @@ internal sealed class WayControlInput : IDisposable
         if (!OperatingSystem.IsLinux()) return;
         try
         {
-            _hub.AddBackend(new LinuxEvdevBackend());
+            var backend = new LinuxEvdevBackend();
+            _hub.AddBackend(backend);
+            _waitBackend = backend;
             _worker = new Thread(WorkerLoop)
             {
                 IsBackground = true,
@@ -56,20 +61,42 @@ internal sealed class WayControlInput : IDisposable
 
     private void WorkerLoop()
     {
+        bool firstPass = true;
         while (!_stopping)
         {
             try
             {
+                if (!firstPass)
+                {
+                    if (_waitBackend is not null) _waitBackend.WaitForEvents(1_000);
+                    else Thread.Sleep(4);
+                }
+                firstPass = false;
                 ReadOnlySpan<WcpEvent> events = _hub.Poll();
                 bool devicesChanged = false;
+                ulong latestSequence = 0;
+                long latestTimestamp = 0;
                 lock (_gate)
                 {
                     foreach (WcpEvent inputEvent in events)
                     {
                         Apply(inputEvent);
                         devicesChanged |= inputEvent.Kind is WcpEventKind.DeviceConnected or WcpEventKind.DeviceDisconnected;
+                        if (inputEvent.Kind is WcpEventKind.Button or WcpEventKind.Axis)
+                        {
+                            latestSequence = inputEvent.Sequence;
+                            latestTimestamp = inputEvent.TimestampMicroseconds;
+                        }
                     }
-                    if (events.Length > 0) PublishActiveControls();
+                    if (events.Length > 0)
+                    {
+                        PublishActiveControls();
+                        if (latestSequence != 0)
+                        {
+                            Interlocked.Exchange(ref _latestEventTimestampMicroseconds, latestTimestamp);
+                            Interlocked.Exchange(ref _latestEventSequence, unchecked((long)latestSequence));
+                        }
+                    }
                 }
 
                 if (devicesChanged)
@@ -92,12 +119,18 @@ internal sealed class WayControlInput : IDisposable
                 }
                 return;
             }
-            Thread.Sleep(4);
         }
     }
 
     public bool IsActive(WcpControl control) =>
         (ushort)control < 64 && ((ulong)Interlocked.Read(ref _activeControls) & (1UL << (ushort)control)) != 0;
+
+    public bool TryGetLatestEvent(ulong observedSequence, out ulong sequence, out long timestampMicroseconds)
+    {
+        sequence = unchecked((ulong)Interlocked.Read(ref _latestEventSequence));
+        timestampMicroseconds = Interlocked.Read(ref _latestEventTimestampMicroseconds);
+        return sequence != 0 && sequence != observedSequence;
+    }
 
     public bool TryConsumeActivatedControl(out WcpControl control)
     {

@@ -79,3 +79,8 @@ public interface IWayControlBackend : IDisposable
 
     void Poll(ICollection<WcpEvent> events);
 }
+
+public interface IWayControlWaitBackend
+{
+    bool WaitForEvents(int timeoutMilliseconds);
+}

@@ -6,7 +6,7 @@ using System.Text;
 
 namespace SystemRegisIII.WayControlProtocol;
 
-public sealed partial class LinuxEvdevBackend : IWayControlBackend
+public sealed partial class LinuxEvdevBackend : IWayControlBackend, IWayControlWaitBackend
 {
     private const int OpenReadOnly = 0;
     private const int OpenNonBlocking = 0x800;
@@ -21,6 +21,7 @@ public sealed partial class LinuxEvdevBackend : IWayControlBackend
     private const int ButtonGamepad = 0x130;
     private const int ButtonDpadUp = 0x220;
     private const int ButtonDpadRight = 0x223;
+    private const short PollInput = 0x0001;
 
     private readonly string _deviceRoot;
     private readonly string _sysClassRoot;
@@ -28,6 +29,8 @@ public sealed partial class LinuxEvdevBackend : IWayControlBackend
     private readonly Dictionary<string, EvdevDevice> _devices = new(StringComparer.Ordinal);
     private long _lastScanTimestamp;
     private ulong _sequence;
+    private PollDescriptor[] _pollDescriptors = [];
+    private bool _pollDescriptorsDirty = true;
     private bool _disposed;
 
     public LinuxEvdevBackend(
@@ -45,6 +48,30 @@ public sealed partial class LinuxEvdevBackend : IWayControlBackend
     public string Name => "linux-evdev";
 
     public IReadOnlyCollection<WcpDeviceInfo> Devices => _devices.Values.Select(device => device.Info).ToArray();
+
+    public unsafe bool WaitForEvents(int timeoutMilliseconds)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        ArgumentOutOfRangeException.ThrowIfLessThan(timeoutMilliseconds, -1);
+        if (_pollDescriptorsDirty)
+        {
+            _pollDescriptors = _devices.Values
+                .Select(device => new PollDescriptor { Descriptor = device.Descriptor, Events = PollInput })
+                .ToArray();
+            _pollDescriptorsDirty = false;
+        }
+
+        while (true)
+        {
+            fixed (PollDescriptor* descriptors = _pollDescriptors)
+            {
+                int result = Native.poll(descriptors, (nuint)_pollDescriptors.Length, timeoutMilliseconds);
+                if (result >= 0) return result > 0;
+            }
+            if (Marshal.GetLastPInvokeError() != ErrorInterrupted)
+                throw new IOException("Linux poll() failed while waiting for controller input.");
+        }
+    }
 
     public void Poll(ICollection<WcpEvent> events)
     {
@@ -82,6 +109,7 @@ public sealed partial class LinuxEvdevBackend : IWayControlBackend
                 EvdevDevice? device = TryOpenDevice(path);
                 if (device is null) continue;
                 _devices.Add(path, device);
+                _pollDescriptorsDirty = true;
                 events.Add(NewEvent(device.Info.Id, WcpEventKind.DeviceConnected, WcpControl.None, 0));
             }
         }
@@ -232,11 +260,19 @@ public sealed partial class LinuxEvdevBackend : IWayControlBackend
     {
         if (!_devices.Remove(path, out EvdevDevice? device)) return;
         Native.close(device.Descriptor);
+        _pollDescriptorsDirty = true;
         events.Add(NewEvent(device.Info.Id, WcpEventKind.DeviceDisconnected, WcpControl.None, 0));
     }
 
     private WcpEvent NewEvent(string deviceId, WcpEventKind kind, WcpControl control, int value) =>
-        new(++_sequence, Stopwatch.GetTimestamp() * 1_000_000 / Stopwatch.Frequency, deviceId, kind, control, value);
+        new(++_sequence, StopwatchMicroseconds(), deviceId, kind, control, value);
+
+    private static long StopwatchMicroseconds()
+    {
+        long timestamp = Stopwatch.GetTimestamp();
+        return timestamp / Stopwatch.Frequency * 1_000_000 +
+            timestamp % Stopwatch.Frequency * 1_000_000 / Stopwatch.Frequency;
+    }
 
     private static bool TryMapButton(ushort code, out WcpControl control)
     {
@@ -320,6 +356,7 @@ public sealed partial class LinuxEvdevBackend : IWayControlBackend
         foreach (EvdevDevice device in _devices.Values)
             Native.close(device.Descriptor);
         _devices.Clear();
+        _pollDescriptors = [];
     }
 
     private sealed class EvdevDevice(int descriptor, WcpDeviceInfo info)
@@ -334,6 +371,14 @@ public sealed partial class LinuxEvdevBackend : IWayControlBackend
 
     private readonly record struct AxisRange(int Minimum, int Maximum, int Flat);
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PollDescriptor
+    {
+        public int Descriptor;
+        public short Events;
+        public short ReturnedEvents;
+    }
+
     private static partial class Native
     {
         [LibraryImport("libc", SetLastError = true, StringMarshalling = StringMarshalling.Utf8)]
@@ -347,5 +392,8 @@ public sealed partial class LinuxEvdevBackend : IWayControlBackend
 
         [LibraryImport("libc", SetLastError = true)]
         internal static partial int close(int descriptor);
+
+        [LibraryImport("libc", SetLastError = true)]
+        internal static unsafe partial int poll(PollDescriptor* descriptors, nuint count, int timeoutMilliseconds);
     }
 }

@@ -142,6 +142,8 @@ Defined packet types are `Hello`, `Welcome`, `DeviceConnected`, `DeviceDisconnec
 - Axis capture converts a deliberate stick movement into a mappable directional control such as `LeftStickLeft`.
 - The input/debug windows show WCP status and the first connected controller.
 - All evdev discovery, hotplug, reads and ioctls run on the dedicated `WayControlProtocol` worker; the WFEX/render thread reads only the published normalized state.
+- The worker blocks in Linux `poll()` until a controller descriptor is readable and wakes only once per second for hotplug discovery when idle. There is no fixed-rate controller polling loop.
+- The debug input panel reports `WCP>FRAME`, measured from the monotonic WCP event timestamp until the corresponding host-side core frame has completed.
 - Device-specific presets, configurable axis thresholds and hardware validation remain.
 - Every current keyboard mapping and deterministic WFEX input path remains intact.
 
