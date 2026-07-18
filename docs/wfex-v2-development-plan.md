@@ -150,7 +150,7 @@ Acceptance: lockstep remains bit-deterministic; an intentionally slow host stays
 
 ### Checkpoint 5 - Optional compressed stream fallback
 
-Deferred by design. Shared memory is the normal local high-throughput path, so a compressed stream codec will be considered later only after measurements on a real non-shared transport show that byte reduction outweighs codec CPU and latency.
+Completed after explicit follow-up. Measurements, codec selection, wire contract, safety bounds and parity evidence are recorded in [WFEX v2 Checkpoint 5 compressed stream fallback](wfex-v2-checkpoint-5-compressed-stream.md). PACKRLE is optional; shared memory and raw ARGB remain preferred defaults.
 
 1. Measure raw socket cost before selecting a codec.
 2. Prototype one fast lossless codec for full ARGB frames.
@@ -206,4 +206,4 @@ Shared memory is considered successful only if it reduces framebuffer copying wi
 
 Start with Checkpoint 0 and commit it independently. Then land handshake plus raw v2 before shared memory so negotiation and error handling can be tested without debugging two new mechanisms at once. Shared memory is the first expected performance feature. Presentation decoupling follows after frame ownership is proven. Compression remains optional and measurement-driven.
 
-WFEX v2's required local protocol work is complete through Checkpoint 6. Checkpoint 5 compression remains optional and deferred. Shared memory remains deterministic lockstep unless `presentation_mode = "latest-frame"` is configured, and every migrated producer retains its documented fallback path.
+WFEX v2 is complete through all planned checkpoints. PACKRLE is an optional streamed fallback, shared memory remains deterministic lockstep unless `presentation_mode = "latest-frame"` is configured, and every migrated producer retains its documented raw/v1 path.

@@ -26,6 +26,7 @@ audio?.Trigger(StormaktSound.Deploy);
 var command = new byte[29];
 var header = new byte[WfexV2FrameHeader.BaseHeaderSize];
 var frame = new uint[Width * Height];
+var encodedFrame = Array.Empty<byte>();
 ulong frameIndex = 0;
 
 if (negotiatedSession.PresentationMode == WfexPresentationModes.LatestFrame)
@@ -81,9 +82,15 @@ while (true)
     }
     else if (negotiatedSession.MajorVersion >= 2)
     {
-        WfexV2FrameHeader.CreateRaw(Width, Height, frameIndex, frameIndex * 16_666_667UL, 16_666_667UL).Write(header);
+        bool packedRle = (negotiatedSession.Capabilities & WfexCapabilities.PackedRleFrameRecords) != 0;
+        int encodedBytes = packedRle ? WfexPackedRle.Encode(frame, ref encodedFrame) : 0;
+        WfexV2FrameHeader frameHeader = packedRle
+            ? WfexV2FrameHeader.CreatePackedRle(Width, Height, encodedBytes, frameIndex, frameIndex * 16_666_667UL, 16_666_667UL)
+            : WfexV2FrameHeader.CreateRaw(Width, Height, frameIndex, frameIndex * 16_666_667UL, 16_666_667UL);
+        frameHeader.Write(header);
         output.Write(header.AsSpan(0, WfexV2FrameHeader.BaseHeaderSize));
-        output.Write(MemoryMarshal.AsBytes(frame.AsSpan()));
+        if (packedRle) output.Write(encodedFrame.AsSpan(0, encodedBytes));
+        else output.Write(MemoryMarshal.AsBytes(frame.AsSpan()));
     }
     else
     {

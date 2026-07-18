@@ -6,7 +6,7 @@ using SystemRegisIII.Core;
 RunSelfTest();
 string corpusDirectory = CorpusArgument(args) ?? Path.Combine(AppContext.BaseDirectory, "corpus");
 int corpusCases = RunMalformedCorpus(corpusDirectory);
-Console.WriteLine($"WFEX CONFORMANCE OK · {69 + corpusCases} CASES · CORPUS {corpusCases}");
+Console.WriteLine($"WFEX CONFORMANCE OK · {80 + corpusCases} CASES · CORPUS {corpusCases}");
 if (args.Contains("--benchmark", StringComparer.Ordinal)) RunBenchmark();
 
 static void RunSelfTest()
@@ -58,6 +58,8 @@ static void RunSelfTest()
     Require(hello.MajorVersion == 2 && hello.PixelFormats == WfexPixelFormats.Argb8888, "producer hello changed");
     Require(hello.PresentationModes == (WfexPresentationModes.DeterministicLockstep | WfexPresentationModes.LatestFrame),
         "producer did not offer both presentation modes");
+    Require((hello.Capabilities & WfexCapabilities.PackedRleFrameRecords) != 0,
+        "producer did not offer PACKRLE");
     WfexHandshakeRecord restrictedHello = WfexHandshakeRecord.CreateProducerHello(
         new WfexLimits(400, 280, 448_000),
         WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords,
@@ -73,6 +75,10 @@ static void RunSelfTest()
     WfexNegotiatedSession rawSession = WfexNegotiation.AcceptProducerHello(
         hello, WfexLimits.Default, out _, rawCapabilities);
     Require((rawSession.Capabilities & WfexCapabilities.SharedMemorySlots) == 0, "raw policy selected shared memory");
+    WfexNegotiatedSession packedSession = WfexNegotiation.AcceptProducerHello(
+        hello, WfexLimits.Default, out _, rawCapabilities | WfexCapabilities.PackedRleFrameRecords);
+    Require((packedSession.Capabilities & WfexCapabilities.PackedRleFrameRecords) != 0,
+        "PACKRLE capability was not selected");
     WfexNegotiatedSession latestSession = WfexNegotiation.AcceptProducerHello(
         hello, WfexLimits.Default, out WfexHandshakeRecord latestAccept,
         WfexNegotiation.HostCapabilities, WfexPresentationModes.LatestFrame);
@@ -116,6 +122,43 @@ static void RunSelfTest()
     WfexV2FrameHeader expectedV2 = WfexV2FrameHeader.CreateRaw(400, 280, 42, 700_000_014, 16_666_667);
     expectedV2.Write(v2);
     Require(WfexV2FrameHeader.Parse(v2) == expectedV2, "v2 frame header did not roundtrip");
+    uint[] packedPixels = Enumerable.Range(0, 4096)
+        .Select(static index => index % 19 < 12 ? 0xff102030u : 0xff000000u | (uint)index)
+        .ToArray();
+    byte[] packedBuffer = [];
+    int packedBytes = WfexPackedRle.Encode(packedPixels, ref packedBuffer);
+    uint[] packedDecoded = new uint[packedPixels.Length];
+    WfexPackedRle.Decode(packedBuffer.AsSpan(0, packedBytes), packedDecoded);
+    Require(packedDecoded.AsSpan().SequenceEqual(packedPixels), "PACKRLE roundtrip changed pixels");
+    Require(packedBytes < packedPixels.Length * sizeof(uint), "PACKRLE did not reduce a run-heavy frame");
+    WfexV2FrameHeader packedHeader = WfexV2FrameHeader.CreatePackedRle(
+        64, 64, packedBytes, 43, 716_666_681, 16_666_667);
+    byte[] packedHeaderBytes = new byte[WfexV2FrameHeader.BaseHeaderSize];
+    packedHeader.Write(packedHeaderBytes);
+    Require(WfexV2FrameHeader.Parse(packedHeaderBytes) == packedHeader, "PACKRLE v2 header did not roundtrip");
+    uint[] literalPixels = Enumerable.Range(0, WfexPackedRle.MaximumChunkPixels + 1).Select(static value => (uint)value).ToArray();
+    byte[] literalBuffer = [];
+    int literalBytes = WfexPackedRle.Encode(literalPixels, ref literalBuffer);
+    Require(literalBytes <= WfexPackedRle.MaximumEncodedBytes(literalPixels.Length), "PACKRLE literal bound was exceeded");
+    uint[] literalDecoded = new uint[literalPixels.Length];
+    WfexPackedRle.Decode(literalBuffer.AsSpan(0, literalBytes), literalDecoded);
+    Require(literalDecoded.AsSpan().SequenceEqual(literalPixels), "PACKRLE chunk boundary changed literals");
+    ExpectPackedFailure([0xff, 0x7f], 16, "oversized literal token");
+    ExpectPackedFailure([0x00, 0x80], 16, "truncated repeat token");
+    ExpectPackedFailure([0x00, 0x00, 1, 2, 3], 1, "truncated literal pixel");
+    ExpectPackedFailure([0x00, 0x80, 1, 2, 3, 4], 2, "decoded underflow");
+    var packedRandom = new Random(3020);
+    for (int pass = 0; pass < 64; pass++)
+    {
+        uint[] fuzzPixels = new uint[1 + packedRandom.Next(4096)];
+        for (int index = 0; index < fuzzPixels.Length; index++)
+            fuzzPixels[index] = packedRandom.Next(5) == 0 ? (uint)packedRandom.Next() : (uint)(index / (1 + packedRandom.Next(12)));
+        byte[] fuzzBuffer = [];
+        int fuzzBytes = WfexPackedRle.Encode(fuzzPixels, ref fuzzBuffer);
+        uint[] fuzzDecoded = new uint[fuzzPixels.Length];
+        WfexPackedRle.Decode(fuzzBuffer.AsSpan(0, fuzzBytes), fuzzDecoded);
+        Require(fuzzDecoded.AsSpan().SequenceEqual(fuzzPixels), $"PACKRLE fuzz pass {pass} changed pixels");
+    }
     byte[] fragmentedV2 = new byte[v2.Length];
     WfexStreamReader.ReadExactly(new FragmentedStream(v2, 5), fragmentedV2);
     Require(WfexV2FrameHeader.Parse(fragmentedV2) == expectedV2, "fragmented v2 header changed in transit");
@@ -268,6 +311,7 @@ static int RunMalformedCorpus(string directory)
         {
             "v1" => ValidateCorpusV1(record),
             "v2" => ValidateCorpusV2(record),
+            "v2-packrle" => ValidateCorpusV2Packed(record),
             _ => throw new InvalidDataException($"Corpus case {path} has unknown version '{version}'."),
         };
         if (!string.Equals(actual, expected, StringComparison.Ordinal))
@@ -294,6 +338,23 @@ static string ValidateCorpusV2(byte[] record)
     if ((ulong)record.Length < header.RecordBytes) return "TruncatedPayload";
     if ((ulong)record.Length > header.RecordBytes) return "TrailingBytes";
     return "Accepted";
+}
+
+static string ValidateCorpusV2Packed(byte[] record)
+{
+    string headerResult = ValidateCorpusV2(record);
+    if (headerResult != "Accepted") return headerResult;
+    WfexV2FrameHeader header = WfexV2FrameHeader.Parse(record);
+    if (header.Codec != WfexV2PayloadCodec.PackedRleArgb8888) return "WrongCodec";
+    try
+    {
+        WfexPackedRle.Decode(record.AsSpan(header.HeaderSize, header.PayloadBytes), new uint[header.PixelCount]);
+        return "Accepted";
+    }
+    catch (InvalidDataException)
+    {
+        return "InvalidCompressedPayload";
+    }
 }
 
 static void RunBenchmark()
@@ -324,6 +385,14 @@ static void CopyBenchmark(int width, int height, int iterations)
     timer.Stop();
     double bytes = (double)source.Length * sizeof(uint) * iterations;
     Console.WriteLine($"COPY {width}X{height} · {bytes / timer.Elapsed.TotalSeconds / 1_000_000_000:0.00} GB/S · {timer.Elapsed.TotalMilliseconds / iterations:0.000} MS/FRAME");
+}
+
+static void ExpectPackedFailure(byte[] encoded, int pixelCount, string label)
+{
+    bool threw = false;
+    try { WfexPackedRle.Decode(encoded, new uint[pixelCount]); }
+    catch (InvalidDataException) { threw = true; }
+    Require(threw, $"PACKRLE accepted {label}");
 }
 
 static byte[] Header(int width, int height, int stride, ulong frameIndex, int payloadBytes)

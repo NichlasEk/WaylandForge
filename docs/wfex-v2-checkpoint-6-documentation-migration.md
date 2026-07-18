@@ -1,6 +1,6 @@
 # WFEX v2 Checkpoint 6 - documentation and migration
 
-Checkpoint 6 closes the compatibility and adoption work around the implemented v2 protocol. Compression remains the separate, optional Checkpoint 5 and is deliberately deferred until a non-shared transport measurement justifies it.
+Checkpoint 6 closes the compatibility and adoption work around the implemented v2 protocol. The later explicit Checkpoint 5 follow-up added optional PACKRLE without changing these compatibility rules.
 
 ## Delivered
 
@@ -29,7 +29,7 @@ The host integration suite additionally covers v1 fallback, v2 raw, shared locks
 Verification on 2026-07-18 produced:
 
 - full solution and explicit Stormakt Release builds with zero warnings and zero errors;
-- `WFEX CONFORMANCE OK - 76 CASES - CORPUS 7` from both the bundled and explicit corpus paths;
+- after the PACKRLE follow-up, `WFEX CONFORMANCE OK - 90 CASES - CORPUS 10` from both the bundled and explicit corpus paths;
 - the producer example running as a real child process at 64x48 in v1, v2 raw and v2 shared modes;
 - five 600-frame Stormakt raw/shared comparisons with identical framebuffer hashes;
 - passing latest-frame, v1 fallback, required-v2 failure, shared-memory cleanup, crash and reconnect checks.

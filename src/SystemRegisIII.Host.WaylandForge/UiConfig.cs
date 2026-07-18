@@ -111,6 +111,7 @@ internal sealed class UiConfig
         writer.WriteLine($"socket_path = \"{Escape(ExternalCore.SocketPath)}\"");
         writer.WriteLine($"protocol_policy = \"{Escape(ExternalCore.ProtocolPolicy)}\"");
         writer.WriteLine($"frame_transport = \"{Escape(ExternalCore.FrameTransport)}\"");
+        writer.WriteLine($"frame_codec = \"{Escape(ExternalCore.FrameCodec)}\"");
         writer.WriteLine($"presentation_mode = \"{Escape(ExternalCore.PresentationMode)}\"");
         writer.WriteLine($"shared_memory_directory = \"{Escape(ExternalCore.SharedMemoryDirectory)}\"");
         WriteWfexLimits(writer, ExternalCore);
@@ -126,6 +127,7 @@ internal sealed class UiConfig
         writer.WriteLine($"socket_path = \"{Escape(ExternalCore2.SocketPath)}\"");
         writer.WriteLine($"protocol_policy = \"{Escape(ExternalCore2.ProtocolPolicy)}\"");
         writer.WriteLine($"frame_transport = \"{Escape(ExternalCore2.FrameTransport)}\"");
+        writer.WriteLine($"frame_codec = \"{Escape(ExternalCore2.FrameCodec)}\"");
         writer.WriteLine($"presentation_mode = \"{Escape(ExternalCore2.PresentationMode)}\"");
         writer.WriteLine($"shared_memory_directory = \"{Escape(ExternalCore2.SharedMemoryDirectory)}\"");
         WriteWfexLimits(writer, ExternalCore2);
@@ -141,6 +143,7 @@ internal sealed class UiConfig
         writer.WriteLine($"socket_path = \"{Escape(ExternalCore3.SocketPath)}\"");
         writer.WriteLine($"protocol_policy = \"{Escape(ExternalCore3.ProtocolPolicy)}\"");
         writer.WriteLine($"frame_transport = \"{Escape(ExternalCore3.FrameTransport)}\"");
+        writer.WriteLine($"frame_codec = \"{Escape(ExternalCore3.FrameCodec)}\"");
         writer.WriteLine($"presentation_mode = \"{Escape(ExternalCore3.PresentationMode)}\"");
         writer.WriteLine($"shared_memory_directory = \"{Escape(ExternalCore3.SharedMemoryDirectory)}\"");
         WriteWfexLimits(writer, ExternalCore3);
@@ -354,6 +357,14 @@ internal sealed class UiConfig
                     break;
                 case "frame_transport":
                     externalCore.FrameTransport = ParseFrameTransport(value, externalCore.FrameTransport);
+                    break;
+                case "frame_codec":
+                    externalCore.FrameCodec = value.ToLowerInvariant() switch
+                    {
+                        "prefer-packrle" => "prefer-packrle",
+                        "require-packrle" => "require-packrle",
+                        _ => "raw",
+                    };
                     break;
                 case "presentation_mode":
                     externalCore.PresentationMode = value.Equals("latest-frame", StringComparison.OrdinalIgnoreCase)
@@ -660,6 +671,7 @@ internal sealed class UiExternalCoreConfig
     public string SocketPath { get; set; } = string.Empty;
     public string ProtocolPolicy { get; set; } = "v1";
     public string FrameTransport { get; set; } = "raw";
+    public string FrameCodec { get; set; } = "raw";
     public string PresentationMode { get; set; } = "lockstep";
     public string SharedMemoryDirectory { get; set; } = string.Empty;
     public int MaximumFrameWidth { get; set; } = WfexLimits.Default.MaximumWidth;

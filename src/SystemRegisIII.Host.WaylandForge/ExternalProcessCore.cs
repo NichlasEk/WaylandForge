@@ -24,6 +24,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     private string _pointerDriver = "absolute";
     private string _protocolPolicy = "v1";
     private string _frameTransport = "raw";
+    private string _frameCodec = "raw";
     private string _presentationMode = "lockstep";
     private string _sharedMemoryDirectory = string.Empty;
     private string _fallbackDllPath = string.Empty;
@@ -46,6 +47,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     private int _lastStride;
     private uint[] _frame = [];
     private uint[] _pendingFrame = [];
+    private byte[] _encodedFrame = [];
     private readonly byte[] _header = new byte[32];
     private readonly byte[] _v2Header = new byte[WfexV2FrameHeader.MaximumHeaderSize];
     private readonly byte[] _stepCommandBuffer = new byte[29];
@@ -61,6 +63,9 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     private ulong _lastPresentationTimestampNanoseconds;
     private ulong _lastNominalDurationNanoseconds;
     private ulong _sharedPayloadBytesAvoided;
+    private ulong _compressedFrames;
+    private ulong _compressedWireBytes;
+    private ulong _compressedDecodedBytes;
     private bool _lastFrameUsesSharedMemory;
     private readonly object _latestFrameLock = new();
     private Thread? _latestFrameReader;
@@ -101,7 +106,18 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     public string ProtocolTiming => _negotiatedSession.MajorVersion < 2 || _v2FramesReceived == 0
         ? "-"
         : $"{_lastPresentationTimestampNanoseconds / 1_000_000.0:0.000} MS · {_lastNominalDurationNanoseconds / 1_000_000.0:0.000} MS";
-    public string ProtocolCopySavings => _sharedRegion is null ? "-" : $"{_sharedPayloadBytesAvoided / (1024.0 * 1024.0):0.0} MIB";
+    public string ProtocolCopySavings => _sharedRegion is not null
+        ? $"{_sharedPayloadBytesAvoided / (1024.0 * 1024.0):0.0} MIB"
+        : _compressedFrames > 0
+            ? $"{Math.Max(0.0, (double)_compressedDecodedBytes - _compressedWireBytes) / (1024.0 * 1024.0):0.0} MIB"
+            : "-";
+    public string ProtocolCodec => _sharedRegion is not null
+        ? "RAW SHM"
+        : _compressedFrames > 0
+            ? $"PACKRLE · {_compressedWireBytes * 100.0 / _compressedDecodedBytes:0.0}% WIRE"
+            : (_negotiatedSession.Capabilities & WfexCapabilities.PackedRleFrameRecords) != 0
+                ? "PACKRLE · WAITING"
+                : "RAW ARGB";
     public string ProtocolPacing => _negotiatedSession.PresentationMode != WfexPresentationModes.LatestFrame
         ? "LOCKSTEP"
         : $"LATEST · SIM {_latestSimulationIndex} · SHOW {_latestPresentedIndex} · DROP {_latestDroppedFrames} · {_latestReceiveToPresentMilliseconds:0.00} MS";
@@ -164,6 +180,12 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         {
             "prefer-shm" => "prefer-shm",
             "require-shm" => "require-shm",
+            _ => "raw",
+        };
+        _frameCodec = config.FrameCodec.Trim().ToLowerInvariant() switch
+        {
+            "prefer-packrle" => "prefer-packrle",
+            "require-packrle" => "require-packrle",
             _ => "raw",
         };
         _presentationMode = config.PresentationMode.Equals("latest-frame", StringComparison.OrdinalIgnoreCase)
@@ -440,7 +462,25 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
             _frame = new uint[frameHeader.PixelCount];
         }
 
-        WfexStreamReader.ReadExactly(stream, MemoryMarshal.AsBytes(_frame.AsSpan()));
+        if (frameHeader.Codec == WfexV2PayloadCodec.PackedRleArgb8888)
+        {
+            if ((_negotiatedSession.Capabilities & WfexCapabilities.PackedRleFrameRecords) == 0)
+                throw new InvalidDataException("WFEX producer sent PACKRLE without negotiating it.");
+            if (_encodedFrame.Length < frameHeader.PayloadBytes)
+                _encodedFrame = new byte[WfexPackedRle.MaximumEncodedBytes(frameHeader.PixelCount)];
+            Span<byte> encodedPayload = _encodedFrame.AsSpan(0, frameHeader.PayloadBytes);
+            WfexStreamReader.ReadExactly(stream, encodedPayload);
+            WfexPackedRle.Decode(encodedPayload, _frame);
+            _compressedFrames++;
+            _compressedWireBytes += (uint)frameHeader.PayloadBytes;
+            _compressedDecodedBytes += (uint)frameHeader.DecodedPayloadBytes;
+        }
+        else
+        {
+            if (_frameCodec == "require-packrle" && frameHeader.IsV2)
+                throw new InvalidDataException("WFEX PACKRLE was required but the producer sent a raw frame.");
+            WfexStreamReader.ReadExactly(stream, MemoryMarshal.AsBytes(_frame.AsSpan()));
+        }
         if (frameHeader.IsV2) CommitV2Sequence(frameHeader);
         FrameIndex = frameHeader.FrameIndex;
         _lastFrameUsesSharedMemory = false;
@@ -614,7 +654,8 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         WfexFrameHeader header = WfexFrameHeader.Parse(_header, _wfexLimits);
         return new FrameRecordInfo(
             header.Width, header.Height, header.StridePixels, header.FrameIndex,
-            header.PayloadBytes, false, 0, 0);
+            header.PayloadBytes, false, 0, 0,
+            WfexV2PayloadCodec.RawArgb8888, header.PayloadBytes);
     }
 
     private FrameRecordInfo ReadV2FrameHeader(Stream stream)
@@ -637,7 +678,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         return new FrameRecordInfo(
             header.Width, header.Height, header.StridePixels, header.FrameIndex,
             header.PayloadBytes, true, header.PresentationTimestampNanoseconds,
-            header.NominalDurationNanoseconds);
+            header.NominalDurationNanoseconds, header.Codec, header.DecodedPayloadBytes);
     }
 
     private void ValidateV2Sequence(ulong frameIndex)
@@ -838,6 +879,9 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         _lastPresentationTimestampNanoseconds = 0;
         _lastNominalDurationNanoseconds = 0;
         _sharedPayloadBytesAvoided = 0;
+        _compressedFrames = 0;
+        _compressedWireBytes = 0;
+        _compressedDecodedBytes = 0;
         _lastFrameUsesSharedMemory = false;
         lock (_latestFrameLock)
         {
@@ -859,7 +903,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     private void EnsureFileProtocolPolicy()
     {
         if (_protocolNegotiated) return;
-        if (_protocolPolicy == "require-v2" || _frameTransport == "require-shm")
+        if (_protocolPolicy == "require-v2" || _frameTransport == "require-shm" || _frameCodec == "require-packrle")
             throw new InvalidOperationException("WFEX v2 negotiation requires an interactive stdio or Unix-socket control channel.");
         _protocolFallback = _protocolPolicy == "prefer-v2";
         _protocolNegotiated = true;
@@ -872,6 +916,8 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         {
             if (_frameTransport == "require-shm")
                 throw new InvalidOperationException("WFEX shared memory requires WFEX v2 negotiation.");
+            if (_frameCodec == "require-packrle")
+                throw new InvalidOperationException("WFEX PACKRLE requires WFEX v2 negotiation.");
             _protocolNegotiated = true;
             return;
         }
@@ -882,6 +928,8 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         {
             if (_frameTransport == "require-shm")
                 throw new TimeoutException("WFEX shared memory was required but the producer did not offer a v2 handshake.");
+            if (_frameCodec == "require-packrle")
+                throw new TimeoutException("WFEX PACKRLE was required but the producer did not offer a v2 handshake.");
             _protocolFallback = true;
             _protocolNegotiated = true;
             AddStderrLine("HOST: WFEX v2 hello not offered; using v1 fallback.");
@@ -894,7 +942,11 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
 
         WfexHandshakeRecord hello = WfexHandshakeRecord.Parse(buffer, WfexHandshakeRecord.ProducerMagic);
         WfexCapabilities enabledCapabilities = WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords;
-        if (_frameTransport != "raw") enabledCapabilities |= WfexCapabilities.SharedMemorySlots;
+        bool producerOffersShared = (hello.Capabilities & WfexCapabilities.SharedMemorySlots) != 0;
+        if (_frameTransport != "raw" && producerOffersShared)
+            enabledCapabilities |= WfexCapabilities.SharedMemorySlots;
+        else if (_frameCodec != "raw")
+            enabledCapabilities |= WfexCapabilities.PackedRleFrameRecords;
         WfexPresentationModes requestedPresentationMode = _presentationMode == "latest-frame"
             ? WfexPresentationModes.LatestFrame
             : WfexPresentationModes.DeterministicLockstep;
@@ -903,6 +955,11 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         bool sharedMemorySelected = (_negotiatedSession.Capabilities & WfexCapabilities.SharedMemorySlots) != 0;
         if (_frameTransport == "require-shm" && !sharedMemorySelected)
             throw new InvalidDataException("WFEX shared memory was required but the producer did not offer it.");
+        if (_frameCodec == "require-packrle" && sharedMemorySelected)
+            throw new InvalidOperationException("WFEX require-packrle cannot be combined with a selected shared-memory transport.");
+        if (_frameCodec == "require-packrle" &&
+            (_negotiatedSession.Capabilities & WfexCapabilities.PackedRleFrameRecords) == 0)
+            throw new InvalidDataException("WFEX PACKRLE was required but the producer did not offer it.");
         if (sharedMemorySelected)
         {
             try
@@ -913,8 +970,9 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
             }
             catch (Exception ex) when (_frameTransport == "prefer-shm")
             {
-                AddStderrLine($"HOST: shared-memory setup unavailable ({ex.Message}); using raw v2 records.");
+                AddStderrLine($"HOST: shared-memory setup unavailable ({ex.Message}); using streamed v2 records.");
                 enabledCapabilities &= ~WfexCapabilities.SharedMemorySlots;
+                if (_frameCodec != "raw") enabledCapabilities |= WfexCapabilities.PackedRleFrameRecords;
                 _negotiatedSession = WfexNegotiation.AcceptProducerHello(
                     hello, _configuredWfexLimits, out response, enabledCapabilities,
                     WfexPresentationModes.DeterministicLockstep);
@@ -990,9 +1048,11 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         int PayloadBytes,
         bool IsV2,
         ulong PresentationTimestampNanoseconds,
-        ulong NominalDurationNanoseconds)
+        ulong NominalDurationNanoseconds,
+        WfexV2PayloadCodec Codec = WfexV2PayloadCodec.RawArgb8888,
+        int DecodedPayloadBytes = 0)
     {
-        public int PixelCount => PayloadBytes / sizeof(uint);
+        public int PixelCount => (DecodedPayloadBytes == 0 ? PayloadBytes : DecodedPayloadBytes) / sizeof(uint);
     }
 
     private void PresentLastFrame(IFrameSink frameSink)

@@ -12,6 +12,7 @@ public enum WfexV2FrameFlags : ushort
 public enum WfexV2PayloadCodec : uint
 {
     RawArgb8888 = 1,
+    PackedRleArgb8888 = 2,
 }
 
 public enum WfexV2FrameValidationError
@@ -54,7 +55,8 @@ public readonly record struct WfexV2FrameHeader(
     public const ushort BaseHeaderSize = 64;
     public const ushort MaximumHeaderSize = 4096;
 
-    public int PixelCount => PayloadBytes / sizeof(uint);
+    public int PixelCount => checked(Width * Height);
+    public int DecodedPayloadBytes => checked(PixelCount * sizeof(uint));
 
     public static WfexV2FrameHeader CreateRaw(
         int width,
@@ -77,6 +79,32 @@ public readonly record struct WfexV2FrameHeader(
             presentationTimestampNanoseconds,
             nominalDurationNanoseconds,
             checked((ulong)BaseHeaderSize + (uint)payloadBytes));
+    }
+
+    public static WfexV2FrameHeader CreatePackedRle(
+        int width,
+        int height,
+        int encodedPayloadBytes,
+        ulong frameIndex,
+        ulong presentationTimestampNanoseconds,
+        ulong nominalDurationNanoseconds)
+    {
+        int pixelCount = checked(width * height);
+        if (encodedPayloadBytes <= 0 || encodedPayloadBytes > WfexPackedRle.MaximumEncodedBytes(pixelCount))
+            throw new ArgumentOutOfRangeException(nameof(encodedPayloadBytes));
+        return new WfexV2FrameHeader(
+            CurrentMinorVersion,
+            BaseHeaderSize,
+            WfexV2FrameFlags.FullFrame,
+            WfexV2PayloadCodec.PackedRleArgb8888,
+            width,
+            height,
+            width,
+            encodedPayloadBytes,
+            frameIndex,
+            presentationTimestampNanoseconds,
+            nominalDurationNanoseconds,
+            checked((ulong)BaseHeaderSize + (uint)encodedPayloadBytes));
     }
 
     public void Write(Span<byte> destination)
@@ -128,7 +156,8 @@ public readonly record struct WfexV2FrameHeader(
         if (headerSize < BaseHeaderSize || headerSize > MaximumHeaderSize || (headerSize & 7) != 0)
             return Fail(WfexV2FrameValidationError.InvalidHeaderSize, out error);
         if (source.Length < headerSize) return Fail(WfexV2FrameValidationError.HeaderTooShort, out error);
-        if (codec != WfexV2PayloadCodec.RawArgb8888) return Fail(WfexV2FrameValidationError.UnsupportedCodec, out error);
+        if (codec is not (WfexV2PayloadCodec.RawArgb8888 or WfexV2PayloadCodec.PackedRleArgb8888))
+            return Fail(WfexV2FrameValidationError.UnsupportedCodec, out error);
         if ((flags & WfexV2FrameFlags.FullFrame) == 0) return Fail(WfexV2FrameValidationError.MissingFullFrameFlag, out error);
         if (width <= 0) return Fail(WfexV2FrameValidationError.InvalidWidth, out error);
         if (height <= 0) return Fail(WfexV2FrameValidationError.InvalidHeight, out error);
@@ -137,11 +166,20 @@ public readonly record struct WfexV2FrameHeader(
             return Fail(WfexV2FrameValidationError.DimensionLimitExceeded, out error);
         if (stride != width) return Fail(WfexV2FrameValidationError.UnsupportedStride, out error);
 
+        int pixelCount;
         int expectedPayload;
-        try { expectedPayload = checked(checked(width * height) * sizeof(uint)); }
+        try
+        {
+            pixelCount = checked(width * height);
+            expectedPayload = checked(pixelCount * sizeof(uint));
+        }
         catch (OverflowException) { return Fail(WfexV2FrameValidationError.ArithmeticOverflow, out error); }
-        if (payloadBytes != expectedPayload) return Fail(WfexV2FrameValidationError.InvalidPayloadLength, out error);
-        if (payloadBytes > activeLimits.MaximumPayloadBytes) return Fail(WfexV2FrameValidationError.PayloadLimitExceeded, out error);
+        if (expectedPayload > activeLimits.MaximumPayloadBytes) return Fail(WfexV2FrameValidationError.PayloadLimitExceeded, out error);
+        if (codec == WfexV2PayloadCodec.RawArgb8888 && payloadBytes != expectedPayload)
+            return Fail(WfexV2FrameValidationError.InvalidPayloadLength, out error);
+        if (codec == WfexV2PayloadCodec.PackedRleArgb8888 &&
+            (payloadBytes <= 0 || payloadBytes > WfexPackedRle.MaximumEncodedBytes(pixelCount)))
+            return Fail(WfexV2FrameValidationError.InvalidPayloadLength, out error);
         if (recordBytes != checked((ulong)headerSize + (uint)payloadBytes)) return Fail(WfexV2FrameValidationError.InvalidRecordLength, out error);
         if (nominalDuration == 0) return Fail(WfexV2FrameValidationError.InvalidNominalDuration, out error);
 

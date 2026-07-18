@@ -15,6 +15,7 @@ WfexNegotiatedSession negotiatedSession = WfexNegotiation.NegotiateProducerFromE
 using WfexSharedRegion? sharedRegion = OpenSharedRegion(negotiatedSession, input, output);
 var frame = new uint[frameWidth * frameHeight];
 var header = new byte[WfexV2FrameHeader.BaseHeaderSize];
+var encodedFrame = Array.Empty<byte>();
 var command = new byte[5];
 ulong frameIndex = 0;
 int blobX = frameWidth / 2;
@@ -46,9 +47,15 @@ while (ReadExact(input, command))
     }
     else if (negotiatedSession.MajorVersion >= 2)
     {
-        WfexV2FrameHeader.CreateRaw(frameWidth, frameHeight, frameIndex, frameIndex * 16_666_667UL, 16_666_667UL).Write(header);
+        bool packedRle = (negotiatedSession.Capabilities & WfexCapabilities.PackedRleFrameRecords) != 0;
+        int encodedBytes = packedRle ? WfexPackedRle.Encode(frame, ref encodedFrame) : 0;
+        WfexV2FrameHeader frameHeader = packedRle
+            ? WfexV2FrameHeader.CreatePackedRle(frameWidth, frameHeight, encodedBytes, frameIndex, frameIndex * 16_666_667UL, 16_666_667UL)
+            : WfexV2FrameHeader.CreateRaw(frameWidth, frameHeight, frameIndex, frameIndex * 16_666_667UL, 16_666_667UL);
+        frameHeader.Write(header);
         output.Write(header.AsSpan(0, WfexV2FrameHeader.BaseHeaderSize));
-        output.Write(MemoryMarshalBytes(frame));
+        if (packedRle) output.Write(encodedFrame.AsSpan(0, encodedBytes));
+        else output.Write(MemoryMarshalBytes(frame));
     }
     else
     {

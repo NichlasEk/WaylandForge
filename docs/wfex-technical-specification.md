@@ -2,14 +2,14 @@
 
 Status: documentation of the protocol implemented by the current WaylandForge host and external cores.
 
-WFEX is WaylandForge's small binary framebuffer protocol for process-isolated game and emulator cores. It is not a video codec or a general network streaming protocol. A WFEX stream is a sequence of complete, uncompressed ARGB8888 frame records. Input travels in the opposite direction through one of the companion input formats described below.
+WFEX is WaylandForge's small binary framebuffer protocol for process-isolated game and emulator cores. It is not a general network streaming protocol. A WFEX stream is a sequence of complete ARGB8888 frames carried raw or, when negotiated in v2, by the lossless PACKRLE codec. Input travels in the opposite direction through one of the companion input formats described below.
 
 The primary implementation references are:
 
 - `src/SystemRegisIII.Host.WaylandForge/ExternalProcessCore.cs`, which starts external processes, transports input, validates WFEX records and presents frames;
 - `src/SystemRegisIII.ExternalCore.Stormakt3020/Program.cs`, which implements the pointer-aware stdio producer used by Stormakt 3020;
 - `src/SystemRegisIII.ExternalCore.Dummy/Program.cs`, which is the smallest reference producer;
-- `src/SystemRegisIII.Core/WfexNegotiation.cs`, `WfexV2Frame.cs` and `WfexSharedMemory.cs`, which define the shared v2 wire and mapped-memory contracts;
+- `src/SystemRegisIII.Core/WfexNegotiation.cs`, `WfexV2Frame.cs`, `WfexPackedRle.cs` and `WfexSharedMemory.cs`, which define the shared v2 wire, codec and mapped-memory contracts;
 - `src/SystemRegisIII.Host.WaylandForge/FrameStore.cs`, which copies a received frame into the host's packed framebuffer.
 
 ## Design goals
@@ -23,7 +23,7 @@ WFEX deliberately keeps the integration boundary narrow:
 - code with a different license can remain outside the WaylandForge process;
 - the same frame record works over standard output, a file/FIFO or a Unix socket.
 
-The protocol currently prioritizes local bring-up, determinism and simple debugging over bandwidth efficiency.
+The protocol prioritizes local bring-up, determinism and simple debugging. Raw ARGB8888 remains mandatory; PACKRLE is an optional stream optimization and shared memory remains the preferred local high-throughput path.
 
 ## Byte order and integer representation
 
@@ -83,7 +83,7 @@ Both records are exactly 48 bytes and little-endian:
 | 40 | 4 | `uint32` | `pixelFormats` | Offered or selected pixel-format bits. |
 | 44 | 4 | `uint32` | `presentationModes` | Offered or selected presentation-mode bits. |
 
-Capability bit 0 is `RAW_FRAME_RECORDS` and bit 1 is `VERSIONED_FRAME_RECORDS`; both are mandatory for the current v2 baseline. The second bit prevents a Checkpoint 1-era producer that still emits v1 headers after negotiation from being silently misparsed. Capability bit 2 is the optional `SHARED_MEMORY_SLOTS`. Pixel-format bit 0 is `ARGB8888`. Presentation bit 0 is `DETERMINISTIC_LOCKSTEP`; bit 1 is `LATEST_FRAME`. Every producer offers lockstep and may additionally offer latest-frame; the host selects exactly one offered mode. `LATEST_FRAME` is valid only when shared-memory slots were also selected. Unknown required capability bits fail negotiation. Unknown optional bits are masked out.
+Capability bit 0 is `RAW_FRAME_RECORDS` and bit 1 is `VERSIONED_FRAME_RECORDS`; both are mandatory for the current v2 baseline. The second bit prevents a Checkpoint 1-era producer that still emits v1 headers after negotiation from being silently misparsed. Capability bit 2 is the optional `SHARED_MEMORY_SLOTS`; bit 3 is optional `PACKED_RLE_FRAME_RECORDS`. Pixel-format bit 0 is `ARGB8888`. Presentation bit 0 is `DETERMINISTIC_LOCKSTEP`; bit 1 is `LATEST_FRAME`. Every producer offers lockstep and may additionally offer latest-frame; the host selects exactly one offered mode. `LATEST_FRAME` is valid only when shared-memory slots were also selected. Unknown required capability bits fail negotiation. Unknown optional bits are masked out.
 
 The selected maximums are the component-wise minimum of the producer offer and host configuration. The mandatory Checkpoint 1 baseline is raw ARGB8888 in deterministic lockstep. The raw stream transport is therefore explicitly confirmed by capability while the already-open stdio or Unix socket determines the control transport.
 
@@ -132,7 +132,7 @@ Supporting padded rows in the future requires an explicitly negotiated v2 capabi
 
 ## WFEX v2 frame record
 
-After a successful v2 handshake, Checkpoint 2 producers emit a 64-byte `WFF2` header followed by the same tightly packed raw ARGB8888 payload used by v1. The pixels therefore remain byte-identical while metadata becomes explicit and extensible.
+After a successful v2 handshake, producers emit a 64-byte `WFF2` header followed by one full-frame payload. Codec 1 carries the same tightly packed raw ARGB8888 bytes used by v1. Codec 2 carries the lossless PACKRLE representation described below.
 
 | Offset | Size | Type | Field | Meaning |
 |---:|---:|---|---|---|
@@ -141,11 +141,11 @@ After a successful v2 handshake, Checkpoint 2 producers emit a 64-byte `WFF2` he
 | 6 | 2 | `uint16` | `minorVersion` | Currently 0. |
 | 8 | 2 | `uint16` | `headerSize` | 64 through 4096, divisible by 8. |
 | 10 | 2 | `uint16` | `flags` | Bit 0 `FULL_FRAME` is mandatory. |
-| 12 | 4 | `uint32` | `payloadCodec` | 1 is raw ARGB8888. |
+| 12 | 4 | `uint32` | `payloadCodec` | 1 is raw ARGB8888; 2 is PACKRLE ARGB8888. |
 | 16 | 4 | `int32` | `width` | Positive visible width within negotiated limits. |
 | 20 | 4 | `int32` | `height` | Positive visible height within negotiated limits. |
 | 24 | 4 | `int32` | `stridePixels` | Currently must equal `width`. |
-| 28 | 4 | `int32` | `payloadBytes` | Must equal `width * height * 4`. |
+| 28 | 4 | `int32` | `payloadBytes` | Encoded bytes following the header; raw must equal `width * height * 4`. |
 | 32 | 8 | `uint64` | `frameIndex` | Monotonic frame sequence, modulo `uint64`. |
 | 40 | 8 | `uint64` | `presentationTimestampNs` | Producer media time in nanoseconds. |
 | 48 | 8 | `uint64` | `nominalDurationNs` | Positive nominal frame duration. |
@@ -155,14 +155,36 @@ Bytes from offset 64 through `headerSize - 1` are optional header extensions. A 
 
 The host validates codec, flags, dimensions, checked payload arithmetic, negotiated limits, declared record length and nominal duration before allocation. It accepts the first frame index of a new connection, then requires each complete record to increment by one. Wrap from `uint64.MaxValue` to zero is valid. Duplicates, gaps and out-of-order indices stop the core with the expected and received values; reconnect/reset starts a new sequence.
 
+## WFEX v2 PACKRLE stream codec
+
+`frame_codec` selects `raw`, `prefer-packrle` or `require-packrle`. PACKRLE is available only for negotiated v2 stream records; shared-memory slots remain raw. With `prefer-shm` plus `prefer-packrle`, shared memory wins when available and PACKRLE becomes the streamed fallback if shared-region creation fails. `require-packrle` requires `frame_transport = "raw"`.
+
+PACKRLE encodes the complete logical `width * height` pixel sequence as little-endian tokens. Each token begins with a `uint16`:
+
+```text
+bit 15      0 = literal, 1 = repeated pixel
+bits 14..0  pixel count minus one (1..32768 pixels)
+```
+
+A literal token is followed by `count` little-endian `uint32` ARGB pixels. A repeat token is followed by one little-endian `uint32` ARGB pixel which is expanded `count` times. Tokens continue until exactly `width * height` pixels have been decoded. Encoders should use repeat tokens for runs of at least three pixels and group other pixels into literal blocks.
+
+The negotiated `maximumPayloadBytes` is always the decoded ceiling. Before reading an encoded payload, the host checks dimensions and decoded `width * height * 4` against that ceiling. PACKRLE's encoded upper bound is:
+
+```text
+decodedBytes + 2 * ceil(pixelCount / 32768)
+```
+
+The host rejects zero/oversized encoded payloads before allocation, then rejects truncated tokens, tokens exceeding the remaining decoded frame, decoded underflow and trailing token data. A corrupt payload is never partially presented. Raw records remain mandatory and selectable even when PACKRLE is offered.
+
 ## WFEX v2 shared-memory transport
 
-`frame_transport` selects `raw`, `prefer-shm` or `require-shm` independently of `protocol_policy`. Shared memory requires a v2 interactive stdio or Unix-socket connection. `prefer-shm` negotiates raw v2 when the producer lacks the capability or when the host cannot create the region before sending its accept. `require-shm` fails instead. Once a shared setup has been selected and acknowledged, transport failure is fatal rather than silently switching record formats mid-stream.
+`frame_transport` selects `raw`, `prefer-shm` or `require-shm` independently of `protocol_policy`. Shared memory requires a v2 interactive stdio or Unix-socket connection. `prefer-shm` negotiates streamed v2 when the producer lacks the capability or when the host cannot create the region before sending its accept; that stream is raw or PACKRLE according to `frame_codec`. `require-shm` fails instead. Once a shared setup has been selected and acknowledged, transport failure is fatal rather than silently switching record formats mid-stream.
 
 ```toml
 [external_core3]
 protocol_policy = "prefer-v2"
 frame_transport = "prefer-shm"
+frame_codec = "prefer-packrle" # streamed fallback; raw | prefer-packrle | require-packrle
 presentation_mode = "lockstep" # or latest-frame; latest-frame requires shared memory
 shared_memory_directory = "" # empty selects /dev/shm or the runtime temp directory
 ```
@@ -244,7 +266,7 @@ The header overhead is negligible compared with the raw framebuffer.
 | 320 x 224 | 286,720 B | 286,752 B | 17.2 MB/s |
 | 400 x 280 | 448,000 B | 448,032 B | 26.9 MB/s |
 
-These rates are reasonable through local pipes and Unix sockets. They are not intended for an internet-facing transport.
+These raw rates are reasonable through local pipes and Unix sockets. PACKRLE reduced the measured 400x280 Stormakt stream to 54.4% of raw; content with fewer repeated spans may save less. Neither transport is intended as an internet-facing media protocol.
 
 ## Stdio control protocol
 
@@ -429,7 +451,7 @@ All v1 stdio, file/FIFO and Unix-socket readers use the same `WfexFrameHeader` p
 - `byteCount == width * height * sizeof(uint)` and a configurable payload ceiling, defaulting to 256 MiB;
 - successful reading of the complete payload.
 
-The v2 path additionally validates its declared header/record size, payload codec, full-frame flag, nominal duration and frame sequence. Diagnostics expose received v2 records, sequence errors, last media timestamp and nominal duration.
+The v2 path additionally validates its declared header/record size, payload codec, decoded and encoded bounds, full-frame flag, nominal duration and frame sequence. PACKRLE tokens are decoded into a bounded full-frame buffer only after the header passes. Diagnostics expose codec/wire ratio, saved bytes, received records, sequence errors, last media timestamp and nominal duration.
 
 The limits are configured independently under each `external_core` section with `max_frame_width`, `max_frame_height` and `max_frame_bytes`. The shared record reader handles fragmented reads, rejects a truncated synchronous record and gives non-blocking file-like streams a bounded no-data retry window. A transport whose underlying `Read` blocks must still supply its own timeout, as the Unix-socket path does.
 
@@ -484,7 +506,7 @@ A correct implementation must handle partial reads and writes. A single stream c
 WFEX currently has no:
 
 - pixel format other than ARGB8888;
-- compression or delta-frame encoding;
+- delta-frame or inter-frame encoding;
 - dirty rectangles or partial frame updates;
 - checksum or corruption recovery;
 - stream resynchronization after an invalid or dropped byte;
@@ -515,6 +537,6 @@ A new producer compatible with the current host should:
 9. loop on partial reads and writes;
 10. select `S`, `P`, Stormakt's host-side `Q`, or WFIN according to the configured transport and input requirements.
 
-A v2 producer additionally sends its hello before waiting for ordinary input, honors the host-selected capability intersection, emits `WFF2` records for raw v2, and enters shared-memory setup only when `SHARED_MEMORY_SLOTS` was selected. It must never send both a raw frame record and a shared notification for the same negotiated session.
+A v2 producer additionally sends its hello before waiting for ordinary input, honors the host-selected capability intersection, emits `WFF2` records for raw or selected PACKRLE v2, and enters shared-memory setup only when `SHARED_MEMORY_SLOTS` was selected. It must never send both a stream frame record and a shared notification for the same negotiated session, and must never emit codec 2 unless `PACKED_RLE_FRAME_RECORDS` was selected.
 
 Following those rules is enough to make a software-rendered external core appear as a normal WaylandForge viewport without sharing a graphics context or loading the core into the host process.

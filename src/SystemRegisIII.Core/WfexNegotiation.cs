@@ -9,6 +9,7 @@ public enum WfexCapabilities : ulong
     RawFrameRecords = 1UL << 0,
     VersionedFrameRecords = 1UL << 1,
     SharedMemorySlots = 1UL << 2,
+    PackedRleFrameRecords = 1UL << 3,
 }
 
 [Flags]
@@ -45,7 +46,8 @@ public readonly record struct WfexHandshakeRecord(
     public static WfexHandshakeRecord CreateProducerHello(
         WfexLimits limits,
         WfexCapabilities capabilities = WfexCapabilities.RawFrameRecords |
-            WfexCapabilities.VersionedFrameRecords | WfexCapabilities.SharedMemorySlots,
+            WfexCapabilities.VersionedFrameRecords | WfexCapabilities.SharedMemorySlots |
+            WfexCapabilities.PackedRleFrameRecords,
         WfexPresentationModes presentationModes = WfexPresentationModes.DeterministicLockstep |
             WfexPresentationModes.LatestFrame)
     {
@@ -125,14 +127,15 @@ public readonly record struct WfexNegotiatedSession(
 
     public string DiagnosticLabel => MajorVersion == 1
         ? "V1 RAW LOCKSTEP"
-        : $"V{MajorVersion}.{MinorVersion} RAW {(PresentationMode == WfexPresentationModes.LatestFrame ? "LATEST" : "LOCKSTEP")}";
+        : $"V{MajorVersion}.{MinorVersion} {(PresentationMode == WfexPresentationModes.LatestFrame ? "LATEST" : "LOCKSTEP")}";
 }
 
 public static class WfexNegotiation
 {
     public const string PolicyEnvironmentVariable = "WAYLANDFORGE_WFEX_POLICY";
     public static WfexCapabilities HostCapabilities =>
-        WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords | WfexCapabilities.SharedMemorySlots;
+        WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords |
+        WfexCapabilities.SharedMemorySlots | WfexCapabilities.PackedRleFrameRecords;
 
     public static WfexNegotiatedSession AcceptProducerHello(
         WfexHandshakeRecord hello,
@@ -181,7 +184,8 @@ public static class WfexNegotiation
         Stream output,
         WfexLimits producerLimits,
         WfexCapabilities offeredCapabilities = WfexCapabilities.RawFrameRecords |
-            WfexCapabilities.VersionedFrameRecords | WfexCapabilities.SharedMemorySlots,
+            WfexCapabilities.VersionedFrameRecords | WfexCapabilities.SharedMemorySlots |
+            WfexCapabilities.PackedRleFrameRecords,
         WfexPresentationModes offeredPresentationModes = WfexPresentationModes.DeterministicLockstep |
             WfexPresentationModes.LatestFrame)
     {

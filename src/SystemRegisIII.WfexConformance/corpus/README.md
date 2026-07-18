@@ -1,6 +1,6 @@
 # WFEX malformed-stream corpus
 
-Each `.wfexcase` file is an intentionally malformed complete record encoded as hexadecimal. `version` selects the v1 or v2 parser and `expect` names the validation result. `TruncatedPayload` means that the header is valid but fewer payload bytes follow than the header declares.
+Each `.wfexcase` file is an intentionally malformed complete record encoded as hexadecimal. `version` selects the v1, v2 or v2 PACKRLE parser and `expect` names the validation result. `TruncatedPayload` means that the header is valid but fewer payload bytes follow than the header declares. PACKRLE cases also decode the bounded payload and expect corrupt token streams to fail.
 
 The conformance executable loads this directory on every normal run. An external corpus can be checked with:
 

@@ -465,6 +465,7 @@ internal sealed unsafe class ForgeApp : IDisposable
                 DrawMetric(x, y, "WFEX", external.ProtocolStatus); y += 18;
                 DrawMetric(x, y, "LIMIT", external.ProtocolLimits); y += 18;
                 DrawMetric(x, y, "TRANSPORT", external.ProtocolTransport); y += 18;
+                DrawMetric(x, y, "CODEC", external.ProtocolCodec); y += 18;
                 DrawMetric(x, y, "RECORD", external.ProtocolFrameStatus); y += 18;
                 DrawMetric(x, y, "PACING", external.ProtocolPacing); y += 18;
                 DrawMetric(x, y, "MEDIA", external.ProtocolTiming); y += 18;
