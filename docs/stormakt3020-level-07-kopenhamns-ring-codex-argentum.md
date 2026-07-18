@@ -4,7 +4,7 @@ Status: aktiv utvecklingsplan för kampanjens sjunde rad, level id `6`. Första 
 
 ## Nuvarande spelbara checkpoint
 
-Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen render/step-dispatch och kampanjens sparade Bana 5-lastning. Den spelbara rymdöppningen leder efter en kort inflygning genom tre bossportar, två fullstora bossar och en fregattduo.
+Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen render/step-dispatch och kampanjens sparade Bana 5-lastning. Den spelbara rymdöppningen leder efter en kort inflygning genom tre bossportar, tre fullstora bossar och en fregattduo.
 
 **Trekroners lås:**
 
@@ -60,9 +60,18 @@ Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen rende
 - reparationsdrönaren kan återställa ett utslaget torn till halv styrka men aldrig laga skrov eller återuppliva en fregatt;
 - Sörens ed bryter en extra sköldnod, frigivna skepp skadar torn och fler snapphaneallierade fördröjer reparationen;
 - om den ena fregatten faller fortsätter den andra med ett tätare eget anfallsmönster;
-- segern lämnar båda vraken i spelrummet och visar checkpointresultatet **Superfregatten väntar**.
+- segern lämnar båda vraken i spelrummet och släpper fram Superfregatten utan meny eller levelreset.
 
-Miljön, låset, urtavlan, Frederik, Ögat, Dannebrogsvingarna, fregattduon, HUD, barriärer och resultatkort har kodritade fallbackformer i wide och legacy. `WAYLANDFORGE_STORMAKT_COPENHAGEN_GATE_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_ADMIRALTY_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_FREDERIK_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_EYE_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_DANNEBROG_TEST=1` och `WAYLANDFORGE_STORMAKT_COPENHAGEN_DUO_TEST=1` hoppar till förkortade deterministiska stridsfixtures. Det är fortfarande en utvecklingscheckpoint: nästa svep ska ersätta resultatstoppet med Kong Christians sektionsägda Superfregatt.
+**Kong Christians Superfregatt:**
+
+- fas 1 äger tre separata sektioner: en drönarbuk och två bredsidor; endast levande sektioner får fortsätta använda sitt anfall;
+- drönarna är skjutbara mål med egna banor och eld, medan bredsidorna växlar mellan babord och styrbord;
+- fas 2 fäller ut fyra korsnoder som låser en telegraferad skärmkvadrant; en förstörd nod gör motsvarande kvadrant permanent säker;
+- fas 3 låter en separat minnesmantel kompilera tre kumulativa order: kanonkulor, historiskt omöjliga raketer och ett telegraferat silverljus;
+- fas 4 öppnar kronreaktorn och låter Sören, frigivna skepp och snapphaneallierade hålla bakgrundsflottan, vilket sänker anfallstakten utan att skada reaktorn åt Karl;
+- reaktorbrottet lämnar det övre stadssigillet sprucket och visar checkpointresultatet **Holmens landning väntar**.
+
+Miljön, låset, urtavlan, Frederik, Ögat, Dannebrogsvingarna, fregattduon, Superfregatten, HUD, barriärer och resultatkort har kodritade fallbackformer i wide och legacy. `WAYLANDFORGE_STORMAKT_COPENHAGEN_GATE_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_ADMIRALTY_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_FREDERIK_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_EYE_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_DANNEBROG_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_DUO_TEST=1` och `WAYLANDFORGE_STORMAKT_COPENHAGEN_SUPERFRIGATE_TEST=1` hoppar till förkortade deterministiska stridsfixtures. Det är fortfarande en utvecklingscheckpoint: nästa svep ska ersätta resultatstoppet med den korta spelbara landningen vid Holmen och det direkta genrebytet.
 
 ## Kärna
 

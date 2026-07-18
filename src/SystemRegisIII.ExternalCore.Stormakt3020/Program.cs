@@ -272,6 +272,10 @@ internal sealed class StormaktGame
     private const int CopenhagenDuoMaxHealth = 480;
     private const int CopenhagenDuoTurretHealth = 54;
     private const int CopenhagenDuoShieldHealth = 30;
+    private const int CopenhagenSuperSectionHealth = 240;
+    private const int CopenhagenSuperCrossNodeHealth = 72;
+    private const int CopenhagenSuperMemoryHealth = 360;
+    private const int CopenhagenSuperReactorHealth = 540;
     private const int RtsSalvagedSilverGoal = 1_200;
     private const int DungeonFirstSigilMask = 1 << 8;
     private const int DungeonFogdeRescuedMask = 1 << 9;
@@ -345,6 +349,8 @@ internal sealed class StormaktGame
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_DANNEBROG_TEST"), "1", StringComparison.Ordinal);
     private readonly bool _copenhagenDuoTestMode = string.Equals(
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_DUO_TEST"), "1", StringComparison.Ordinal);
+    private readonly bool _copenhagenSuperTestMode = string.Equals(
+        Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_SUPERFRIGATE_TEST"), "1", StringComparison.Ordinal);
     private readonly SpritePack? _sprites;
     private readonly StormaktMusicLoop? _audio;
     private Random _random = new(3020);
@@ -592,6 +598,16 @@ internal sealed class StormaktGame
         new(0, 270, true, "ELEFANTEN", "JEG TAGER ÅBNINGEN", "FLYT JER", null, "rigsregnskabet");
     private static readonly RadioCard CopenhagenDuoFallRadio =
         new(0, 300, true, "KUNG CHRISTIAN", "MINE SKÆRME FALDER", "FLAGSKIB FREM", null, "portrait_christian");
+    private static readonly RadioCard CopenhagenSuperRadio =
+        new(0, 390, true, "KUNG CHRISTIAN", "HISTORIEN ER MIN", "JEG RETTER DEN", null, "portrait_christian");
+    private static readonly RadioCard CopenhagenSuperCrossRadio =
+        new(0, 300, false, "EBBA GRIP", "VITA KORSRAMEN", "BRYT EN SÄKER SÖM", null, "portrait_ebba");
+    private static readonly RadioCard CopenhagenSuperMemoryRadio =
+        new(0, 330, true, "KUNG CHRISTIAN", "KANONER VAR RAKETTER", "DET MINNS JEG", null, "portrait_christian");
+    private static readonly RadioCard CopenhagenSuperHoldRadio =
+        new(0, 330, false, "SÖREN SVARTKRUT", "JAG HÅLLER FLOTTAN", "ÖPPNA KRONAN", null, "portrait_soren", true);
+    private static readonly RadioCard CopenhagenSuperFallRadio =
+        new(0, 360, true, "KUNG CHRISTIAN", "BYEN LÅSER SIG", "I KOMMER EJ NED", null, "portrait_christian");
     private int _shipX;
     private int _shipY;
     private int _cooldown;
@@ -1101,6 +1117,20 @@ internal sealed class StormaktGame
                 resetCopenhagen.DannebrogActive = true;
                 resetCopenhagen.DannebrogDeathAge = 320;
                 BeginCopenhagenDuo(resetCopenhagen, testFixture: true);
+            }
+            if (_copenhagenSuperTestMode)
+            {
+                resetCopenhagen.Age = 5_400;
+                resetCopenhagen.GateActive = true;
+                resetCopenhagen.AdmiraltyActive = true;
+                resetCopenhagen.FrederikActive = true;
+                resetCopenhagen.EyeActive = true;
+                resetCopenhagen.DannebrogActive = true;
+                resetCopenhagen.DuoActive = true;
+                resetCopenhagen.DuoHealth[0] = 0;
+                resetCopenhagen.DuoHealth[1] = 0;
+                resetCopenhagen.DuoDeathAge = 360;
+                BeginCopenhagenSuperfrigate(resetCopenhagen, testFixture: true);
             }
         }
         if (_snapphaneWorld is SnapphaneWorldState resetSnapphane)
@@ -5362,6 +5392,13 @@ internal sealed class StormaktGame
             return;
         }
 
+        if (state.SuperActive)
+        {
+            StepCopenhagenSuperfrigate(state);
+            StepEnemyShots();
+            return;
+        }
+
         if (state.DuoActive)
         {
             StepCopenhagenDuo(state);
@@ -6302,9 +6339,7 @@ internal sealed class StormaktGame
             if (deathAge is 28 or 66 or 112 or 174 or 226)
                 _audio?.Trigger(StormaktSound.EnemyExplosion);
             if (deathAge < 270 || _bossRadioCard is not null) return;
-            _stageClear = true;
-            _stageClearAge = 0;
-            _audio?.SwitchMusic(StormaktMusicTrack.Combat);
+            BeginCopenhagenSuperfrigate(state);
             return;
         }
 
@@ -6539,6 +6574,400 @@ internal sealed class StormaktGame
     {
         double entry = Math.Min(1.0, wall.Age / 45.0);
         return -18 + 122 * entry;
+    }
+
+    private void BeginCopenhagenSuperfrigate(CopenhagenWorldState state, bool testFixture = false)
+    {
+        state.SuperActive = true;
+        state.SuperTestFixture = testFixture;
+        state.SuperAge = 0;
+        state.SuperPhase = 1;
+        state.SuperPhaseAge = 0;
+        state.SuperDeathAge = 0;
+        state.SuperHitFlash = 0;
+        state.SuperLastHitSection = -1;
+        state.SuperLockQuadrant = -1;
+        state.SuperLockAge = 0;
+        state.SuperMemoryOrder = 0;
+        state.SuperMemoryHealth = testFixture ? 90 : CopenhagenSuperMemoryHealth;
+        state.SuperBeamAge = 0;
+        state.SuperBeamTargetX = _shipX;
+        state.SuperBeamHitPlayer = false;
+        state.SuperSupportShown = false;
+        int sectionHealth = testFixture ? 36 : CopenhagenSuperSectionHealth;
+        state.SuperSectionHealth[0] = sectionHealth;
+        state.SuperSectionHealth[1] = sectionHealth;
+        state.SuperSectionHealth[2] = sectionHealth;
+        state.SuperSectionHealth[3] = testFixture ? 72 : CopenhagenSuperReactorHealth;
+        Array.Clear(state.SuperCrossHealth);
+        state.SuperDrones.Clear();
+        _enemyShots.Clear();
+        _shots.Clear();
+        if (testFixture) return;
+        ActivateBossRadio(CopenhagenSuperRadio);
+        _audio?.SwitchMusic(StormaktMusicTrack.Boss);
+        _audio?.Trigger(StormaktSound.OresundCrownCoreOpen);
+    }
+
+    private void StepCopenhagenSuperfrigate(CopenhagenWorldState state)
+    {
+        state.SuperAge++;
+        state.SuperPhaseAge++;
+        state.SuperHitFlash = Math.Max(0, state.SuperHitFlash - 1);
+        state.SuperSectionBreakFlash = Math.Max(0, state.SuperSectionBreakFlash - 1);
+        if (state.SuperDeathAge > 0)
+        {
+            _shots.Clear();
+            int deathAge = state.SuperDeathAge++;
+            if (deathAge == 1)
+            {
+                _enemyShots.Clear();
+                state.SuperDrones.Clear();
+                _score += 15_000;
+                ActivateBossRadio(CopenhagenSuperFallRadio);
+                _audio?.Trigger(StormaktSound.Broadside);
+            }
+            if (deathAge is 22 or 48 or 79 or 116 or 158 or 207 or 261)
+                _audio?.Trigger(StormaktSound.EnemyExplosion);
+            if (deathAge < 320 || _bossRadioCard is not null) return;
+            _stageClear = true;
+            _stageClearAge = 0;
+            _audio?.SwitchMusic(StormaktMusicTrack.Relief);
+            return;
+        }
+
+        StepCopenhagenSuperDrones(state);
+        StepCopenhagenSuperShots(state);
+        switch (state.SuperPhase)
+        {
+            case 1:
+                StepCopenhagenSuperSections(state);
+                break;
+            case 2:
+                StepCopenhagenSuperCross(state);
+                break;
+            case 3:
+                StepCopenhagenSuperMemory(state);
+                break;
+            default:
+                StepCopenhagenSuperReactor(state);
+                break;
+        }
+    }
+
+    private void StepCopenhagenSuperSections(CopenhagenWorldState state)
+    {
+        (double centerX, double centerY) = CopenhagenSuperCenter(state);
+        if (state.SuperSectionHealth[0] > 0 && state.SuperPhaseAge % 145 == 40 && state.SuperDrones.Count < 7)
+        {
+            for (int drone = -1; drone <= 1; drone++)
+                state.SuperDrones.Add(new CopenhagenRoyalDrone(centerX + drone * 18, centerY + 28,
+                    drone * 0.32, 0.72, state.SuperTestFixture ? 6 : 24, state.SuperDroneSerial++));
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        if (state.SuperPhaseAge % 92 == 0)
+        {
+            if (state.SuperSectionHealth[1] > 0) FireCopenhagenSuperBroadside(centerX - 76, centerY + 12, -1);
+            if (state.SuperSectionHealth[2] > 0) FireCopenhagenSuperBroadside(centerX + 76, centerY + 12, 1);
+        }
+        if (state.SuperSectionHealth.Take(3).Any(health => health > 0)) return;
+        state.SuperPhase = 2;
+        state.SuperPhaseAge = 0;
+        int health = state.SuperTestFixture ? 12 : CopenhagenSuperCrossNodeHealth;
+        for (int node = 0; node < state.SuperCrossHealth.Length; node++) state.SuperCrossHealth[node] = health;
+        state.SuperDrones.Clear();
+        _enemyShots.Clear();
+        ActivateBossRadio(CopenhagenSuperCrossRadio);
+        _audio?.Trigger(StormaktSound.OresundFortressLock);
+    }
+
+    private void StepCopenhagenSuperCross(CopenhagenWorldState state)
+    {
+        if (state.SuperLockAge > 0)
+        {
+            state.SuperLockAge++;
+            if (state.SuperLockAge > 82)
+            {
+                state.SuperLockAge = 0;
+                state.SuperLockQuadrant = -1;
+            }
+            else if (state.SuperLockAge >= 44 && !state.SuperLockHitPlayer &&
+                CopenhagenSuperShipInsideQuadrant(state.SuperLockQuadrant))
+            {
+                state.SuperLockHitPlayer = true;
+                DamageShip();
+            }
+        }
+        if (state.SuperPhaseAge % 105 == 1)
+        {
+            int start = state.SuperPhaseAge / 105;
+            state.SuperLockQuadrant = -1;
+            for (int offset = 0; offset < state.SuperCrossHealth.Length; offset++)
+            {
+                int quadrant = (start + offset) % state.SuperCrossHealth.Length;
+                if (state.SuperCrossHealth[quadrant] <= 0) continue;
+                state.SuperLockQuadrant = quadrant;
+                break;
+            }
+            if (state.SuperLockQuadrant >= 0)
+            {
+                state.SuperLockAge = 1;
+                state.SuperLockHitPlayer = false;
+                _audio?.Trigger(StormaktSound.TitheSealWall);
+            }
+        }
+        if (state.SuperPhaseAge % 72 == 0)
+        {
+            (double centerX, double centerY) = CopenhagenSuperCenter(state);
+            FireAimedCopenhagenShot(centerX, centerY + 23, 2.3, 2);
+        }
+        if (state.SuperCrossHealth.Any(health => health > 0)) return;
+        state.SuperPhase = 3;
+        state.SuperPhaseAge = 0;
+        state.SuperLockAge = 0;
+        state.SuperLockQuadrant = -1;
+        _enemyShots.Clear();
+        ActivateBossRadio(CopenhagenSuperMemoryRadio);
+        _audio?.Trigger(StormaktSound.TitheBossPhaseBreak);
+    }
+
+    private void StepCopenhagenSuperMemory(CopenhagenWorldState state)
+    {
+        int maximum = state.SuperTestFixture ? 90 : CopenhagenSuperMemoryHealth;
+        int order = Math.Clamp((maximum - state.SuperMemoryHealth) * 3 / Math.Max(1, maximum), 0, 2);
+        if (order > state.SuperMemoryOrder)
+        {
+            state.SuperMemoryOrder = order;
+            _enemyShots.Clear();
+            _audio?.Trigger(StormaktSound.Broadside);
+        }
+        (double centerX, double centerY) = CopenhagenSuperCenter(state);
+        if (state.SuperPhaseAge % 76 == 0)
+        {
+            int lanes = 3 + state.SuperMemoryOrder * 2;
+            for (int lane = 0; lane < lanes; lane++)
+            {
+                double angle = Math.PI * (0.18 + 0.64 * lane / Math.Max(1, lanes - 1));
+                _enemyShots.Add(new EnemyShot(centerX, centerY + 24,
+                    Math.Cos(angle) * 2.1, Math.Sin(angle) * 2.1, 6));
+            }
+        }
+        if (state.SuperMemoryOrder >= 1 && state.SuperPhaseAge % 58 == 18)
+        {
+            for (int rocket = -1; rocket <= 1; rocket++)
+            {
+                double originX = centerX + rocket * 42;
+                double dx = _shipX + rocket * 18 - originX;
+                double dy = _shipY - centerY;
+                double length = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
+                _enemyShots.Add(new EnemyShot(originX, centerY + 4, dx / length * 2.65, dy / length * 2.65, 4));
+            }
+        }
+        if (state.SuperMemoryOrder >= 2) StepCopenhagenSuperBeam(state, 126);
+        if (state.SuperMemoryHealth > 0) return;
+        state.SuperPhase = 4;
+        state.SuperPhaseAge = 0;
+        state.SuperBeamAge = 0;
+        _enemyShots.Clear();
+        ActivateBossRadio(CopenhagenSuperHoldRadio);
+        _audio?.Trigger(StormaktSound.OresundCrownCoreOpen);
+    }
+
+    private void StepCopenhagenSuperReactor(CopenhagenWorldState state)
+    {
+        int support = Math.Min(7, Math.Max(0, state.IncomingFreedShips) + Math.Max(0, state.SnapphaneAllies) +
+            (state.SorenOathComplete ? 2 : 0));
+        int aimedInterval = 48 + support * 5;
+        (double centerX, double centerY) = CopenhagenSuperCenter(state);
+        if (state.SuperPhaseAge % aimedInterval == 0)
+        {
+            FireAimedCopenhagenShot(centerX - 48, centerY + 18, 2.55, 2);
+            FireAimedCopenhagenShot(centerX + 48, centerY + 18, 2.55, 2);
+        }
+        int droneInterval = 150 + support * 18;
+        if (state.SuperPhaseAge % droneInterval == 35 && state.SuperDrones.Count < 5)
+        {
+            state.SuperDrones.Add(new CopenhagenRoyalDrone(centerX, centerY + 25, 0, 0.9,
+                state.SuperTestFixture ? 6 : 24, state.SuperDroneSerial++));
+        }
+        StepCopenhagenSuperBeam(state, 138 + support * 4);
+        if (!state.SuperSupportShown && state.SuperPhaseAge >= 90)
+        {
+            state.SuperSupportShown = true;
+            state.SuperSupportFlash = 90;
+            _audio?.Trigger(StormaktSound.TwinCannon);
+        }
+        state.SuperSupportFlash = Math.Max(0, state.SuperSupportFlash - 1);
+        if (state.SuperSectionHealth[3] > 0) return;
+        state.SuperDeathAge = 1;
+    }
+
+    private void StepCopenhagenSuperBeam(CopenhagenWorldState state, int interval)
+    {
+        if (state.SuperBeamAge > 0)
+        {
+            state.SuperBeamAge++;
+            if (state.SuperBeamAge is >= 42 and <= 72 && !state.SuperBeamHitPlayer &&
+                Math.Abs(_shipX - state.SuperBeamTargetX) < 10)
+            {
+                state.SuperBeamHitPlayer = true;
+                DamageShip();
+            }
+            if (state.SuperBeamAge > 82) state.SuperBeamAge = 0;
+        }
+        if (state.SuperBeamAge == 0 && state.SuperPhaseAge % interval == 1)
+        {
+            state.SuperBeamAge = 1;
+            state.SuperBeamTargetX = _shipX;
+            state.SuperBeamHitPlayer = false;
+            _audio?.Trigger(StormaktSound.OresundLaserRelay);
+        }
+    }
+
+    private void StepCopenhagenSuperDrones(CopenhagenWorldState state)
+    {
+        for (int index = state.SuperDrones.Count - 1; index >= 0; index--)
+        {
+            CopenhagenRoyalDrone drone = state.SuperDrones[index];
+            drone.Age++;
+            drone.X += drone.Vx + Math.Sin((drone.Age + drone.Serial * 17) * 0.06) * 0.32;
+            drone.Y += drone.Vy;
+            if (drone.Age % 95 == 0) FireAimedCopenhagenShot(drone.X, drone.Y, 2.05, 3);
+            if (DistanceSquared(drone.X, drone.Y, _shipX, _shipY) < 15 * 15)
+            {
+                state.SuperDrones.RemoveAt(index);
+                DamageShip();
+                continue;
+            }
+            if (drone.Y > _height + 24 || drone.X < -24 || drone.X > _width + 24)
+                state.SuperDrones.RemoveAt(index);
+        }
+    }
+
+    private void StepCopenhagenSuperShots(CopenhagenWorldState state)
+    {
+        (double centerX, double centerY) = CopenhagenSuperCenter(state);
+        for (int shotIndex = _shots.Count - 1; shotIndex >= 0; shotIndex--)
+        {
+            Shot shot = _shots[shotIndex];
+            CopenhagenRoyalDrone? drone = state.SuperDrones
+                .FirstOrDefault(candidate => DistanceSquared(shot.X, shot.Y, candidate.X, candidate.Y) < 13 * 13);
+            if (drone is not null)
+            {
+                drone.Health -= shot.Power;
+                _shots.RemoveAt(shotIndex);
+                if (drone.Health <= 0)
+                {
+                    state.SuperDrones.Remove(drone);
+                    _score += 120;
+                    _audio?.Trigger(StormaktSound.EnemyExplosion);
+                }
+                continue;
+            }
+
+            int target = -1;
+            if (state.SuperPhase == 1)
+            {
+                for (int section = 0; section < 3; section++)
+                {
+                    if (state.SuperSectionHealth[section] <= 0) continue;
+                    (double sectionX, double sectionY) = CopenhagenSuperSectionPosition(section, centerX, centerY);
+                    if (DistanceSquared(shot.X, shot.Y, sectionX, sectionY) < (section == 0 ? 22 * 22 : 27 * 27))
+                    {
+                        target = section;
+                        break;
+                    }
+                }
+                if (target >= 0)
+                    state.SuperSectionHealth[target] = Math.Max(0, state.SuperSectionHealth[target] - shot.Power);
+            }
+            else if (state.SuperPhase == 2)
+            {
+                for (int node = 0; node < state.SuperCrossHealth.Length; node++)
+                {
+                    if (state.SuperCrossHealth[node] <= 0) continue;
+                    (double nodeX, double nodeY) = CopenhagenSuperCrossNodePosition(node, centerX, centerY);
+                    if (DistanceSquared(shot.X, shot.Y, nodeX, nodeY) >= 14 * 14) continue;
+                    state.SuperCrossHealth[node] = Math.Max(0, state.SuperCrossHealth[node] - shot.Power);
+                    target = 10 + node;
+                    break;
+                }
+            }
+            else if (state.SuperPhase == 3 && state.SuperMemoryHealth > 0 &&
+                DistanceSquared(shot.X, shot.Y, centerX, centerY - 4) < 25 * 25)
+            {
+                state.SuperMemoryHealth = Math.Max(0, state.SuperMemoryHealth - shot.Power);
+                target = 20;
+            }
+            else if (state.SuperPhase == 4 && state.SuperSectionHealth[3] > 0 &&
+                DistanceSquared(shot.X, shot.Y, centerX, centerY - 5) < 29 * 29)
+            {
+                state.SuperSectionHealth[3] = Math.Max(0, state.SuperSectionHealth[3] - shot.Power);
+                target = 3;
+            }
+            if (target < 0) continue;
+            _shots.RemoveAt(shotIndex);
+            state.SuperHitFlash = 5;
+            state.SuperLastHitSection = target;
+            bool broken = target switch
+            {
+                >= 10 and < 14 => state.SuperCrossHealth[target - 10] == 0,
+                20 => state.SuperMemoryHealth == 0,
+                _ => state.SuperSectionHealth[target] == 0,
+            };
+            if (!broken) continue;
+            state.SuperSectionBreakFlash = 20;
+            _score += target >= 10 ? 480 : 900;
+            _audio?.Trigger(StormaktSound.OresundCrownCoreBreak);
+        }
+    }
+
+    private void FireCopenhagenSuperBroadside(double x, double y, int side)
+    {
+        for (int lane = -2; lane <= 2; lane++)
+        {
+            double targetX = _shipX + lane * 31 + side * 12;
+            double dx = targetX - x;
+            double dy = _height + 10 - y;
+            double length = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
+            _enemyShots.Add(new EnemyShot(x, y, dx / length * 2.3, dy / length * 2.3, 2));
+        }
+        _audio?.Trigger(StormaktSound.Broadside);
+    }
+
+    private bool CopenhagenSuperShipInsideQuadrant(int quadrant)
+    {
+        if (quadrant < 0) return false;
+        int splitY = (_height + 52) / 2;
+        bool right = _shipX >= _width / 2;
+        bool bottom = _shipY >= splitY;
+        return quadrant switch
+        {
+            0 => !right && !bottom,
+            1 => right && !bottom,
+            2 => right && bottom,
+            _ => !right && bottom,
+        };
+    }
+
+    private (double X, double Y) CopenhagenSuperCenter(CopenhagenWorldState state)
+    {
+        double entry = Math.Min(1.0, state.SuperAge / 110.0);
+        double eased = entry * entry * (3.0 - 2.0 * entry);
+        return (_width / 2.0 + Math.Sin(state.SuperAge * 0.006) * 18, -88 + 148 * eased);
+    }
+
+    private static (double X, double Y) CopenhagenSuperSectionPosition(int section, double centerX, double centerY) => section switch
+    {
+        0 => (centerX, centerY + 27),
+        1 => (centerX - 77, centerY + 10),
+        _ => (centerX + 77, centerY + 10),
+    };
+
+    private static (double X, double Y) CopenhagenSuperCrossNodePosition(int node, double centerX, double centerY)
+    {
+        double angle = Math.PI / 4.0 + node * Math.PI / 2.0;
+        return (centerX + Math.Cos(angle) * 76.0, centerY + 32 + Math.Sin(angle) * 49.0);
     }
 
     private void StepCopenhagenGateShots(CopenhagenWorldState state)
@@ -14625,7 +15054,8 @@ internal sealed class StormaktGame
         {
             DrawCopenhagenBarrier(frame, state);
             DrawCopenhagenEyeWalls(frame, state);
-            if (state.DuoActive) DrawCopenhagenDuo(frame, state);
+            if (state.SuperActive) DrawCopenhagenSuperfrigate(frame, state);
+            else if (state.DuoActive) DrawCopenhagenDuo(frame, state);
             else if (state.DannebrogActive) DrawCopenhagenDannebrog(frame, state);
             else if (state.EyeActive) DrawCopenhagenEye(frame, state);
             else if (state.FrederikActive) DrawCopenhagenFrederik(frame, state);
@@ -14646,6 +15076,7 @@ internal sealed class StormaktGame
             DrawCopenhagenEyeHud(frame, state);
             DrawCopenhagenDannebrogHud(frame, state);
             DrawCopenhagenDuoHud(frame, state);
+            DrawCopenhagenSuperHud(frame, state);
             DrawCopenhagenCheckpointBanner(frame, state);
         }
         DrawCopenhagenMissionTitle(frame, age);
@@ -15309,6 +15740,207 @@ internal sealed class StormaktGame
         DrawText(frame, x + 4, 28, "ABSALON", state.DuoHealth[0] > 0 ? 0xffbdf8ff : 0xff8f2635);
         DrawRect(frame, x + 2, 35, (width - 4) * state.DuoHealth[1] / maximum, 4, 0xffff8a4a);
         DrawText(frame, x + width - 58, 41, "ELEFANTEN", state.DuoHealth[1] > 0 ? 0xffffd66b : 0xff8f2635);
+    }
+
+    private void DrawCopenhagenSuperfrigate(uint[] frame, CopenhagenWorldState state)
+    {
+        if (state.SuperLockQuadrant >= 0 && state.SuperLockAge > 0)
+            DrawCopenhagenSuperQuadrantLock(frame, state);
+        if (state.SuperBeamAge > 0)
+        {
+            bool active = state.SuperBeamAge is >= 42 and <= 72;
+            uint color = active ? 0xffffffff : (state.SuperBeamAge / 5 & 1) == 0 ? 0xff7fc7ff : 0xffd6b25e;
+            int radius = active ? 7 : 2;
+            for (int offset = -radius; offset <= radius; offset += Math.Max(1, radius))
+                DrawLine(frame, state.SuperBeamTargetX + offset, 16, state.SuperBeamTargetX + offset, _height - 13, color);
+        }
+
+        (double centerXD, double centerYD) = CopenhagenSuperCenter(state);
+        int centerX = (int)Math.Round(centerXD);
+        int centerY = (int)Math.Round(centerYD);
+        uint hull = state.SuperDeathAge > 0 ? 0xff692834 : state.SuperHitFlash > 0 ? 0xff4b5358 : 0xff202b34;
+        FillTriangle(frame, centerX, centerY - 55, centerX - 128, centerY + 48, centerX + 128, centerY + 48, hull);
+        FillTriangle(frame, centerX, centerY - 39, centerX - 105, centerY + 34, centerX + 105, centerY + 34, 0xff29343a);
+        DrawLine(frame, centerX - 123, centerY + 44, centerX + 123, centerY + 44, 0xffd6b25e);
+        DrawLine(frame, centerX - 101, centerY + 31, centerX + 101, centerY + 31, 0xff8f2635);
+        DrawCrown(frame, centerX - 4, centerY - 41, 0xffffd66b);
+
+        for (int section = 0; section < 3; section++)
+        {
+            (double sectionXD, double sectionYD) = CopenhagenSuperSectionPosition(section, centerXD, centerYD);
+            int x = (int)Math.Round(sectionXD);
+            int y = (int)Math.Round(sectionYD);
+            bool broken = state.SuperSectionHealth[section] <= 0;
+            bool hit = state.SuperHitFlash > 0 && state.SuperLastHitSection == section;
+            uint color = broken ? 0xff592531 : hit ? 0xffffffff : section == 0 ? 0xff765139 : 0xff8f2635;
+            if (section == 0)
+            {
+                DrawRect(frame, x - 25, y - 12, 50, 23, 0xff101820);
+                DrawCircleOutline(frame, x, y, 17, color);
+                for (int hatch = -16; hatch <= 16; hatch += 8)
+                    DrawLine(frame, x + hatch, y - 8, x + hatch + 5, y + 8, color);
+            }
+            else
+            {
+                FillTriangle(frame, x, y - 18, x - 28, y + 14, x + 28, y + 14, color);
+                DrawLine(frame, x - 20, y + 6, x + 20, y + 6, 0xfff2eee4);
+                for (int gun = -1; gun <= 1; gun++) FillCircle(frame, x + gun * 10, y + 11, 3, 0xffffd66b);
+            }
+            if (broken)
+            {
+                DrawLine(frame, x - 17, y - 13, x + 17, y + 13, 0xffff8a4a);
+                DrawLine(frame, x + 17, y - 13, x - 17, y + 13, 0xffff8a4a);
+            }
+        }
+
+        if (state.SuperPhase == 2)
+        {
+            for (int node = 0; node < state.SuperCrossHealth.Length; node++)
+            {
+                (double nodeXD, double nodeYD) = CopenhagenSuperCrossNodePosition(node, centerXD, centerYD);
+                int x = (int)Math.Round(nodeXD);
+                int y = (int)Math.Round(nodeYD);
+                bool broken = state.SuperCrossHealth[node] <= 0;
+                DrawLine(frame, centerX, centerY + 12, x, y, broken ? 0xff315b42 : 0xfff2eee4);
+                if (broken)
+                {
+                    DrawLine(frame, x - 7, y - 7, x + 7, y + 7, 0xff7fc7ff);
+                    DrawLine(frame, x + 7, y - 7, x - 7, y + 7, 0xff7fc7ff);
+                }
+                else
+                {
+                    FillCircle(frame, x, y, 8, 0xff101820);
+                    DrawCircleOutline(frame, x, y, 10,
+                        state.SuperLockQuadrant == node ? 0xffff6b62 : 0xfff2eee4);
+                    FillCircle(frame, x, y, 3, 0xff7fc7ff);
+                }
+            }
+        }
+
+        if (state.SuperPhase >= 3)
+        {
+            bool reactor = state.SuperPhase == 4;
+            uint core = reactor ? 0xffffec9a : state.SuperMemoryOrder switch
+            {
+                0 => 0xffd6b25e,
+                1 => 0xffff8a4a,
+                _ => 0xffbdf8ff,
+            };
+            FillCircle(frame, centerX, centerY - 4, reactor ? 24 : 20, 0xff101820);
+            DrawCircleOutline(frame, centerX, centerY - 4, reactor ? 27 : 23, core);
+            DrawCircleOutline(frame, centerX, centerY - 4, reactor ? 17 : 13, 0xff8f2635);
+            FillCircle(frame, centerX, centerY - 4, reactor ? 9 : 6, core);
+            if (reactor)
+            {
+                int pulse = state.SuperPhaseAge / 5 % 8;
+                DrawCircleOutline(frame, centerX, centerY - 4, 31 + pulse, 0xff7fc7ff);
+            }
+        }
+
+        foreach (CopenhagenRoyalDrone drone in state.SuperDrones)
+        {
+            int x = (int)Math.Round(drone.X);
+            int y = (int)Math.Round(drone.Y);
+            FillTriangle(frame, x, y - 8, x - 10, y + 7, x + 10, y + 7,
+                drone.Serial % 2 == 0 ? 0xff8f2635 : 0xffd8d1b9);
+            FillCircle(frame, x, y, 3, 0xffffd66b);
+        }
+        if (state.SuperPhase == 4 && state.SuperSupportShown)
+            DrawCopenhagenSuperSupport(frame, state);
+        if (state.SuperDeathAge > 0)
+        {
+            int burst = Math.Min(135, state.SuperDeathAge / 2);
+            DrawCircleOutline(frame, centerX, centerY, 36 + burst, 0xffff8a4a);
+            DrawCircleOutline(frame, centerX, centerY, 18 + burst / 2, 0xffffffff);
+            DrawLine(frame, centerX - burst, centerY - 35, centerX + burst, centerY + 35, 0xff8f2635);
+        }
+        if (state.SuperAge < 200)
+        {
+            int width = Math.Min(262, _width - 30);
+            int x = (_width - width) / 2;
+            int y = _height <= 224 ? 134 : 166;
+            DrawRect(frame, x, y, width, 31, 0xdd080d12);
+            DrawLine(frame, x, y, x + width - 1, y, 0xffffd66b);
+            DrawText(frame, x + (width - 174) / 2, y + 10, "KONG CHRISTIANS SUPERFREGATT", 0xffffd66b);
+        }
+    }
+
+    private void DrawCopenhagenSuperQuadrantLock(uint[] frame, CopenhagenWorldState state)
+    {
+        int splitX = _width / 2;
+        int splitY = (_height + 52) / 2;
+        bool right = state.SuperLockQuadrant is 1 or 2;
+        bool bottom = state.SuperLockQuadrant is 2 or 3;
+        int x0 = right ? splitX : 1;
+        int x1 = right ? _width - 2 : splitX;
+        int y0 = bottom ? splitY : 17;
+        int y1 = bottom ? _height - 13 : splitY;
+        bool active = state.SuperLockAge is >= 44 and <= 82;
+        uint color = active ? 0xffff6b62 : (state.SuperLockAge / 5 & 1) == 0 ? 0xff765139 : 0xffd8d1b9;
+        DrawLine(frame, x0, y0, x1, y0, color);
+        DrawLine(frame, x1, y0, x1, y1, color);
+        DrawLine(frame, x1, y1, x0, y1, color);
+        DrawLine(frame, x0, y1, x0, y0, color);
+        for (int hatch = x0 - (y1 - y0); hatch < x1; hatch += 24)
+            DrawLine(frame, Math.Max(x0, hatch), y1, Math.Min(x1, hatch + y1 - y0), y0, color);
+    }
+
+    private void DrawCopenhagenSuperSupport(uint[] frame, CopenhagenWorldState state)
+    {
+        int count = Math.Clamp(state.IncomingFreedShips + state.SnapphaneAllies / 2 + (state.SorenOathComplete ? 1 : 0), 1, 4);
+        for (int ally = 0; ally < count; ally++)
+        {
+            int side = ally % 2 == 0 ? -1 : 1;
+            int x = _width / 2 + side * (132 + ally / 2 * 18);
+            int y = _height - 55 - ally * 14;
+            FillTriangle(frame, x, y - 7, x - 7, y + 6, x + 7, y + 6,
+                state.SorenOathComplete && ally == 0 ? 0xff315b42 : 0xff293c43);
+            DrawLine(frame, x, y - 9, x, y - 15, 0xff77e6a0);
+            if (state.SuperSupportFlash > 0 && (state.SuperSupportFlash / 4 + ally & 1) == 0)
+                DrawLine(frame, x, y - 16, _width / 2, 82, 0xffffd66b);
+        }
+    }
+
+    private void DrawCopenhagenSuperHud(uint[] frame, CopenhagenWorldState state)
+    {
+        if (!state.SuperActive || state.SuperAge < 40 || state.SuperDeathAge > 0) return;
+        int width = Math.Min(234, _width - 62);
+        int x = (_width - width) / 2;
+        DrawRect(frame, x, 20, width, 25, 0xdd080d12);
+        string label;
+        int health;
+        int maximum;
+        uint color;
+        if (state.SuperPhase == 1)
+        {
+            maximum = (state.SuperTestFixture ? 36 : CopenhagenSuperSectionHealth) * 3;
+            health = state.SuperSectionHealth.Take(3).Sum();
+            label = $"SEKTIONER  {state.SuperSectionHealth.Take(3).Count(value => value > 0)}/3";
+            color = 0xffff8a4a;
+        }
+        else if (state.SuperPhase == 2)
+        {
+            maximum = (state.SuperTestFixture ? 12 : CopenhagenSuperCrossNodeHealth) * 4;
+            health = state.SuperCrossHealth.Sum();
+            label = $"VITA KORSRAMEN  {state.SuperCrossHealth.Count(value => value > 0)}/4";
+            color = 0xfff2eee4;
+        }
+        else if (state.SuperPhase == 3)
+        {
+            maximum = state.SuperTestFixture ? 90 : CopenhagenSuperMemoryHealth;
+            health = state.SuperMemoryHealth;
+            label = $"FELMINNE  ORDER {state.SuperMemoryOrder + 1}";
+            color = state.SuperMemoryOrder == 2 ? 0xffbdf8ff : 0xffffd66b;
+        }
+        else
+        {
+            maximum = state.SuperTestFixture ? 72 : CopenhagenSuperReactorHealth;
+            health = state.SuperSectionHealth[3];
+            label = "KRONREAKTOR  SISTA HÅLLET";
+            color = 0xff7fc7ff;
+        }
+        DrawRect(frame, x + 2, 22, (width - 4) * health / Math.Max(1, maximum), 5, color);
+        DrawText(frame, x + 4, 31, label, 0xffbdf8ff);
     }
 
     private void DrawCopenhagenCheckpointBanner(uint[] frame, CopenhagenWorldState state)
@@ -16678,7 +17310,7 @@ internal sealed class StormaktGame
         }
         else if (_levelId == 6)
         {
-            DrawCopenhagenDuoSeal(frame, panelX + 196, 67);
+            DrawCopenhagenSuperSeal(frame, panelX + 196, 67);
         }
         else
         {
@@ -16724,8 +17356,8 @@ internal sealed class StormaktGame
             }
             else if (_levelId == 6)
             {
-                DrawText(frame, panelX + 31, 99, "SKÄRMFREGATTER BRUTNA", 0xffffd66b);
-                DrawText(frame, panelX + 31, 116, "SUPERFREGATTEN VÄNTAR", 0xff9bd4dc);
+                DrawText(frame, panelX + 31, 99, "SUPERFREGATTEN BRUTEN", 0xffffd66b);
+                DrawText(frame, panelX + 28, 116, "HOLMENS LANDNING VÄNTAR", 0xff9bd4dc);
             }
             else
             {
@@ -16767,6 +17399,18 @@ internal sealed class StormaktGame
         DrawLine(frame, x - 29 - split, y + 12, x - 3 - split, y + 12, 0xff7fc7ff);
         DrawLine(frame, x + 3 + split, y - 12, x + 29 + split, y - 12, 0xffff8a4a);
         FillCircle(frame, x, y, 7 + (_stageClearAge / 6 & 1), 0xffffd66b);
+    }
+
+    private void DrawCopenhagenSuperSeal(uint[] frame, int x, int y)
+    {
+        int crack = Math.Min(22, _stageClearAge / 7);
+        FillTriangle(frame, x, y - 24, x - 40, y + 19, x + 40, y + 19, 0xff29343a);
+        DrawLine(frame, x - 34, y + 14, x + 34, y + 14, 0xffd6b25e);
+        FillCircle(frame, x, y, 15, 0xff101820);
+        DrawCircleOutline(frame, x, y, 17, 0xff7fc7ff);
+        DrawLine(frame, x - crack, y - crack, x + crack, y + crack, 0xffff8a4a);
+        DrawLine(frame, x + crack, y - crack / 2, x - crack, y + crack / 2, 0xffffffff);
+        DrawCrown(frame, x - 4, y - 6, 0xff8f2635);
     }
 
     private void DrawSnapphaneOathSeal(uint[] frame, int x, int y)
@@ -18130,6 +18774,29 @@ internal sealed class StormaktGame
         public int[] DuoTurretHealth { get; } = new int[4];
         public int[] DuoShipFallAge { get; } = new int[2];
         public CopenhagenShieldWall? DuoShieldWall { get; set; }
+        public bool SuperActive { get; set; }
+        public bool SuperTestFixture { get; set; }
+        public int SuperAge { get; set; }
+        public int SuperPhase { get; set; }
+        public int SuperPhaseAge { get; set; }
+        public int SuperDeathAge { get; set; }
+        public int SuperHitFlash { get; set; }
+        public int SuperSectionBreakFlash { get; set; }
+        public int SuperLastHitSection { get; set; } = -1;
+        public int SuperLockQuadrant { get; set; } = -1;
+        public int SuperLockAge { get; set; }
+        public bool SuperLockHitPlayer { get; set; }
+        public int SuperMemoryHealth { get; set; }
+        public int SuperMemoryOrder { get; set; }
+        public int SuperBeamAge { get; set; }
+        public int SuperBeamTargetX { get; set; }
+        public bool SuperBeamHitPlayer { get; set; }
+        public bool SuperSupportShown { get; set; }
+        public int SuperSupportFlash { get; set; }
+        public int SuperDroneSerial { get; set; }
+        public int[] SuperSectionHealth { get; } = new int[4];
+        public int[] SuperCrossHealth { get; } = new int[4];
+        public List<CopenhagenRoyalDrone> SuperDrones { get; } = [];
     }
 
     private sealed class CopenhagenSeizureChain(int target, int health)
@@ -18159,6 +18826,17 @@ internal sealed class StormaktGame
         public bool SorenBreakApplied { get; set; }
         public int[] Health { get; } = Enumerable.Range(0, 7)
             .Select(index => index == gapIndex ? 0 : nodeHealth).ToArray();
+    }
+
+    private sealed class CopenhagenRoyalDrone(double x, double y, double vx, double vy, int health, int serial)
+    {
+        public double X { get; set; } = x;
+        public double Y { get; set; } = y;
+        public double Vx { get; } = vx;
+        public double Vy { get; } = vy;
+        public int Health { get; set; } = health;
+        public int Serial { get; } = serial;
+        public int Age { get; set; }
     }
 
     private sealed class SnapphaneWorldState
