@@ -258,6 +258,8 @@ internal sealed class StormaktGame
     private const int OresundServiceCarriageHealth = 144;
     private const int OresundTrainCannonHealth = 72;
     private const int CopenhagenGateNodeMaxHealth = 180;
+    private const int CopenhagenAdmiraltyMaxHealth = 540;
+    private const int CopenhagenHourMarkMaxHealth = 30;
     private const int RtsSalvagedSilverGoal = 1_200;
     private const int DungeonFirstSigilMask = 1 << 8;
     private const int DungeonFogdeRescuedMask = 1 << 9;
@@ -321,6 +323,8 @@ internal sealed class StormaktGame
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_RED_HOUNDS_FINAL_TEST"), "1", StringComparison.Ordinal);
     private readonly bool _copenhagenGateTestMode = string.Equals(
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_GATE_TEST"), "1", StringComparison.Ordinal);
+    private readonly bool _copenhagenAdmiraltyTestMode = string.Equals(
+        Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_ADMIRALTY_TEST"), "1", StringComparison.Ordinal);
     private readonly SpritePack? _sprites;
     private readonly StormaktMusicLoop? _audio;
     private Random _random = new(3020);
@@ -532,6 +536,12 @@ internal sealed class StormaktGame
         new(0, 330, true, "TREKRONERS LÅS", "KRONAN HÅLLER", "STADEN FÖRBLIR SLUTEN", null, "rigsregnskabet");
     private static readonly RadioCard CopenhagenGateFallRadio =
         new(0, 300, false, "EBBA GRIP", "FÖRSTA LÅSET BRUSTET", "AMIRALITETET VÄNTAR", null, "portrait_ebba");
+    private static readonly RadioCard CopenhagenAdmiraltyRadio =
+        new(0, 330, true, "URVERKSAMIRALEN", "TOLV SLAG REGISTRERADE", "INGEN TIMME ÄR FRI", null, "rigsregnskabet");
+    private static readonly RadioCard CopenhagenNoonRadio =
+        new(0, 270, false, "EBBA GRIP", "URTAVLAN EXEKVERAR", "SÖK EN BRUTEN TIMME", null, "portrait_ebba");
+    private static readonly RadioCard CopenhagenAdmiraltyFallRadio =
+        new(0, 300, false, "EBBA GRIP", "AMIRALITETET BRUSTET", "FREDERIK NULL VÄNTAR", null, "portrait_ebba");
     private int _shipX;
     private int _shipY;
     private int _cooldown;
@@ -973,6 +983,16 @@ internal sealed class StormaktGame
                 resetCopenhagen.GateIntroAge = 120;
                 for (int node = 0; node < resetCopenhagen.GateHealth.Length; node++)
                     resetCopenhagen.GateHealth[node] = 36;
+            }
+            if (_copenhagenAdmiraltyTestMode)
+            {
+                resetCopenhagen.Age = 900;
+                resetCopenhagen.GateActive = true;
+                resetCopenhagen.GateIntroAge = 500;
+                resetCopenhagen.GateFallAge = 240;
+                for (int node = 0; node < resetCopenhagen.GateHealth.Length; node++)
+                    resetCopenhagen.GateHealth[node] = 0;
+                BeginCopenhagenAdmiralty(resetCopenhagen, testFixture: true);
             }
         }
         if (_snapphaneWorld is SnapphaneWorldState resetSnapphane)
@@ -5105,7 +5125,8 @@ internal sealed class StormaktGame
             1 => SkanskaRadioCards,
             2 => OresundRadioCards,
             4 => TitheRadioCards,
-            5 or 6 => [],
+            5 => [],
+            6 => [],
             _ => RadioCards,
         };
         foreach (RadioCard card in cards)
@@ -5233,6 +5254,13 @@ internal sealed class StormaktGame
             return;
         }
 
+        if (state.AdmiraltyActive)
+        {
+            StepCopenhagenAdmiralty(state);
+            StepEnemyShots();
+            return;
+        }
+
         state.GateIntroAge++;
         state.HitFlash = Math.Max(0, state.HitFlash - 1);
         state.RepairFlash = Math.Max(0, state.RepairFlash - 1);
@@ -5256,10 +5284,154 @@ internal sealed class StormaktGame
         if (state.GateFallAge is 24 or 52 or 86)
             _audio?.Trigger(StormaktSound.EnemyExplosion);
         if (state.GateFallAge < 240 || _bossRadioCard is not null) return;
+        BeginCopenhagenAdmiralty(state);
+    }
 
-        _stageClear = true;
-        _stageClearAge = 0;
-        _audio?.SwitchMusic(StormaktMusicTrack.Combat);
+    private void BeginCopenhagenAdmiralty(CopenhagenWorldState state, bool testFixture = false)
+    {
+        state.AdmiraltyActive = true;
+        state.AdmiraltyAge = 0;
+        state.AdmiraltyHealth = testFixture ? 96 : CopenhagenAdmiraltyMaxHealth;
+        state.AdmiraltyDeathAge = 0;
+        state.AdmiraltyHitFlash = 0;
+        state.CurrentHour = 0;
+        for (int hour = 0; hour < state.HourHealth.Length; hour++)
+        {
+            state.HourHealth[hour] = testFixture ? 9 : CopenhagenHourMarkMaxHealth;
+            state.HourArmed[hour] = false;
+        }
+        _enemyShots.Clear();
+        _shots.Clear();
+        if (testFixture) return;
+        ActivateBossRadio(CopenhagenAdmiraltyRadio);
+        _audio?.Trigger(StormaktSound.OresundFortressLock);
+    }
+
+    private void StepCopenhagenAdmiralty(CopenhagenWorldState state)
+    {
+        state.AdmiraltyAge++;
+        state.AdmiraltyHitFlash = Math.Max(0, state.AdmiraltyHitFlash - 1);
+        state.HourHitFlash = Math.Max(0, state.HourHitFlash - 1);
+        state.NoonFlash = Math.Max(0, state.NoonFlash - 1);
+
+        if (state.AdmiraltyDeathAge > 0)
+        {
+            int deathAge = state.AdmiraltyDeathAge++;
+            if (deathAge is 24 or 58 or 96 or 144)
+                _audio?.Trigger(StormaktSound.EnemyExplosion);
+            if (deathAge == 1)
+            {
+                _enemyShots.Clear();
+                _shots.Clear();
+                _score += 3_200;
+                ActivateBossRadio(CopenhagenAdmiraltyFallRadio);
+                _audio?.Trigger(StormaktSound.Broadside);
+            }
+            if (deathAge < 240 || _bossRadioCard is not null) return;
+            _stageClear = true;
+            _stageClearAge = 0;
+            _audio?.SwitchMusic(StormaktMusicTrack.Combat);
+            return;
+        }
+
+        int hour = Math.Min(11, state.AdmiraltyAge / 90 % 12);
+        if (hour != state.CurrentHour || state.AdmiraltyAge == 1)
+        {
+            state.CurrentHour = hour;
+            if (state.HourHealth[hour] > 0) state.HourArmed[hour] = true;
+            _audio?.Trigger(StormaktSound.TitheRegisterSwitch);
+        }
+
+        StepCopenhagenAdmiraltyShots(state);
+        StepCopenhagenAdmiraltyAttacks(state);
+        if (state.AdmiraltyHealth > 0) return;
+        state.AdmiraltyHealth = 0;
+        state.AdmiraltyDeathAge = 1;
+    }
+
+    private void StepCopenhagenAdmiraltyShots(CopenhagenWorldState state)
+    {
+        (double centerX, double centerY) = CopenhagenAdmiraltyCenter(state);
+        for (int shotIndex = _shots.Count - 1; shotIndex >= 0; shotIndex--)
+        {
+            Shot shot = _shots[shotIndex];
+            int hitHour = -1;
+            for (int hour = 0; hour < state.HourHealth.Length; hour++)
+            {
+                if (state.HourHealth[hour] <= 0) continue;
+                (double hourX, double hourY) = CopenhagenHourPosition(hour, centerX, centerY);
+                if (DistanceSquared(shot.X, shot.Y, hourX, hourY) < 11 * 11)
+                {
+                    hitHour = hour;
+                    break;
+                }
+            }
+            if (hitHour >= 0)
+            {
+                state.HourHealth[hitHour] = Math.Max(0, state.HourHealth[hitHour] - shot.Power);
+                state.HourHitFlash = 5;
+                state.LastHitHour = hitHour;
+                _shots.RemoveAt(shotIndex);
+                if (state.HourHealth[hitHour] == 0)
+                {
+                    state.HourArmed[hitHour] = false;
+                    _score += 180;
+                    _audio?.Trigger(StormaktSound.OresundSwitchBreak);
+                }
+                continue;
+            }
+            if (DistanceSquared(shot.X, shot.Y, centerX, centerY) >= 24 * 24) continue;
+            state.AdmiraltyHealth = Math.Max(0, state.AdmiraltyHealth - shot.Power);
+            state.AdmiraltyHitFlash = 5;
+            _shots.RemoveAt(shotIndex);
+        }
+    }
+
+    private void StepCopenhagenAdmiraltyAttacks(CopenhagenWorldState state)
+    {
+        if (state.AdmiraltyAge < 90) return;
+        (double centerX, double centerY) = CopenhagenAdmiraltyCenter(state);
+        (double hourX, double hourY) = CopenhagenHourPosition(state.CurrentHour, centerX, centerY);
+        int withinHour = state.AdmiraltyAge % 90;
+        if (state.HourHealth[state.CurrentHour] > 0 && withinHour is 18 or 30 or 42)
+        {
+            double dx = _shipX - hourX;
+            double dy = _shipY - hourY;
+            double length = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
+            double vx = dx / length;
+            double vy = dy / length;
+            double spread = (withinHour - 30) / 120.0;
+            _enemyShots.Add(new EnemyShot(hourX, hourY, (vx - vy * spread) * 2.05, (vy + vx * spread) * 2.05, 2));
+        }
+
+        if (state.AdmiraltyAge % 1_080 != 0) return;
+        state.NoonFlash = 90;
+        ActivateBossRadio(CopenhagenNoonRadio);
+        for (int hour = 0; hour < state.HourArmed.Length; hour++)
+        {
+            if (!state.HourArmed[hour] || state.HourHealth[hour] <= 0) continue;
+            (double x, double y) = CopenhagenHourPosition(hour, centerX, centerY);
+            double angle = Math.Atan2(y - centerY, x - centerX);
+            for (int ray = -1; ray <= 1; ray++)
+            {
+                double shotAngle = angle + Math.PI / 2.0 + ray * 0.22;
+                _enemyShots.Add(new EnemyShot(x, y, Math.Cos(shotAngle) * 1.8, Math.Sin(shotAngle) * 1.8, 4));
+            }
+        }
+        _audio?.Trigger(StormaktSound.Broadside);
+    }
+
+    private (double X, double Y) CopenhagenAdmiraltyCenter(CopenhagenWorldState state)
+    {
+        double entry = Math.Min(1.0, state.AdmiraltyAge / 90.0);
+        double eased = entry * entry * (3.0 - 2.0 * entry);
+        return (_width / 2.0, -46 + 126 * eased);
+    }
+
+    private static (double X, double Y) CopenhagenHourPosition(int hour, double centerX, double centerY)
+    {
+        double angle = -Math.PI / 2.0 + hour * Math.PI * 2.0 / 12.0;
+        return (centerX + Math.Cos(angle) * 102.0, centerY + Math.Sin(angle) * 50.0);
     }
 
     private void StepCopenhagenGateShots(CopenhagenWorldState state)
@@ -13345,7 +13517,8 @@ internal sealed class StormaktGame
         if (state is not null)
         {
             DrawCopenhagenBarrier(frame, state);
-            if (state.GateActive) DrawCopenhagenGate(frame, state);
+            if (state.AdmiraltyActive) DrawCopenhagenAdmiralty(frame, state);
+            else if (state.GateActive) DrawCopenhagenGate(frame, state);
         }
         DrawShots(frame);
         DrawEnemyShots(frame);
@@ -13353,7 +13526,12 @@ internal sealed class StormaktGame
         DrawBorder(frame);
         DrawHud(frame);
         DrawLoadoutHud(frame);
-        if (state is not null) DrawCopenhagenGateHud(frame, state);
+        if (state is not null)
+        {
+            DrawCopenhagenGateHud(frame, state);
+            DrawCopenhagenAdmiraltyHud(frame, state);
+            DrawCopenhagenCheckpointBanner(frame, state);
+        }
         DrawCopenhagenMissionTitle(frame, age);
         DrawRadio(frame);
         DrawStageClear(frame);
@@ -13484,6 +13662,87 @@ internal sealed class StormaktGame
         DrawRect(frame, x, 21, barWidth, 13, 0xdd080d12);
         DrawRect(frame, x + 2, 23, (barWidth - 4) * total / (CopenhagenGateNodeMaxHealth * 3), 4, 0xffffd66b);
         DrawText(frame, x + 4, 28, $"TREKRONERS LÅS  {alive}/3", 0xffbdf8ff);
+    }
+
+    private void DrawCopenhagenAdmiralty(uint[] frame, CopenhagenWorldState state)
+    {
+        (double centerXD, double centerYD) = CopenhagenAdmiraltyCenter(state);
+        int centerX = (int)Math.Round(centerXD);
+        int centerY = (int)Math.Round(centerYD);
+        uint outer = state.NoonFlash > 0 && (state.NoonFlash / 4 & 1) == 0 ? 0xffff6b62 : 0xffd6b25e;
+        DrawCircleOutline(frame, centerX, centerY, 108, outer);
+        DrawCircleOutline(frame, centerX, centerY, 94, 0xff344d5c);
+        for (int hour = 0; hour < state.HourHealth.Length; hour++)
+        {
+            (double hourXD, double hourYD) = CopenhagenHourPosition(hour, centerXD, centerYD);
+            int x = (int)Math.Round(hourXD);
+            int y = (int)Math.Round(hourYD);
+            bool broken = state.HourHealth[hour] <= 0;
+            bool current = hour == state.CurrentHour;
+            bool hit = state.HourHitFlash > 0 && state.LastHitHour == hour;
+            uint color = broken ? 0xff263744 : hit ? 0xffffffff : current ? 0xffff8a4a :
+                state.HourArmed[hour] ? 0xffff6b62 : 0xff9bd4dc;
+            DrawLine(frame, centerX, centerY, x, y, broken ? 0xff202b33 : 0xff493c29);
+            if (broken)
+            {
+                DrawLine(frame, x - 5, y - 5, x + 5, y + 5, 0xff315b42);
+                DrawLine(frame, x + 5, y - 5, x - 5, y + 5, 0xff315b42);
+            }
+            else
+            {
+                FillCircle(frame, x, y, current ? 7 : 5, 0xff101820);
+                DrawCircleOutline(frame, x, y, current ? 8 : 6, color);
+                PutPixel(frame, x, y, color);
+            }
+        }
+
+        int handHour = state.CurrentHour;
+        (double handX, double handY) = CopenhagenHourPosition(handHour, centerXD, centerYD);
+        DrawLine(frame, centerX, centerY, (int)Math.Round(handX), (int)Math.Round(handY), 0xffffd66b);
+        double minuteAngle = -Math.PI / 2.0 + (state.AdmiraltyAge % 90) * Math.PI * 2.0 / 90.0;
+        DrawLine(frame, centerX, centerY, centerX + (int)Math.Round(Math.Cos(minuteAngle) * 61),
+            centerY + (int)Math.Round(Math.Sin(minuteAngle) * 30), 0xff7fc7ff);
+
+        uint core = state.AdmiraltyDeathAge > 0 ? 0xff8f2635 :
+            state.AdmiraltyHitFlash > 0 ? 0xffffec9a : 0xff172536;
+        FillCircle(frame, centerX, centerY, 22, core);
+        DrawCircleOutline(frame, centerX, centerY, 24, 0xffffd66b);
+        DrawCrown(frame, centerX - 4, centerY - 4, 0xffff8a4a);
+        DrawLine(frame, centerX - 13, centerY + 9, centerX + 13, centerY + 9, 0xff9bd4dc);
+        if (state.AdmiraltyDeathAge > 0)
+        {
+            int burst = Math.Min(70, state.AdmiraltyDeathAge / 2);
+            DrawCircleOutline(frame, centerX, centerY, 26 + burst, 0xffff8a4a);
+            for (int hour = 0; hour < 12; hour += 2)
+            {
+                (double x, double y) = CopenhagenHourPosition(hour, centerXD, centerYD);
+                DrawLine(frame, centerX, centerY, (int)x, (int)y, 0xff8f2635);
+            }
+        }
+    }
+
+    private void DrawCopenhagenAdmiraltyHud(uint[] frame, CopenhagenWorldState state)
+    {
+        if (!state.AdmiraltyActive || state.AdmiraltyAge < 45 || state.AdmiraltyDeathAge > 0) return;
+        int barWidth = Math.Min(196, _width - 90);
+        int x = (_width - barWidth) / 2;
+        int safeHours = state.HourHealth.Count(health => health <= 0);
+        DrawRect(frame, x, 21, barWidth, 14, 0xdd080d12);
+        DrawRect(frame, x + 2, 23, (barWidth - 4) * state.AdmiraltyHealth / CopenhagenAdmiraltyMaxHealth, 4, 0xffff8a4a);
+        DrawText(frame, x + 4, 28, $"AMIRALITETET  {state.CurrentHour + 1:00}  LUCKOR {safeHours}", 0xffbdf8ff);
+    }
+
+    private void DrawCopenhagenCheckpointBanner(uint[] frame, CopenhagenWorldState state)
+    {
+        if (state.AdmiraltyActive || state.GateFallAge is < 70 or >= 230) return;
+        int width = Math.Min(232, _width - 32);
+        int x = (_width - width) / 2;
+        int y = _height <= 224 ? 80 : 103;
+        DrawRect(frame, x, y, width, 43, 0xee080d12);
+        DrawLine(frame, x, y, x + width - 1, y, 0xffffd66b);
+        DrawLine(frame, x, y + 42, x + width - 1, y + 42, 0xff2f74c9);
+        DrawText(frame, x + (width - 126) / 2, y + 9, "TREKRONERS LÅS BRUTET", 0xffffd66b);
+        DrawText(frame, x + (width - 120) / 2, y + 26, "AMIRALITETET ÖPPNAS", 0xff9bd4dc);
     }
 
     private void DrawCopenhagenMissionTitle(uint[] frame, int age)
@@ -14831,7 +15090,7 @@ internal sealed class StormaktGame
         }
         else if (_levelId == 6)
         {
-            DrawCopenhagenLockSeal(frame, panelX + 196, 67);
+            DrawCopenhagenAdmiraltySeal(frame, panelX + 196, 67);
         }
         else
         {
@@ -14877,8 +15136,8 @@ internal sealed class StormaktGame
             }
             else if (_levelId == 6)
             {
-                DrawText(frame, panelX + 28, 99, "TREKRONERS LÅS BRUTET", 0xffffd66b);
-                DrawText(frame, panelX + 31, 116, "AMIRALITETET VÄNTAR", 0xff9bd4dc);
+                DrawText(frame, panelX + 28, 99, "AMIRALITETET BRUSTET", 0xffffd66b);
+                DrawText(frame, panelX + 28, 116, "FREDERIK NULL VÄNTAR", 0xff9bd4dc);
             }
             else
             {
@@ -14888,18 +15147,18 @@ internal sealed class StormaktGame
         }
     }
 
-    private void DrawCopenhagenLockSeal(uint[] frame, int x, int y)
+    private void DrawCopenhagenAdmiraltySeal(uint[] frame, int x, int y)
     {
         DrawCircleOutline(frame, x, y, 23, 0xffd6b25e);
-        for (int node = 0; node < 3; node++)
+        for (int hour = 0; hour < 12; hour++)
         {
-            double angle = -Math.PI / 2.0 + node * Math.PI * 2.0 / 3.0;
-            int nodeX = x + (int)Math.Round(Math.Cos(angle) * 18);
-            int nodeY = y + (int)Math.Round(Math.Sin(angle) * 12);
-            DrawLine(frame, x, y, nodeX, nodeY, 0xff765139);
-            DrawLine(frame, nodeX - 4, nodeY - 4, nodeX + 4, nodeY + 4, 0xff8f2635);
-            DrawLine(frame, nodeX + 4, nodeY - 4, nodeX - 4, nodeY + 4, 0xff8f2635);
+            double angle = -Math.PI / 2.0 + hour * Math.PI * 2.0 / 12.0;
+            int hourX = x + (int)Math.Round(Math.Cos(angle) * 19);
+            int hourY = y + (int)Math.Round(Math.Sin(angle) * 13);
+            PutPixel(frame, hourX, hourY, hour % 3 == 0 ? 0xff8f2635 : 0xff344d5c);
         }
+        DrawLine(frame, x, y, x + 14, y + 7, 0xff8f2635);
+        DrawLine(frame, x, y, x - 8, y - 11, 0xff8f2635);
         DrawCrown(frame, x - 4, y - 3, 0xffffd66b);
     }
 
@@ -15160,6 +15419,7 @@ internal sealed class StormaktGame
             2 => OresundRadioCards,
             4 => TitheRadioCards,
             5 => [],
+            6 => [],
             _ => RadioCards,
         };
         foreach (RadioCard card in cards)
@@ -16179,6 +16439,17 @@ internal sealed class StormaktGame
         public bool BarrierHitPlayer { get; set; }
         public int[] GateHealth { get; } = new int[3];
         public List<int> DestroyedOrder { get; } = [];
+        public bool AdmiraltyActive { get; set; }
+        public int AdmiraltyAge { get; set; }
+        public int AdmiraltyHealth { get; set; }
+        public int AdmiraltyDeathAge { get; set; }
+        public int AdmiraltyHitFlash { get; set; }
+        public int CurrentHour { get; set; }
+        public int HourHitFlash { get; set; }
+        public int LastHitHour { get; set; } = -1;
+        public int NoonFlash { get; set; }
+        public int[] HourHealth { get; } = new int[12];
+        public bool[] HourArmed { get; } = new bool[12];
     }
 
     private sealed class SnapphaneWorldState

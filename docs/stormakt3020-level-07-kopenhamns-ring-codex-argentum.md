@@ -4,15 +4,26 @@ Status: aktiv utvecklingsplan för kampanjens sjunde rad, level id `6`. Första 
 
 ## Nuvarande spelbara checkpoint
 
-Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen render/step-dispatch och kampanjens sparade Bana 5-lastning. Den första yttre ringsektionen leder efter en kort inflygning till **Trekroners lås**:
+Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen render/step-dispatch och kampanjens sparade Bana 5-lastning. Den spelbara rymdöppningen leder efter en kort inflygning genom två sammanhängande bossportar.
+
+**Trekroners lås:**
 
 - murkronan skickar ned tvärgående sigillväggar med en fysisk lucka;
 - eldkronan skjuter roterande korseld;
 - reparationskronan läker den svagaste återstående grannen;
 - förstöringsordningen ändrar därför resten av striden;
-- när alla tre kronorna faller visas checkpointresultatet **Amiralitetet väntar**.
+- när alla tre kronorna faller öppnas Amiralitetet utan meny eller levelreset.
 
-Miljön, låset, HUD, barriärer och resultatkort har kodritade fallbackformer i wide och legacy. `WAYLANDFORGE_STORMAKT_COPENHAGEN_GATE_TEST=1` hoppar direkt till en förkortad låsstrid för determinism- och transporttest. Det är fortfarande en utvecklingscheckpoint: nästa svep ska fortsätta in i De tolv timmarnas amiralitet i stället för att returnera till kampanjmenyn.
+**De tolv timmarnas amiralitet:**
+
+- urverksamiralen flyttar sin aktiva visare genom tolv förstörbara timmarkeringar;
+- varje hel timme registrerar den markeringens skottmönster så länge markeringen finns kvar;
+- markeringar kan skjutas sönder för poäng och blir permanenta säkra luckor;
+- efter tolv slag exekveras alla återstående registrerade timmar samtidigt;
+- den centrala amiralskärnan kan skadas under hela striden;
+- segern visar checkpointresultatet **Frederik Null väntar**.
+
+Miljön, låset, urtavlan, HUD, barriärer och resultatkort har kodritade fallbackformer i wide och legacy. `WAYLANDFORGE_STORMAKT_COPENHAGEN_GATE_TEST=1` hoppar direkt till en förkortad låsstrid och `WAYLANDFORGE_STORMAKT_COPENHAGEN_ADMIRALTY_TEST=1` till en förkortad Amiralitetsstrid för determinism- och transporttest. Det är fortfarande en utvecklingscheckpoint: nästa svep ska fortsätta från Amiralitetet till Frederik Null i stället för att returnera till kampanjmenyn.
 
 ## Kärna
 
