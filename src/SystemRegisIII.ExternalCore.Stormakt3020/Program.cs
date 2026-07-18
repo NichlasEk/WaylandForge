@@ -17,6 +17,7 @@ var input = Console.OpenStandardInput();
 var output = Console.OpenStandardOutput();
 WfexNegotiatedSession negotiatedSession = WfexNegotiation.NegotiateProducerFromEnvironment(
     input, output, new WfexLimits(Width, Height, Width * Height * sizeof(uint)));
+using WfexSharedRegion? sharedRegion = OpenSharedRegion(negotiatedSession, input, output);
 using var audio = StormaktMusicLoop.TryStartDefault();
 var game = new StormaktGame(Width, Height, SpritePack.LoadDefault(), audio);
 audio?.Trigger(StormaktSound.Deploy);
@@ -62,11 +63,18 @@ while (true)
     game.Step(buttons, pointer, controller);
     game.Render(frame, frameIndex);
 
-    int headerSize;
-    if (negotiatedSession.MajorVersion >= 2)
+    if (sharedRegion is not null)
+    {
+        WfexSharedNotification notification = sharedRegion.Publish(
+            frame, Width, Height, Width, frameIndex,
+            frameIndex * 16_666_667UL, 16_666_667UL);
+        notification.Write(output);
+    }
+    else if (negotiatedSession.MajorVersion >= 2)
     {
         WfexV2FrameHeader.CreateRaw(Width, Height, frameIndex, frameIndex * 16_666_667UL, 16_666_667UL).Write(header);
-        headerSize = WfexV2FrameHeader.BaseHeaderSize;
+        output.Write(header.AsSpan(0, WfexV2FrameHeader.BaseHeaderSize));
+        output.Write(MemoryMarshal.AsBytes(frame.AsSpan()));
     }
     else
     {
@@ -77,10 +85,9 @@ while (true)
         BinaryPrimitives.WriteUInt64LittleEndian(header.AsSpan(16), frameIndex);
         BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(24), frame.Length * sizeof(uint));
         BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(28), 0);
-        headerSize = WfexFrameHeader.Size;
+        output.Write(header.AsSpan(0, WfexFrameHeader.Size));
+        output.Write(MemoryMarshal.AsBytes(frame.AsSpan()));
     }
-    output.Write(header.AsSpan(0, headerSize));
-    output.Write(MemoryMarshal.AsBytes(frame.AsSpan()));
     output.Flush();
     frameIndex++;
 }
@@ -100,6 +107,15 @@ static bool ReadExact(Stream stream, Span<byte> buffer)
     }
 
     return true;
+}
+
+static WfexSharedRegion? OpenSharedRegion(WfexNegotiatedSession session, Stream input, Stream output)
+{
+    if ((session.Capabilities & WfexCapabilities.SharedMemorySlots) == 0) return null;
+    WfexSharedSetup setup = WfexSharedSetup.Read(input);
+    WfexSharedRegion region = WfexSharedRegion.OpenProducer(setup, session.Limits);
+    WfexSharedSetupAck.Write(output);
+    return region;
 }
 
 internal readonly record struct RtsPointer(int X, int Y, uint Buttons, bool Inside);

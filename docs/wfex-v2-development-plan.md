@@ -1,6 +1,6 @@
 # WFEX v2 development plan
 
-Status: active; Checkpoints 0, 1 and 2 completed 2026-07-18
+Status: active; Checkpoints 0 through 3 completed 2026-07-18
 
 Scope: WaylandForge host and process-isolated desktop cores
 
@@ -127,6 +127,8 @@ Acceptance: raw v2 output matches v1 framebuffer hashes at every sampled frame a
 
 ### Checkpoint 3 - Shared-memory transport
 
+Completed. Layout, ownership rules, cleanup behavior, parity and performance evidence are recorded in [WFEX v2 Checkpoint 3 shared memory](wfex-v2-checkpoint-3-shared-memory.md). Stormakt now prefers two-slot shared memory while raw v2 and v1 remain selectable fallbacks.
+
 1. Implement negotiated region creation and permission-safe handle transfer.
 2. Implement two-slot ownership first, then optionally measure three slots.
 3. Add release/acquire publication rules and sequence checks.
@@ -198,4 +200,4 @@ Shared memory is considered successful only if it reduces framebuffer copying wi
 
 Start with Checkpoint 0 and commit it independently. Then land handshake plus raw v2 before shared memory so negotiation and error handling can be tested without debugging two new mechanisms at once. Shared memory is the first expected performance feature. Presentation decoupling follows after frame ownership is proven. Compression remains optional and measurement-driven.
 
-Until Checkpoint 3 lands, negotiated sessions use the production v2 raw-record layout while shared memory remains unimplemented. Stormakt retains the same deterministic rendering path and v1 fallback.
+Until Checkpoint 4 lands, shared memory remains deterministic lockstep. Latest-frame pacing and deliberate presentation drops are not enabled. Stormakt retains raw v2 and v1 fallback paths.

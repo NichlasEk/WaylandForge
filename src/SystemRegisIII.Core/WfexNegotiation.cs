@@ -8,6 +8,7 @@ public enum WfexCapabilities : ulong
     None = 0,
     RawFrameRecords = 1UL << 0,
     VersionedFrameRecords = 1UL << 1,
+    SharedMemorySlots = 1UL << 2,
 }
 
 [Flags]
@@ -46,7 +47,7 @@ public readonly record struct WfexHandshakeRecord(
         CurrentMajorVersion,
         CurrentMinorVersion,
         WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords,
-        WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords,
+        WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords | WfexCapabilities.SharedMemorySlots,
         limits,
         WfexPixelFormats.Argb8888,
         WfexPresentationModes.DeterministicLockstep);
@@ -118,17 +119,19 @@ public static class WfexNegotiation
 {
     public const string PolicyEnvironmentVariable = "WAYLANDFORGE_WFEX_POLICY";
     public static WfexCapabilities HostCapabilities =>
-        WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords;
+        WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords | WfexCapabilities.SharedMemorySlots;
 
     public static WfexNegotiatedSession AcceptProducerHello(
         WfexHandshakeRecord hello,
         WfexLimits hostLimits,
-        out WfexHandshakeRecord response)
+        out WfexHandshakeRecord response,
+        WfexCapabilities? enabledCapabilities = null)
     {
-        WfexCapabilities unknownRequired = hello.RequiredCapabilities & ~HostCapabilities;
+        WfexCapabilities activeCapabilities = enabledCapabilities ?? HostCapabilities;
+        WfexCapabilities unknownRequired = hello.RequiredCapabilities & ~activeCapabilities;
         if (unknownRequired != WfexCapabilities.None)
             throw new InvalidDataException($"WFEX producer requires unsupported capabilities: {unknownRequired}.");
-        WfexCapabilities selectedCapabilities = hello.Capabilities & HostCapabilities;
+        WfexCapabilities selectedCapabilities = hello.Capabilities & activeCapabilities;
         WfexCapabilities mandatoryBaseline = WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords;
         if ((selectedCapabilities & mandatoryBaseline) != mandatoryBaseline ||
             (hello.PixelFormats & WfexPixelFormats.Argb8888) == 0 ||

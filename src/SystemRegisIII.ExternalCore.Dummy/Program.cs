@@ -10,6 +10,7 @@ Stream input = Console.OpenStandardInput();
 Stream output = Console.OpenStandardOutput();
 WfexNegotiatedSession negotiatedSession = WfexNegotiation.NegotiateProducerFromEnvironment(
     input, output, new WfexLimits(frameWidth, frameHeight, frameWidth * frameHeight * sizeof(uint)));
+using WfexSharedRegion? sharedRegion = OpenSharedRegion(negotiatedSession, input, output);
 var frame = new uint[frameWidth * frameHeight];
 var header = new byte[WfexV2FrameHeader.BaseHeaderSize];
 var command = new byte[5];
@@ -27,11 +28,18 @@ while (ReadExact(input, command))
     uint buttons = BinaryPrimitives.ReadUInt32LittleEndian(command.AsSpan(1));
     RenderFrame(frame, frameWidth, frameHeight, frameIndex, buttons, ref blobX, ref blobY);
 
-    int headerSize;
-    if (negotiatedSession.MajorVersion >= 2)
+    if (sharedRegion is not null)
+    {
+        WfexSharedNotification notification = sharedRegion.Publish(
+            frame, frameWidth, frameHeight, frameWidth, frameIndex,
+            frameIndex * 16_666_667UL, 16_666_667UL);
+        notification.Write(output);
+    }
+    else if (negotiatedSession.MajorVersion >= 2)
     {
         WfexV2FrameHeader.CreateRaw(frameWidth, frameHeight, frameIndex, frameIndex * 16_666_667UL, 16_666_667UL).Write(header);
-        headerSize = WfexV2FrameHeader.BaseHeaderSize;
+        output.Write(header.AsSpan(0, WfexV2FrameHeader.BaseHeaderSize));
+        output.Write(MemoryMarshalBytes(frame));
     }
     else
     {
@@ -42,10 +50,9 @@ while (ReadExact(input, command))
         BinaryPrimitives.WriteUInt64LittleEndian(header.AsSpan(16), frameIndex);
         BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(24), frame.Length * sizeof(uint));
         BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(28), 0);
-        headerSize = WfexFrameHeader.Size;
+        output.Write(header.AsSpan(0, WfexFrameHeader.Size));
+        output.Write(MemoryMarshalBytes(frame));
     }
-    output.Write(header.AsSpan(0, headerSize));
-    output.Write(MemoryMarshalBytes(frame));
     output.Flush();
 
     frameIndex++;
@@ -176,4 +183,13 @@ static void PutPixel(uint[] frame, int width, int height, int x, int y, uint col
 static ReadOnlySpan<byte> MemoryMarshalBytes(uint[] frame)
 {
     return System.Runtime.InteropServices.MemoryMarshal.AsBytes(frame.AsSpan());
+}
+
+static WfexSharedRegion? OpenSharedRegion(WfexNegotiatedSession session, Stream input, Stream output)
+{
+    if ((session.Capabilities & WfexCapabilities.SharedMemorySlots) == 0) return null;
+    WfexSharedSetup setup = WfexSharedSetup.Read(input);
+    WfexSharedRegion region = WfexSharedRegion.OpenProducer(setup, session.Limits);
+    WfexSharedSetupAck.Write(output);
+    return region;
 }

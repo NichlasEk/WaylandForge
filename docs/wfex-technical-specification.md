@@ -9,6 +9,7 @@ The primary implementation references are:
 - `src/SystemRegisIII.Host.WaylandForge/ExternalProcessCore.cs`, which starts external processes, transports input, validates WFEX records and presents frames;
 - `src/SystemRegisIII.ExternalCore.Stormakt3020/Program.cs`, which implements the pointer-aware stdio producer used by Stormakt 3020;
 - `src/SystemRegisIII.ExternalCore.Dummy/Program.cs`, which is the smallest reference producer;
+- `src/SystemRegisIII.Core/WfexNegotiation.cs`, `WfexV2Frame.cs` and `WfexSharedMemory.cs`, which define the shared v2 wire and mapped-memory contracts;
 - `src/SystemRegisIII.Host.WaylandForge/FrameStore.cs`, which copies a received frame into the host's packed framebuffer.
 
 ## Design goals
@@ -82,7 +83,7 @@ Both records are exactly 48 bytes and little-endian:
 | 40 | 4 | `uint32` | `pixelFormats` | Offered or selected pixel-format bits. |
 | 44 | 4 | `uint32` | `presentationModes` | Offered or selected presentation-mode bits. |
 
-Capability bit 0 is `RAW_FRAME_RECORDS` and bit 1 is `VERSIONED_FRAME_RECORDS`; both are mandatory for the current v2 baseline. The second bit prevents a Checkpoint 1-era producer that still emits v1 headers after negotiation from being silently misparsed. Pixel-format bit 0 is `ARGB8888`. Presentation bit 0 is `DETERMINISTIC_LOCKSTEP`; bit 1 is reserved for `LATEST_FRAME` but is not yet selected. Unknown required capability bits fail negotiation. Unknown optional bits are masked out.
+Capability bit 0 is `RAW_FRAME_RECORDS` and bit 1 is `VERSIONED_FRAME_RECORDS`; both are mandatory for the current v2 baseline. The second bit prevents a Checkpoint 1-era producer that still emits v1 headers after negotiation from being silently misparsed. Capability bit 2 is the optional `SHARED_MEMORY_SLOTS`. Pixel-format bit 0 is `ARGB8888`. Presentation bit 0 is `DETERMINISTIC_LOCKSTEP`; bit 1 is reserved for `LATEST_FRAME` but is not yet selected. Unknown required capability bits fail negotiation. Unknown optional bits are masked out.
 
 The selected maximums are the component-wise minimum of the producer offer and host configuration. The mandatory Checkpoint 1 baseline is raw ARGB8888 in deterministic lockstep. The raw stream transport is therefore explicitly confirmed by capability while the already-open stdio or Unix socket determines the control transport.
 
@@ -153,6 +154,61 @@ After a successful v2 handshake, Checkpoint 2 producers emit a 64-byte `WFF2` he
 Bytes from offset 64 through `headerSize - 1` are optional header extensions. A minor-version reader validates the bounded declared size, reads the complete header and skips unknown extension bytes before consuming the payload. Unknown extensions therefore cannot be confused with pixels. The current producers use `headerSize == 64`, logical timestamps `frameIndex * 16,666,667 ns` and a nominal 60 Hz duration of `16,666,667 ns`.
 
 The host validates codec, flags, dimensions, checked payload arithmetic, negotiated limits, declared record length and nominal duration before allocation. It accepts the first frame index of a new connection, then requires each complete record to increment by one. Wrap from `uint64.MaxValue` to zero is valid. Duplicates, gaps and out-of-order indices stop the core with the expected and received values; reconnect/reset starts a new sequence.
+
+## WFEX v2 shared-memory transport
+
+`frame_transport` selects `raw`, `prefer-shm` or `require-shm` independently of `protocol_policy`. Shared memory requires a v2 interactive stdio or Unix-socket connection. `prefer-shm` negotiates raw v2 when the producer lacks the capability or when the host cannot create the region before sending its accept. `require-shm` fails instead. Once a shared setup has been selected and acknowledged, transport failure is fatal rather than silently switching record formats mid-stream.
+
+```toml
+[external_core3]
+protocol_policy = "prefer-v2"
+frame_transport = "prefer-shm"
+shared_memory_directory = "" # empty selects /dev/shm or the runtime temp directory
+```
+
+The raw v2 control channel remains open for input, lifecycle, setup and 16-byte frame notifications. Pixel payloads use a two-slot file-backed mapping. At 400x280 this reduces producer-to-host control output from 448,064 bytes per frame to 16 bytes and removes the host's intermediate framebuffer copy: `FrameStore` copies directly from the immutable reading slot.
+
+### Setup record
+
+After the 48-byte host accept, the host writes a 48-byte `WFS2` setup header followed by a UTF-8 path:
+
+| Offset | Size | Type | Field | Meaning |
+|---:|---:|---|---|---|
+| 0 | 4 | `uint32` | `magic` | `0x32534657` (`WFS2`). |
+| 4 | 2 | `uint16` | `headerSize` | Must be 48. |
+| 6 | 2 | `uint16` | `slotCount` | Must be 2. |
+| 8 | 4 | `uint32` | `controlSize` | Must be 64. |
+| 12 | 4 | `uint32` | `slotHeaderSize` | Must be 64. |
+| 16 | 4 | `uint32` | `slotStrideBytes` | `64 + maximumPayloadBytes`. |
+| 20 | 4 | `uint32` | `maximumPayloadBytes` | Must not exceed negotiated payload limits. |
+| 24 | 8 | `uint64` | `regionBytes` | `64 + slotCount * slotStrideBytes`. |
+| 32 | 4 | `uint32` | `pathBytes` | 1 through 1024. |
+| 36 | 4 | `uint32` | `reserved` | Zero on write, ignored on read. |
+| 40 | 8 | `uint64` | `nonce` | Random session identity repeated in the mapping. |
+
+The host creates the backing file with mode `0600` in `/dev/shm`, falling back to the runtime temporary directory when necessary. A configured `shared_memory_directory` may override it. The producer requires the random WaylandForge filename prefix, rejects symbolic links, checks the exact file and region size plus absence of group/other permissions, then validates the control block and nonce.
+
+After validating and mapping, the producer unlinks the pathname and sends the fixed eight-byte `WFSA` acknowledgement. The host also attempts the unlink idempotently. Both mappings remain valid through their open handles. If the host dies in the narrow interval before the producer maps, the next host creation removes dead-PID WaylandForge regions; live-PID mappings are never swept.
+
+### Region and slot layout
+
+The 64-byte control block contains `WFSM`, layout version 1, both fixed structure sizes, payload/region sizes and the nonce. It is followed by two equal slots:
+
+```text
+64-byte control
+64-byte slot 0 header + maximum payload
+64-byte slot 1 header + maximum payload
+```
+
+Each slot header stores state, publication sequence, frame index, media timestamp, nominal duration, width, height, stride and payload size. Slot states are:
+
+```text
+FREE -> WRITING -> READY -> READING -> FREE
+```
+
+The producer waits for its alternating slot to become `FREE`, marks it `WRITING`, copies pixels and metadata, publishes `READY` after a memory barrier and sends a `WFR2` notification. The notification is 16 bytes: magic, size, slot index and 64-bit publication sequence. The host verifies state and sequence, marks `READING`, validates metadata as a normal v2 raw frame, presents directly from the mapped pixel span and finally releases the slot to `FREE`.
+
+Both frame index and slot publication sequence are checked. Two occupied slots apply bounded backpressure; a timeout does not consume a publication sequence. A reconnect creates a new random region and resets both sequence epochs.
 
 ## Pixel format
 
@@ -435,5 +491,7 @@ A new producer compatible with the current host should:
 8. increment `frameIndex` monotonically;
 9. loop on partial reads and writes;
 10. select `S`, `P`, Stormakt's host-side `Q`, or WFIN according to the configured transport and input requirements.
+
+A v2 producer additionally sends its hello before waiting for ordinary input, honors the host-selected capability intersection, emits `WFF2` records for raw v2, and enters shared-memory setup only when `SHARED_MEMORY_SLOTS` was selected. It must never send both a raw frame record and a shared notification for the same negotiated session.
 
 Following those rules is enough to make a software-rendered external core appear as a normal WaylandForge viewport without sharing a graphics context or loading the core into the host process.

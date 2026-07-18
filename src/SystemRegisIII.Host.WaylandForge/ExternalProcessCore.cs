@@ -23,12 +23,15 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     private string _socketPath = string.Empty;
     private string _pointerDriver = "absolute";
     private string _protocolPolicy = "v1";
+    private string _frameTransport = "raw";
+    private string _sharedMemoryDirectory = string.Empty;
     private string _fallbackDllPath = string.Empty;
     private WfexLimits _configuredWfexLimits = WfexLimits.Default;
     private WfexLimits _wfexLimits = WfexLimits.Default;
     private WfexNegotiatedSession _negotiatedSession = WfexNegotiatedSession.Version1(WfexLimits.Default);
     private bool _protocolNegotiated;
     private bool _protocolFallback;
+    private WfexSharedRegion? _sharedRegion;
     private Process? _process;
     private Stream? _wfexStream;
     private Socket? _socketListener;
@@ -56,6 +59,8 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
     private ulong _v2SequenceErrors;
     private ulong _lastPresentationTimestampNanoseconds;
     private ulong _lastNominalDurationNanoseconds;
+    private ulong _sharedPayloadBytesAvoided;
+    private bool _lastFrameUsesSharedMemory;
 
     public ExternalProcessCore(UiExternalCoreConfig config, string fallbackDllPath)
     {
@@ -73,12 +78,14 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
             ? "V1 RAW LOCKSTEP · FALLBACK"
             : _negotiatedSession.DiagnosticLabel;
     public string ProtocolLimits => $"{_wfexLimits.MaximumWidth}X{_wfexLimits.MaximumHeight} · {_wfexLimits.MaximumPayloadBytes / (1024 * 1024)} MIB";
+    public string ProtocolTransport => _sharedRegion is null ? "RAW STREAM" : "SHM X2 + CONTROL";
     public string ProtocolFrameStatus => _negotiatedSession.MajorVersion < 2
         ? $"V1 · FRAME {FrameIndex}"
         : $"V2 · RX {_v2FramesReceived} · SEQERR {_v2SequenceErrors}";
     public string ProtocolTiming => _negotiatedSession.MajorVersion < 2 || _v2FramesReceived == 0
         ? "-"
         : $"{_lastPresentationTimestampNanoseconds / 1_000_000.0:0.000} MS · {_lastNominalDurationNanoseconds / 1_000_000.0:0.000} MS";
+    public string ProtocolCopySavings => _sharedRegion is null ? "-" : $"{_sharedPayloadBytesAvoided / (1024.0 * 1024.0):0.0} MIB";
     public bool IsRunning => _process is { HasExited: false };
     public int? ExitCode => _process is { HasExited: true } process ? process.ExitCode : _lastExitCode;
     public string Status => IsRunning ? "RUNNING" : ExitCode is int code ? $"EXIT {code}" : "STOPPED";
@@ -134,6 +141,19 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
             _ => "v1",
         };
         _configuredWfexLimits = new WfexLimits(config.MaximumFrameWidth, config.MaximumFrameHeight, config.MaximumFrameBytes);
+        _frameTransport = config.FrameTransport.Trim().ToLowerInvariant() switch
+        {
+            "prefer-shm" => "prefer-shm",
+            "require-shm" => "require-shm",
+            _ => "raw",
+        };
+        _sharedMemoryDirectory = config.SharedMemoryDirectory.Trim();
+        FrameIndex = 0;
+        _lastWidth = 0;
+        _lastHeight = 0;
+        _lastStride = 0;
+        _lastFrameUsesSharedMemory = false;
+        Array.Clear(_frame);
         ResetProtocolNegotiation();
         _fallbackDllPath = fallbackDllPath;
         _startBlockedAfterExit = false;
@@ -147,6 +167,10 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         _startBlockedAfterExit = false;
         LastError = string.Empty;
         Array.Clear(_frame);
+        _lastWidth = 0;
+        _lastHeight = 0;
+        _lastStride = 0;
+        _lastFrameUsesSharedMemory = false;
         ResetProtocolNegotiation();
     }
 
@@ -275,18 +299,19 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         SaturnInputState inputState = input.Poll();
         SendInputState(inputState);
 
-        if (!WaitForSocketData(_frame.Length == 0 ? 2000 : 0))
+        if (!WaitForSocketData(_lastWidth == 0 ? 2000 : 0))
         {
-            if (_frame.Length > 0 && _lastWidth > 0 && _lastHeight > 0)
+            if (_lastWidth > 0 && _lastHeight > 0)
             {
-                frameSink.Present(_frame, _lastWidth, _lastHeight, _lastStride);
+                if (_frame.Length > 0 && !_lastFrameUsesSharedMemory)
+                    frameSink.Present(_frame, _lastWidth, _lastHeight, _lastStride);
                 return;
             }
             throw new TimeoutException("External WF core did not produce an initial frame.");
         }
 
         int oldTimeout = _socketStream.ReadTimeout;
-        _socketStream.ReadTimeout = _frame.Length == 0 ? 2000 : 500;
+        _socketStream.ReadTimeout = _lastWidth == 0 ? 2000 : 500;
         try
         {
             ReadWfexFrame(_socketStream, frameSink);
@@ -376,6 +401,11 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
 
     private void ReadWfexFrame(Stream stream, IFrameSink frameSink)
     {
+        if (_sharedRegion is not null)
+        {
+            ReadSharedFrame(stream, frameSink);
+            return;
+        }
         FrameRecordInfo frameHeader = _negotiatedSession.MajorVersion >= 2
             ? ReadV2FrameHeader(stream)
             : ReadV1FrameHeader(stream);
@@ -388,10 +418,58 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         WfexStreamReader.ReadExactly(stream, MemoryMarshal.AsBytes(_frame.AsSpan()));
         if (frameHeader.IsV2) CommitV2Sequence(frameHeader);
         FrameIndex = frameHeader.FrameIndex;
+        _lastFrameUsesSharedMemory = false;
         _lastWidth = frameHeader.Width;
         _lastHeight = frameHeader.Height;
         _lastStride = frameHeader.StridePixels;
         frameSink.Present(_frame, frameHeader.Width, frameHeader.Height, frameHeader.StridePixels);
+    }
+
+    private void ReadSharedFrame(Stream controlStream, IFrameSink frameSink)
+    {
+        WfexSharedNotification notification = WfexSharedNotification.Read(controlStream);
+        ReadOnlySpan<uint> pixels = _sharedRegion!.AcquirePixels(notification, out WfexSharedFrameMetadata metadata);
+        try
+        {
+            ulong recordBytes = metadata.PayloadBytes >= 0
+                ? (ulong)WfexV2FrameHeader.BaseHeaderSize + (uint)metadata.PayloadBytes
+                : 0;
+            var candidate = new WfexV2FrameHeader(
+                WfexV2FrameHeader.CurrentMinorVersion,
+                WfexV2FrameHeader.BaseHeaderSize,
+                WfexV2FrameFlags.FullFrame,
+                WfexV2PayloadCodec.RawArgb8888,
+                metadata.Width,
+                metadata.Height,
+                metadata.StridePixels,
+                metadata.PayloadBytes,
+                metadata.FrameIndex,
+                metadata.PresentationTimestampNanoseconds,
+                metadata.NominalDurationNanoseconds,
+                recordBytes);
+            candidate.Write(_v2Header);
+            WfexV2FrameHeader validated = WfexV2FrameHeader.Parse(
+                _v2Header.AsSpan(0, WfexV2FrameHeader.BaseHeaderSize), _wfexLimits);
+            if (pixels.Length != validated.PixelCount)
+                throw new InvalidDataException("WFEX shared-memory pixel span does not match its metadata.");
+            ValidateV2Sequence(validated.FrameIndex);
+            frameSink.Present(pixels, validated.Width, validated.Height, validated.StridePixels);
+            var record = new FrameRecordInfo(
+                validated.Width, validated.Height, validated.StridePixels, validated.FrameIndex,
+                validated.PayloadBytes, true, validated.PresentationTimestampNanoseconds,
+                validated.NominalDurationNanoseconds);
+            CommitV2Sequence(record);
+            _sharedPayloadBytesAvoided += (uint)validated.PayloadBytes;
+            FrameIndex = validated.FrameIndex;
+            _lastFrameUsesSharedMemory = true;
+            _lastWidth = validated.Width;
+            _lastHeight = validated.Height;
+            _lastStride = validated.StridePixels;
+        }
+        finally
+        {
+            _sharedRegion.ReleasePixels(notification);
+        }
     }
 
     private FrameRecordInfo ReadV1FrameHeader(Stream stream)
@@ -599,6 +677,8 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         _socket = null;
         _socketListener?.Dispose();
         _socketListener = null;
+        _sharedRegion?.Dispose();
+        _sharedRegion = null;
         DeleteSocketPath();
     }
 
@@ -614,12 +694,14 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         _v2SequenceErrors = 0;
         _lastPresentationTimestampNanoseconds = 0;
         _lastNominalDurationNanoseconds = 0;
+        _sharedPayloadBytesAvoided = 0;
+        _lastFrameUsesSharedMemory = false;
     }
 
     private void EnsureFileProtocolPolicy()
     {
         if (_protocolNegotiated) return;
-        if (_protocolPolicy == "require-v2")
+        if (_protocolPolicy == "require-v2" || _frameTransport == "require-shm")
             throw new InvalidOperationException("WFEX v2 negotiation requires an interactive stdio or Unix-socket control channel.");
         _protocolFallback = _protocolPolicy == "prefer-v2";
         _protocolNegotiated = true;
@@ -630,6 +712,8 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         if (_protocolNegotiated) return;
         if (_protocolPolicy == "v1")
         {
+            if (_frameTransport == "require-shm")
+                throw new InvalidOperationException("WFEX shared memory requires WFEX v2 negotiation.");
             _protocolNegotiated = true;
             return;
         }
@@ -638,6 +722,8 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
         int received = ReadHandshakeWithTimeout(producerOutput, buffer, 2000);
         if (received == 0 && _protocolPolicy == "prefer-v2")
         {
+            if (_frameTransport == "require-shm")
+                throw new TimeoutException("WFEX shared memory was required but the producer did not offer a v2 handshake.");
             _protocolFallback = true;
             _protocolNegotiated = true;
             AddStderrLine("HOST: WFEX v2 hello not offered; using v1 fallback.");
@@ -649,13 +735,55 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
             throw new InvalidDataException($"WFEX v2 producer sent a truncated handshake ({received}/{buffer.Length} bytes).");
 
         WfexHandshakeRecord hello = WfexHandshakeRecord.Parse(buffer, WfexHandshakeRecord.ProducerMagic);
-        _negotiatedSession = WfexNegotiation.AcceptProducerHello(hello, _configuredWfexLimits, out WfexHandshakeRecord response);
+        WfexCapabilities enabledCapabilities = WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords;
+        if (_frameTransport != "raw") enabledCapabilities |= WfexCapabilities.SharedMemorySlots;
+        _negotiatedSession = WfexNegotiation.AcceptProducerHello(
+            hello, _configuredWfexLimits, out WfexHandshakeRecord response, enabledCapabilities);
+        bool sharedMemorySelected = (_negotiatedSession.Capabilities & WfexCapabilities.SharedMemorySlots) != 0;
+        if (_frameTransport == "require-shm" && !sharedMemorySelected)
+            throw new InvalidDataException("WFEX shared memory was required but the producer did not offer it.");
+        if (sharedMemorySelected)
+        {
+            try
+            {
+                _sharedRegion = WfexSharedRegion.CreateHost(
+                    _negotiatedSession.Limits,
+                    string.IsNullOrWhiteSpace(_sharedMemoryDirectory) ? null : _sharedMemoryDirectory);
+            }
+            catch (Exception ex) when (_frameTransport == "prefer-shm")
+            {
+                AddStderrLine($"HOST: shared-memory setup unavailable ({ex.Message}); using raw v2 records.");
+                enabledCapabilities &= ~WfexCapabilities.SharedMemorySlots;
+                _negotiatedSession = WfexNegotiation.AcceptProducerHello(
+                    hello, _configuredWfexLimits, out response, enabledCapabilities);
+                sharedMemorySelected = false;
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"WFEX shared memory was required but region creation failed: {ex.Message}", ex);
+            }
+        }
         response.Write(buffer);
         producerInput.Write(buffer);
         producerInput.Flush();
         _wfexLimits = _negotiatedSession.Limits;
+        if (sharedMemorySelected) ConfigureSharedMemory(producerOutput, producerInput);
         _protocolNegotiated = true;
         AddStderrLine($"HOST: negotiated {_negotiatedSession.DiagnosticLabel}.");
+    }
+
+    private void ConfigureSharedMemory(Stream producerOutput, Stream producerInput)
+    {
+        WfexSharedRegion region = _sharedRegion ?? throw new InvalidOperationException("WFEX shared-memory region was not prepared.");
+        region.Setup.Write(producerInput);
+        producerInput.Flush();
+        byte[] acknowledgement = new byte[WfexSharedSetupAck.Size];
+        int received = ReadHandshakeWithTimeout(producerOutput, acknowledgement, 2000);
+        if (received != acknowledgement.Length)
+            throw new TimeoutException($"WFEX shared-memory setup acknowledgement was incomplete ({received}/{acknowledgement.Length} bytes).");
+        using var ackStream = new MemoryStream(acknowledgement, writable: false);
+        WfexSharedSetupAck.Read(ackStream);
+        region.UnlinkBackingFile();
     }
 
     private static int ReadHandshakeWithTimeout(Stream stream, byte[] buffer, int timeoutMilliseconds)
@@ -702,6 +830,7 @@ internal sealed class ExternalProcessCore : ISystemCore, IDisposable
 
     private void PresentLastFrame(IFrameSink frameSink)
     {
+        if (_lastFrameUsesSharedMemory) return;
         if (_frame.Length > 0 && _lastWidth > 0 && _lastHeight > 0)
         {
             frameSink.Present(_frame, _lastWidth, _lastHeight, _lastStride);

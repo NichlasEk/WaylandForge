@@ -56,6 +56,11 @@ static void RunSelfTest()
     WfexNegotiatedSession session = WfexNegotiation.AcceptProducerHello(
         hello, new WfexLimits(320, 240, 307_200), out WfexHandshakeRecord accept);
     Require(session.Limits == new WfexLimits(320, 240, 307_200), "negotiated limits were not intersected");
+    Require((session.Capabilities & WfexCapabilities.SharedMemorySlots) != 0, "shared-memory capability was not selected");
+    WfexCapabilities rawCapabilities = WfexCapabilities.RawFrameRecords | WfexCapabilities.VersionedFrameRecords;
+    WfexNegotiatedSession rawSession = WfexNegotiation.AcceptProducerHello(
+        hello, WfexLimits.Default, out _, rawCapabilities);
+    Require((rawSession.Capabilities & WfexCapabilities.SharedMemorySlots) == 0, "raw policy selected shared memory");
     accept.Write(handshake);
     Require(WfexHandshakeRecord.Parse(handshake, WfexHandshakeRecord.HostMagic) == accept, "host accept did not roundtrip");
 
@@ -116,7 +121,89 @@ static void RunSelfTest()
     Require(WfexV2Sequence.IsExpected(true, 77, 78, out sequenceExpected) && sequenceExpected == 78, "next v2 sequence was rejected");
     Require(!WfexV2Sequence.IsExpected(true, 77, 77, out sequenceExpected) && sequenceExpected == 78, "duplicate v2 sequence was accepted");
     Require(WfexV2Sequence.IsExpected(true, ulong.MaxValue, 0, out sequenceExpected) && sequenceExpected == 0, "v2 sequence wrap policy changed");
-    Console.WriteLine("WFEX CONFORMANCE OK · 44 CASES");
+
+    var sharedLimits = new WfexLimits(4, 4, 64);
+    string staleSharedPath = Path.Combine(Path.GetTempPath(), "waylandforge-wfex-2147483647-conformance-stale");
+    File.WriteAllBytes(staleSharedPath, [0]);
+    if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(staleSharedPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+    using WfexSharedRegion sharedHost = WfexSharedRegion.CreateHost(sharedLimits, Path.GetTempPath());
+    Require(!File.Exists(staleSharedPath), "stale shared-memory backing file was not cleaned on host creation");
+    using var setupStream = new MemoryStream();
+    sharedHost.Setup.Write(setupStream);
+    setupStream.Position = 0;
+    WfexSharedSetup setupRoundtrip = WfexSharedSetup.Read(setupStream);
+    Require(setupRoundtrip == sharedHost.Setup, "shared-memory setup did not roundtrip");
+    byte[] overflowingSetup = setupStream.ToArray();
+    BinaryPrimitives.WriteUInt32LittleEndian(overflowingSetup.AsSpan(20), uint.MaxValue);
+    bool setupOverflowRejected = false;
+    try { WfexSharedSetup.Read(new MemoryStream(overflowingSetup, false)); }
+    catch (InvalidDataException) { setupOverflowRejected = true; }
+    Require(setupOverflowRejected, "overflowing shared-memory setup was accepted");
+    string sharedPath = sharedHost.Setup.Path;
+    if (!OperatingSystem.IsWindows())
+        Require(File.GetUnixFileMode(sharedPath) == (UnixFileMode.UserRead | UnixFileMode.UserWrite), "shared-memory permissions are not user-private");
+    using WfexSharedRegion sharedProducer = WfexSharedRegion.OpenProducer(sharedHost.Setup, sharedLimits);
+    sharedHost.UnlinkBackingFile();
+    Require(!File.Exists(sharedPath), "shared-memory backing path remained linked after both sides mapped it");
+    uint[] sharedPixels = Enumerable.Range(0, 16).Select(static value => 0xff000000u | (uint)value).ToArray();
+    bool badSlotRejected = false;
+    try { sharedHost.Peek(new WfexSharedNotification(2, 0)); }
+    catch (InvalidDataException) { badSlotRejected = true; }
+    Require(badSlotRejected, "out-of-range shared-memory slot was accepted");
+    WfexSharedNotification published = sharedProducer.Publish(sharedPixels, 4, 4, 4, 9, 150_000_003, 16_666_667);
+    using var notificationStream = new MemoryStream();
+    published.Write(notificationStream);
+    notificationStream.Position = 0;
+    WfexSharedNotification receivedNotification = WfexSharedNotification.Read(notificationStream);
+    Require(receivedNotification == published, "shared-memory notification did not roundtrip");
+    WfexSharedFrameMetadata sharedMetadata = sharedHost.Peek(receivedNotification);
+    Require(sharedMetadata.FrameIndex == 9 && sharedMetadata.PixelCount == 16, "shared-memory metadata changed");
+    uint[] sharedDestination = new uint[16];
+    sharedHost.Consume(receivedNotification, sharedDestination);
+    Require(sharedDestination.AsSpan().SequenceEqual(sharedPixels), "shared-memory pixels changed");
+    for (ulong index = 10; index < 14; index++)
+    {
+        WfexSharedNotification next = sharedProducer.Publish(sharedPixels, 4, 4, 4, index, index * 16_666_667, 16_666_667);
+        Require(next.SlotIndex == next.Sequence % 2, "shared-memory two-slot alternation changed");
+        sharedHost.Consume(next, sharedDestination);
+    }
+    WfexSharedNotification busy0 = sharedProducer.Publish(sharedPixels, 4, 4, 4, 14, 14 * 16_666_667UL, 16_666_667);
+    WfexSharedNotification busy1 = sharedProducer.Publish(sharedPixels, 4, 4, 4, 15, 15 * 16_666_667UL, 16_666_667);
+    bool slotTimedOut = false;
+    try { sharedProducer.Publish(sharedPixels, 4, 4, 4, 16, 16 * 16_666_667UL, 16_666_667, 5); }
+    catch (TimeoutException) { slotTimedOut = true; }
+    Require(slotTimedOut, "busy shared-memory slots did not apply backpressure");
+    sharedHost.Consume(busy0, sharedDestination);
+    sharedHost.Consume(busy1, sharedDestination);
+    WfexSharedNotification afterBusy = sharedProducer.Publish(sharedPixels, 4, 4, 4, 16, 16 * 16_666_667UL, 16_666_667);
+    Require(afterBusy.Sequence == busy1.Sequence + 1, "shared-memory timeout skipped a publication sequence");
+    sharedHost.Consume(afterBusy, sharedDestination);
+    using var ackStream = new MemoryStream();
+    WfexSharedSetupAck.Write(ackStream);
+    ackStream.Position = 0;
+    WfexSharedSetupAck.Read(ackStream);
+    byte[] badAck = ackStream.ToArray();
+    badAck[0] ^= 0xff;
+    bool badAckRejected = false;
+    try { WfexSharedSetupAck.Read(new MemoryStream(badAck, false)); }
+    catch (InvalidDataException) { badAckRejected = true; }
+    Require(badAckRejected, "invalid shared-memory acknowledgement was accepted");
+
+    using WfexSharedRegion nonceHost = WfexSharedRegion.CreateHost(sharedLimits, Path.GetTempPath());
+    bool nonceRejected = false;
+    try { using WfexSharedRegion ignored = WfexSharedRegion.OpenProducer(nonceHost.Setup with { Nonce = nonceHost.Setup.Nonce + 1 }, sharedLimits); }
+    catch (InvalidDataException) { nonceRejected = true; }
+    Require(nonceRejected, "mismatched shared-memory nonce was accepted");
+    if (!OperatingSystem.IsWindows())
+    {
+        using WfexSharedRegion permissionHost = WfexSharedRegion.CreateHost(sharedLimits, Path.GetTempPath());
+        File.SetUnixFileMode(permissionHost.Setup.Path, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead);
+        bool broadPermissionsRejected = false;
+        try { using WfexSharedRegion ignored = WfexSharedRegion.OpenProducer(permissionHost.Setup, sharedLimits); }
+        catch (InvalidDataException) { broadPermissionsRejected = true; }
+        Require(broadPermissionsRejected, "broad shared-memory permissions were accepted");
+    }
+    Console.WriteLine("WFEX CONFORMANCE OK · 64 CASES");
 }
 
 static void RunBenchmark()

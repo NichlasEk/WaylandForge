@@ -110,6 +110,8 @@ internal sealed class UiConfig
         writer.WriteLine($"pointer_driver = \"{Escape(ExternalCore.PointerDriver)}\"");
         writer.WriteLine($"socket_path = \"{Escape(ExternalCore.SocketPath)}\"");
         writer.WriteLine($"protocol_policy = \"{Escape(ExternalCore.ProtocolPolicy)}\"");
+        writer.WriteLine($"frame_transport = \"{Escape(ExternalCore.FrameTransport)}\"");
+        writer.WriteLine($"shared_memory_directory = \"{Escape(ExternalCore.SharedMemoryDirectory)}\"");
         WriteWfexLimits(writer, ExternalCore);
         writer.WriteLine();
         writer.WriteLine("[external_core2]");
@@ -122,6 +124,8 @@ internal sealed class UiConfig
         writer.WriteLine($"pointer_driver = \"{Escape(ExternalCore2.PointerDriver)}\"");
         writer.WriteLine($"socket_path = \"{Escape(ExternalCore2.SocketPath)}\"");
         writer.WriteLine($"protocol_policy = \"{Escape(ExternalCore2.ProtocolPolicy)}\"");
+        writer.WriteLine($"frame_transport = \"{Escape(ExternalCore2.FrameTransport)}\"");
+        writer.WriteLine($"shared_memory_directory = \"{Escape(ExternalCore2.SharedMemoryDirectory)}\"");
         WriteWfexLimits(writer, ExternalCore2);
         writer.WriteLine();
         writer.WriteLine("[external_core3]");
@@ -134,6 +138,8 @@ internal sealed class UiConfig
         writer.WriteLine($"pointer_driver = \"{Escape(ExternalCore3.PointerDriver)}\"");
         writer.WriteLine($"socket_path = \"{Escape(ExternalCore3.SocketPath)}\"");
         writer.WriteLine($"protocol_policy = \"{Escape(ExternalCore3.ProtocolPolicy)}\"");
+        writer.WriteLine($"frame_transport = \"{Escape(ExternalCore3.FrameTransport)}\"");
+        writer.WriteLine($"shared_memory_directory = \"{Escape(ExternalCore3.SharedMemoryDirectory)}\"");
         WriteWfexLimits(writer, ExternalCore3);
         writer.WriteLine();
 
@@ -343,6 +349,12 @@ internal sealed class UiConfig
                 case "protocol_policy":
                     externalCore.ProtocolPolicy = ParseProtocolPolicy(value, externalCore.ProtocolPolicy);
                     break;
+                case "frame_transport":
+                    externalCore.FrameTransport = ParseFrameTransport(value, externalCore.FrameTransport);
+                    break;
+                case "shared_memory_directory":
+                    externalCore.SharedMemoryDirectory = value;
+                    break;
                 case "max_frame_width":
                     externalCore.MaximumFrameWidth = Math.Clamp(ParseInt(value, externalCore.MaximumFrameWidth), 1, 32_768);
                     break;
@@ -457,6 +469,17 @@ internal sealed class UiConfig
             "v1" => "v1",
             "prefer-v2" => "prefer-v2",
             "require-v2" => "require-v2",
+            _ => fallback,
+        };
+    }
+
+    private static string ParseFrameTransport(string value, string fallback)
+    {
+        return value.Trim().ToLowerInvariant() switch
+        {
+            "raw" => "raw",
+            "prefer-shm" => "prefer-shm",
+            "require-shm" => "require-shm",
             _ => fallback,
         };
     }
@@ -628,6 +651,8 @@ internal sealed class UiExternalCoreConfig
     public string PointerDriver { get; set; } = "absolute";
     public string SocketPath { get; set; } = string.Empty;
     public string ProtocolPolicy { get; set; } = "v1";
+    public string FrameTransport { get; set; } = "raw";
+    public string SharedMemoryDirectory { get; set; } = string.Empty;
     public int MaximumFrameWidth { get; set; } = WfexLimits.Default.MaximumWidth;
     public int MaximumFrameHeight { get; set; } = WfexLimits.Default.MaximumHeight;
     public int MaximumFrameBytes { get; set; } = WfexLimits.Default.MaximumPayloadBytes;
