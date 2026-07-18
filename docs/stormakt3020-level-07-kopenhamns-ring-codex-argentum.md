@@ -1,0 +1,265 @@
+# Stormakt 3020 - Bana 7: Köpenhamns ring och Codex Argentum
+
+Status: utvecklingsplan för kampanjens sjunde rad, level id `6`. Banan är ännu låst/developer-preview i runtime. Den här planen ersätter den tidigare idén att Superarmadans reträtt ensam avslutar kampanjen.
+
+## Kärna
+
+Köpenhamn är inte byggd ovanpå Codex Argentum. Köpenhamn är byggd för att hålla den nere.
+
+Stadens spiror, fundament, befästningar, dockor och kronring bildar ett enda barockt sigill. Kung Christian känner till valvet men vågar inte öppna det: Codexen erkänner varken kungariken eller blodslinjer, bara anspråk som kan bevisas i silver. Karls silverkropp från skogsmånen är därför inte kampanjens stora skatt utan dess behörighetsnyckel.
+
+Finalen består av två sammanhängande akter:
+
+1. **Köpenhamns ring - Konung Christians vrede:** vertikal shmup genom en försvarsring, fogdens sista kärna och Superarmadan, med flera korta bossportar och tre fulla bossar.
+2. **Staden under staden - Codex Argentum:** Karl landar och spelet växlar till det befintliga top-down-/hack-and-slash-språket. Under Köpenhamn använder han marginalfragment som programmerar silver, kompilerar legender och ersätter en lokal verklighetslag åt gången.
+
+Rymdakten ska kännas som att hela den gamla kampanjen samlas till en offensiv. Markakten ska först kännas mindre och farligare: Karl är ensam under staden medan Ebba och Sören håller ringen ovanför honom.
+
+## Berättelsens sanning
+
+Den folkliga berättelsen säger att Codex Argentum visar var allt silver finns. Det är tillräckligt sant för att locka Karl, fogden och kronan mot samma plats, men boken är egentligen manualen till en silverbaserad infrastruktur under Norden, äldre än människor, Danmark, Sverige och Malmodern.
+
+Codexen kan tre saker:
+
+- skriva om silverhaltig materia som kod;
+- kompilera ihågkomna legender till tillfälliga fysiska instanser;
+- skriva en lokal lag som verkligheten lyder tills en annan lag ersätter den.
+
+Christian har bara haft tillgång till lösrivna marginalkopior. Superarmadan är hans största lyckade legendkompilering: inte flottan som verkligen fanns, utan den orimliga flotta eftervärlden påstår att en vred kung borde ha haft. Ju mindre historiskt korrekt minnet är, desto större blir dess vapen.
+
+Christian slåss därför inte bara av stolthet. När Karls silversignal passerar den yttre ringen förstår han att staden har upptäckt en giltig användare. Hans vrede är också rädsla. Tidiga radiosvar får låta kungligt hånfulla; nära valvet spricker rösten och han säger saker som antyder att Karl har varit där förut utan att förklara hur.
+
+## Akt I - Konung Christians vrede
+
+### Miljö och rytm
+
+Tre bakgrundsdjup rör sig oberoende:
+
+- en fjärrplåt med Köpenhamns mörka kupoler, gyllene kanaler och en kronformad orbitalring;
+- ett mellandjup av urverksdockor, ankarkättingar, rödvita segelpaneler och långsamt roterande sigillarmar;
+- ett nära lager av murkrön, silverinskrifter och fysiska ringportar som skapar läsbara stridskorridorer.
+
+Striden går från yttre dockor till kronringen, genom fogdens inre tullmaskin och vidare ut framför den gyllene port där Superarmadan kompileras. Tidigare val syns utan att göra finalen omöjlig:
+
+- frigivna skepp håller en bakgrundsflank och slår ut ett batteri;
+- Sörens ed ger ett verkligt koppargrönt stödpar i vissa bossfaser;
+- fler snapphaneallierade minskar reparationsdrönarnas takt;
+- den permanenta Bana 5-lastningen följer Karl oförändrad.
+
+### Bosskedja
+
+Bossarna delas i portar, fulla bossar och Superarmadans delmål så att banan får många identiteter utan tio likadana livsmätare.
+
+#### Port 1 - Trekroners lås
+
+Tre fästningshuvuden delar ett roterande lås. Ett huvud skapar murar, ett skjuter korseld och ett reparerar de andra. Spelaren väljer först vilket beteende som ska försvinna. Låset är kort, fysiskt och etablerar att stadens försvar är delar av ett sigill.
+
+#### Port 2 - De tolv timmarnas amiralitet
+
+En urverksadmiral hoppar mellan tolv markerade lägen runt skärmen. Varje timslag lämnar kvar ett skottmönster; efter tolv slag försöker hela urtavlan exekvera samtidigt. Förstörda timmarkeringar blir säkra luckor i den slutliga salvan.
+
+#### Full boss 1 - Överfogde Frederik Null
+
+Frederik anländer i ett tron-/slagskepp byggt av kvitton, beslagtagna vapensköldar och nollställda skeppsregister.
+
+- Fas 1 stämplar spelarens tidigare räddade skepp som beslagtagna och skickar indrivningskedjor mot dem.
+- Fas 2 river bort tronen och använder registervingarna som två separata närstridsblad.
+- Fas 3 nollställer sin egen rustning varje gång en reparationsnod får avsluta en bokföringscykel; spelaren måste bryta rätt nod före nästa stämpel.
+
+När skrovet faller flyr hans tullkärna in i kronringen.
+
+#### Full boss 2 - Øresunds Øje
+
+Fogdens avskalade kärna sitter i ringens centrum som ett mekaniskt öga. Den läser spelarens vanligaste rörelseriktning och bygger tillfälliga tullmurar där Karl sannolikt kommer att vara, inte där han är. Sören kan slå ut en prediktionslins, men huvudmönstret måste fortfarande lösas av spelaren.
+
+När ögat brister slutar fogdesystemet kontrollera ringen. I några sekunder verkar slaget vunnet. Då använder Christian en marginalkopia och kompilerar Superarmadan genom den gyllene porten.
+
+#### Superarmadans port - Dannebrogsvingarna
+
+Rödvita jaktdrönare bildar roterande kors. Varje kors har fyra hörnnoder; att bryta ett hörn öppnar en flyktväg men vrider nästa formation. De är ett gemensamt formationshot, inte hundratals kollisionsobjekt.
+
+#### Superarmadans duo - Absalon och Elefanten
+
+Två skärmfregatter gör växelvisa bredsidor. **Absalon** bygger defensiva murar av skölddrönare. **Elefanten** laddar genom dem och förvandlar murarnas luckor till anfallskorridorer. Reparationsdrönare kan återställa ett kanontorn men aldrig återuppliva en besegrad fregatt.
+
+#### Full boss 3 - Kong Christian: Superfregatten
+
+Flaggskeppet fyller övre halvan av skärmen och har fyra förstörbara sektioner: drönarbuk, babords bredsida, styrbords bredsida och kronreaktor.
+
+1. **Kunglig distans:** bredsidor och drönarbuk arbetar i tydliga växlingar.
+2. **Den vita korsramen:** fyra noder låser skärmens kvadranter i turordning. En bruten nod skapar en permanent säker söm.
+3. **Den felaktigt ihågkomna salvan:** vapnet blir starkare och mer anakronistiskt för varje kunglig order; det blandar kanonkulor, raketer och ett historiskt omöjligt silverljus.
+4. **Sista hållet:** Sören och frigivna skepp håller bakgrundsflottan medan Karl öppnar kronreaktorn.
+
+Superfregatten förstörs inte fullständigt. Reaktorn slår i stället sönder den övre delen av stadens sigill. Christian stänger de återstående ringarna, skär av flottan och tvingar Karl att landa vid Holmen. Ebba och Sören håller ytan; Karl fortsätter nedåt.
+
+## Övergång till hack-and-slash
+
+Landningen är spelbar och kort, inte en resultatskärm. Skeppet glider genom brinnande dockor, spelaren skjuter loss tre landningsankare och Karl lämnar därefter farkosten i sin silverkropp. Kameran vrids till top-down utan meny eller laddad kampanjrad.
+
+Markakten återanvänder bevisade Diablo-liknande byggstenar från Silverkroppens dungeon:
+
+- pointer-/controllerstyrd förflyttning och anfall;
+- riktning, stagger, telegraph, loot och quick potion;
+- tydliga rum och deterministisk pathing;
+- separat autosave och developer-save.
+
+Den får däremot egen state (`CopenhagenWorldState` plus markdel), egen seed `3707`, eget save-namn och egna fiende-/föremålsdefinitioner. Den får aldrig mutera Silverkroppens `DungeonState` eller dess autosave.
+
+## Akt II - Staden under staden
+
+### Områden
+
+#### Djup 1 - Holmens omvända arsenal
+
+Kanongångar hänger från taket och silverammunition rullar uppför sluttningar. Här lär spelaren att ett markerat silverföremål kan få en ny beskrivning. Första obligatoriska satsen är:
+
+> Hjertat är ej brutet. Hjertat är en port.
+
+Ett sprucket silverhjärta vecklar ut sig till en dörr. Samma verb återkommer senare på ett hjärta som kan bli vapen eller bro, men bara en form kan vara aktiv.
+
+#### Djup 2 - Rosenborgs minnesmaskin
+
+Rummen lagrar inte historien utan vad människor har upprepat om historien. Här kompileras legender: stupade älgkaroliner, ett spöke av Öresundsflottan, en lydig men instabil kopia av en tidigare boss och ett felaktigt ihågkommet kungligt supervapen.
+
+En legend har en kort integritetsmätare. Historiskt rimliga minnen är stabila men svagare. Orimliga minnen är starkare, tappar snabbare formen och kan bokstavstolka sin sista order.
+
+#### Djup 3 - Christiansborgs marginalvalv
+
+Stadens fundament bildar enorma skrivtecken runt Codexens kammare. Här införs lokala lagar. Endast en lag är aktiv; en ny inskription ersätter den gamla fullständigt.
+
+Exempel:
+
+- **Under denna himmel må intet danskt verk flyga.** Flygande danska konstruktioner störtar, men även frigivna före detta danska skepp måste lämna området.
+- **Silver skall här väga mindre än skuld.** Karl kan flytta enorma silverblock; förrädare blir långsamma, medan Karls egen silverkropp får sämre friktion.
+- **Ingen krona må äga det den ej själv kan bära.** Kungliga sköldar faller av, men loot kan inte magasineras förrän lagen byts.
+- **En kanon skall äta danska skepp.** En felbeskriven kanon tuggar faktiskt i sig skepp, blir mätt och vägrar skjuta tills spelaren får den att spotta ut en reaktorkärna.
+
+### Marginalsystemet
+
+Första versionen använder författade satser, inte fri textinmatning. Vid ett silverlektorn väljer spelaren mellan två eller tre exakta marginaler. Detta gör följden läsbar, lokaliserbar och deterministiskt testbar samtidigt som bokstavstolkningshumorn bevaras.
+
+State äger:
+
+- aktiv lag;
+- vilket silverobjekt som har skrivits om och dess nuvarande form;
+- aktiv legend och återstående integritet;
+- eventuella korruptionsord som en fiende har lagt till;
+- rumseffekter som måste återställas när lagen ersätts.
+
+HUD visar den aktiva satsen som en smal silvermarginal. Lagens effekt får aldrig vara dold bakom loretext.
+
+## Markbossar
+
+### Portboss - Den mätta kanonen
+
+Det första katastrofala marginalexperimentet blir en fysisk miniboss. Kanonen jagar danska skeppssilhuetter, tuggar i sig dem och använder deras vapen utan att förstå målet. Spelaren matar den tre felaktiga komponenter för att överbelasta dess bokstavliga matsmältning och öppna vägen.
+
+### Full boss 4 - Marginalfogden Korrektorius
+
+Korrektorius slåss med fyra mekaniska fjäderpennor. Han försöker inte döda Karl direkt utan korrumpera den aktiva lagen genom att infoga **icke**, byta **danskt** mot **svenskt** eller flytta ett skiljetecken. Varje ändring telegraferas på HUD-marginalen innan världen lyder den. Att bryta rätt penna avbryter rätt ord.
+
+### Portboss - Sagokonungen
+
+Rosenborg kompilerar den kung som eftervärlden felaktigt minns: större krona, fler lejon, omöjliga raketer och en häst som kan segla. Spelaren kan välja en stabil sannare legend som motvikt eller en stark men riskabel karolinsk överdrift.
+
+### Full boss 5 - Konung Christians vrede
+
+Christian går inte personligen ned i valvet. Hans bevisade kungliga anspråk kompilerar en silverrustning kring hans röst, vapensköld och samlade vrede. Bossen är alltså både Christian och stadens försök att verkställa hans äganderätt.
+
+- Fas 1 använder tre kungliga lagar som spelaren måste ersätta vid lektorn.
+- Fas 2 kompilerar minnen av besegrade kampanjbossar som korta kombinationsattacker.
+- Fas 3 tar bort ord ur spelarens marginal; spelaren måste återvinna orden fysiskt från rustningens delar.
+- Sista fasen saknar ny större explosion. Karl bevisar sitt anspråk genom att stå kvar i Codexens öppna silverkrets medan rustningen blir tyngre av Christians skuld.
+
+När Vreden faller öppnas valvet. Christian är besegrad som anspråk men behöver inte vara död; hans sista radio kan vara ett skräckslaget **"du er ikke den første"**.
+
+## Codexkammaren och slutbilden
+
+Kammaren har 254 släckta silverkonturer längs väggarna. De förklaras inte först. Karls kropp fungerar som nyckel och boken öppnas utan att han rör den.
+
+Första sidan är redan skriven:
+
+```text
+ANVÄNDARE IGENKÄND: KARL, INSTANS 255
+FÖREGÅENDE 254 EXEKVERINGAR MISSLYCKADES
+ÅTERUPPTA KRIGET?
+```
+
+Karl den 255:e är inte en ättling. Han är den senaste körningen.
+
+Spelet ska inte låta spelaren svara ja eller nej i samma kampanj. Prompten står kvar medan musikens sista kungliga motiv bryts ned till Codexens kalla klockpuls. En mycket svag marginal börjar skriva ett ord till efter eftertexterna, men klipps före läsbar fullbordan. Segern över fogden och Christian är verklig; frågan öppnar nästa konflikt utan att ogiltigförklara kampanjen.
+
+## Radio och avslöjandets disciplin
+
+Obligatoriska röster:
+
+- Ebba leder ringanfallet och stannar ovan jord efter landningen.
+- Sören förvandlar sin ed till konkret flankstöd och vägrar kalla Karl kung.
+- Frederik Null talar i bokföring och förstår Codexen som den slutliga ägandeboken.
+- Christian går från ceremoniell vrede till igenkänning och rädsla.
+- Codexen har ingen mänsklig röst; text, mekaniskt sidljud och silverklocka räcker.
+
+Ingen radio får säga **instans**, **254** eller **körning** före sista kammaren. Christian får antyda upprepning men inte lösa gåtan.
+
+## Musik
+
+Minst fyra fasta roller behövs:
+
+1. **Köpenhamns ring:** snabb barock-techno med urverkspuls och kunglig mässing.
+2. **Superarmadan/Konung Christians vrede:** tidigare Superarmada-idé, men med en allt mer felkompilerad fanfar.
+3. **Staden under staden:** långsammare hack-and-slash-loop med luta/cembalo över industriell bas och silverklockor.
+4. **Codex Argentum:** avskalad boss-/slutmusik där motiv från Stora Bält återkommer som om en maskin minns det fel.
+
+Landningen använder några sekunders nästan total tystnad mellan akt I och II så genrebytet känns fysiskt.
+
+## Grafik och objekt
+
+Första assetfamiljer:
+
+- `copenhagen_ring_far`, `copenhagen_docks_mid`, `copenhagen_seal_near` i wide/legacy-varianter;
+- `trekroner_lock`, `clock_admiralty`, `frederik_throne`, `oresund_eye`;
+- `armada_cross_drone`, `absalon_screen`, `elefanten_charge`, `christian_superfrigate` med separata sektioner;
+- `holmen_floor`, `rosenborg_memory`, `christiansborg_margin`, `codex_vault`;
+- silverhjärtats port-/bro-/vapenformer;
+- Korrektorius pennor, Sagokonungen, Vredens rustning och de 254 släckta konturerna.
+
+Alla genererade sprites behöver kodritade fallbacks och packas genom befintlig WFSA-pipeline. Farliga projektiler använder inte samma silvervita färg som passiv marginaltext.
+
+## State, save och tekniska gränser
+
+- Level id är `6`; reset-seed är `3707`.
+- `CopenhagenWorldState` äger akt, bossportar, ringstatus, landning och markvärld.
+- Bana 5-lastning, frigivna skepp, SnapphaneRoute, SnapphaneAllies och SorenOathComplete läses från kampanjsave men skrivs inte om godtyckligt.
+- Ett separat Köpenhamn-autosave skapas först efter landningen och vid djupövergångar.
+- En färdig rymdakt får återupptas vid Holmen; spelaren ska inte behöva spela om Superarmadan efter ett markdöd.
+- Codexlagar är explicita enum-/dataposter. Ingen runtime-eval, skriptmotor eller fri texttolk ingår i första versionen.
+- Endast en lokal lag, en aktiv legend och en omskriven huvudkonstruktion får vara aktiva samtidigt.
+- Wide 400x280 och legacy 320x224 delar simulation, hitboxar och saveutfall.
+
+## Byggsvep
+
+1. **Dispatch och tvåaktsstate:** developer-startbar level id 6, seed, separat render/step, titel, tom ring och en deterministisk landningsövergång.
+2. **Ringportarna:** Trekroners lås, Amiralitetets urtavla, bakgrundslager och fysisk ringgeometri.
+3. **Fogdens slut:** Frederik Null och Øresunds Øje med eventradio och separata fasövergångar.
+4. **Superarmadan:** Dannebrogsvingar, fregattduo, sektionsägd Superfregatt och allierad påverkan.
+5. **Markgrund:** Holmen, top-down-rörelse, combat, eget save och genre-/musikbyte.
+6. **Marginalsystem:** materiaformer, en lag åt gången, legendintegritet och synlig bokstavstolkning.
+7. **Markbossar:** Den mätta kanonen, Korrektorius och Sagokonungen.
+8. **Christians vrede:** slutbossens lag-/legendfaser och anspråksupplösning.
+9. **Codexkammaren:** instans 255-avslöjande, slutbild, eftertexter och full radio-/musikmix.
+10. **Polish och offentlig status:** slutassets, balans, wide/legacy-WFEX, save-matris och publik `STRID` först när båda akterna är kompletta.
+
+Varje svep får egen smal commit och push.
+
+## Acceptans
+
+- Bana 7 kan startas och återupptas utan att äldre level timelines, radio eller bossar läcker in.
+- Alla bossportar har skilda läsbara lösningar; mängden bossar blir inte en följd av identiska livsmätare.
+- Aktbytet sker utan kampanjmeny och markdöd återupptar efter landningen.
+- PACKRLE/WFEX, raw och shared memory ger identiska slutliga framehashar i lockstep.
+- Samma input och save ger identiska bossfaser, marginalval och Codexslut i wide och legacy.
+- Varje lag återställer sina lokala effekter när den ersätts; ingen stale gravitation, fraktion eller kollisionsregel överlever.
+- Korruptionsord telegraferas före effekt och kan avbrytas deterministiskt.
+- Tidigare kampanjval ger stöd och visuella skillnader men kan aldrig göra finalen omöjlig.
+- Första sidan visar exakt instans 255-avslöjandet och ingen tidigare dialog förstör det.

@@ -76,11 +76,11 @@ Då anländer **Kung Christians Superarmada** ur en gyllene hyperrymdsport. Det 
 4. **Den kungliga salvan:** under 40 procent fäller fregatten ut en enorm vit korsram, låser skärmens fyra kvadranter i turordning och blandar långsamma kanonkulor med snabba drönarrusningar. Förstör korsramens fyra noder för att blotta kronreaktorn.
 5. **Sista hållet:** när reaktorn öppnas går Karl CCLV och Sören in från varsin sida. Spelaren avlossar den avgörande bredsidan; fregatten bryts i flera stora, långsamma explosioner medan Superarmadan tappar formation och flyr tillbaka genom porten.
 
-Kung Christian behöver inte visas som människa i första kampanjen. Hans närvaro bärs av vapensköld, ordertext och den orimligt stora fregatten; det sparar en personlig duell till en eventuell fortsättning.
+Superfregatten avslutar rymdakten men inte hela kampanjen. När kronreaktorn brister stänger Christian de återstående ringarna och tvingar Karl att landa. Spelet växlar därefter till top-down hack-and-slash under Köpenhamn. Christian möter Karl genom den silverrustning som verkställer hans kungliga anspråk, **Konung Christians vrede**, snarare än genom en vanlig mänsklig duell.
 
 Finalmusik: ett eget spår, arbetsnamn **Kung Christians Superarmada**, som börjar med en kort kunglig fanfar, går över i snabb sorgmättad bossmarsch och lägger till snapphanarnas kopparslag när allierade anländer. `kronans-sista-salva-v1.wav` kan användas som prototyp men ska inte vara slutlig finalmusik.
 
-Segern slår sönder fogdemaskinen och tvingar Superarmadan till reträtt, men utplånar varken Danmark eller den danska kronan. Slutbilden visar Karl CCLV och snapphanarnas kapare mot den slocknade kronringen.
+Segern slår sönder fogdemaskinen och Superarmadan men utplånar varken Danmark eller den danska kronan. Under staden finner Karl **Codex Argentum**, manualen till Nordens programmerbara silverinfrastruktur. Dess första sida identifierar honom som instans 255 och avslöjar att de föregående 254 exekveringarna misslyckades. Detaljerad tvåaktsplan: `docs/stormakt3020-level-07-kopenhamns-ring-codex-argentum.md`.
 
 ## Återkommande systemspråk
 
