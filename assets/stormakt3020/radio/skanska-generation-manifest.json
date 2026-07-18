@@ -957,6 +957,106 @@
       "sha256": "33dad3ca5aa0575001c9ae1d05dcd51e6367dc9f2391c69722b0b911223d5945",
       "request": "assets/stormakt3020/radio/raw/agnete-red-mega-da-request.json",
       "reference_sha256": "c457baf10d9d669d09fc5305230f35128321cd1dcfaeb17a3d9989c801b5c1f6"
+    },
+    {
+      "kind": "line",
+      "line": "soren-snapphane-duel-challenge",
+      "role": "soren-svartkrut",
+      "job_id": "d298a60f2bb34f54baed1ca12cc4f18d",
+      "file": "assets/stormakt3020/radio/raw/soren-snapphane-duel-challenge-sv-raw.wav",
+      "sha256": "315cef6906b8bb04b118be1a9c4fb2d2570f5b338974f86f83aa25d4fb6693b7",
+      "request": "assets/stormakt3020/radio/raw/soren-snapphane-duel-challenge-sv-request.json",
+      "reference_sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b"
+    },
+    {
+      "kind": "line",
+      "line": "soren-snapphane-duel-hooks",
+      "role": "soren-svartkrut",
+      "job_id": "f6bfe4f63cfd4c46981a7d7084bbde35",
+      "file": "assets/stormakt3020/radio/raw/soren-snapphane-duel-hooks-sv-raw.wav",
+      "sha256": "cf404a4fb1cc3a90ea6cc08fea0a2f4f9b2fbc2f3f9aaf0bad4c07b86a437ed6",
+      "request": "assets/stormakt3020/radio/raw/soren-snapphane-duel-hooks-sv-request.json",
+      "reference_sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b"
+    },
+    {
+      "kind": "line",
+      "line": "soren-snapphane-oath",
+      "role": "soren-svartkrut",
+      "job_id": "9b1f7c38dc8f4de49d3ac9cef96407ce",
+      "file": "assets/stormakt3020/radio/raw/soren-snapphane-oath-sv-raw.wav",
+      "sha256": "6e851d43f582add06e2ade8d2363840b267e880e3fbb89a9312f343934e1e2c8",
+      "request": "assets/stormakt3020/radio/raw/soren-snapphane-oath-sv-request.json",
+      "reference_sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-snapphane-oath",
+      "role": "ebba-grip",
+      "job_id": "00c06b2a64e543f79a8faee4c68eb830",
+      "file": "assets/stormakt3020/radio/raw/ebba-snapphane-oath-sv-raw.wav",
+      "sha256": "7705938b730d06bea67d1885d8bf9bec08abce711a0025075245cd3ecb4e2a9d",
+      "request": "assets/stormakt3020/radio/raw/ebba-snapphane-oath-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-snapphane-route-open",
+      "role": "ebba-grip",
+      "job_id": "d6ff65ace7d64f47bdf601ab8744783d",
+      "file": "assets/stormakt3020/radio/raw/ebba-snapphane-route-open-sv-raw.wav",
+      "sha256": "ae90448101d35e07c9232a28edeff5c1bff4c94f0cfa428070f77f211d12dee1",
+      "request": "assets/stormakt3020/radio/raw/ebba-snapphane-route-open-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "soren-snapphane-kapar-route",
+      "role": "soren-svartkrut",
+      "job_id": "793d50e5b5f0420eac1348c93cb08bd2",
+      "file": "assets/stormakt3020/radio/raw/soren-snapphane-kapar-route-sv-raw.wav",
+      "sha256": "7a2adcb8a980edd7f740c8c043128d84a9043cbea0656baa6db3a52b2bfb7859",
+      "request": "assets/stormakt3020/radio/raw/soren-snapphane-kapar-route-sv-request.json",
+      "reference_sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b"
+    },
+    {
+      "kind": "line",
+      "line": "soren-snapphane-krut-route",
+      "role": "soren-svartkrut",
+      "job_id": "abba63d08c3e43078d92b2aa57f6a076",
+      "file": "assets/stormakt3020/radio/raw/soren-snapphane-krut-route-sv-raw.wav",
+      "sha256": "a9e3e42b37039c0d477f4abb9c73426b79e9a6f48c1b8f469f8874d3d0671c99",
+      "request": "assets/stormakt3020/radio/raw/soren-snapphane-krut-route-sv-request.json",
+      "reference_sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b"
+    },
+    {
+      "kind": "line",
+      "line": "soren-red-hounds-chain",
+      "role": "soren-svartkrut",
+      "job_id": "370d8304bfa84af0a9cf6a6685ac569c",
+      "file": "assets/stormakt3020/radio/raw/soren-red-hounds-chain-sv-raw.wav",
+      "sha256": "f2a31e15ccbbca168dcaa09e7f5d5388e86109162aaaf4718729c9e6ef0c9d28",
+      "request": "assets/stormakt3020/radio/raw/soren-red-hounds-chain-sv-request.json",
+      "reference_sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b"
+    },
+    {
+      "kind": "line",
+      "line": "ebba-red-hounds-mask",
+      "role": "ebba-grip",
+      "job_id": "3b055278026c464798dfda6387d8c8e8",
+      "file": "assets/stormakt3020/radio/raw/ebba-red-hounds-mask-sv-raw.wav",
+      "sha256": "e491bcede8f664aea66c1eb436ff8737e75dd9060795315676626fe8bac69091",
+      "request": "assets/stormakt3020/radio/raw/ebba-red-hounds-mask-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "soren-red-hounds-victory",
+      "role": "soren-svartkrut",
+      "job_id": "8a8dad1fa7be408f9fe20e2cb4853d28",
+      "file": "assets/stormakt3020/radio/raw/soren-red-hounds-victory-sv-raw.wav",
+      "sha256": "ea05db0d35dfc41bb6d3bf5cd79dfb029dc81f75f51192955a6020a8aab6b91a",
+      "request": "assets/stormakt3020/radio/raw/soren-red-hounds-victory-sv-request.json",
+      "reference_sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b"
     }
   ],
   "service": "http://127.0.0.1:8765",

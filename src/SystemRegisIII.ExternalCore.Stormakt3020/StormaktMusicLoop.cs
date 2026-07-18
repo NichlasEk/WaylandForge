@@ -711,6 +711,16 @@ internal sealed class StormaktMusicLoop : IDisposable
             (StormaktVoice.BodilRedChain, "bodil-red-chain-da-radio.wav", 1.0f),
             (StormaktVoice.DagmarRedMask, "dagmar-red-mask-da-radio.wav", 0.96f),
             (StormaktVoice.AgneteRedMega, "agnete-red-mega-da-radio.wav", 1.0f),
+            (StormaktVoice.SorenSnapphaneDuelChallenge, "soren-snapphane-duel-challenge-sv-radio.wav", 0.92f),
+            (StormaktVoice.SorenSnapphaneDuelHooks, "soren-snapphane-duel-hooks-sv-radio.wav", 0.94f),
+            (StormaktVoice.SorenSnapphaneOath, "soren-snapphane-oath-sv-radio.wav", 0.90f),
+            (StormaktVoice.EbbaSnapphaneOath, "ebba-snapphane-oath-sv-radio.wav", 0.88f),
+            (StormaktVoice.EbbaSnapphaneRouteOpen, "ebba-snapphane-route-open-sv-radio.wav", 0.88f),
+            (StormaktVoice.SorenSnapphaneKaparRoute, "soren-snapphane-kapar-route-sv-radio.wav", 0.92f),
+            (StormaktVoice.SorenSnapphaneKrutRoute, "soren-snapphane-krut-route-sv-radio.wav", 0.94f),
+            (StormaktVoice.SorenRedHoundsChain, "soren-red-hounds-chain-sv-radio.wav", 0.96f),
+            (StormaktVoice.EbbaRedHoundsMask, "ebba-red-hounds-mask-sv-radio.wav", 0.92f),
+            (StormaktVoice.SorenRedHoundsVictory, "soren-red-hounds-victory-sv-radio.wav", 0.94f),
         ];
         Dictionary<StormaktVoice, LoadedEffect> voices = [];
         foreach ((StormaktVoice voice, string file, float gain) in entries)
@@ -917,6 +927,16 @@ internal enum StormaktVoice
     BodilRedChain,
     DagmarRedMask,
     AgneteRedMega,
+    SorenSnapphaneDuelChallenge,
+    SorenSnapphaneDuelHooks,
+    SorenSnapphaneOath,
+    EbbaSnapphaneOath,
+    EbbaSnapphaneRouteOpen,
+    SorenSnapphaneKaparRoute,
+    SorenSnapphaneKrutRoute,
+    SorenRedHoundsChain,
+    EbbaRedHoundsMask,
+    SorenRedHoundsVictory,
 }
 
 internal enum StormaktMusicTrack

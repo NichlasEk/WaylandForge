@@ -885,6 +885,116 @@
       "model_backend": "voxcpm2"
     },
     {
+      "id": "soren-snapphane-duel-challenge",
+      "role": "soren-svartkrut",
+      "level": 5,
+      "frame": -1,
+      "cue": "snapphane_duel_challenge",
+      "text": "Heder före led. Visa mig vad du går för, Karl.",
+      "subtitle_lines": ["HEDER FÖRE LED", "VISA MIG KARL"],
+      "seed": 302122,
+      "model_backend": "dots.tts-soar"
+    },
+    {
+      "id": "soren-snapphane-duel-hooks",
+      "role": "soren-svartkrut",
+      "level": 5,
+      "frame": -1,
+      "cue": "snapphane_duel_hooks",
+      "text": "Byt sida då! Kedjan sluter sig.",
+      "subtitle_lines": ["BYT SIDA DÅ", "KEDJAN SLUTER"],
+      "seed": 302122,
+      "model_backend": "dots.tts-soar"
+    },
+    {
+      "id": "soren-snapphane-oath",
+      "role": "soren-svartkrut",
+      "level": 5,
+      "frame": -1,
+      "cue": "snapphane_oath",
+      "text": "Ingen fogde mellan oss. Min ed står.",
+      "subtitle_lines": ["INGEN FOGDE", "MELLAN OSS"],
+      "seed": 302122,
+      "model_backend": "dots.tts-soar"
+    },
+    {
+      "id": "ebba-snapphane-oath",
+      "role": "ebba-grip",
+      "level": 5,
+      "frame": -1,
+      "cue": "snapphane_ebba_oath",
+      "text": "Eden är låst. Kursen öppnas.",
+      "subtitle_lines": ["EDEN ÄR LÅST", "KURSEN ÖPPNAS"],
+      "seed": 302121,
+      "model_backend": "dots.tts-soar"
+    },
+    {
+      "id": "ebba-snapphane-route-open",
+      "role": "ebba-grip",
+      "level": 5,
+      "frame": -1,
+      "cue": "snapphane_route_open",
+      "text": "Två leder. Välj med skrovet.",
+      "subtitle_lines": ["TVÅ LEDER", "VÄLJ MED SKROVET"],
+      "seed": 302121,
+      "model_backend": "dots.tts-soar"
+    },
+    {
+      "id": "soren-snapphane-kapar-route",
+      "role": "soren-svartkrut",
+      "level": 5,
+      "frame": -1,
+      "cue": "snapphane_kapar_route",
+      "text": "Ni tar bojarna. Jag tar elden.",
+      "subtitle_lines": ["NI TAR BOJARNA", "JAG TAR ELDEN"],
+      "seed": 302122,
+      "model_backend": "dots.tts-soar"
+    },
+    {
+      "id": "soren-snapphane-krut-route",
+      "role": "soren-svartkrut",
+      "level": 5,
+      "frame": -1,
+      "cue": "snapphane_krut_route",
+      "text": "Rätt fram. Låt järnet gå.",
+      "subtitle_lines": ["RÄTT FRAM", "LÅT JÄRNET GÅ"],
+      "seed": 302122,
+      "model_backend": "dots.tts-soar"
+    },
+    {
+      "id": "soren-red-hounds-chain",
+      "role": "soren-svartkrut",
+      "level": 5,
+      "frame": -1,
+      "cue": "red_hounds_soren_chain",
+      "text": "Bryt kopplet! Jag tar mitten.",
+      "subtitle_lines": ["BRYT KOPPLET", "JAG TAR MITTEN"],
+      "seed": 302122,
+      "model_backend": "dots.tts-soar"
+    },
+    {
+      "id": "ebba-red-hounds-mask",
+      "role": "ebba-grip",
+      "level": 5,
+      "frame": -1,
+      "cue": "red_hounds_ebba_mask",
+      "text": "Tre luktventiler. Öppna kärnan.",
+      "subtitle_lines": ["TRE LUKTVENTILER", "ÖPPNA KÄRNAN"],
+      "seed": 302121,
+      "model_backend": "dots.tts-soar"
+    },
+    {
+      "id": "soren-red-hounds-victory",
+      "role": "soren-svartkrut",
+      "level": 5,
+      "frame": -1,
+      "cue": "red_hounds_victory",
+      "text": "Eden håller. Köpenhamn väntar härnäst.",
+      "subtitle_lines": ["EDEN HÅLLER", "KÖPENHAMN NÄSTA"],
+      "seed": 302122,
+      "model_backend": "dots.tts-soar"
+    },
+    {
       "id": "agnete-red-scent",
       "role": "agnete-red",
       "level": 5,

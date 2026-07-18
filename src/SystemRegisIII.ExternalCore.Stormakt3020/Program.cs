@@ -313,19 +313,19 @@ internal sealed class StormaktGame
             "portrait_ebba"),
     ];
     private static readonly RadioCard SnapphaneDuelChallengeRadio =
-        new(0, 330, true, "SÖREN SVARTKRUT", "HEDER FÖRE LED", "VISA MIG KARL", null, "portrait_soren", true);
+        new(0, 330, true, "SÖREN SVARTKRUT", "HEDER FÖRE LED", "VISA MIG KARL", StormaktVoice.SorenSnapphaneDuelChallenge, "portrait_soren", true);
     private static readonly RadioCard SnapphaneDuelHooksRadio =
-        new(0, 300, true, "SÖREN SVARTKRUT", "BYT SIDA DÅ", "KEDJAN SLUTER", null, "portrait_soren", true);
+        new(0, 300, true, "SÖREN SVARTKRUT", "BYT SIDA DÅ", "KEDJAN SLUTER", StormaktVoice.SorenSnapphaneDuelHooks, "portrait_soren", true);
     private static readonly RadioCard SnapphaneOathRadio =
-        new(0, 390, true, "SÖREN SVARTKRUT", "INGEN FOGDE", "MELLAN OSS", null, "portrait_soren", true);
+        new(0, 390, true, "SÖREN SVARTKRUT", "INGEN FOGDE", "MELLAN OSS", StormaktVoice.SorenSnapphaneOath, "portrait_soren", true);
     private static readonly RadioCard SnapphaneEbbaOathRadio =
-        new(0, 330, false, "EBBA GRIP", "EDEN ÄR LÅST", "KURSEN ÖPPNAS", null, "portrait_ebba");
+        new(0, 330, false, "EBBA GRIP", "EDEN ÄR LÅST", "KURSEN ÖPPNAS", StormaktVoice.EbbaSnapphaneOath, "portrait_ebba");
     private static readonly RadioCard SnapphaneRouteOpenRadio =
-        new(0, 330, false, "EBBA GRIP", "TVÅ LEDER", "VÄLJ MED SKROVET", null, "portrait_ebba");
+        new(0, 330, false, "EBBA GRIP", "TVÅ LEDER", "VÄLJ MED SKROVET", StormaktVoice.EbbaSnapphaneRouteOpen, "portrait_ebba");
     private static readonly RadioCard SnapphaneKaparRouteRadio =
-        new(0, 330, true, "SÖREN SVARTKRUT", "NI TAR BOJARNA", "JAG TAR ELDEN", null, "portrait_soren", true);
+        new(0, 330, true, "SÖREN SVARTKRUT", "NI TAR BOJARNA", "JAG TAR ELDEN", StormaktVoice.SorenSnapphaneKaparRoute, "portrait_soren", true);
     private static readonly RadioCard SnapphaneKrutRouteRadio =
-        new(0, 330, true, "SÖREN SVARTKRUT", "RÄTT FRAM", "LÅT JÄRNET GÅ", null, "portrait_soren", true);
+        new(0, 330, true, "SÖREN SVARTKRUT", "RÄTT FRAM", "LÅT JÄRNET GÅ", StormaktVoice.SorenSnapphaneKrutRoute, "portrait_soren", true);
     private static readonly RadioCard RedHoundsAgneteRadio =
         new(0, 180, true, "AGNETE RØD", "JEG HAR FÆRTEN", "AF SVENSKEREN", StormaktVoice.AgneteRedScent, "portrait_agnete_red");
     private static readonly RadioCard RedHoundsBodilRadio =
@@ -337,15 +337,15 @@ internal sealed class StormaktGame
     private static readonly RadioCard RedHoundsChainTripletsRadio =
         new(0, 180, true, "RØD-SØSTRENE", "STRAM KOPPLET", "EN TO TRÆK", StormaktVoice.BodilRedChain, "portrait_red_triplets");
     private static readonly RadioCard RedHoundsChainRadio =
-        new(0, 210, true, "SÖREN SVARTKRUT", "BRYT KOPPLET", "JAG TAR MITTEN", null, "portrait_soren", true);
+        new(0, 210, true, "SÖREN SVARTKRUT", "BRYT KOPPLET", "JAG TAR MITTEN", StormaktVoice.SorenRedHoundsChain, "portrait_soren", true);
     private static readonly RadioCard RedHoundsDagmarMaskRadio =
         new(0, 180, true, "DAGMAR RØD", "LUKTVENTILER", "ÅBNER KÆFTEN", StormaktVoice.DagmarRedMask, "portrait_dagmar_red");
     private static readonly RadioCard RedHoundsMaskRadio =
-        new(0, 210, false, "EBBA GRIP", "TRE LUKTVENTILER", "ÖPPNA KÄRNAN", null, "portrait_ebba");
+        new(0, 210, false, "EBBA GRIP", "TRE LUKTVENTILER", "ÖPPNA KÄRNAN", StormaktVoice.EbbaRedHoundsMask, "portrait_ebba");
     private static readonly RadioCard RedHoundsMegaRadio =
         new(0, 180, true, "RØD-SØSTRENE", "SKYD SKYD SKYD", "HELE FYNS SOL", StormaktVoice.AgneteRedMega, "portrait_red_triplets");
     private static readonly RadioCard RedHoundsVictoryRadio =
-        new(0, 330, true, "SÖREN SVARTKRUT", "EDEN HÅLLER", "KÖPENHAMN NÄSTA", null, "portrait_soren", true);
+        new(0, 330, true, "SÖREN SVARTKRUT", "EDEN HÅLLER", "KÖPENHAMN NÄSTA", StormaktVoice.SorenRedHoundsVictory, "portrait_soren", true);
     private static readonly RadioCard RigsregnskabetIntroRadio =
         new(0, 390, true, "RIGSREGNSKABET", "SKULD FUNNEN", "KARL CCLV", StormaktVoice.RigsregnskabetIntro, "rigsregnskabet");
     private static readonly RadioCard RigsregnskabetInterestRadio =
