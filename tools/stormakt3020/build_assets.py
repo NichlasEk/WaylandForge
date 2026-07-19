@@ -1372,6 +1372,64 @@ def append_copenhagen_ring_assets(entries: list[tuple[str, Image.Image]], source
         entries.append((name, sprite))
 
 
+def append_copenhagen_midgame_assets(
+    entries: list[tuple[str, Image.Image]],
+    frederik_eye_source: Image.Image,
+    armada_source: Image.Image,
+    portrait_source: Image.Image,
+) -> None:
+    frederik_eye = [
+        ("cph_frederik_p1", 0, 0, (156, 96)),
+        ("cph_frederik_p2", 1, 0, (188, 104)),
+        ("cph_frederik_p3", 2, 0, (156, 104)),
+        ("cph_frederik_broken", 3, 0, (156, 96)),
+        ("cph_eye_p1", 0, 1, (176, 110)),
+        ("cph_eye_p2", 1, 1, (190, 118)),
+        ("cph_eye_p3", 2, 1, (190, 118)),
+        ("cph_eye_broken", 3, 1, (176, 110)),
+    ]
+    for name, column, row, target in frederik_eye:
+        left = column * frederik_eye_source.width // 4
+        top = row * frederik_eye_source.height // 2
+        right = (column + 1) * frederik_eye_source.width // 4
+        bottom = (row + 1) * frederik_eye_source.height // 2
+        sprite = trim_alpha(frederik_eye_source.crop((left, top, right, bottom)).convert("RGBA"))
+        sprite = sprite.resize(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+    armada = [
+        ("cph_dannebrog_portal", 0, 0, (154, 154)),
+        ("cph_dannebrog_node", 1, 0, (38, 48)),
+        ("cph_absalon", 2, 0, (94, 72)),
+        ("cph_absalon_broken", 3, 0, (94, 72)),
+        ("cph_elefant", 0, 1, (86, 78)),
+        ("cph_elefant_broken", 1, 1, (86, 78)),
+        ("cph_superfrigate", 2, 1, (256, 126)),
+        ("cph_superfrigate_broken", 3, 1, (256, 126)),
+    ]
+    for name, column, row, target in armada:
+        left = column * armada_source.width // 4
+        top = row * armada_source.height // 2
+        right = (column + 1) * armada_source.width // 4
+        bottom = (row + 1) * armada_source.height // 2
+        sprite = trim_alpha(armada_source.crop((left, top, right, bottom)).convert("RGBA"))
+        sprite = sprite.resize(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+    portrait_bases = ["portrait_frederik", "portrait_eye", "portrait_absalon", "portrait_elefant"]
+    for row, base in enumerate(portrait_bases):
+        for column, state in enumerate(("neutral", "speak")):
+            left = column * portrait_source.width // 2
+            top = row * portrait_source.height // 4
+            right = (column + 1) * portrait_source.width // 2
+            bottom = (row + 1) * portrait_source.height // 4
+            portrait = trim_alpha(portrait_source.crop((left, top, right, bottom)).convert("RGBA"))
+            portrait.thumbnail((38, 38), Image.Resampling.LANCZOS)
+            canvas = Image.new("RGBA", (38, 38), (0, 0, 0, 0))
+            canvas.alpha_composite(portrait, ((38 - portrait.width) // 2, 38 - portrait.height))
+            entries.append((f"{base}_{state}", canvas))
+
+
 def build(
     input_path: Path,
     danish_input_path: Path,
@@ -1434,6 +1492,9 @@ def build(
     red_hound_admirals_input_path: Path,
     copenhagen_ring_background_input_path: Path,
     copenhagen_ring_machinery_input_path: Path,
+    copenhagen_frederik_eye_input_path: Path,
+    copenhagen_armada_input_path: Path,
+    copenhagen_portraits_input_path: Path,
     copenhagen_holmen_input_path: Path,
     copenhagen_holmen_guard_input_path: Path,
     copenhagen_codex_input_path: Path,
@@ -1531,6 +1592,9 @@ def build(
     red_hound_admirals_source = Image.open(red_hound_admirals_input_path).convert("RGBA")
     copenhagen_ring_background_source = Image.open(copenhagen_ring_background_input_path).convert("RGBA")
     copenhagen_ring_machinery_source = Image.open(copenhagen_ring_machinery_input_path).convert("RGBA")
+    copenhagen_frederik_eye_source = Image.open(copenhagen_frederik_eye_input_path).convert("RGBA")
+    copenhagen_armada_source = Image.open(copenhagen_armada_input_path).convert("RGBA")
+    copenhagen_portraits_source = Image.open(copenhagen_portraits_input_path).convert("RGBA")
     copenhagen_holmen_source = Image.open(copenhagen_holmen_input_path).convert("RGBA")
     copenhagen_holmen_guard_source = Image.open(copenhagen_holmen_guard_input_path).convert("RGBA")
     copenhagen_codex_source = Image.open(copenhagen_codex_input_path).convert("RGBA")
@@ -1660,6 +1724,8 @@ def build(
     append_snapphane_red_hounds_assets(entries, snapphane_red_hounds_source)
     append_red_hound_admiral_portraits(entries, red_hound_admirals_source)
     append_copenhagen_ring_assets(entries, copenhagen_ring_machinery_source)
+    append_copenhagen_midgame_assets(
+        entries, copenhagen_frederik_eye_source, copenhagen_armada_source, copenhagen_portraits_source)
     append_copenhagen_holmen_assets(entries, copenhagen_holmen_source)
     append_copenhagen_holmen_guard(entries, copenhagen_holmen_guard_source)
     append_copenhagen_codex_assets(entries, copenhagen_codex_source)
@@ -1908,6 +1974,9 @@ def main() -> None:
     parser.add_argument("--red-hound-admirals-input", type=Path, default=Path("assets/stormakt3020/red-hound-admiral-triplets-v1.png"))
     parser.add_argument("--copenhagen-ring-background-input", type=Path, default=Path("assets/stormakt3020/copenhagen-ring-background-v1.png"))
     parser.add_argument("--copenhagen-ring-machinery-input", type=Path, default=Path("assets/stormakt3020/copenhagen-ring-machinery-v1.png"))
+    parser.add_argument("--copenhagen-frederik-eye-input", type=Path, default=Path("assets/stormakt3020/copenhagen-frederik-eye-v1.png"))
+    parser.add_argument("--copenhagen-armada-input", type=Path, default=Path("assets/stormakt3020/copenhagen-royal-armada-v1.png"))
+    parser.add_argument("--copenhagen-portraits-input", type=Path, default=Path("assets/stormakt3020/copenhagen-radio-portraits-v1.png"))
     parser.add_argument("--copenhagen-holmen-input", type=Path, default=Path("assets/stormakt3020/copenhagen-holmen-environment-v1.png"))
     parser.add_argument("--copenhagen-holmen-guard-input", type=Path, default=Path("assets/stormakt3020/copenhagen-holmen-guard-v1.png"))
     parser.add_argument("--copenhagen-codex-input", type=Path, default=Path("assets/stormakt3020/copenhagen-codex-v1.png"))
@@ -2010,6 +2079,9 @@ def main() -> None:
         args.red_hound_admirals_input,
         args.copenhagen_ring_background_input,
         args.copenhagen_ring_machinery_input,
+        args.copenhagen_frederik_eye_input,
+        args.copenhagen_armada_input,
+        args.copenhagen_portraits_input,
         args.copenhagen_holmen_input,
         args.copenhagen_holmen_guard_input,
         args.copenhagen_codex_input,

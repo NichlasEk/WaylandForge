@@ -598,17 +598,17 @@ internal sealed class StormaktGame
     private static readonly RadioCard CopenhagenAdmiraltyFallRadio =
         new(0, 300, false, "EBBA GRIP", "AMIRALITETET BRUSTET", "FREDERIK NULL VÄNTAR", StormaktVoice.CopenhagenAdmiraltyFall, "portrait_ebba");
     private static readonly RadioCard CopenhagenFrederikRadio =
-        new(0, 360, true, "FREDERIK NULL", "ALLE SKIBE BESLAGT", "JEG NULSTILLER JER", StormaktVoice.CopenhagenFrederik, "rigsregnskabet");
+        new(0, 360, true, "FREDERIK NULL", "ALLE SKIBE BESLAGT", "JEG NULSTILLER JER", StormaktVoice.CopenhagenFrederik, "portrait_frederik");
     private static readonly RadioCard CopenhagenFrederikBladesRadio =
         new(0, 300, false, "EBBA GRIP", "TRONEN SLÄPPER", "REGISTERBLAD IN", StormaktVoice.CopenhagenFrederikBlades, "portrait_ebba");
     private static readonly RadioCard CopenhagenFrederikRepairRadio =
-        new(0, 300, true, "FREDERIK NULL", "REGNSKABET LUKKER", "RUSTNING ÅTERFÖRS", StormaktVoice.CopenhagenFrederikRepair, "rigsregnskabet");
+        new(0, 300, true, "FREDERIK NULL", "REGNSKABET LUKKER", "RUSTNING ÅTERFÖRS", StormaktVoice.CopenhagenFrederikRepair, "portrait_frederik");
     private static readonly RadioCard CopenhagenFrederikFallRadio =
-        new(0, 300, true, "FREDERIK NULL", "NUL KAN EJ VARA", "EN SKULD", StormaktVoice.CopenhagenFrederikFall, "rigsregnskabet");
+        new(0, 300, true, "FREDERIK NULL", "NUL KAN EJ VARA", "EN SKULD", StormaktVoice.CopenhagenFrederikFall, "portrait_frederik");
     private static readonly RadioCard CopenhagenEyeRadio =
         new(0, 330, false, "EBBA GRIP", "TULLKÄRNAN SER OSS", "BRYT DIN EGEN KURS", StormaktVoice.CopenhagenEye, "portrait_ebba");
     private static readonly RadioCard CopenhagenEyeLensRadio =
-        new(0, 300, true, "ØRESUNDS ØJE", "RÖRELSE REGISTRERAD", "FRAMTID BESKATTAS", StormaktVoice.CopenhagenEyeLens, "rigsregnskabet");
+        new(0, 300, true, "ØRESUNDS ØJE", "RÖRELSE REGISTRERAD", "FRAMTID BESKATTAS", StormaktVoice.CopenhagenEyeLens, "portrait_eye");
     private static readonly RadioCard CopenhagenEyeSorenRadio =
         new(0, 270, false, "SÖREN SVARTKRUT", "EN LINS ÄR MIN", "RESTEN ÄR DIN", StormaktVoice.CopenhagenEyeSoren, "portrait_soren", true);
     private static readonly RadioCard CopenhagenEyeFallRadio =
@@ -622,9 +622,9 @@ internal sealed class StormaktGame
     private static readonly RadioCard CopenhagenDuoRadio =
         new(0, 330, false, "EBBA GRIP", "TVÅ SKÄRMFREGATTER", "MUREN OCH BETEN", StormaktVoice.CopenhagenDuo, "portrait_ebba");
     private static readonly RadioCard CopenhagenAbsalonWallRadio =
-        new(0, 270, true, "ABSALON", "SKJOLDMUR FREM", "LUK HIMLEN", StormaktVoice.CopenhagenAbsalonWall, "rigsregnskabet");
+        new(0, 270, true, "ABSALON", "SKJOLDMUR FREM", "LUK HIMLEN", StormaktVoice.CopenhagenAbsalonWall, "portrait_absalon");
     private static readonly RadioCard CopenhagenElefantenChargeRadio =
-        new(0, 270, true, "ELEFANTEN", "JEG TAGER ÅBNINGEN", "FLYT JER", StormaktVoice.CopenhagenElefantenCharge, "rigsregnskabet");
+        new(0, 270, true, "ELEFANTEN", "JEG TAGER ÅBNINGEN", "FLYT JER", StormaktVoice.CopenhagenElefantenCharge, "portrait_elefant");
     private static readonly RadioCard CopenhagenDuoFallRadio =
         new(0, 300, true, "KUNG CHRISTIAN", "MINE SKÆRME FALDER", "FLAGSKIB FREM", StormaktVoice.CopenhagenDuoFall, "portrait_christian");
     private static readonly RadioCard CopenhagenSuperRadio =
@@ -17487,19 +17487,32 @@ internal sealed class StormaktGame
 
         uint hull = state.FrederikDeathAge > 0 ? 0xff8f2635 :
             state.FrederikHitFlash > 0 ? 0xffffec9a : 0xff29343a;
-        FillTriangle(frame, centerX, centerY - 42, centerX - 78, centerY + 36, centerX + 78, centerY + 36, hull);
-        DrawLine(frame, centerX - 74, centerY + 33, centerX + 74, centerY + 33, 0xffd6b25e);
-        DrawLine(frame, centerX - 58, centerY + 18, centerX + 58, centerY + 18, 0xff765139);
-        DrawRect(frame, centerX - 24, centerY - 22, 48, 36,
-            state.FrederikPhase == 1 ? 0xff4b2530 : 0xff1b242b);
-        FillTriangle(frame, centerX, centerY - 48, centerX - 20, centerY - 13,
-            centerX + 20, centerY - 13, 0xff6b3a31);
-        DrawCrown(frame, centerX - 4, centerY - 25, 0xffffd66b);
-        for (int receipt = 0; receipt < 5; receipt++)
+        string frederikName = state.FrederikDeathAge > 0 ? "cph_frederik_broken" :
+            state.FrederikPhase == 3 ? "cph_frederik_p3" : "cph_frederik_p1";
+        Sprite frederik = default;
+        bool packedFrederik = _sprites is not null && _sprites.TryGet(frederikName, out frederik);
+        if (packedFrederik)
         {
-            int x = centerX - 54 + receipt * 27;
-            DrawRect(frame, x, centerY + 21, 13, 8, 0xffd8d1b9);
-            DrawLine(frame, x + 2, centerY + 24, x + 10, centerY + 24, 0xff765139);
+            DrawSprite(frame, frederik, centerX - frederik.Width / 2, centerY - frederik.Height / 2);
+            if (state.FrederikHitFlash > 0)
+                DrawCircleOutline(frame, centerX, centerY, 47 + state.FrederikHitFlash % 3, hull);
+        }
+        else
+        {
+            FillTriangle(frame, centerX, centerY - 42, centerX - 78, centerY + 36, centerX + 78, centerY + 36, hull);
+            DrawLine(frame, centerX - 74, centerY + 33, centerX + 74, centerY + 33, 0xffd6b25e);
+            DrawLine(frame, centerX - 58, centerY + 18, centerX + 58, centerY + 18, 0xff765139);
+            DrawRect(frame, centerX - 24, centerY - 22, 48, 36,
+                state.FrederikPhase == 1 ? 0xff4b2530 : 0xff1b242b);
+            FillTriangle(frame, centerX, centerY - 48, centerX - 20, centerY - 13,
+                centerX + 20, centerY - 13, 0xff6b3a31);
+            DrawCrown(frame, centerX - 4, centerY - 25, 0xffffd66b);
+            for (int receipt = 0; receipt < 5; receipt++)
+            {
+                int x = centerX - 54 + receipt * 27;
+                DrawRect(frame, x, centerY + 21, 13, 8, 0xffd8d1b9);
+                DrawLine(frame, x + 2, centerY + 24, x + 10, centerY + 24, 0xff765139);
+            }
         }
 
         if (state.FrederikPhase == 2)
@@ -17619,23 +17632,38 @@ internal sealed class StormaktGame
         int centerX = (int)Math.Round(centerXD);
         int centerY = (int)Math.Round(centerYD);
         uint shell = state.EyeDeathAge > 0 ? 0xff8f2635 : state.EyeHitFlash > 0 ? 0xffffec9a : 0xff29343a;
-        FillTriangle(frame, centerX, centerY - 48, centerX - 88, centerY + 4, centerX, centerY + 50, shell);
-        FillTriangle(frame, centerX, centerY - 48, centerX + 88, centerY + 4, centerX, centerY + 50, shell);
-        DrawLine(frame, centerX - 84, centerY + 3, centerX, centerY - 45, 0xffd6b25e);
-        DrawLine(frame, centerX, centerY - 45, centerX + 84, centerY + 3, 0xffd6b25e);
-        DrawLine(frame, centerX - 84, centerY + 3, centerX, centerY + 47, 0xff765139);
-        DrawLine(frame, centerX, centerY + 47, centerX + 84, centerY + 3, 0xff765139);
-        FillCircle(frame, centerX, centerY, 31, 0xff101820);
-        DrawCircleOutline(frame, centerX, centerY, 33, 0xff9bd4dc);
-        DrawCircleOutline(frame, centerX, centerY, 25, 0xffd6b25e);
+        string eyeName = state.EyeDeathAge > 0 ? "cph_eye_broken" :
+            state.EyePhase == 3 ? "cph_eye_p3" : "cph_eye_p1";
+        Sprite eye = default;
+        bool packedEye = _sprites is not null && _sprites.TryGet(eyeName, out eye);
+        if (packedEye)
+        {
+            DrawSprite(frame, eye, centerX - eye.Width / 2, centerY - eye.Height / 2);
+            if (state.EyeHitFlash > 0) DrawCircleOutline(frame, centerX, centerY, 35, shell);
+        }
+        else
+        {
+            FillTriangle(frame, centerX, centerY - 48, centerX - 88, centerY + 4, centerX, centerY + 50, shell);
+            FillTriangle(frame, centerX, centerY - 48, centerX + 88, centerY + 4, centerX, centerY + 50, shell);
+            DrawLine(frame, centerX - 84, centerY + 3, centerX, centerY - 45, 0xffd6b25e);
+            DrawLine(frame, centerX, centerY - 45, centerX + 84, centerY + 3, 0xffd6b25e);
+            DrawLine(frame, centerX - 84, centerY + 3, centerX, centerY + 47, 0xff765139);
+            DrawLine(frame, centerX, centerY + 47, centerX + 84, centerY + 3, 0xff765139);
+            FillCircle(frame, centerX, centerY, 31, 0xff101820);
+            DrawCircleOutline(frame, centerX, centerY, 33, 0xff9bd4dc);
+            DrawCircleOutline(frame, centerX, centerY, 25, 0xffd6b25e);
+        }
         double dx = state.EyePredictedX - centerXD;
         double dy = state.EyePredictedY - centerYD;
         double length = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
         int pupilX = centerX + (int)Math.Round(dx / length * 10);
         int pupilY = centerY + (int)Math.Round(dy / length * 7);
-        FillCircle(frame, pupilX, pupilY, 9, state.EyePhase == 3 ? 0xffff6b62 : 0xff7fc7ff);
-        FillCircle(frame, pupilX, pupilY, 4, 0xff03080f);
-        PutPixel(frame, pupilX - 2, pupilY - 2, 0xffffffff);
+        if (!packedEye)
+        {
+            FillCircle(frame, pupilX, pupilY, 9, state.EyePhase == 3 ? 0xffff6b62 : 0xff7fc7ff);
+            FillCircle(frame, pupilX, pupilY, 4, 0xff03080f);
+            PutPixel(frame, pupilX - 2, pupilY - 2, 0xffffffff);
+        }
 
         if (state.EyePhase == 2)
         {
@@ -17692,8 +17720,15 @@ internal sealed class StormaktGame
         int portalX = _width / 2;
         int portalY = 67;
         int pulse = state.DannebrogAge / 5 % 7;
-        DrawCircleOutline(frame, portalX, portalY, 88 + pulse, 0xff765139);
-        DrawCircleOutline(frame, portalX, portalY, 76 - pulse / 2, 0xffd6b25e);
+        Sprite portal = default;
+        bool packedPortal = _sprites is not null && _sprites.TryGet("cph_dannebrog_portal", out portal);
+        if (packedPortal)
+            DrawSprite(frame, portal, portalX - portal.Width / 2, portalY - portal.Height / 2);
+        else
+        {
+            DrawCircleOutline(frame, portalX, portalY, 88 + pulse, 0xff765139);
+            DrawCircleOutline(frame, portalX, portalY, 76 - pulse / 2, 0xffd6b25e);
+        }
         for (int ray = 0; ray < 8; ray++)
         {
             double angle = ray * Math.PI / 4.0 + state.DannebrogAge * 0.004;
@@ -17744,11 +17779,19 @@ internal sealed class StormaktGame
             uint stripe = (node + state.DannebrogFormation) % 2 == 0 ? 0xff8f2635 : 0xffd8d1b9;
             DrawLine(frame, centerX, centerY, nodeX, nodeY, 0xfff2eee4);
             DrawLine(frame, centerX + 2, centerY, nodeX + 2, nodeY, 0xff8f2635);
-            FillTriangle(frame, nodeX, nodeY - 11, nodeX - 14, nodeY + 8, nodeX + 14, nodeY + 8,
-                hit ? 0xffffffff : stripe);
-            DrawLine(frame, nodeX - 10, nodeY + 2, nodeX + 10, nodeY + 2,
-                stripe == 0xff8f2635 ? 0xfff2eee4 : 0xff8f2635);
-            FillCircle(frame, nodeX, nodeY, 4, 0xffffd66b);
+            if (_sprites?.TryGet("cph_dannebrog_node", out Sprite dannebrogNode) == true)
+            {
+                DrawSprite(frame, dannebrogNode, nodeX - dannebrogNode.Width / 2, nodeY - dannebrogNode.Height / 2);
+                if (hit) DrawCircleOutline(frame, nodeX, nodeY, 15, 0xffffffff);
+            }
+            else
+            {
+                FillTriangle(frame, nodeX, nodeY - 11, nodeX - 14, nodeY + 8, nodeX + 14, nodeY + 8,
+                    hit ? 0xffffffff : stripe);
+                DrawLine(frame, nodeX - 10, nodeY + 2, nodeX + 10, nodeY + 2,
+                    stripe == 0xff8f2635 ? 0xfff2eee4 : 0xff8f2635);
+                FillCircle(frame, nodeX, nodeY, 4, 0xffffd66b);
+            }
             int maximum = state.DannebrogTestFixture ? 12 : CopenhagenDannebrogNodeHealth;
             DrawRect(frame, nodeX - 12, nodeY + 12, 24, 3, 0xff101820);
             DrawRect(frame, nodeX - 12, nodeY + 12, 24 * state.DannebrogNodeHealth[node] / maximum, 3, 0xffff8a4a);
@@ -17860,7 +17903,17 @@ internal sealed class StormaktGame
         bool hit = state.DuoHitFlash > 0 && state.DuoLastHitShip == ship && state.DuoLastHitTurret < 0;
         uint hull = dead ? 0xff592531 : hit ? 0xffffffff : ship == 0 ? 0xff263744 : 0xff4b3030;
         uint trim = ship == 0 ? 0xff9bd4dc : 0xffff8a4a;
-        if (ship == 0)
+        string duoName = ship == 0
+            ? dead ? "cph_absalon_broken" : "cph_absalon"
+            : dead ? "cph_elefant_broken" : "cph_elefant";
+        Sprite duoShip = default;
+        bool packedDuo = _sprites is not null && _sprites.TryGet(duoName, out duoShip);
+        if (packedDuo)
+        {
+            DrawSprite(frame, duoShip, x - duoShip.Width / 2, y - duoShip.Height / 2);
+            if (hit) DrawCircleOutline(frame, x, y, ship == 0 ? 35 : 31, 0xffffffff);
+        }
+        else if (ship == 0)
         {
             FillTriangle(frame, x, y - 29, x - 45, y + 22, x + 45, y + 22, hull);
             DrawLine(frame, x - 39, y + 18, x + 39, y + 18, trim);
@@ -17874,7 +17927,8 @@ internal sealed class StormaktGame
             DrawLine(frame, x - 34, y - 17, x + 34, y - 17, trim);
             FillCircle(frame, x, y - 5, 8, 0xffffd66b);
         }
-        DrawText(frame, x - (ship == 0 ? 21 : 27), y + 27, ship == 0 ? "ABSALON" : "ELEFANTEN", trim);
+        if (!packedDuo)
+            DrawText(frame, x - (ship == 0 ? 21 : 27), y + 27, ship == 0 ? "ABSALON" : "ELEFANTEN", trim);
         for (int side = 0; side < 2; side++)
         {
             int turret = ship * 2 + side;
@@ -17928,11 +17982,22 @@ internal sealed class StormaktGame
         int centerX = (int)Math.Round(centerXD);
         int centerY = (int)Math.Round(centerYD);
         uint hull = state.SuperDeathAge > 0 ? 0xff692834 : state.SuperHitFlash > 0 ? 0xff4b5358 : 0xff202b34;
-        FillTriangle(frame, centerX, centerY - 55, centerX - 128, centerY + 48, centerX + 128, centerY + 48, hull);
-        FillTriangle(frame, centerX, centerY - 39, centerX - 105, centerY + 34, centerX + 105, centerY + 34, 0xff29343a);
-        DrawLine(frame, centerX - 123, centerY + 44, centerX + 123, centerY + 44, 0xffd6b25e);
-        DrawLine(frame, centerX - 101, centerY + 31, centerX + 101, centerY + 31, 0xff8f2635);
-        DrawCrown(frame, centerX - 4, centerY - 41, 0xffffd66b);
+        string superName = state.SuperDeathAge > 0 ? "cph_superfrigate_broken" : "cph_superfrigate";
+        Sprite superfrigate = default;
+        bool packedSuper = _sprites is not null && _sprites.TryGet(superName, out superfrigate);
+        if (packedSuper)
+        {
+            DrawSprite(frame, superfrigate, centerX - superfrigate.Width / 2, centerY - superfrigate.Height / 2);
+            if (state.SuperHitFlash > 0) DrawCircleOutline(frame, centerX, centerY, 55, 0xffffffff);
+        }
+        else
+        {
+            FillTriangle(frame, centerX, centerY - 55, centerX - 128, centerY + 48, centerX + 128, centerY + 48, hull);
+            FillTriangle(frame, centerX, centerY - 39, centerX - 105, centerY + 34, centerX + 105, centerY + 34, 0xff29343a);
+            DrawLine(frame, centerX - 123, centerY + 44, centerX + 123, centerY + 44, 0xffd6b25e);
+            DrawLine(frame, centerX - 101, centerY + 31, centerX + 101, centerY + 31, 0xff8f2635);
+            DrawCrown(frame, centerX - 4, centerY - 41, 0xffffd66b);
+        }
 
         for (int section = 0; section < 3; section++)
         {
@@ -17942,7 +18007,11 @@ internal sealed class StormaktGame
             bool broken = state.SuperSectionHealth[section] <= 0;
             bool hit = state.SuperHitFlash > 0 && state.SuperLastHitSection == section;
             uint color = broken ? 0xff592531 : hit ? 0xffffffff : section == 0 ? 0xff765139 : 0xff8f2635;
-            if (section == 0)
+            if (packedSuper)
+            {
+                if (hit) DrawCircleOutline(frame, x, y, 18, 0xffffffff);
+            }
+            else if (section == 0)
             {
                 DrawRect(frame, x - 25, y - 12, 50, 23, 0xff101820);
                 DrawCircleOutline(frame, x, y, 17, color);
