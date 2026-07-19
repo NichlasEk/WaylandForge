@@ -1,10 +1,10 @@
 # Stormakt 3020 - Bana 7: Köpenhamns ring och Codex Argentum
 
-Status: aktiv utvecklingsplan för kampanjens sjunde rad, level id `6`. Rymdakten, Holmens landning och markaktens tre första rum med port- och materiamarginaler är developer-startbara; hela banan förblir låst i publik kampanj tills båda akterna är färdiga. Den här planen ersätter den tidigare idén att Superarmadans reträtt ensam avslutar kampanjen.
+Status: aktiv utvecklingsplan för kampanjens sjunde rad, level id `6`. Rymdakten, Holmens landning och markaktens fyra första rum med port-, materia- och legendkompilering är developer-startbara; hela banan förblir låst i publik kampanj tills båda akterna är färdiga. Den här planen ersätter den tidigare idén att Superarmadans reträtt ensam avslutar kampanjen.
 
 ## Nuvarande spelbara checkpoint
 
-Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen render/step-dispatch och kampanjens sparade Bana 5-lastning. Den spelbara kedjan leder efter en kort inflygning genom tre bossportar, tre fullstora bossar och en fregattduo, vidare genom en aktiv landning, Holmens första top-down-rum, Codexens första marginalval, kanongången och Rosenborgs materiaförgård.
+Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen render/step-dispatch och kampanjens sparade Bana 5-lastning. Den spelbara kedjan leder efter en kort inflygning genom tre bossportar, tre fullstora bossar och en fregattduo, vidare genom en aktiv landning, Holmens första top-down-rum, Codexens första marginalval, kanongången, Rosenborgs materiaförgård och den första legendkompileringen i minnesmaskinen.
 
 **Trekroners lås:**
 
@@ -77,7 +77,7 @@ Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen rende
 - ankarnas egna skott fortsätter pressa Karl tills vart och ett har skjutits sönder;
 - när det tredje ankaret brister vrids spelrummet direkt till top-down och markmusiken tar över utan kampanjmeny eller levelreset.
 
-**Holmen och Rosenborg - första tre rummen:**
+**Holmen och Rosenborg - första fyra rummen:**
 
 - Karl har separat markposition, hälsa, potion, riktat närstridshugg och stagger; inget av detta muterar Silverkroppens `DungeonState`;
 - fyra dockvakter jagar, telegraferar hugg, kan staggras och måste besegras innan silverhjärtat kan användas;
@@ -87,11 +87,14 @@ Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen rende
 - Rosenborgs förgård låter samma silververktyg kompileras om mellan **Silfret är en sköld** och **Silfret är en klinga** vid ett fysiskt lektor medan vakter och minneskärnan fortsätter striden;
 - skölden upphäver nästa verkliga träff och behöver därefter skrivas om, medan klingan kretsar i ett perspektivlager kring Karl och angriper närliggande vakter eller kärnan; en ny form ersätter alltid den gamla;
 - minneskärnan telegraferar ett korsformat rutnät över golvet, kan bekämpas med båda formerna och öppnar vägen till den egentliga minnesmaskinen;
-- ett separat schema-3-save i `copenhagen-holmen.json` gör att en vanlig Bana 7-start återupptar rätt markrum med aktiv marginal, portläge, vakter, kanon- eller kärnhälsa och sköldens återhämtning i stället för att spela om Superarmadan;
+- minnesmaskinen låter pilar eller mus välja mellan **En älgkarolin stod** och **Sju älgar stormade**; den ensamma karolinen är stabil och uthållig, medan sjualegenden slår hårt men snabbt förlorar sin synliga integritet;
+- när överdriftens integritet når noll bokstavstolkar den sin sista order som **STORMA**, rusar utan styrning genom rummet och kan träffa både danska minnen och Karl; den stabila legenden löses i stället upp fredligt;
+- materiaformen följer med in i maskinen, så en aktiv sköld eller klinga kan existera samtidigt som exakt en separat legend;
+- ett separat schema-4-save i `copenhagen-holmen.json` gör att en vanlig Bana 7-start återupptar rätt markrum med aktiv marginal, portläge, vakter, kanon- eller kärnhälsa, sköldens återhämtning och en aktiv eller korrumperad legend i stället för att spela om Superarmadan;
 - developer-läget visar och tillämpar `DEVSKÖLD` på både rymd- och markakten; publik Bana 7 får vanlig skada när den senare låses upp.
 - Bana 7 öppnar en egen developer-submeny från kampanjraden: ringen och landningen kan startas direkt, Holmen kan återupptas från sitt separata save och Rosenborgs förgård kan provas som ett saveskyddat direktprov; Marginalvalvet och Codexen förblir låsta kommande djup.
 
-Miljön, bossarna, landningen, de tre första markrummen, HUD och barriärer har kodritade fallbackformer i wide och legacy. Holmens första grafikpass återanvänder Silverkroppens riktiga Karl-animationer och tempelgolv, men packar egna ankare, kedja, docksmide, arsenalugn, vrakgods, silverhjärta och en full åttaframars Holmen-vakt. Vaktens idle, två gångsteg, telegraph, kontakt, träff, fall och lik följer simulationens verkliga faser; dödsriktningen fryses och kan inte spegelvändas när Karl passerar. Kanongångens vapen återbrukar den befintliga bryggkanonen som ett riktigt stridsobjekt med egen hälsa, varningslinje och vrakbild. Rosenborg återbrukar riktiga tempelport-, altare- och förvridet-silver-assets men lägger roterande materiaformer och djuptelegrafering i separata renderlager. Korrekt marginal, bokstavsfel, båda materiaformerna och ett byte mitt i striden är deterministiska i 400x280 och 320x224; samma klingbild är bitidentisk genom WFEX v2 raw, PACKRLE och shared memory. Nästa utvecklingssvep kan öppna själva minnesmaskinen och göra den första kompilerade legenden spelbar.
+Miljön, bossarna, landningen, de fyra första markrummen, HUD och barriärer har kodritade fallbackformer i wide och legacy. Holmens första grafikpass återanvänder Silverkroppens riktiga Karl-animationer och tempelgolv, men packar egna ankare, kedja, docksmide, arsenalugn, vrakgods, silverhjärta och en full åttaframars Holmen-vakt. Vaktens idle, två gångsteg, telegraph, kontakt, träff, fall och lik följer simulationens verkliga faser; dödsriktningen fryses och kan inte spegelvändas när Karl passerar. Kanongångens vapen återbrukar den befintliga bryggkanonen som ett riktigt stridsobjekt med egen hälsa, varningslinje och vrakbild. Rosenborg återbrukar riktiga tempelport-, altare-, förvridet-silver- och älgkarolin-assets men lägger roterande materiaformer, en 50 procent större legendfigur, minnesekon och djuptelegrafering i separata renderlager. Båda legendvalen, vertikala och horisontella pilval, integritetsförlust och det bokstavliga STORMA-felet är deterministiska i 400x280 och 320x224; samma korrumperade legendbild är bitidentisk genom WFEX v2 raw, PACKRLE och shared memory. Nästa utvecklingssvep kan bygga portbossen Sagokonungen ur maskinens felaktiga kungaminne.
 
 ## Kärna
 
