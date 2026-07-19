@@ -1,10 +1,10 @@
 # Stormakt 3020 - Bana 7: Köpenhamns ring och Codex Argentum
 
-Status: aktiv utvecklingsplan för kampanjens sjunde rad, level id `6`. Första rymdslicen är developer-startbar; hela banan förblir låst i publik kampanj tills båda akterna är färdiga. Den här planen ersätter den tidigare idén att Superarmadans reträtt ensam avslutar kampanjen.
+Status: aktiv utvecklingsplan för kampanjens sjunde rad, level id `6`. Rymdakten, Holmens landning och markaktens första rum är developer-startbara; hela banan förblir låst i publik kampanj tills båda akterna är färdiga. Den här planen ersätter den tidigare idén att Superarmadans reträtt ensam avslutar kampanjen.
 
 ## Nuvarande spelbara checkpoint
 
-Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen render/step-dispatch och kampanjens sparade Bana 5-lastning. Den spelbara rymdöppningen leder efter en kort inflygning genom tre bossportar, tre fullstora bossar och en fregattduo.
+Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen render/step-dispatch och kampanjens sparade Bana 5-lastning. Den spelbara kedjan leder efter en kort inflygning genom tre bossportar, tre fullstora bossar och en fregattduo, vidare genom en aktiv landning och in i Holmens första top-down-rum.
 
 **Trekroners lås:**
 
@@ -69,9 +69,23 @@ Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen rende
 - fas 2 fäller ut fyra korsnoder som låser en telegraferad skärmkvadrant; en förstörd nod gör motsvarande kvadrant permanent säker;
 - fas 3 låter en separat minnesmantel kompilera tre kumulativa order: kanonkulor, historiskt omöjliga raketer och ett telegraferat silverljus;
 - fas 4 öppnar kronreaktorn och låter Sören, frigivna skepp och snapphaneallierade hålla bakgrundsflottan, vilket sänker anfallstakten utan att skada reaktorn åt Karl;
-- reaktorbrottet lämnar det övre stadssigillet sprucket och visar checkpointresultatet **Holmens landning väntar**.
+- reaktorbrottet lämnar det övre stadssigillet sprucket och tvingar Karl direkt ned mot Holmen utan resultatkort eller meny.
 
-Miljön, låset, urtavlan, Frederik, Ögat, Dannebrogsvingarna, fregattduon, Superfregatten, HUD, barriärer och resultatkort har kodritade fallbackformer i wide och legacy. `WAYLANDFORGE_STORMAKT_COPENHAGEN_GATE_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_ADMIRALTY_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_FREDERIK_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_EYE_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_DANNEBROG_TEST=1`, `WAYLANDFORGE_STORMAKT_COPENHAGEN_DUO_TEST=1` och `WAYLANDFORGE_STORMAKT_COPENHAGEN_SUPERFRIGATE_TEST=1` hoppar till förkortade deterministiska stridsfixtures. Det är fortfarande en utvecklingscheckpoint: nästa svep ska ersätta resultatstoppet med den korta spelbara landningen vid Holmen och det direkta genrebytet.
+**Holmens landning:**
+
+- Karls skepp glider genom brinnande dockor medan tre fysiska landningsankare håller fast inflygningsleden;
+- ankarnas egna skott fortsätter pressa Karl tills vart och ett har skjutits sönder;
+- när det tredje ankaret brister vrids spelrummet direkt till top-down och markmusiken tar över utan kampanjmeny eller levelreset.
+
+**Holmens omvända arsenal - första rummet:**
+
+- Karl har separat markposition, hälsa, potion, riktat närstridshugg och stagger; inget av detta muterar Silverkroppens `DungeonState`;
+- fyra dockvakter jagar, telegraferar hugg, kan staggras och måste besegras innan silverhjärtats port öppnas;
+- tangentbord, WCP-handkontroll och pekarens click-to-move delar samma rörelsegränser; digital controllerinput dubbleras inte med den analoga axeln;
+- ett separat `copenhagen-holmen.json` autosave gör att en vanlig Bana 7-start återupptar markrummet i stället för att spela om Superarmadan;
+- developer-läget visar och tillämpar `DEVSKÖLD` på både rymd- och markakten; publik Bana 7 får vanlig skada när den senare låses upp.
+
+Miljön, bossarna, landningen, Holmens första rum, HUD och barriärer har kodritade fallbackformer i wide och legacy. De tidigare Köpenhamns-fixturerna kompletteras av `WAYLANDFORGE_STORMAKT_COPENHAGEN_LANDING_TEST=1` och `WAYLANDFORGE_STORMAKT_COPENHAGEN_GROUND_TEST=1`. Upprepade fulla landnings- och markspår är deterministiska i 400x280 och 320x224; markspåret ger samma framebuffer genom WFEX v2 raw, PACKRLE och shared memory. Nästa utvecklingssvep börjar vid silverhjärtat och gör marginalsatsen **Hjertat är ej brutet. Hjertat är en port.** spelbar.
 
 ## Kärna
 
@@ -173,7 +187,7 @@ Markakten återanvänder bevisade Diablo-liknande byggstenar från Silverkroppen
 - pointer-/controllerstyrd förflyttning och anfall;
 - riktning, stagger, telegraph, loot och quick potion;
 - tydliga rum och deterministisk pathing;
-- separat autosave och developer-save.
+- separat autosave och developer-fixtures.
 
 Den får däremot egen state (`CopenhagenWorldState` plus markdel), egen seed `3707`, eget save-namn och egna fiende-/föremålsdefinitioner. Den får aldrig mutera Silverkroppens `DungeonState` eller dess autosave.
 

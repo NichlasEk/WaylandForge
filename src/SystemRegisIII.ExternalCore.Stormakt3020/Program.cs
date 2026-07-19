@@ -276,6 +276,7 @@ internal sealed class StormaktGame
     private const int CopenhagenSuperCrossNodeHealth = 72;
     private const int CopenhagenSuperMemoryHealth = 360;
     private const int CopenhagenSuperReactorHealth = 540;
+    private const int CopenhagenLandingAnchorHealth = 72;
     private const int RtsSalvagedSilverGoal = 1_200;
     private const int DungeonFirstSigilMask = 1 << 8;
     private const int DungeonFogdeRescuedMask = 1 << 9;
@@ -351,6 +352,13 @@ internal sealed class StormaktGame
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_DUO_TEST"), "1", StringComparison.Ordinal);
     private readonly bool _copenhagenSuperTestMode = string.Equals(
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_SUPERFRIGATE_TEST"), "1", StringComparison.Ordinal);
+    private readonly bool _copenhagenLandingTestMode = string.Equals(
+        Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_LANDING_TEST"), "1", StringComparison.Ordinal);
+    private readonly bool _copenhagenGroundTestMode = string.Equals(
+        Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_GROUND_TEST"), "1", StringComparison.Ordinal);
+    private bool CopenhagenFixtureActive => _copenhagenGateTestMode || _copenhagenAdmiraltyTestMode ||
+        _copenhagenFrederikTestMode || _copenhagenEyeTestMode || _copenhagenDannebrogTestMode ||
+        _copenhagenDuoTestMode || _copenhagenSuperTestMode || _copenhagenLandingTestMode || _copenhagenGroundTestMode;
     private readonly SpritePack? _sprites;
     private readonly StormaktMusicLoop? _audio;
     private Random _random = new(3020);
@@ -608,6 +616,14 @@ internal sealed class StormaktGame
         new(0, 330, false, "SÖREN SVARTKRUT", "JAG HÅLLER FLOTTAN", "ÖPPNA KRONAN", null, "portrait_soren", true);
     private static readonly RadioCard CopenhagenSuperFallRadio =
         new(0, 360, true, "KUNG CHRISTIAN", "BYEN LÅSER SIG", "I KOMMER EJ NED", null, "portrait_christian");
+    private static readonly RadioCard CopenhagenLandingRadio =
+        new(0, 330, false, "EBBA GRIP", "DOCKORNA BRINNER", "SKJUT TRE ANKARE", null, "portrait_ebba");
+    private static readonly RadioCard CopenhagenLandingClearRadio =
+        new(0, 300, false, "SÖREN SVARTKRUT", "LANDNINGSLINAN FRI", "JAG HÅLLER RINGEN", null, "portrait_soren", true);
+    private static readonly RadioCard CopenhagenGroundRadio =
+        new(0, 330, false, "EBBA GRIP", "DU ÄR PÅ HOLMEN", "VI STANNAR OVAN", null, "portrait_ebba");
+    private static readonly RadioCard CopenhagenGroundClearRadio =
+        new(0, 300, false, "KARL CCLV", "HJERTAT ÄR EJ BRUTET", "HJERTAT ÄR EN PORT", null, "portrait_karl");
     private int _shipX;
     private int _shipY;
     private int _cooldown;
@@ -768,6 +784,14 @@ internal sealed class StormaktGame
             return;
         }
         StepRadio();
+
+        if (_levelId == 6 && _copenhagenWorld is CopenhagenWorldState { GroundActive: true } groundWorld)
+        {
+            StepCopenhagenGround(groundWorld, buttons, pointer, controller);
+            StepStars();
+            _previousButtons = buttons;
+            return;
+        }
 
         int speed = (buttons & Slow) != 0 ? (_width <= 320 ? 2 : 3) : (_width <= 320 ? 4 : 5);
         int precisionSpeed = (buttons & Slow) != 0 ? 1 : 2;
@@ -1132,6 +1156,27 @@ internal sealed class StormaktGame
                 resetCopenhagen.DuoDeathAge = 360;
                 BeginCopenhagenSuperfrigate(resetCopenhagen, testFixture: true);
             }
+            if (_copenhagenLandingTestMode)
+            {
+                resetCopenhagen.Age = 6_300;
+                resetCopenhagen.GateActive = true;
+                resetCopenhagen.SuperActive = true;
+                resetCopenhagen.SuperSectionHealth[3] = 0;
+                resetCopenhagen.SuperDeathAge = 400;
+                BeginCopenhagenLanding(resetCopenhagen, testFixture: true);
+            }
+            if (_copenhagenGroundTestMode)
+            {
+                resetCopenhagen.Age = 7_200;
+                resetCopenhagen.GateActive = true;
+                resetCopenhagen.SuperActive = true;
+                resetCopenhagen.SuperSectionHealth[3] = 0;
+                resetCopenhagen.SuperDeathAge = 400;
+                resetCopenhagen.LandingActive = true;
+                for (int anchor = 0; anchor < resetCopenhagen.LandingAnchorHealth.Length; anchor++)
+                    resetCopenhagen.LandingAnchorHealth[anchor] = 0;
+                BeginCopenhagenGround(resetCopenhagen, testFixture: true);
+            }
         }
         if (_snapphaneWorld is SnapphaneWorldState resetSnapphane)
         {
@@ -1308,6 +1353,14 @@ internal sealed class StormaktGame
         if (levelId == 3 && !fresh && TryLoadDungeonSave("autosave", out DungeonState? resumed))
         {
             _dungeon = resumed;
+            ClearBossRadio();
+            _audio?.SwitchMusic(StormaktMusicTrack.Dungeon);
+        }
+        if (levelId == 6 && !fresh && !CopenhagenFixtureActive &&
+            _copenhagenWorld is CopenhagenWorldState copenhagenResume &&
+            TryLoadCopenhagenGroundSave(out CopenhagenGroundSave groundSave))
+        {
+            RestoreCopenhagenGround(copenhagenResume, groundSave);
             ClearBossRadio();
             _audio?.SwitchMusic(StormaktMusicTrack.Dungeon);
         }
@@ -5219,6 +5272,89 @@ internal sealed class StormaktGame
         }
     }
 
+    private void WriteCopenhagenGroundSave(CopenhagenGroundState ground)
+    {
+        try
+        {
+            string path = DungeonSavePath("copenhagen-holmen");
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            string temporary = path + ".tmp";
+            string backup = path + ".bak";
+            var save = new CopenhagenGroundSave(1, _width, _height, ground.Age, ground.KarlX, ground.KarlY,
+                ground.Health, ground.MaxHealth, ground.Potions, ground.RoomClear, ground.DoorReady,
+                ground.Enemies.Select(enemy => new CopenhagenGroundEnemySave(enemy.Id, enemy.X, enemy.Y,
+                    enemy.Health, enemy.MaxHealth, enemy.DeathAge)).ToList());
+            File.WriteAllText(temporary, JsonSerializer.Serialize(save));
+            if (File.Exists(path)) File.Copy(path, backup, true);
+            File.Move(temporary, path, true);
+        }
+        catch (IOException exception)
+        {
+            Console.Error.WriteLine($"Stormakt Copenhagen save warning: {exception.Message}");
+        }
+    }
+
+    private static bool TryLoadCopenhagenGroundSave(out CopenhagenGroundSave save)
+    {
+        save = default;
+        string path = DungeonSavePath("copenhagen-holmen");
+        foreach (string candidate in new[] { path, path + ".bak" })
+        {
+            try
+            {
+                if (!File.Exists(candidate)) continue;
+                save = JsonSerializer.Deserialize<CopenhagenGroundSave>(File.ReadAllText(candidate));
+                if (save.Schema == 1 && save.Width >= 320 && save.Height >= 224 && save.MaxHealth > 0 &&
+                    save.Enemies is { Count: <= 16 }) return true;
+            }
+            catch (JsonException)
+            {
+            }
+            catch (IOException)
+            {
+            }
+        }
+        save = default;
+        return false;
+    }
+
+    private void RestoreCopenhagenGround(CopenhagenWorldState state, CopenhagenGroundSave save)
+    {
+        state.GroundActive = true;
+        state.LandingActive = false;
+        double scaleX = _width / (double)save.Width;
+        double scaleY = _height / (double)save.Height;
+        var ground = new CopenhagenGroundState
+        {
+            Age = Math.Max(0, save.Age),
+            KarlX = Math.Clamp(save.KarlX * scaleX, 18, _width - 18),
+            KarlY = Math.Clamp(save.KarlY * scaleY, 47, _height - 17),
+            Health = Math.Clamp(save.Health, 1, save.MaxHealth),
+            MaxHealth = save.MaxHealth,
+            Potions = Math.Max(0, save.Potions),
+            RoomClear = save.RoomClear,
+            DoorReady = save.DoorReady,
+            FacingX = 0,
+            FacingY = -1,
+        };
+        ground.TargetX = ground.KarlX;
+        ground.TargetY = ground.KarlY;
+        foreach (CopenhagenGroundEnemySave enemy in save.Enemies)
+        {
+            var restored = new CopenhagenGroundEnemy(enemy.Id,
+                Math.Clamp(enemy.X * scaleX, 18, _width - 18),
+                Math.Clamp(enemy.Y * scaleY, 47, _height - 17), Math.Max(1, enemy.MaxHealth))
+            {
+                Health = Math.Clamp(enemy.Health, 0, Math.Max(1, enemy.MaxHealth)),
+                DeathAge = Math.Max(0, enemy.DeathAge),
+            };
+            ground.Enemies.Add(restored);
+        }
+        state.Ground = ground;
+        _enemyShots.Clear();
+        _shots.Clear();
+    }
+
     private static double DistanceSquared(double x1, double y1, double x2, double y2)
     {
         double dx = x2 - x1;
@@ -5388,6 +5524,13 @@ internal sealed class StormaktGame
 
         if (!state.GateActive)
         {
+            StepEnemyShots();
+            return;
+        }
+
+        if (state.LandingActive)
+        {
+            StepCopenhagenLanding(state);
             StepEnemyShots();
             return;
         }
@@ -6630,9 +6773,7 @@ internal sealed class StormaktGame
             if (deathAge is 22 or 48 or 79 or 116 or 158 or 207 or 261)
                 _audio?.Trigger(StormaktSound.EnemyExplosion);
             if (deathAge < 320 || _bossRadioCard is not null) return;
-            _stageClear = true;
-            _stageClearAge = 0;
-            _audio?.SwitchMusic(StormaktMusicTrack.Relief);
+            BeginCopenhagenLanding(state);
             return;
         }
 
@@ -6968,6 +7109,305 @@ internal sealed class StormaktGame
     {
         double angle = Math.PI / 4.0 + node * Math.PI / 2.0;
         return (centerX + Math.Cos(angle) * 76.0, centerY + 32 + Math.Sin(angle) * 49.0);
+    }
+
+    private void BeginCopenhagenLanding(CopenhagenWorldState state, bool testFixture = false)
+    {
+        state.LandingActive = true;
+        state.LandingTestFixture = testFixture;
+        state.LandingAge = 0;
+        state.LandingReleaseAge = 0;
+        state.LandingHitFlash = 0;
+        int health = testFixture ? 12 : CopenhagenLandingAnchorHealth;
+        for (int anchor = 0; anchor < state.LandingAnchorHealth.Length; anchor++)
+            state.LandingAnchorHealth[anchor] = health;
+        _enemyShots.Clear();
+        _shots.Clear();
+        if (testFixture) return;
+        ActivateBossRadio(CopenhagenLandingRadio);
+        _audio?.SwitchMusic(StormaktMusicTrack.Relief);
+        _audio?.Trigger(StormaktSound.OresundTrainRumble);
+    }
+
+    private void StepCopenhagenLanding(CopenhagenWorldState state)
+    {
+        state.LandingAge++;
+        state.LandingHitFlash = Math.Max(0, state.LandingHitFlash - 1);
+        for (int shotIndex = _shots.Count - 1; shotIndex >= 0; shotIndex--)
+        {
+            Shot shot = _shots[shotIndex];
+            int hitAnchor = -1;
+            for (int anchor = 0; anchor < state.LandingAnchorHealth.Length; anchor++)
+            {
+                if (state.LandingAnchorHealth[anchor] <= 0) continue;
+                (double anchorX, double anchorY) = CopenhagenLandingAnchorPosition(anchor);
+                if (DistanceSquared(shot.X, shot.Y, anchorX, anchorY) < 16 * 16)
+                {
+                    hitAnchor = anchor;
+                    break;
+                }
+            }
+            if (hitAnchor < 0) continue;
+            state.LandingAnchorHealth[hitAnchor] = Math.Max(0, state.LandingAnchorHealth[hitAnchor] - shot.Power);
+            state.LandingHitFlash = 5;
+            state.LandingLastHitAnchor = hitAnchor;
+            _shots.RemoveAt(shotIndex);
+            if (state.LandingAnchorHealth[hitAnchor] == 0)
+            {
+                _score += 600;
+                _audio?.Trigger(StormaktSound.TitheChainLockBreak);
+            }
+        }
+        if (state.LandingAge > 75 && state.LandingAge % 84 == 0)
+        {
+            int anchor = state.LandingAge / 84 % state.LandingAnchorHealth.Length;
+            if (state.LandingAnchorHealth[anchor] > 0)
+            {
+                (double anchorX, double anchorY) = CopenhagenLandingAnchorPosition(anchor);
+                FireAimedCopenhagenShot(anchorX, anchorY + 7, 2.05, 4);
+            }
+        }
+        if (state.LandingAnchorHealth.Any(health => health > 0)) return;
+        if (state.LandingReleaseAge == 0)
+        {
+            state.LandingReleaseAge = 1;
+            _enemyShots.Clear();
+            ActivateBossRadio(CopenhagenLandingClearRadio);
+            _audio?.Trigger(StormaktSound.OresundTrainCrash);
+            return;
+        }
+        state.LandingReleaseAge++;
+        if (state.LandingReleaseAge < 170 || _bossRadioCard is not null) return;
+        BeginCopenhagenGround(state, testFixture: state.LandingTestFixture);
+    }
+
+    private (double X, double Y) CopenhagenLandingAnchorPosition(int anchor)
+    {
+        double x = (anchor + 1) * _width / 4.0;
+        double y = 73 + anchor * 25 + Math.Sin((anchor + 1) * 1.7) * 5;
+        return (x, y);
+    }
+
+    private void BeginCopenhagenGround(CopenhagenWorldState state, bool testFixture = false)
+    {
+        state.LandingActive = false;
+        state.GroundActive = true;
+        var ground = new CopenhagenGroundState
+        {
+            TestFixture = testFixture,
+            KarlX = _width / 2.0,
+            KarlY = _height - 48,
+            TargetX = _width / 2.0,
+            TargetY = _height - 48,
+            Health = 100,
+            MaxHealth = 100,
+            Potions = 1,
+            FacingX = 0,
+            FacingY = -1,
+        };
+        int enemyHealth = testFixture ? 12 : 42;
+        (double X, double Y)[] positions =
+        [
+            (_width * 0.27, _height * 0.55),
+            (_width * 0.73, _height * 0.51),
+            (_width * 0.38, _height * 0.34),
+            (_width * 0.64, _height * 0.29),
+        ];
+        for (int index = 0; index < positions.Length; index++)
+            ground.Enemies.Add(new CopenhagenGroundEnemy(index, positions[index].X, positions[index].Y, enemyHealth));
+        state.Ground = ground;
+        _enemyShots.Clear();
+        _shots.Clear();
+        ClearBossRadio();
+        if (!testFixture) ActivateBossRadio(CopenhagenGroundRadio);
+        _audio?.SwitchMusic(StormaktMusicTrack.Dungeon);
+        _audio?.Trigger(StormaktSound.DungeonSwordSlash);
+        if (!testFixture && !CopenhagenFixtureActive) WriteCopenhagenGroundSave(ground);
+    }
+
+    private void StepCopenhagenGround(
+        CopenhagenWorldState state, uint buttons, RtsPointer pointer, ControllerInput controller)
+    {
+        CopenhagenGroundState? ground = state.Ground;
+        if (ground is null) return;
+        ground.Age++;
+        ground.HitFlash = Math.Max(0, ground.HitFlash - 1);
+        ground.AttackAge = Math.Max(0, ground.AttackAge - 1);
+        ground.AttackCooldown = Math.Max(0, ground.AttackCooldown - 1);
+        ground.PotionFlash = Math.Max(0, ground.PotionFlash - 1);
+
+        if (ground.Dead)
+        {
+            if (Pressed(buttons, Start))
+            {
+                if (!ground.TestFixture && TryLoadCopenhagenGroundSave(out CopenhagenGroundSave save))
+                    RestoreCopenhagenGround(state, save);
+                else
+                    BeginCopenhagenGround(state, ground.TestFixture);
+            }
+            return;
+        }
+
+        int speed = (buttons & Slow) != 0 ? 2 : 3;
+        uint directions = Up | Down | Left | Right;
+        uint controllerDirections = controller.Buttons & directions;
+        uint keyboardDirections = (buttons & directions) & ~controllerDirections;
+        int dx = ((keyboardDirections & Right) != 0 ? speed : 0) - ((keyboardDirections & Left) != 0 ? speed : 0);
+        int dy = ((keyboardDirections & Down) != 0 ? speed : 0) - ((keyboardDirections & Up) != 0 ? speed : 0);
+        (int analogX, int analogY, bool analogActive) = ControllerStickMovement(controller.LeftX, controller.LeftY, speed);
+        if (analogActive)
+        {
+            dx += analogX;
+            dy += analogY;
+        }
+        else
+        {
+            dx += ((controllerDirections & Right) != 0 ? 1 : 0) - ((controllerDirections & Left) != 0 ? 1 : 0);
+            dy += ((controllerDirections & Down) != 0 ? 1 : 0) - ((controllerDirections & Up) != 0 ? 1 : 0);
+        }
+        if ((pointer.Buttons & 2) != 0 && pointer.Inside)
+        {
+            ground.TargetX = pointer.X;
+            ground.TargetY = pointer.Y;
+            ground.HasTarget = true;
+        }
+        if (dx != 0 || dy != 0)
+        {
+            ground.HasTarget = false;
+            double length = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
+            ground.FacingX = dx / length;
+            ground.FacingY = dy / length;
+            ground.KarlX += dx;
+            ground.KarlY += dy;
+        }
+        else if (ground.HasTarget)
+        {
+            double targetDx = ground.TargetX - ground.KarlX;
+            double targetDy = ground.TargetY - ground.KarlY;
+            double length = Math.Sqrt(targetDx * targetDx + targetDy * targetDy);
+            if (length <= speed) ground.HasTarget = false;
+            else
+            {
+                ground.FacingX = targetDx / length;
+                ground.FacingY = targetDy / length;
+                ground.KarlX += ground.FacingX * speed;
+                ground.KarlY += ground.FacingY * speed;
+            }
+        }
+        ground.KarlX = Math.Clamp(ground.KarlX, 18, _width - 18);
+        ground.KarlY = Math.Clamp(ground.KarlY, 47, _height - 17);
+
+        bool pointerAttack = (pointer.Buttons & 1) != 0 && pointer.Inside;
+        if (((buttons & Fire) != 0 || pointerAttack) && ground.AttackCooldown == 0)
+        {
+            if (pointerAttack)
+            {
+                double aimX = pointer.X - ground.KarlX;
+                double aimY = pointer.Y - ground.KarlY;
+                double length = Math.Max(1.0, Math.Sqrt(aimX * aimX + aimY * aimY));
+                ground.FacingX = aimX / length;
+                ground.FacingY = aimY / length;
+            }
+            AttackCopenhagenGround(ground);
+        }
+        if (Pressed(buttons, QuickPotion) && ground.Potions > 0 && ground.Health < ground.MaxHealth)
+        {
+            ground.Potions--;
+            ground.Health = Math.Min(ground.MaxHealth, ground.Health + 45);
+            ground.PotionFlash = 30;
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        StepCopenhagenGroundEnemies(ground);
+        if (!ground.RoomClear && ground.Enemies.All(enemy => enemy.Health <= 0))
+        {
+            ground.RoomClear = true;
+            ground.DoorReady = true;
+            ActivateBossRadio(CopenhagenGroundClearRadio);
+            _score += 2_400;
+            _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+            if (!ground.TestFixture && !CopenhagenFixtureActive) WriteCopenhagenGroundSave(ground);
+        }
+        if (ground.DoorReady && DistanceSquared(ground.KarlX, ground.KarlY, _width / 2.0, 43) < 29 * 29 &&
+            ((buttons & Fire) != 0 || pointerAttack))
+        {
+            ground.CheckpointReady = true;
+        }
+    }
+
+    private void AttackCopenhagenGround(CopenhagenGroundState ground)
+    {
+        ground.AttackAge = 12;
+        ground.AttackCooldown = 17;
+        ground.AttackSerial++;
+        foreach (CopenhagenGroundEnemy enemy in ground.Enemies)
+        {
+            if (enemy.Health <= 0) continue;
+            double dx = enemy.X - ground.KarlX;
+            double dy = enemy.Y - ground.KarlY;
+            double distance = Math.Sqrt(dx * dx + dy * dy);
+            if (distance > 39 || distance < 1) continue;
+            double facing = dx / distance * ground.FacingX + dy / distance * ground.FacingY;
+            if (facing < -0.05) continue;
+            enemy.Health = Math.Max(0, enemy.Health - 18);
+            enemy.HitFlash = 6;
+            enemy.StaggerAge = 10;
+            enemy.LastHitSerial = ground.AttackSerial;
+            if (enemy.Health == 0)
+            {
+                enemy.DeathAge = 1;
+                _score += 320;
+                _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+            }
+            else
+            {
+                _audio?.Trigger(StormaktSound.DungeonSwordHit);
+            }
+        }
+        _audio?.Trigger(StormaktSound.DungeonSwordSlash);
+    }
+
+    private void StepCopenhagenGroundEnemies(CopenhagenGroundState ground)
+    {
+        foreach (CopenhagenGroundEnemy enemy in ground.Enemies)
+        {
+            enemy.HitFlash = Math.Max(0, enemy.HitFlash - 1);
+            if (enemy.Health <= 0)
+            {
+                enemy.DeathAge++;
+                continue;
+            }
+            if (enemy.StaggerAge > 0)
+            {
+                enemy.StaggerAge--;
+                continue;
+            }
+            double dx = ground.KarlX - enemy.X;
+            double dy = ground.KarlY - enemy.Y;
+            double distance = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
+            if (distance > 34)
+            {
+                double speed = 0.68 + enemy.Id * 0.05;
+                enemy.X += dx / distance * speed;
+                enemy.Y += dy / distance * speed;
+                enemy.AttackAge = 0;
+            }
+            else
+            {
+                enemy.AttackAge++;
+                if (enemy.AttackAge == 28 && distance < 42)
+                    DamageCopenhagenGround(ground);
+                if (enemy.AttackAge > 54) enemy.AttackAge = 0;
+            }
+        }
+    }
+
+    private void DamageCopenhagenGround(CopenhagenGroundState ground)
+    {
+        ground.HitFlash = 12;
+        if (_developerMode && _levelId == 6) return;
+        ground.Health = Math.Max(0, ground.Health - 20);
+        _audio?.Trigger(StormaktSound.HullHit);
+        if (ground.Health == 0) ground.Dead = true;
     }
 
     private void StepCopenhagenGateShots(CopenhagenWorldState state)
@@ -9656,7 +10096,7 @@ internal sealed class StormaktGame
 
     private void DamageShip()
     {
-        if (_developerMode && _levelId == 5)
+        if (_developerMode && _levelId is 5 or 6)
         {
             _heat = Math.Max(_heat, 40);
             _invulnerabilityFrames = Math.Max(_invulnerabilityFrames, 8);
@@ -14941,7 +15381,7 @@ internal sealed class StormaktGame
         DrawText(frame, _width - 116, 5, "POÄNG " + _score.ToString("000000"), 0xff7fc7ff);
         DrawText(frame, 6, _height - 9, "LIV " + _lives, 0xffff6b7f);
         DrawText(frame, (_width - 114) / 2, _height - 9, "Z ELD  X BREDSIDA", 0xffb7c7d6);
-        if (_developerMode && _levelId == 5)
+        if (_developerMode && _levelId is 5 or 6)
             DrawText(frame, 6, 18, "DEVSKÖLD", 0xff77e6a0);
         int heatX = _width - 52;
         DrawRect(frame, heatX, _height - 8, 44, 4, 0xff2a3440);
@@ -15048,13 +15488,19 @@ internal sealed class StormaktGame
     {
         Clear(frame, 0xff03080f);
         CopenhagenWorldState? state = _copenhagenWorld;
+        if (state is { GroundActive: true })
+        {
+            DrawCopenhagenGroundWorld(frame, state);
+            return;
+        }
         int age = state?.Age ?? 0;
         DrawCopenhagenBackground(frame, age);
         if (state is not null)
         {
             DrawCopenhagenBarrier(frame, state);
             DrawCopenhagenEyeWalls(frame, state);
-            if (state.SuperActive) DrawCopenhagenSuperfrigate(frame, state);
+            if (state.LandingActive) DrawCopenhagenLanding(frame, state);
+            else if (state.SuperActive) DrawCopenhagenSuperfrigate(frame, state);
             else if (state.DuoActive) DrawCopenhagenDuo(frame, state);
             else if (state.DannebrogActive) DrawCopenhagenDannebrog(frame, state);
             else if (state.EyeActive) DrawCopenhagenEye(frame, state);
@@ -15077,6 +15523,7 @@ internal sealed class StormaktGame
             DrawCopenhagenDannebrogHud(frame, state);
             DrawCopenhagenDuoHud(frame, state);
             DrawCopenhagenSuperHud(frame, state);
+            DrawCopenhagenLandingHud(frame, state);
             DrawCopenhagenCheckpointBanner(frame, state);
         }
         DrawCopenhagenMissionTitle(frame, age);
@@ -15941,6 +16388,203 @@ internal sealed class StormaktGame
         }
         DrawRect(frame, x + 2, 22, (width - 4) * health / Math.Max(1, maximum), 5, color);
         DrawText(frame, x + 4, 31, label, 0xffbdf8ff);
+    }
+
+    private void DrawCopenhagenLanding(uint[] frame, CopenhagenWorldState state)
+    {
+        int dockTop = 42;
+        for (int pier = 0; pier < 4; pier++)
+        {
+            int x = pier * _width / 3 - 18;
+            int height = 54 + (pier * 17 % 31);
+            DrawRect(frame, x, dockTop, 38, height, 0xff211b1c);
+            DrawLine(frame, x, dockTop + height, x + 37, dockTop + height, 0xff765139);
+            for (int window = dockTop + 12; window < dockTop + height - 5; window += 17)
+                FillCircle(frame, x + 19, window, 3 + (state.LandingAge / 7 + pier & 1), 0xffff8a4a);
+        }
+        for (int anchor = 0; anchor < state.LandingAnchorHealth.Length; anchor++)
+        {
+            (double anchorXD, double anchorYD) = CopenhagenLandingAnchorPosition(anchor);
+            int x = (int)Math.Round(anchorXD);
+            int y = (int)Math.Round(anchorYD);
+            bool broken = state.LandingAnchorHealth[anchor] <= 0;
+            bool hit = state.LandingHitFlash > 0 && state.LandingLastHitAnchor == anchor;
+            uint color = broken ? 0xff315b42 : hit ? 0xffffffff : 0xffd6b25e;
+            for (int link = 0; link < 5; link++)
+            {
+                int linkY = 18 + (y - 18) * link / 5;
+                DrawCircleOutline(frame, x, linkY, 3, broken ? 0xff263744 : 0xff765139);
+            }
+            if (broken)
+            {
+                DrawLine(frame, x - 10, y - 9, x + 10, y + 9, color);
+                DrawLine(frame, x + 10, y - 9, x - 10, y + 9, color);
+            }
+            else
+            {
+                DrawCircleOutline(frame, x, y, 13, color);
+                DrawLine(frame, x, y - 12, x, y + 15, color);
+                DrawLine(frame, x - 10, y + 8, x, y + 15, color);
+                DrawLine(frame, x + 10, y + 8, x, y + 15, color);
+                int maximum = state.LandingTestFixture ? 12 : CopenhagenLandingAnchorHealth;
+                DrawRect(frame, x - 13, y + 18, 26 * state.LandingAnchorHealth[anchor] / maximum, 3, 0xffff8a4a);
+            }
+        }
+        if (state.LandingReleaseAge > 0)
+        {
+            int descent = Math.Min(80, state.LandingReleaseAge / 2);
+            DrawLine(frame, _width / 2 - 32, 26, _width / 2 - 32, 26 + descent, 0xff77e6a0);
+            DrawLine(frame, _width / 2 + 32, 26, _width / 2 + 32, 26 + descent, 0xff77e6a0);
+        }
+        if (state.LandingAge < 190)
+        {
+            int width = Math.Min(238, _width - 30);
+            int x = (_width - width) / 2;
+            int y = _height <= 224 ? 139 : 171;
+            DrawRect(frame, x, y, width, 29, 0xdd080d12);
+            DrawLine(frame, x, y, x + width - 1, y, 0xffff8a4a);
+            DrawText(frame, x + (width - 168) / 2, y + 10, "HOLMEN · TRE LANDNINGSANKARE", 0xffffd66b);
+        }
+    }
+
+    private void DrawCopenhagenLandingHud(uint[] frame, CopenhagenWorldState state)
+    {
+        if (!state.LandingActive || state.LandingAge < 30) return;
+        int width = Math.Min(206, _width - 86);
+        int x = (_width - width) / 2;
+        DrawRect(frame, x, 21, width, 14, 0xdd080d12);
+        int broken = state.LandingAnchorHealth.Count(health => health <= 0);
+        DrawRect(frame, x + 2, 23, (width - 4) * broken / 3, 4, 0xff77e6a0);
+        DrawText(frame, x + 4, 28, $"LANDNING  ANKARE {broken}/3", 0xffbdf8ff);
+    }
+
+    private void DrawCopenhagenGroundWorld(uint[] frame, CopenhagenWorldState state)
+    {
+        CopenhagenGroundState? ground = state.Ground;
+        Clear(frame, 0xff0b1012);
+        for (int y = 18; y < _height - 12; y += 24)
+        {
+            for (int x = (y / 24 & 1) == 0 ? -18 : -6; x < _width; x += 42)
+            {
+                DrawRect(frame, x, y, 39, 21, 0xff151b1e);
+                DrawLine(frame, x, y + 20, x + 38, y + 20, 0xff29343a);
+                DrawLine(frame, x + 38, y, x + 38, y + 20, 0xff765139);
+            }
+        }
+        DrawRect(frame, 0, 18, _width, 27, 0xff211b1c);
+        for (int forge = 0; forge < 5; forge++)
+        {
+            int x = 24 + forge * (_width - 48) / 4;
+            FillCircle(frame, x, 31, 7, 0xff592531);
+            FillCircle(frame, x, 31, 3 + ((((ground?.Age ?? 0) / 6) + forge) & 1), 0xffff8a4a);
+        }
+        DrawCopenhagenGroundHeartDoor(frame, ground);
+        if (ground is null) return;
+
+        foreach (CopenhagenGroundEnemy enemy in ground.Enemies.OrderBy(enemy => enemy.Y))
+            DrawCopenhagenGroundEnemy(frame, enemy);
+        DrawCopenhagenGroundKarl(frame, ground);
+        DrawBorder(frame);
+        DrawCopenhagenGroundHud(frame, ground);
+        DrawRadio(frame);
+        DrawPause(frame);
+        if (ground.Dead)
+        {
+            int x = (_width - 184) / 2;
+            int y = (_height - 43) / 2;
+            DrawRect(frame, x, y, 184, 43, 0xee090b10);
+            DrawText(frame, x + 40, y + 10, "KARL FÖLL PÅ HOLMEN", 0xffff6b7f);
+            DrawText(frame, x + 25, y + 27, "START ÅTERUPPTAR", 0xffffd66b);
+        }
+        else if (ground.CheckpointReady)
+        {
+            int width = Math.Min(220, _width - 30);
+            int x = (_width - width) / 2;
+            int y = (_height - 45) / 2;
+            DrawRect(frame, x, y, width, 45, 0xee080d12);
+            DrawLine(frame, x, y, x + width - 1, y, 0xff7fc7ff);
+            DrawText(frame, x + (width - 132) / 2, y + 10, "HOLMENS ARSENAL SÄKRAD", 0xffffd66b);
+            DrawText(frame, x + (width - 126) / 2, y + 27, "SILVERHJÄRTAT VÄNTAR", 0xff9bd4dc);
+        }
+    }
+
+    private void DrawCopenhagenGroundHeartDoor(uint[] frame, CopenhagenGroundState? ground)
+    {
+        int x = _width / 2;
+        int y = 42;
+        uint color = ground?.DoorReady == true ? 0xff7fc7ff : 0xff4b5358;
+        FillCircle(frame, x - 8, y, 11, 0xff29343a);
+        FillCircle(frame, x + 8, y, 11, 0xff29343a);
+        FillTriangle(frame, x, y + 22, x - 18, y, x + 18, y, 0xff29343a);
+        DrawCircleOutline(frame, x - 8, y, 12, color);
+        DrawCircleOutline(frame, x + 8, y, 12, color);
+        DrawLine(frame, x - 17, y, x, y + 22, color);
+        DrawLine(frame, x + 17, y, x, y + 22, color);
+        if (ground?.DoorReady == true)
+            DrawCircleOutline(frame, x, y + 5, 24 + ground.Age / 6 % 5, 0xffd6b25e);
+    }
+
+    private void DrawCopenhagenGroundEnemy(uint[] frame, CopenhagenGroundEnemy enemy)
+    {
+        int x = (int)Math.Round(enemy.X);
+        int y = (int)Math.Round(enemy.Y);
+        if (enemy.Health <= 0)
+        {
+            int sink = Math.Min(9, enemy.DeathAge / 5);
+            DrawLine(frame, x - 13, y + sink, x + 13, y + sink, 0xff592531);
+            DrawLine(frame, x - 8, y - 4 + sink, x + 9, y + 5 + sink, 0xff765139);
+            return;
+        }
+        bool telegraph = enemy.AttackAge is >= 12 and < 28;
+        uint coat = enemy.HitFlash > 0 ? 0xffffffff : 0xff8f2635;
+        FillCircle(frame, x, y - 9, 6, 0xffd8d1b9);
+        FillTriangle(frame, x, y - 4, x - 12, y + 16, x + 12, y + 16, coat);
+        DrawLine(frame, x - 8, y + 5, x + 8, y + 5, 0xfff2eee4);
+        DrawLine(frame, x + 7, y, x + 15, y + (telegraph ? 15 : 7), telegraph ? 0xffffd66b : 0xff765139);
+        if (telegraph) DrawCircleOutline(frame, x, y, 19 + enemy.AttackAge / 4, 0xffff8a4a);
+        DrawRect(frame, x - 11, y + 19, 22 * enemy.Health / enemy.MaxHealth, 3, 0xffff8a4a);
+    }
+
+    private void DrawCopenhagenGroundKarl(uint[] frame, CopenhagenGroundState ground)
+    {
+        int x = (int)Math.Round(ground.KarlX);
+        int y = (int)Math.Round(ground.KarlY);
+        uint silver = ground.HitFlash > 0 ? 0xffffffff : 0xffb7c7d6;
+        FillCircle(frame, x, y - 10, 6, 0xffffd6b0);
+        FillTriangle(frame, x, y - 5, x - 11, y + 17, x + 11, y + 17, silver);
+        DrawLine(frame, x - 7, y + 4, x + 7, y + 4, 0xff2f74c9);
+        DrawCrown(frame, x - 4, y - 14, 0xffffd66b);
+        int bladeX = x + (int)Math.Round(ground.FacingX * 19);
+        int bladeY = y + (int)Math.Round(ground.FacingY * 19);
+        DrawLine(frame, x, y + 2, bladeX, bladeY, 0xffd8d1b9);
+        if (ground.AttackAge > 0)
+        {
+            double baseAngle = Math.Atan2(ground.FacingY, ground.FacingX);
+            for (int ray = -2; ray <= 2; ray++)
+            {
+                double angle = baseAngle + ray * 0.22;
+                int tipX = x + (int)Math.Round(Math.Cos(angle) * 34);
+                int tipY = y + (int)Math.Round(Math.Sin(angle) * 34);
+                DrawLine(frame, x, y, tipX, tipY, ray == 0 ? 0xffffffff : 0xff7fc7ff);
+            }
+        }
+        if (ground.HasTarget) DrawCircleOutline(frame, (int)ground.TargetX, (int)ground.TargetY, 6, 0xff7fc7ff);
+    }
+
+    private void DrawCopenhagenGroundHud(uint[] frame, CopenhagenGroundState ground)
+    {
+        DrawRect(frame, 0, 0, _width, 17, 0xff080d12);
+        DrawText(frame, 6, 5, "KARL CCLV · HOLMEN", 0xffffd66b);
+        int barX = _width - 105;
+        DrawRect(frame, barX, 5, 72, 5, 0xff29343a);
+        DrawRect(frame, barX, 5, 72 * ground.Health / Math.Max(1, ground.MaxHealth), 5,
+            ground.PotionFlash > 0 ? 0xff77e6a0 : 0xffff6b7f);
+        DrawText(frame, _width - 28, 5, $"Q{ground.Potions}", 0xffbdf8ff);
+        DrawText(frame, 6, _height - 9, "Z HUGG  RMB GÅ  Q BRYG", 0xffb7c7d6);
+        if (_developerMode && _levelId == 6)
+            DrawText(frame, 6, 19, "DEVSKÖLD", 0xff77e6a0);
+        if (ground.DoorReady && !ground.CheckpointReady)
+            DrawText(frame, _width - 138, _height - 9, "HJÄRTAT · Z", 0xff7fc7ff);
     }
 
     private void DrawCopenhagenCheckpointBanner(uint[] frame, CopenhagenWorldState state)
@@ -17581,6 +18225,7 @@ internal sealed class StormaktGame
         for (int index = 0; index < CampaignNames.Length; index++)
         {
             string status = index == 3 && File.Exists(DungeonSavePath("autosave")) ? "FORTSÄTT" :
+                _developerMode && index == 6 && File.Exists(DungeonSavePath("copenhagen-holmen")) ? "FORTSÄTT" :
                 index is 0 or 1 or 2 or 3 or 4 ? "STRID" : _developerMode ? "DEV" : "LÅST";
             DrawLevelOption(frame, panelX + 12, listY + index * rowHeight, panelWidth - 24,
                 rowHeight - 2, index, $"{index + 1}  {CampaignNames[index]}", status);
@@ -17589,6 +18234,8 @@ internal sealed class StormaktGame
         string footer = _lockedLevelNoticeFrames > 0 ? "FÄLTTÅGET ÄR LÅST" :
             _levelSelection == 3 && File.Exists(DungeonSavePath("autosave")) ? "START FORTSÄTT  SLOW+START NYTT" :
             _levelSelection == 4 && File.Exists(DungeonSavePath("campaign")) ? "START KIT  SLOW+START STANDARD" :
+            _developerMode && _levelSelection == 6 && File.Exists(DungeonSavePath("copenhagen-holmen")) ?
+                "START HOLMEN  SLOW+START RING" :
             _developerMode ? "UTVECKLARLÄGE  ALLT UPPLÅST" : "UPP NER VÄLJ  START";
         DrawText(frame, (_width - footer.Length * 6) / 2, panelBottom - 9, footer,
             _lockedLevelNoticeFrames > 0 ? 0xff65c58a : 0xffb7c7d6);
@@ -18531,6 +19178,11 @@ internal sealed class StormaktGame
         TitheBroadsideModule BroadsideModule, TitheShipModule ShipModule, int FreedShips,
         SnapphaneRoute SnapphaneRoute = SnapphaneRoute.None, int SnapphaneAllies = 0,
         bool SorenOathComplete = false);
+    private readonly record struct CopenhagenGroundSave(int Schema, int Width, int Height, int Age,
+        double KarlX, double KarlY, int Health, int MaxHealth, int Potions, bool RoomClear, bool DoorReady,
+        List<CopenhagenGroundEnemySave> Enemies);
+    private readonly record struct CopenhagenGroundEnemySave(int Id, double X, double Y,
+        int Health, int MaxHealth, int DeathAge);
 
     private sealed class SorenRivalState
     {
@@ -18797,6 +19449,15 @@ internal sealed class StormaktGame
         public int[] SuperSectionHealth { get; } = new int[4];
         public int[] SuperCrossHealth { get; } = new int[4];
         public List<CopenhagenRoyalDrone> SuperDrones { get; } = [];
+        public bool LandingActive { get; set; }
+        public bool LandingTestFixture { get; set; }
+        public int LandingAge { get; set; }
+        public int LandingReleaseAge { get; set; }
+        public int LandingHitFlash { get; set; }
+        public int LandingLastHitAnchor { get; set; } = -1;
+        public int[] LandingAnchorHealth { get; } = new int[3];
+        public bool GroundActive { get; set; }
+        public CopenhagenGroundState? Ground { get; set; }
     }
 
     private sealed class CopenhagenSeizureChain(int target, int health)
@@ -18837,6 +19498,46 @@ internal sealed class StormaktGame
         public int Health { get; set; } = health;
         public int Serial { get; } = serial;
         public int Age { get; set; }
+    }
+
+    private sealed class CopenhagenGroundState
+    {
+        public bool TestFixture { get; set; }
+        public int Age { get; set; }
+        public double KarlX { get; set; }
+        public double KarlY { get; set; }
+        public double TargetX { get; set; }
+        public double TargetY { get; set; }
+        public bool HasTarget { get; set; }
+        public double FacingX { get; set; }
+        public double FacingY { get; set; }
+        public int Health { get; set; }
+        public int MaxHealth { get; set; }
+        public int Potions { get; set; }
+        public int HitFlash { get; set; }
+        public int PotionFlash { get; set; }
+        public int AttackAge { get; set; }
+        public int AttackCooldown { get; set; }
+        public int AttackSerial { get; set; }
+        public bool RoomClear { get; set; }
+        public bool DoorReady { get; set; }
+        public bool CheckpointReady { get; set; }
+        public bool Dead { get; set; }
+        public List<CopenhagenGroundEnemy> Enemies { get; } = [];
+    }
+
+    private sealed class CopenhagenGroundEnemy(int id, double x, double y, int health)
+    {
+        public int Id { get; } = id;
+        public double X { get; set; } = x;
+        public double Y { get; set; } = y;
+        public int Health { get; set; } = health;
+        public int MaxHealth { get; } = health;
+        public int HitFlash { get; set; }
+        public int StaggerAge { get; set; }
+        public int AttackAge { get; set; }
+        public int LastHitSerial { get; set; }
+        public int DeathAge { get; set; }
     }
 
     private sealed class SnapphaneWorldState
