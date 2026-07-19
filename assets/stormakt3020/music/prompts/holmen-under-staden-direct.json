@@ -1,0 +1,7 @@
+{
+  "prompt": "Instrumental dark action-RPG baroque industrial loop for landing beneath Copenhagen at Holmen. E minor, 96 BPM, heavy grounded 4/4. Lute, low viola da gamba and dry harpsichord play fragments of the Copenhagen royal code while deep analog bass, muted industrial kick, forge hammer percussion and restrained breakbeat ghosts establish deliberate hack-and-slash momentum. Sparse silver handbells introduce the three-note programmable matter pulse. Brick vaults, hot furnaces, black iron guards and a buried city-sized seal; intimate and physical after the orbital battle but never sleepy or ambient. Memorable dungeon groove, room for sword impacts and radio, circular loop, no long intro, breakdown, final cadence or fade. No vocals, choir, heroic fanfare, festival EDM, supersaw, pop, rock guitar, trailer braams or comedy.",
+  "lyrics": "[Instrumental]", "vocal_language": "unknown", "audio_duration": 48, "audio_format": "wav", "task_type": "text2music", "batch_size": 1,
+  "thinking": false, "use_format": false, "bpm": 96, "key_scale": "E minor", "time_signature": "4/4", "inference_steps": 8, "guidance_scale": 8.0,
+  "use_random_seed": false, "seed": 30201906, "constrained_decoding": true, "use_cot_caption": false, "use_cot_language": false,
+  "lm_negative_prompt": "vocals, choir, singing, ambient sleep music, heroic fanfare, festival EDM, supersaw, pop, rock guitar, trailer braams, comedy, breakdown, final cadence, fade"
+}

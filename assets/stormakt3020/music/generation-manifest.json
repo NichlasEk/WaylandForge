@@ -161,6 +161,56 @@
       "duration_seconds": 24,
       "thinking": false,
       "sha256": "a527b7e623af92ae8ceacb68a6ca109b976c35318d84885d4df72197acab8ad1"
+    },
+    {
+      "role": "level_07_kopenhamns_ring", "file": "kopenhamns-ring-v1.wav", "request": "prompts/kopenhamns-ring-direct.json",
+      "task_id": "0bd7aa3b-e258-4c8c-8740-cb89cbb24c44", "seed": "30201901", "duration_seconds": 48, "thinking": false,
+      "sha256": "85dd80059215abaaff343be7f06047ad8f603f78c704f5cbcbb0092c0dfc5892"
+    },
+    {
+      "role": "level_07_frederik_null", "file": "frederik-null-v1.wav", "request": "prompts/frederik-null-direct.json",
+      "task_id": "7faa565b-9188-4c93-b31d-e4fb1f68587a", "seed": "30201902", "duration_seconds": 48, "thinking": false,
+      "sha256": "c74febc211d862c5b6a3836ff7ed9a10b7e095031304265039e6ad326f5a299e"
+    },
+    {
+      "role": "level_07_oresunds_oje", "file": "oresunds-oje-v1.wav", "request": "prompts/oresunds-oje-direct.json",
+      "task_id": "91460827-1b9d-481c-8a93-df78fc11582e", "seed": "30201913", "duration_seconds": 48, "thinking": false,
+      "sha256": "c67d4634adaf91e11a1147be3736bc4ead677fc027d996e7d4639ffeb7da283a"
+    },
+    {
+      "role": "level_07_kungliga_armadan", "file": "kungliga-armadan-v1.wav", "request": "prompts/kungliga-armadan-direct.json",
+      "task_id": "f84d3384-24c5-4ea3-9ff2-384fb84b3ca9", "seed": "30201904", "duration_seconds": 48, "thinking": false,
+      "sha256": "a64753a510394992c839fe86e58988e41c545aafd17b6c2d4c1e5706d8c483e5"
+    },
+    {
+      "role": "level_07_christians_superfregatt", "file": "christians-superfregatt-v1.wav", "request": "prompts/christians-superfregatt-direct.json",
+      "task_id": "384ed500-c3f4-4e88-8b4f-865c9cbf9f63", "seed": "30201905", "duration_seconds": 48, "thinking": false,
+      "sha256": "9e353148a505d989d7c764ec577f532dee20d5f84fa6a72298ae4b37d069973f"
+    },
+    {
+      "role": "level_07_holmen_under_staden", "file": "holmen-under-staden-v1.wav", "request": "prompts/holmen-under-staden-direct.json",
+      "task_id": "ea7932e0-6ac2-486e-b0d3-2bab95079e51", "seed": "30201906", "duration_seconds": 48, "thinking": false,
+      "sha256": "4c6c3f169983d36d7189d0a1a048a9cbc91946e610ea78a73066ab9014ab55e3"
+    },
+    {
+      "role": "level_07_argentum_legender", "file": "argentum-legender-v1.wav", "request": "prompts/argentum-legender-direct.json",
+      "task_id": "82d061b8-2852-4a64-9771-f60976358386", "seed": "30201907", "duration_seconds": 48, "thinking": false,
+      "sha256": "cbc0cc52b44f84de65ff714e57eda030d54c77bd494ce755251ddbbeca57bda6"
+    },
+    {
+      "role": "level_07_konung_christians_vrede", "file": "konung-christians-vrede-v1.wav", "request": "prompts/konung-christians-vrede-direct.json",
+      "task_id": "569ec657-89c7-44ed-8ac4-2191999f546e", "seed": "30201908", "duration_seconds": 48, "thinking": false,
+      "sha256": "1841f42044fb26337068ba6b9ddf68bb6c2307dc549e7dbe7825cc41473934a0"
+    },
+    {
+      "role": "level_07_kopenhamn_silvergryning", "file": "kopenhamn-silvergryning-v1.wav", "request": "prompts/kopenhamn-silvergryning-direct.json",
+      "task_id": "cfc8e448-86ac-48b7-bc5f-13f5fa8cd848", "seed": "30201909", "duration_seconds": 24, "thinking": false,
+      "sha256": "176ea0ac89017547b5fa06cd7d84bcd7020e08a677b60e28d44660790c1bf577"
+    },
+    {
+      "role": "level_07_kopenhamn_landning", "file": "kopenhamn-landning-v1.wav", "request": "prompts/kopenhamn-landning-direct.json",
+      "task_id": "7a32d3d1-537a-488d-a9c1-ba221c60153f", "seed": "30201910", "duration_seconds": 24, "thinking": false,
+      "sha256": "8a54d2ff92782973b9227df65be2168a886057d5f81a044bbb62fb114d171346"
     }
   ],
   "derived": [
@@ -250,6 +300,56 @@
       "duration_seconds": 16,
       "runtime_crossfade_seconds": 0.5,
       "sha256": "266461e479046a080a074e972e439770698ecd89c87a981c79a1fb9d5c920a07"
+    },
+    {
+      "role": "level_07_kopenhamns_ring_runtime_loop", "file": "kopenhamns-ring-loop-v1.wav", "source": "kopenhamns-ring-v1.wav",
+      "tool": "../../../tools/stormakt3020/build_music_loops.py", "bpm": 120, "bars": 22, "duration_seconds": 44, "runtime_crossfade_seconds": 0.5,
+      "sha256": "68df39c4fa686fd3c722e4e3896b559aa52d85987f4956f0dd4c400a5816f694"
+    },
+    {
+      "role": "level_07_frederik_null_runtime_loop", "file": "frederik-null-loop-v1.wav", "source": "frederik-null-v1.wav",
+      "tool": "../../../tools/stormakt3020/build_music_loops.py", "bpm": 126, "bars": 24, "duration_seconds": 45.714, "runtime_crossfade_seconds": 0.5,
+      "sha256": "179599243d7817b3a1fa6d68a468d8876a0b9a5999a861efa38b8d27df588d85"
+    },
+    {
+      "role": "level_07_oresunds_oje_runtime_loop", "file": "oresunds-oje-loop-v1.wav", "source": "oresunds-oje-v1.wav",
+      "tool": "../../../tools/stormakt3020/build_music_loops.py", "bpm": 112, "bars": 20, "duration_seconds": 42.857, "runtime_crossfade_seconds": 0.5,
+      "sha256": "7ae8117ca116d939d8e2766479dcf0cd9a061dc109e1b28d480b76ec71fac696"
+    },
+    {
+      "role": "level_07_kungliga_armadan_runtime_loop", "file": "kungliga-armadan-loop-v1.wav", "source": "kungliga-armadan-v1.wav",
+      "tool": "../../../tools/stormakt3020/build_music_loops.py", "bpm": 124, "bars": 23, "duration_seconds": 44.516, "runtime_crossfade_seconds": 0.5,
+      "sha256": "0243583dc628bfc6b3b7306deab7bef7d022f94a72525142bdfac5a728e0e156"
+    },
+    {
+      "role": "level_07_christians_superfregatt_runtime_loop", "file": "christians-superfregatt-loop-v1.wav", "source": "christians-superfregatt-v1.wav",
+      "tool": "../../../tools/stormakt3020/build_music_loops.py", "bpm": 132, "bars": 22, "duration_seconds": 40, "runtime_crossfade_seconds": 0.5,
+      "sha256": "1674fc58fa4f88b65d12e9d22ce485d0bbda1439e93cdc90ae852aa33c8e6788"
+    },
+    {
+      "role": "level_07_holmen_runtime_loop", "file": "holmen-under-staden-loop-v1.wav", "source": "holmen-under-staden-v1.wav",
+      "tool": "../../../tools/stormakt3020/build_music_loops.py", "bpm": 96, "bars": 16, "duration_seconds": 40, "runtime_crossfade_seconds": 0.5,
+      "sha256": "8e512546412a659debaffb174f0f95d900fa50f0ce8d0eebd67e18645bac4a9a"
+    },
+    {
+      "role": "level_07_argentum_legender_runtime_loop", "file": "argentum-legender-loop-v1.wav", "source": "argentum-legender-v1.wav",
+      "tool": "../../../tools/stormakt3020/build_music_loops.py", "bpm": 108, "bars": 20, "duration_seconds": 44.444, "runtime_crossfade_seconds": 0.5,
+      "sha256": "faaa84b968bbf0d8afdf7711fcbf9f644cca78d5a720985b302044988706cdda"
+    },
+    {
+      "role": "level_07_christians_vrede_runtime_loop", "file": "konung-christians-vrede-loop-v1.wav", "source": "konung-christians-vrede-v1.wav",
+      "tool": "../../../tools/stormakt3020/build_music_loops.py", "bpm": 128, "bars": 24, "duration_seconds": 45, "runtime_crossfade_seconds": 0.5,
+      "sha256": "1b13407dd2d69638cbad60df0932d3d77520642b42baa0ae09934cea8e457b36"
+    },
+    {
+      "role": "level_07_silvergryning_runtime_loop", "file": "kopenhamn-silvergryning-loop-v1.wav", "source": "kopenhamn-silvergryning-v1.wav",
+      "tool": "../../../tools/stormakt3020/build_music_loops.py", "bpm": 96, "bars": 8, "duration_seconds": 20, "runtime_crossfade_seconds": 0.5,
+      "sha256": "104121e081580bbd0dbda9636047d8d114dc7b7cbb6fa5d2f32c48f51b53f5f0"
+    },
+    {
+      "role": "level_07_landning_runtime_loop", "file": "kopenhamn-landning-loop-v1.wav", "source": "kopenhamn-landning-v1.wav",
+      "tool": "../../../tools/stormakt3020/build_music_loops.py", "bpm": 80, "bars": 8, "duration_seconds": 24, "runtime_crossfade_seconds": 0.5,
+      "sha256": "8c65a841119b36dbfbed90e5dfa09e7425554155d4e0cca787b2d5b640de1525"
     }
   ],
   "rejected": [
@@ -265,6 +365,12 @@
       "task_id": "09c107e1-e342-49ad-9b6a-e5274c02f3fe",
       "seed": "568207100",
       "reason": "LM rewrite changed the somber procession into a triumphant achievement jingle"
+    },
+    {
+      "role": "level_07_oresunds_oje",
+      "task_id": "b13ab80b-3ff6-45f9-81a2-a254709667a8",
+      "seed": "30201903",
+      "reason": "otherwise valid master began with one second of silence, so a stricter immediate-entry prompt and seed replaced it"
     }
   ]
 }

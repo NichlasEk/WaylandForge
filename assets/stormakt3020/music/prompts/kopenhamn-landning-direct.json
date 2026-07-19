@@ -1,0 +1,7 @@
+{
+  "prompt": "Instrumental near-silent mechanical descent interlude as Karl's ship lands through Copenhagen's buried city seal. A minor, 80 BPM, very sparse 4/4, eight-bar circular form. Begin immediately with a low pressure drone, distant black-iron hull groans, slow sub pulse and isolated three-note silver handbell signal. Almost no drums: only one muted mechanical heartbeat per bar and occasional chain resonance. The orbital battle has stopped but the underground threat is opening below; solemn, physical, claustrophobic and expectant. Preserve wide dynamic space and a seamless return, no melody climax, fanfare, action beat, final stop or fade. No vocals, choir, ambient nature, piano ballad, cinematic boom, festival EDM, pop, rock guitar or comedy.",
+  "lyrics": "[Instrumental]", "vocal_language": "unknown", "audio_duration": 24, "audio_format": "wav", "task_type": "text2music", "batch_size": 1,
+  "thinking": false, "use_format": false, "bpm": 80, "key_scale": "A minor", "time_signature": "4/4", "inference_steps": 8, "guidance_scale": 8.0,
+  "use_random_seed": false, "seed": 30201910, "constrained_decoding": true, "use_cot_caption": false, "use_cot_language": false,
+  "lm_negative_prompt": "vocals, choir, singing, ambient nature, piano ballad, cinematic boom, fanfare, action beat, festival EDM, pop, rock guitar, comedy, climax, final stop, fade"
+}

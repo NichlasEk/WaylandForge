@@ -311,14 +311,21 @@ Ingen radio får säga **instans**, **254** eller **körning** före sista kamma
 
 ## Musik
 
-Minst fyra fasta roller behövs:
+Musikpasset landade 2026-07-19 som tio fasta, seedlåsta ACE-Step-roller plus den befintliga deterministiska Codex-klockan:
 
 1. **Köpenhamns ring:** snabb barock-techno med urverkspuls och kunglig mässing.
-2. **Superarmadan/Konung Christians vrede:** tidigare Superarmada-idé, men med en allt mer felkompilerad fanfar.
-3. **Staden under staden:** långsammare hack-and-slash-loop med luta/cembalo över industriell bas och silverklockor.
-4. **Codex Argentum:** avskalad boss-/slutmusik där motiv från Stora Bält återkommer som om en maskin minns det fel.
+2. **Frederik Null:** strikt svartbokföringsfuga med cembalo, fagott och räknemaskinsreläer.
+3. **Øresunds Øje:** kall optisk techno med tre-mot-fyra-puls och förutsägande arpeggio.
+4. **Kungliga armadan:** antiphonal flottmusik för Dannebrog, Absalon och Elefanten.
+5. **Christians superfregatt:** 132 BPM felkompilerad fanfar för rymdaktens slutboss.
+6. **Landningen:** nästan tyst åttatakters tryck-, kedje- och silverklocksinterlud.
+7. **Holmen under staden:** långsammare hack-and-slash-loop med luta, viola da gamba, cembalo och smidespuls.
+8. **Argentumlegender:** mytkompilatorns nyckelharpa, preparerade cembalo och pennklick.
+9. **Konung Christians vrede:** orgel-/trombonkanon där kunglig lag slåss mot silverpulsen.
+10. **Köpenhamn silvergryning:** kort seger och farlig lättnad innan sista kammaren.
+11. **Codex Argentum:** den kalla halvsekundspulsen och felminnet från tidigare motiv.
 
-Landningen använder några sekunders nästan total tystnad mellan akt I och II så genrebytet känns fysiskt.
+Alla genererade mastrar är 48 kHz stereo PCM16. Runtime använder hela takter klippta före modellernas utfader och mixerns befintliga halva sekunds crossfade. En fallande fyrtons kronkod och en tretakts silverpuls binder ihop sviten, medan stateövergångar, developer-fixtures och återupptagna markrum väljer rätt spår direkt.
 
 ## Grafik och objekt
 

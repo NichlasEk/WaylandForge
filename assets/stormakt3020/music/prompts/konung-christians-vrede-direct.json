@@ -1,0 +1,7 @@
+{
+  "prompt": "Instrumental furious royal law baroque-techno boss loop for King Christian confronting programmable silver beneath Copenhagen. C minor, 128 BPM, relentless 4/4. Distorted pipe organ, bass trombone, low strings and martial timpani state the descending four-note crown code as a severe canon, while the three-note silver pulse interrupts it in cold celesta and metallic FM tones. Hard analog bass sequence, disciplined kick, snapped field snare and judicial gavel percussion. The music must sound like a royal decree fighting executable reality: ceremonial rage, legal precision, growing fear and corrupted grandeur. Strong boss hook, dense but readable mix, continuous circular form, no intro swell, breakdown, victorious cadence or fade. No vocals, choir, festival EDM, supersaw, pop, rock guitar, trailer braams, comedy or heroic release.",
+  "lyrics": "[Instrumental]", "vocal_language": "unknown", "audio_duration": 48, "audio_format": "wav", "task_type": "text2music", "batch_size": 1,
+  "thinking": false, "use_format": false, "bpm": 128, "key_scale": "C minor", "time_signature": "4/4", "inference_steps": 8, "guidance_scale": 8.0,
+  "use_random_seed": false, "seed": 30201908, "constrained_decoding": true, "use_cot_caption": false, "use_cot_language": false,
+  "lm_negative_prompt": "vocals, choir, singing, festival EDM, supersaw, pop, rock guitar, trailer braams, comedy, heroic release, breakdown, victorious cadence, fade"
+}

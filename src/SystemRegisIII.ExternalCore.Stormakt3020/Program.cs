@@ -1440,7 +1440,7 @@ internal sealed class StormaktGame
             2 => StormaktMusicTrack.Oresund,
             3 => StormaktMusicTrack.Rts,
             5 => StormaktMusicTrack.Snapphane,
-            6 => StormaktMusicTrack.Combat,
+            6 => CurrentCopenhagenMusicTrack(),
             _ => StormaktMusicTrack.Combat,
         });
     }
@@ -1488,7 +1488,7 @@ internal sealed class StormaktGame
         {
             RestoreCopenhagenGround(copenhagenResume, groundSave);
             ClearBossRadio();
-            _audio?.SwitchMusic(groundSave.Room == 7 ? StormaktMusicTrack.Codex : StormaktMusicTrack.Dungeon);
+            _audio?.SwitchMusic(CurrentCopenhagenMusicTrack());
         }
         if (levelId == 5 && _redHoundsFinalTestMode) _audio?.SwitchMusic(StormaktMusicTrack.RedHoundsBoss);
         _inLevelSelect = false;
@@ -1496,6 +1496,28 @@ internal sealed class StormaktGame
         _inSilverkroppenSelect = false;
         _inCopenhagenSelect = false;
         _audio?.Trigger(StormaktSound.Deploy);
+    }
+
+    private StormaktMusicTrack CurrentCopenhagenMusicTrack()
+    {
+        if (_copenhagenWorld is not CopenhagenWorldState state) return StormaktMusicTrack.CopenhagenRing;
+        if (state.GroundActive && state.Ground is CopenhagenGroundState ground)
+        {
+            if (ground.Room >= 7) return StormaktMusicTrack.Codex;
+            if (ground.Room == 6)
+                return ground.WrathHealth <= 0
+                    ? StormaktMusicTrack.CopenhagenVictory
+                    : StormaktMusicTrack.CopenhagenWrath;
+            return ground.Room >= 3
+                ? StormaktMusicTrack.CopenhagenLegends
+                : StormaktMusicTrack.CopenhagenHolmen;
+        }
+        if (state.LandingActive) return StormaktMusicTrack.CopenhagenLanding;
+        if (state.SuperActive) return StormaktMusicTrack.CopenhagenSuper;
+        if (state.DuoActive || state.DannebrogActive) return StormaktMusicTrack.CopenhagenArmada;
+        if (state.EyeActive) return StormaktMusicTrack.CopenhagenEye;
+        if (state.FrederikActive) return StormaktMusicTrack.CopenhagenFrederik;
+        return StormaktMusicTrack.CopenhagenRing;
     }
 
     private static (int X, int Y, bool Active) ControllerStickMovement(short rawX, short rawY, int maximumSpeed)
@@ -5801,7 +5823,7 @@ internal sealed class StormaktGame
             state.GateIntroAge = 0;
             _enemyShots.Clear();
             ActivateBossRadio(CopenhagenGateRadio);
-            _audio?.SwitchMusic(StormaktMusicTrack.Boss);
+            _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenRing);
             _audio?.Trigger(StormaktSound.Deploy);
         }
 
@@ -6048,6 +6070,7 @@ internal sealed class StormaktGame
         _shots.Clear();
         if (testFixture) return;
         ActivateBossRadio(CopenhagenFrederikRadio);
+        _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenFrederik);
         _audio?.Trigger(StormaktSound.OresundFortressLock);
     }
 
@@ -6344,6 +6367,7 @@ internal sealed class StormaktGame
         _shots.Clear();
         if (testFixture) return;
         ActivateBossRadio(CopenhagenEyeRadio);
+        _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenEye);
         _audio?.Trigger(StormaktSound.OresundCrownCoreOpen);
     }
 
@@ -6550,6 +6574,7 @@ internal sealed class StormaktGame
         _shots.Clear();
         if (testFixture) return;
         ActivateBossRadio(CopenhagenDannebrogRadio);
+        _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenArmada);
         _audio?.Trigger(StormaktSound.OresundFortressLock);
     }
 
@@ -6738,6 +6763,7 @@ internal sealed class StormaktGame
         _shots.Clear();
         if (testFixture) return;
         ActivateBossRadio(CopenhagenDuoRadio);
+        _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenArmada);
         _audio?.Trigger(StormaktSound.Deploy);
     }
 
@@ -7031,7 +7057,7 @@ internal sealed class StormaktGame
         _shots.Clear();
         if (testFixture) return;
         ActivateBossRadio(CopenhagenSuperRadio);
-        _audio?.SwitchMusic(StormaktMusicTrack.Boss);
+        _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenSuper);
         _audio?.Trigger(StormaktSound.OresundCrownCoreOpen);
     }
 
@@ -7410,7 +7436,7 @@ internal sealed class StormaktGame
         _shots.Clear();
         if (testFixture) return;
         ActivateBossRadio(CopenhagenLandingRadio);
-        _audio?.SwitchMusic(StormaktMusicTrack.Relief);
+        _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenLanding);
         _audio?.Trigger(StormaktSound.OresundTrainRumble);
     }
 
@@ -7507,7 +7533,7 @@ internal sealed class StormaktGame
         _shots.Clear();
         ClearBossRadio();
         if (!testFixture) ActivateBossRadio(CopenhagenGroundRadio);
-        _audio?.SwitchMusic(StormaktMusicTrack.Dungeon);
+        _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenHolmen);
         _audio?.Trigger(StormaktSound.DungeonSwordSlash);
         if (!testFixture && !suppressSave && !CopenhagenFixtureActive) WriteCopenhagenGroundSave(ground);
     }
@@ -7699,6 +7725,7 @@ internal sealed class StormaktGame
                 _ => CopenhagenWrathClearRadio,
             });
             _score += 2_400;
+            if (ground.Room == 6) _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenVictory);
             _audio?.Trigger(StormaktSound.DungeonSilverShatter);
             if (!ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
                 WriteCopenhagenGroundSave(ground);
@@ -8251,6 +8278,7 @@ internal sealed class StormaktGame
             ground.Enemies.Add(new CopenhagenGroundEnemy(4 + index, positions[index].X, positions[index].Y, enemyHealth));
         ClearBossRadio();
         ActivateBossRadio(CopenhagenMemoryMachineRadio);
+        _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenLegends);
         _audio?.Trigger(StormaktSound.OresundTrainRumble);
         if (!ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
             WriteCopenhagenGroundSave(ground);
@@ -8444,7 +8472,7 @@ internal sealed class StormaktGame
         ground.SagaKarlHitCooldown = 0;
         ClearBossRadio();
         ActivateBossRadio(CopenhagenSagaKingRadio);
-        _audio?.SwitchMusic(StormaktMusicTrack.Boss);
+        _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenLegends);
         _audio?.Trigger(StormaktSound.OresundTrainRumble);
         if (!ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
             WriteCopenhagenGroundSave(ground);
@@ -8569,7 +8597,7 @@ internal sealed class StormaktGame
         }
         ClearBossRadio();
         ActivateBossRadio(CopenhagenKorrektoriusRadio);
-        _audio?.SwitchMusic(StormaktMusicTrack.Boss);
+        _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenLegends);
         _audio?.Trigger(StormaktSound.OresundTrainRumble);
         if (!ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
             WriteCopenhagenGroundSave(ground);
@@ -8787,7 +8815,7 @@ internal sealed class StormaktGame
         }
         ClearBossRadio();
         ActivateBossRadio(CopenhagenWrathRadio);
-        _audio?.SwitchMusic(StormaktMusicTrack.Boss);
+        _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenWrath);
         _audio?.Trigger(StormaktSound.OresundCrownCoreOpen);
         if (!ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
             WriteCopenhagenGroundSave(ground);

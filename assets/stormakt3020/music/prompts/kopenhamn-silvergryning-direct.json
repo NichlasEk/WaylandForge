@@ -1,0 +1,7 @@
+{
+  "prompt": "Instrumental short Nordic victory and revelation loop after King Christian falls and Codex Argentum opens. D major with a persistent D minor shadow, 96 BPM, stately 4/4. Warm horns and chamber strings gently resolve the descending Copenhagen crown code while nyckelharpa, restrained harpsichord and clear silver handbells reveal the three-note programmable matter pulse underneath. A soft analog bass heartbeat and light field drum keep it suitable beneath a result card. Earned relief, astonishment and dangerous unfinished history rather than celebration. Immediate theme, compact eight-bar-feeling structure, seamless circular return, no giant climax, sentimental swell, final stop or fade. No vocals, choir, pop, rock guitar, festival EDM, supersaw, trailer music or comedy.",
+  "lyrics": "[Instrumental]", "vocal_language": "unknown", "audio_duration": 24, "audio_format": "wav", "task_type": "text2music", "batch_size": 1,
+  "thinking": false, "use_format": false, "bpm": 96, "key_scale": "D major", "time_signature": "4/4", "inference_steps": 8, "guidance_scale": 8.0,
+  "use_random_seed": false, "seed": 30201909, "constrained_decoding": true, "use_cot_caption": false, "use_cot_language": false,
+  "lm_negative_prompt": "vocals, choir, singing, pop, rock guitar, festival EDM, supersaw, trailer music, comedy, giant climax, sentimental swell, final stop, fade"
+}

@@ -1,0 +1,7 @@
+{
+  "prompt": "Instrumental myth-compiling baroque techno dungeon loop for Rosenborg memory machinery, saga automata and Korrektorius marginal laws. B minor, 108 BPM, intricate 4/4. A three-note silver bell pulse acts like executable punctuation while nyckelharpa harmonics, prepared harpsichord, plucked viola and bass clarinet compile broken variations of the shared descending royal code over a warm modular sequencer, dry low kick and tiny pen-click percussion. Legends are remembered incorrectly and become machines: uncanny, clever, dangerous and occasionally grand, never whimsical. Maintain action-RPG propulsion and a strong recognizable hook, leave spectral space for sword hits and speech, circular ending, no ambient drift, breakdown, final cadence or fade. No vocals, choir, fairy-tale sweetness, festival EDM, supersaw, pop, rock guitar, trailer braams or comedy.",
+  "lyrics": "[Instrumental]", "vocal_language": "unknown", "audio_duration": 48, "audio_format": "wav", "task_type": "text2music", "batch_size": 1,
+  "thinking": false, "use_format": false, "bpm": 108, "key_scale": "B minor", "time_signature": "4/4", "inference_steps": 8, "guidance_scale": 8.0,
+  "use_random_seed": false, "seed": 30201907, "constrained_decoding": true, "use_cot_caption": false, "use_cot_language": false,
+  "lm_negative_prompt": "vocals, choir, singing, fairy-tale sweet, ambient drift, festival EDM, supersaw, pop, rock guitar, trailer braams, comedy, breakdown, final cadence, fade"
+}

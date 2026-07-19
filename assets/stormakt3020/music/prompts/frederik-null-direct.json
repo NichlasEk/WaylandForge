@@ -1,0 +1,7 @@
+{
+  "prompt": "Instrumental black-ledger baroque techno boss fugue for Frederik Null, a vast Danish registry machine seizing allied ships. C sharp minor, 126 BPM, relentless 4/4. The Copenhagen descending four-note royal code motif is dissected into strict harpsichord counterpoint, bassoon and low string fugue entries over a dry industrial kick, precise electro toms, clicking comptometer relays and a rubbery analog bass sequence. Curved silver register blades should feel implied by sharp rising string cuts while zero mechanisms answer in cold glass bells. Bureaucratic, predatory, mathematical and elegant, not heroic. Continuous boss pressure, strong recurring hook, clean space for weapons, circular form, no intro swell, breakdown, drop, final cadence or fade. No vocals, choir, dubstep, festival EDM, supersaw, pop, rock guitar, comedy or jazz swing.",
+  "lyrics": "[Instrumental]", "vocal_language": "unknown", "audio_duration": 48, "audio_format": "wav", "task_type": "text2music", "batch_size": 1,
+  "thinking": false, "use_format": false, "bpm": 126, "key_scale": "C# minor", "time_signature": "4/4", "inference_steps": 8, "guidance_scale": 8.0,
+  "use_random_seed": false, "seed": 30201902, "constrained_decoding": true, "use_cot_caption": false, "use_cot_language": false,
+  "lm_negative_prompt": "vocals, choir, singing, dubstep, festival EDM, supersaw, pop, rock guitar, comedy, jazz swing, breakdown, drop, quiet intro, final cadence, fade"
+}

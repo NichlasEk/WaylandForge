@@ -1,0 +1,7 @@
+{
+  "prompt": "Instrumental Nordic baroque-techno assault loop for entering Copenhagen Ring in a dark late-1990s science-fiction arcade game. D minor, 120 BPM, driving 4/4. A memorable descending four-note royal code motif in stern natural brass and clipped chamber strings locks to dry harpsichord ostinato, analog sequencer bass, iron kick, field snare and small clockwork percussion. Monumental orbital fortifications, black iron, tarnished brass, cold cyan machinery and Swedish ships threading a Danish customs seal. Urgent and martial but never triumphant. Dense forward motion from the first beat, clear low end for combat effects, circular ending, no quiet intro, no breakdown, no final cadence, no fade. No vocals, choir, festival EDM, supersaw, pop, rock guitar, trailer braams, comedy or cheerful release.",
+  "lyrics": "[Instrumental]", "vocal_language": "unknown", "audio_duration": 48, "audio_format": "wav", "task_type": "text2music", "batch_size": 1,
+  "thinking": false, "use_format": false, "bpm": 120, "key_scale": "D minor", "time_signature": "4/4", "inference_steps": 8, "guidance_scale": 8.0,
+  "use_random_seed": false, "seed": 30201901, "constrained_decoding": true, "use_cot_caption": false, "use_cot_language": false,
+  "lm_negative_prompt": "vocals, choir, singing, festival EDM, big-room drop, supersaw, pop, rock guitar, trailer braams, comedy, cheerful, breakdown, quiet intro, final cadence, fade"
+}

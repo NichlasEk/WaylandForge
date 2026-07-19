@@ -28,6 +28,16 @@ internal sealed class StormaktMusicLoop : IDisposable
     private readonly float[] _redHoundsBossSamples;
     private readonly float[] _snapphaneVictorySamples;
     private readonly float[] _codexSamples;
+    private readonly float[] _copenhagenRingSamples;
+    private readonly float[] _copenhagenFrederikSamples;
+    private readonly float[] _copenhagenEyeSamples;
+    private readonly float[] _copenhagenArmadaSamples;
+    private readonly float[] _copenhagenSuperSamples;
+    private readonly float[] _copenhagenLandingSamples;
+    private readonly float[] _copenhagenHolmenSamples;
+    private readonly float[] _copenhagenLegendsSamples;
+    private readonly float[] _copenhagenWrathSamples;
+    private readonly float[] _copenhagenVictorySamples;
     private readonly Dictionary<StormaktSound, LoadedEffect> _effects;
     private readonly Dictionary<StormaktVoice, LoadedEffect> _voices;
     private readonly ConcurrentQueue<StormaktSound> _pendingEffects = new();
@@ -64,6 +74,16 @@ internal sealed class StormaktMusicLoop : IDisposable
         float[] redHoundsBossSamples,
         float[] snapphaneVictorySamples,
         float[] codexSamples,
+        float[] copenhagenRingSamples,
+        float[] copenhagenFrederikSamples,
+        float[] copenhagenEyeSamples,
+        float[] copenhagenArmadaSamples,
+        float[] copenhagenSuperSamples,
+        float[] copenhagenLandingSamples,
+        float[] copenhagenHolmenSamples,
+        float[] copenhagenLegendsSamples,
+        float[] copenhagenWrathSamples,
+        float[] copenhagenVictorySamples,
         Dictionary<StormaktSound, LoadedEffect> effects,
         Dictionary<StormaktVoice, LoadedEffect> voices,
         string socketPath)
@@ -83,6 +103,16 @@ internal sealed class StormaktMusicLoop : IDisposable
         _redHoundsBossSamples = redHoundsBossSamples;
         _snapphaneVictorySamples = snapphaneVictorySamples;
         _codexSamples = codexSamples;
+        _copenhagenRingSamples = copenhagenRingSamples;
+        _copenhagenFrederikSamples = copenhagenFrederikSamples;
+        _copenhagenEyeSamples = copenhagenEyeSamples;
+        _copenhagenArmadaSamples = copenhagenArmadaSamples;
+        _copenhagenSuperSamples = copenhagenSuperSamples;
+        _copenhagenLandingSamples = copenhagenLandingSamples;
+        _copenhagenHolmenSamples = copenhagenHolmenSamples;
+        _copenhagenLegendsSamples = copenhagenLegendsSamples;
+        _copenhagenWrathSamples = copenhagenWrathSamples;
+        _copenhagenVictorySamples = copenhagenVictorySamples;
         _effects = effects;
         _voices = voices;
         _totalFrames = samples.Length / Channels;
@@ -159,6 +189,16 @@ internal sealed class StormaktMusicLoop : IDisposable
                 float[] snapphaneVictorySamples = File.Exists(snapphaneVictoryPath) ? LoadPcm16StereoWav(snapphaneVictoryPath) : reliefSamples ?? snapphaneSamples;
                 string codexPath = Path.Combine(musicDirectory, "codex-argentum-clock-loop-v1.wav");
                 float[] codexSamples = File.Exists(codexPath) ? LoadPcm16StereoWav(codexPath) : dungeonSamples ?? reliefSamples ?? samples;
+                float[] copenhagenRingSamples = LoadMusicOrFallback(musicDirectory, "kopenhamns-ring-loop-v1.wav", samples);
+                float[] copenhagenFrederikSamples = LoadMusicOrFallback(musicDirectory, "frederik-null-loop-v1.wav", bossSamples ?? copenhagenRingSamples);
+                float[] copenhagenEyeSamples = LoadMusicOrFallback(musicDirectory, "oresunds-oje-loop-v1.wav", bossSamples ?? copenhagenRingSamples);
+                float[] copenhagenArmadaSamples = LoadMusicOrFallback(musicDirectory, "kungliga-armadan-loop-v1.wav", bossSamples ?? copenhagenRingSamples);
+                float[] copenhagenSuperSamples = LoadMusicOrFallback(musicDirectory, "christians-superfregatt-loop-v1.wav", bossSamples ?? copenhagenArmadaSamples);
+                float[] copenhagenLandingSamples = LoadMusicOrFallback(musicDirectory, "kopenhamn-landning-loop-v1.wav", reliefSamples ?? copenhagenRingSamples);
+                float[] copenhagenHolmenSamples = LoadMusicOrFallback(musicDirectory, "holmen-under-staden-loop-v1.wav", dungeonSamples ?? copenhagenRingSamples);
+                float[] copenhagenLegendsSamples = LoadMusicOrFallback(musicDirectory, "argentum-legender-loop-v1.wav", dungeonSamples ?? copenhagenHolmenSamples);
+                float[] copenhagenWrathSamples = LoadMusicOrFallback(musicDirectory, "konung-christians-vrede-loop-v1.wav", bossSamples ?? copenhagenLegendsSamples);
+                float[] copenhagenVictorySamples = LoadMusicOrFallback(musicDirectory, "kopenhamn-silvergryning-loop-v1.wav", reliefSamples ?? codexSamples);
                 Dictionary<StormaktSound, LoadedEffect> effects = LoadEffects(path);
                 Dictionary<StormaktVoice, LoadedEffect> voices = LoadVoices(path);
                 string socketPath = Environment.GetEnvironmentVariable("WAYLANDFORGE_AUDIO_SOCKET") ?? DefaultSocketPath;
@@ -183,13 +223,23 @@ internal sealed class StormaktMusicLoop : IDisposable
                     ? $"ready ({snapphaneVictorySamples.Length / Channels / SampleRate}s)" : "relief fallback";
                 string codexDescription = File.Exists(codexPath)
                     ? $"ready ({codexSamples.Length / Channels / SampleRate}s)" : "dungeon fallback";
+                int copenhagenTracks = Directory.EnumerateFiles(musicDirectory, "*-loop-v1.wav")
+                    .Count(candidate => Path.GetFileName(candidate) is "kopenhamns-ring-loop-v1.wav" or
+                        "frederik-null-loop-v1.wav" or "oresunds-oje-loop-v1.wav" or
+                        "kungliga-armadan-loop-v1.wav" or "christians-superfregatt-loop-v1.wav" or
+                        "kopenhamn-landning-loop-v1.wav" or "holmen-under-staden-loop-v1.wav" or
+                        "argentum-legender-loop-v1.wav" or "konung-christians-vrede-loop-v1.wav" or
+                        "kopenhamn-silvergryning-loop-v1.wav");
                 Console.Error.WriteLine($"Stormakt audio: loaded {Path.GetFileName(path)} ({samples.Length / Channels / SampleRate}s), " +
                     $"menu march={menuDescription}, Skanska score={skanskaDescription}, Oresund score={oresundDescription}, RTS score={rtsDescription}, dungeon score={dungeonDescription}, boss score={bossDescription}, Tithe boss={titheBossDescription}, " +
-                    $"escape score={escapeDescription}, relief score={reliefDescription}, Snapphane chase={snapphaneDescription}, Red Hounds boss={redHoundsBossDescription}, Snapphane victory={snapphaneVictoryDescription}, Codex clock={codexDescription}, " +
+                    $"escape score={escapeDescription}, relief score={reliefDescription}, Snapphane chase={snapphaneDescription}, Red Hounds boss={redHoundsBossDescription}, Snapphane victory={snapphaneVictoryDescription}, Copenhagen suite={copenhagenTracks}/10, Codex clock={codexDescription}, " +
                     $"{effects.Count} effects and {voices.Count} radio voices.");
                 return new StormaktMusicLoop(samples, menuSamples, skanskaSamples, oresundSamples, rtsSamples, dungeonSamples,
                     bossSamples, titheBossSamples, escapeSamples, reliefSamples, snapphaneSamples, redHoundsBossSamples,
-                    snapphaneVictorySamples, codexSamples, effects, voices, socketPath);
+                    snapphaneVictorySamples, codexSamples, copenhagenRingSamples, copenhagenFrederikSamples,
+                    copenhagenEyeSamples, copenhagenArmadaSamples, copenhagenSuperSamples, copenhagenLandingSamples,
+                    copenhagenHolmenSamples, copenhagenLegendsSamples, copenhagenWrathSamples,
+                    copenhagenVictorySamples, effects, voices, socketPath);
             }
             catch (Exception exception)
             {
@@ -340,6 +390,16 @@ internal sealed class StormaktMusicLoop : IDisposable
                 StormaktMusicTrack.RedHoundsBoss => _redHoundsBossSamples,
                 StormaktMusicTrack.SnapphaneVictory => _snapphaneVictorySamples,
                 StormaktMusicTrack.Codex => _codexSamples,
+                StormaktMusicTrack.CopenhagenRing => _copenhagenRingSamples,
+                StormaktMusicTrack.CopenhagenFrederik => _copenhagenFrederikSamples,
+                StormaktMusicTrack.CopenhagenEye => _copenhagenEyeSamples,
+                StormaktMusicTrack.CopenhagenArmada => _copenhagenArmadaSamples,
+                StormaktMusicTrack.CopenhagenSuper => _copenhagenSuperSamples,
+                StormaktMusicTrack.CopenhagenLanding => _copenhagenLandingSamples,
+                StormaktMusicTrack.CopenhagenHolmen => _copenhagenHolmenSamples,
+                StormaktMusicTrack.CopenhagenLegends => _copenhagenLegendsSamples,
+                StormaktMusicTrack.CopenhagenWrath => _copenhagenWrathSamples,
+                StormaktMusicTrack.CopenhagenVictory => _copenhagenVictorySamples,
                 _ => null,
             };
             if (requestedSamples is not null && _currentTrack != track && _transitionTrack != track)
@@ -871,6 +931,12 @@ internal sealed class StormaktMusicLoop : IDisposable
         return samples;
     }
 
+    private static float[] LoadMusicOrFallback(string directory, string file, float[] fallback)
+    {
+        string path = Path.Combine(directory, file);
+        return File.Exists(path) ? LoadPcm16StereoWav(path) : fallback;
+    }
+
     private sealed class ActiveEffect(LoadedEffect effect)
     {
         public LoadedEffect Effect { get; } = effect;
@@ -1076,4 +1142,14 @@ internal enum StormaktMusicTrack
     RedHoundsBoss,
     SnapphaneVictory,
     Codex,
+    CopenhagenRing,
+    CopenhagenFrederik,
+    CopenhagenEye,
+    CopenhagenArmada,
+    CopenhagenSuper,
+    CopenhagenLanding,
+    CopenhagenHolmen,
+    CopenhagenLegends,
+    CopenhagenWrath,
+    CopenhagenVictory,
 }

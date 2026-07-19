@@ -1,0 +1,7 @@
+{
+  "prompt": "Instrumental royal naval baroque-techno battle loop for the Danish armada, Dannebrog wings, Absalon shield walls and Elefanten charges. G minor, 124 BPM, forceful 4/4. Antiphonal trumpets and horns throw the shared descending four-note Copenhagen code across stereo while aggressive chamber strings, dry pipe organ stabs and military snare counter a muscular analog bass sequencer, iron kick and chain percussion. White-cross heraldry, synchronized fleet maneuvers and heavy mechanical charges; regal discipline gradually becoming unstable. Energetic arcade readability, clear recurring melody, no bombastic film-score smear, circular continuous ending, no quiet intro, breakdown, festival drop, final cadence or fade. No vocals, choir, supersaw, pop, rock guitar, trailer braams, comedy or cheerful major resolution.",
+  "lyrics": "[Instrumental]", "vocal_language": "unknown", "audio_duration": 48, "audio_format": "wav", "task_type": "text2music", "batch_size": 1,
+  "thinking": false, "use_format": false, "bpm": 124, "key_scale": "G minor", "time_signature": "4/4", "inference_steps": 8, "guidance_scale": 8.0,
+  "use_random_seed": false, "seed": 30201904, "constrained_decoding": true, "use_cot_caption": false, "use_cot_language": false,
+  "lm_negative_prompt": "vocals, choir, singing, film-score wash, festival EDM, supersaw, pop, rock guitar, trailer braams, comedy, cheerful, quiet intro, breakdown, drop, final cadence, fade"
+}

@@ -1,0 +1,7 @@
+{
+  "prompt": "Instrumental multi-phase classical-techno final space boss loop for King Christian's colossal superfregatt above Copenhagen. D minor, 132 BPM, punishing 4/4. The descending four-note royal code motif becomes a rapidly miscompiled fanfare in trombones, organ and razor chamber strings, chased by a severe analog bass ostinato, hard iron kick, double field snare, machine percussion and brief cold cyan synth answers. Cross locks, quadrant lattice, memory core and exposed reactor should feel like one escalating mechanism. Grand, furious, slightly wrong and highly melodic, with contrapuntal layers that can survive repeated listening. Constant boss momentum, controlled dynamics for sound effects, loop-ready circular final bar, no intro, breakdown, silence, final cadence or fade. No vocals, choir, festival EDM, supersaw lead, pop, rock guitar, trailer braams or comedy.",
+  "lyrics": "[Instrumental]", "vocal_language": "unknown", "audio_duration": 48, "audio_format": "wav", "task_type": "text2music", "batch_size": 1,
+  "thinking": false, "use_format": false, "bpm": 132, "key_scale": "D minor", "time_signature": "4/4", "inference_steps": 8, "guidance_scale": 8.0,
+  "use_random_seed": false, "seed": 30201905, "constrained_decoding": true, "use_cot_caption": false, "use_cot_language": false,
+  "lm_negative_prompt": "vocals, choir, singing, festival EDM, supersaw, pop, rock guitar, trailer braams, comedy, intro, breakdown, silence, final cadence, fade"
+}
