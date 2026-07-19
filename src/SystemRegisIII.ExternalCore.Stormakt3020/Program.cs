@@ -16799,7 +16799,9 @@ internal sealed class StormaktGame
             }
             if (_sprites is not null)
             {
-                string name = shot.Power > 4 ? "shot_broadside" : "shot_blue";
+                string name = _levelId == 6
+                    ? shot.Power > 4 ? "cph_fx_plasma_orb" : "cph_fx_cyan_lance"
+                    : shot.Power > 4 ? "shot_broadside" : "shot_blue";
                 if (_sprites.TryGet(name, out Sprite sprite))
                 {
                     DrawSprite(frame, sprite, shot.X - (sprite.Width / 2), shot.Y - (sprite.Height / 2));
@@ -16818,7 +16820,9 @@ internal sealed class StormaktGame
         {
             int x = (int)Math.Round(shot.X);
             int y = (int)Math.Round(shot.Y);
-            string? generatedShotName = _levelId == 4 && shot.Kind == 7
+            string? generatedShotName = _levelId == 6 && shot.Kind is 2 or 4
+                ? "cph_fx_royal_bolt"
+                : _levelId == 4 && shot.Kind == 7
                 ? ((_missionFrame / 4 + y / 3) & 1) == 0
                     ? "tithe_effect_press_bolt_a"
                     : "tithe_effect_press_bolt_b"
@@ -17462,11 +17466,17 @@ internal sealed class StormaktGame
                 int supportX = (int)Math.Round(supportXD);
                 int supportY = (int)Math.Round(supportYD);
                 bool seized = (state.FrederikSeizedMask & (1 << support)) != 0;
-                FillTriangle(frame, supportX, supportY - 10, supportX - 12, supportY + 8,
-                    supportX + 12, supportY + 8, seized ? 0xff8f2635 : 0xff315b42);
-                DrawLine(frame, supportX - 9, supportY + 5, supportX + 9, supportY + 5,
-                    seized ? 0xffff6b62 : 0xff77e6a0);
-                if (seized) DrawCrown(frame, supportX - 4, supportY - 1, 0xffffd66b);
+                string supportName = seized ? "cph_detail_ally_seized" : "cph_detail_ally";
+                if (_sprites?.TryGet(supportName, out Sprite supportShip) == true)
+                    DrawSprite(frame, supportShip, supportX - supportShip.Width / 2, supportY - supportShip.Height / 2);
+                else
+                {
+                    FillTriangle(frame, supportX, supportY - 10, supportX - 12, supportY + 8,
+                        supportX + 12, supportY + 8, seized ? 0xff8f2635 : 0xff315b42);
+                    DrawLine(frame, supportX - 9, supportY + 5, supportX + 9, supportY + 5,
+                        seized ? 0xffff6b62 : 0xff77e6a0);
+                    if (seized) DrawCrown(frame, supportX - 4, supportY - 1, 0xffffd66b);
+                }
             }
             foreach (CopenhagenSeizureChain chain in state.FrederikChains)
             {
@@ -17474,12 +17484,17 @@ internal sealed class StormaktGame
                 int tipX = (int)Math.Round(CopenhagenFrederikChainTipX(state, chain, centerXD));
                 int tipY = (int)Math.Round(CopenhagenFrederikChainTipY(state, chain, centerYD));
                 uint chainColor = chain.Completed ? 0xffff6b62 : 0xffd6b25e;
-                DrawLine(frame, centerX, centerY + 22, tipX, tipY, chainColor);
-                for (int link = 1; link < 5; link++)
+                if (_sprites?.TryGet("cph_fx_orange_link", out _) == true)
+                    DrawCopenhagenEffectLink(frame, "cph_fx_orange_link", centerX, centerY + 22, tipX, tipY, chainColor);
+                else
                 {
-                    int x = centerX + (tipX - centerX) * link / 5;
-                    int y = centerY + 22 + (tipY - centerY - 22) * link / 5;
-                    FillCircle(frame, x, y, 2, chainColor);
+                    DrawLine(frame, centerX, centerY + 22, tipX, tipY, chainColor);
+                    for (int link = 1; link < 5; link++)
+                    {
+                        int x = centerX + (tipX - centerX) * link / 5;
+                        int y = centerY + 22 + (tipY - centerY - 22) * link / 5;
+                        FillCircle(frame, x, y, 2, chainColor);
+                    }
                 }
                 if (!chain.Completed) DrawCircleOutline(frame, tipX, tipY, 8, 0xffbdf8ff);
             }
@@ -17531,9 +17546,14 @@ internal sealed class StormaktGame
                 bool active = node == state.FrederikActiveRepairNode;
                 bool broken = state.FrederikRepairHealth[node] <= 0;
                 uint color = broken ? 0xff263744 : active ? 0xff77e6a0 : 0xff8f2635;
-                FillCircle(frame, x, y, 9, 0xff101820);
-                DrawCircleOutline(frame, x, y, 11, color);
-                DrawText(frame, x - 3, y - 3, $"{node}", color);
+                if (!broken && _sprites?.TryGet("cph_detail_repair_node", out Sprite repairNode) == true)
+                    DrawSprite(frame, repairNode, x - repairNode.Width / 2, y - repairNode.Height / 2);
+                else
+                {
+                    FillCircle(frame, x, y, 9, 0xff101820);
+                    DrawCircleOutline(frame, x, y, 11, color);
+                    DrawText(frame, x - 3, y - 3, $"{node}", color);
+                }
                 if (active && !broken)
                 {
                     int cycle = state.FrederikPhaseAge % 240;
@@ -17564,10 +17584,18 @@ internal sealed class StormaktGame
             DrawLine(frame, x - 13, y - 13, x + 13, y + 13, 0xff8f2635);
             return;
         }
-        double side = right ? 1 : -1;
-        FillTriangle(frame, x, y + 24, x - (int)(side * 10) - 7, y - 20,
-            x - (int)(side * 10) + 7, y - 20, 0xffb7c7d6);
-        DrawLine(frame, x, y + 23, x - (int)(side * 10), y - 20, 0xffffd66b);
+        if (_sprites?.TryGet("cph_detail_blade", out Sprite blade) == true)
+        {
+            if (right) DrawSprite(frame, blade, x - blade.Width / 2, y - blade.Height / 2);
+            else DrawSpriteFlippedX(frame, blade, x - blade.Width / 2, y - blade.Height / 2);
+        }
+        else
+        {
+            double side = right ? 1 : -1;
+            FillTriangle(frame, x, y + 24, x - (int)(side * 10) - 7, y - 20,
+                x - (int)(side * 10) + 7, y - 20, 0xffb7c7d6);
+            DrawLine(frame, x, y + 23, x - (int)(side * 10), y - 20, 0xffffd66b);
+        }
         DrawRect(frame, x - 10, y + 27, 20 * health / CopenhagenFrederikBladeHealth, 3, 0xffff8a4a);
     }
 
@@ -17675,8 +17703,15 @@ internal sealed class StormaktGame
                 bool broken = state.EyeLensHealth[lens] <= 0;
                 bool hit = state.EyeLensHitFlash > 0 && state.EyeLastHitLens == lens;
                 uint color = broken ? 0xff315b42 : hit ? 0xffffffff : 0xffff8a4a;
-                DrawLine(frame, centerX, centerY, x, y, broken ? 0xff263744 : 0xff765139);
-                if (broken)
+                DrawCopenhagenEffectLink(frame, broken ? "cph_fx_orange_link" : "cph_fx_white_link",
+                    centerX, centerY, x, y, broken ? 0xff263744 : 0xff765139);
+                string lensName = broken ? "cph_detail_eye_lens_broken" : "cph_detail_eye_lens";
+                if (_sprites?.TryGet(lensName, out Sprite eyeLens) == true)
+                {
+                    DrawSprite(frame, eyeLens, x - eyeLens.Width / 2, y - eyeLens.Height / 2);
+                    if (hit) DrawCircleOutline(frame, x, y, 14, 0xffffffff);
+                }
+                else if (broken)
                 {
                     DrawLine(frame, x - 7, y - 7, x + 7, y + 7, color);
                     DrawLine(frame, x + 7, y - 7, x - 7, y + 7, color);
@@ -17777,8 +17812,8 @@ internal sealed class StormaktGame
                 continue;
             }
             uint stripe = (node + state.DannebrogFormation) % 2 == 0 ? 0xff8f2635 : 0xffd8d1b9;
-            DrawLine(frame, centerX, centerY, nodeX, nodeY, 0xfff2eee4);
-            DrawLine(frame, centerX + 2, centerY, nodeX + 2, nodeY, 0xff8f2635);
+            DrawCopenhagenEffectLink(frame, "cph_fx_white_link", centerX, centerY, nodeX, nodeY, 0xfff2eee4);
+            DrawCopenhagenEffectLink(frame, "cph_fx_orange_link", centerX + 2, centerY, nodeX + 2, nodeY, 0xff8f2635);
             if (_sprites?.TryGet("cph_dannebrog_node", out Sprite dannebrogNode) == true)
             {
                 DrawSprite(frame, dannebrogNode, nodeX - dannebrogNode.Width / 2, nodeY - dannebrogNode.Height / 2);
@@ -17843,11 +17878,20 @@ internal sealed class StormaktGame
                     continue;
                 }
                 if (node > 0 && wall.Health[node - 1] > 0)
-                    DrawLine(frame, (int)Math.Round(CopenhagenDuoWallNodeX(node - 1)) + 11, wallY,
-                        nodeX - 11, wallY, 0xff9bd4dc);
-                FillCircle(frame, nodeX, wallY, 9, 0xff172734);
-                DrawCircleOutline(frame, nodeX, wallY, 11, node % 2 == 0 ? 0xfff2eee4 : 0xff8f2635);
-                DrawLine(frame, nodeX - 6, wallY, nodeX + 6, wallY, 0xffd6b25e);
+                {
+                    int linkX = (int)Math.Round(CopenhagenDuoWallNodeX(node - 1)) + 11;
+                    if (_sprites?.TryGet("cph_fx_white_link", out Sprite wallLink) == true)
+                        DrawSpriteScaled(frame, wallLink, linkX, wallY - 5, Math.Max(1, nodeX - 11 - linkX), 10);
+                    else DrawLine(frame, linkX, wallY, nodeX - 11, wallY, 0xff9bd4dc);
+                }
+                if (_sprites?.TryGet("cph_detail_shield_node", out Sprite shieldNode) == true)
+                    DrawSprite(frame, shieldNode, nodeX - shieldNode.Width / 2, wallY - shieldNode.Height / 2);
+                else
+                {
+                    FillCircle(frame, nodeX, wallY, 9, 0xff172734);
+                    DrawCircleOutline(frame, nodeX, wallY, 11, node % 2 == 0 ? 0xfff2eee4 : 0xff8f2635);
+                    DrawLine(frame, nodeX - 6, wallY, nodeX + 6, wallY, 0xffd6b25e);
+                }
                 int maximum = state.DuoTestFixture ? 8 : CopenhagenDuoShieldHealth;
                 DrawRect(frame, nodeX - 9, wallY + 13, 18 * wall.Health[node] / maximum, 2, 0xff7fc7ff);
             }
@@ -17877,7 +17921,9 @@ internal sealed class StormaktGame
                 (double turretX, double turretY) = CopenhagenDuoTurretPosition(shipX, shipY, side);
                 int droneX = (int)Math.Round(turretX + Math.Sin(state.DuoAge * 0.08) * 18);
                 int droneY = (int)Math.Round(turretY - 24);
-                FillCircle(frame, droneX, droneY, 4, 0xff77e6a0);
+                if (_sprites?.TryGet("cph_detail_repair_drone", out Sprite repairDrone) == true)
+                    DrawSprite(frame, repairDrone, droneX - repairDrone.Width / 2, droneY - repairDrone.Height / 2);
+                else FillCircle(frame, droneX, droneY, 4, 0xff77e6a0);
                 DrawLine(frame, droneX, droneY, (int)Math.Round(turretX), (int)Math.Round(turretY), 0xff77e6a0);
             }
         }
@@ -17941,9 +17987,17 @@ internal sealed class StormaktGame
                 DrawLine(frame, turretX - 6, turretY - 5, turretX + 6, turretY + 5, 0xff8f2635);
                 continue;
             }
-            FillCircle(frame, turretX, turretY, 6, 0xff101820);
-            DrawCircleOutline(frame, turretX, turretY, 7, turretHit ? 0xffffffff : 0xffffd66b);
-            DrawLine(frame, turretX, turretY, turretX, turretY + 11, trim);
+            if (_sprites?.TryGet("cph_detail_turret", out Sprite turretSprite) == true)
+            {
+                DrawSprite(frame, turretSprite, turretX - turretSprite.Width / 2, turretY - turretSprite.Height / 2);
+                if (turretHit) DrawCircleOutline(frame, turretX, turretY, 9, 0xffffffff);
+            }
+            else
+            {
+                FillCircle(frame, turretX, turretY, 6, 0xff101820);
+                DrawCircleOutline(frame, turretX, turretY, 7, turretHit ? 0xffffffff : 0xffffd66b);
+                DrawLine(frame, turretX, turretY, turretX, turretY + 11, trim);
+            }
         }
         if (dead)
         {
@@ -17988,7 +18042,12 @@ internal sealed class StormaktGame
         if (packedSuper)
         {
             DrawSprite(frame, superfrigate, centerX - superfrigate.Width / 2, centerY - superfrigate.Height / 2);
-            if (state.SuperHitFlash > 0) DrawCircleOutline(frame, centerX, centerY, 55, 0xffffffff);
+            if (state.SuperHitFlash > 0)
+            {
+                if (_sprites?.TryGet("cph_fx_hit_ring", out Sprite hitRing) == true)
+                    DrawSpriteScaled(frame, hitRing, centerX - 28, centerY - 28, 56, 56);
+                else DrawCircleOutline(frame, centerX, centerY, 55, 0xffffffff);
+            }
         }
         else
         {
@@ -18026,9 +18085,17 @@ internal sealed class StormaktGame
             }
             if (broken)
             {
-                DrawLine(frame, x - 17, y - 13, x + 17, y + 13, 0xffff8a4a);
-                DrawLine(frame, x + 17, y - 13, x - 17, y + 13, 0xffff8a4a);
+                if (_sprites?.TryGet("cph_fx_fracture", out Sprite brokenFracture) == true)
+                    DrawSpriteScaled(frame, brokenFracture, x - 18, y - 18, 36, 36);
+                else
+                {
+                    DrawLine(frame, x - 17, y - 13, x + 17, y + 13, 0xffff8a4a);
+                    DrawLine(frame, x + 17, y - 13, x - 17, y + 13, 0xffff8a4a);
+                }
             }
+            if (state.SuperSectionBreakFlash > 0 && state.SuperLastHitSection == section &&
+                _sprites?.TryGet("cph_fx_fracture", out Sprite fracture) == true)
+                DrawSprite(frame, fracture, x - fracture.Width / 2, y - fracture.Height / 2);
         }
 
         if (state.SuperPhase == 2)
@@ -18039,18 +18106,32 @@ internal sealed class StormaktGame
                 int x = (int)Math.Round(nodeXD);
                 int y = (int)Math.Round(nodeYD);
                 bool broken = state.SuperCrossHealth[node] <= 0;
-                DrawLine(frame, centerX, centerY + 12, x, y, broken ? 0xff315b42 : 0xfff2eee4);
+                DrawCopenhagenEffectLink(frame, broken ? "cph_fx_orange_link" : "cph_fx_white_link",
+                    centerX, centerY + 12, x, y, broken ? 0xff315b42 : 0xfff2eee4);
                 if (broken)
                 {
-                    DrawLine(frame, x - 7, y - 7, x + 7, y + 7, 0xff7fc7ff);
-                    DrawLine(frame, x + 7, y - 7, x - 7, y + 7, 0xff7fc7ff);
+                    if (_sprites?.TryGet("cph_fx_fracture", out Sprite nodeFracture) == true)
+                        DrawSpriteScaled(frame, nodeFracture, x - 11, y - 11, 22, 22);
+                    else
+                    {
+                        DrawLine(frame, x - 7, y - 7, x + 7, y + 7, 0xff7fc7ff);
+                        DrawLine(frame, x + 7, y - 7, x - 7, y + 7, 0xff7fc7ff);
+                    }
                 }
                 else
                 {
-                    FillCircle(frame, x, y, 8, 0xff101820);
-                    DrawCircleOutline(frame, x, y, 10,
-                        state.SuperLockQuadrant == node ? 0xffff6b62 : 0xfff2eee4);
-                    FillCircle(frame, x, y, 3, 0xff7fc7ff);
+                    if (_sprites?.TryGet("cph_detail_cross_node", out Sprite crossNode) == true)
+                    {
+                        DrawSprite(frame, crossNode, x - crossNode.Width / 2, y - crossNode.Height / 2);
+                        if (state.SuperLockQuadrant == node) DrawCircleOutline(frame, x, y, 12, 0xffff6b62);
+                    }
+                    else
+                    {
+                        FillCircle(frame, x, y, 8, 0xff101820);
+                        DrawCircleOutline(frame, x, y, 10,
+                            state.SuperLockQuadrant == node ? 0xffff6b62 : 0xfff2eee4);
+                        FillCircle(frame, x, y, 3, 0xff7fc7ff);
+                    }
                 }
             }
         }
@@ -18079,9 +18160,18 @@ internal sealed class StormaktGame
         {
             int x = (int)Math.Round(drone.X);
             int y = (int)Math.Round(drone.Y);
-            FillTriangle(frame, x, y - 8, x - 10, y + 7, x + 10, y + 7,
-                drone.Serial % 2 == 0 ? 0xff8f2635 : 0xffd8d1b9);
-            FillCircle(frame, x, y, 3, 0xffffd66b);
+            if (_sprites?.TryGet("cph_detail_royal_drone", out Sprite royalDrone) == true)
+            {
+                if ((drone.Serial & 1) == 0)
+                    DrawSprite(frame, royalDrone, x - royalDrone.Width / 2, y - royalDrone.Height / 2);
+                else DrawSpriteFlippedX(frame, royalDrone, x - royalDrone.Width / 2, y - royalDrone.Height / 2);
+            }
+            else
+            {
+                FillTriangle(frame, x, y - 8, x - 10, y + 7, x + 10, y + 7,
+                    drone.Serial % 2 == 0 ? 0xff8f2635 : 0xffd8d1b9);
+                FillCircle(frame, x, y, 3, 0xffffd66b);
+            }
         }
         if (state.SuperPhase == 4 && state.SuperSupportShown)
             DrawCopenhagenSuperSupport(frame, state);
@@ -18115,12 +18205,45 @@ internal sealed class StormaktGame
         int y1 = bottom ? _height - 13 : splitY;
         bool active = state.SuperLockAge is >= 44 and <= 82;
         uint color = active ? 0xffff6b62 : (state.SuperLockAge / 5 & 1) == 0 ? 0xff765139 : 0xffd8d1b9;
-        DrawLine(frame, x0, y0, x1, y0, color);
-        DrawLine(frame, x1, y0, x1, y1, color);
-        DrawLine(frame, x1, y1, x0, y1, color);
-        DrawLine(frame, x0, y1, x0, y0, color);
-        for (int hatch = x0 - (y1 - y0); hatch < x1; hatch += 24)
-            DrawLine(frame, Math.Max(x0, hatch), y1, Math.Min(x1, hatch + y1 - y0), y0, color);
+        if (_sprites?.TryGet("cph_fx_quadrant", out Sprite quadrant) == true)
+        {
+            DrawSpriteScaled(frame, quadrant, x0, y0, Math.Max(1, x1 - x0), Math.Max(1, y1 - y0));
+            if (active)
+            {
+                DrawLine(frame, x0, y0, x1, y0, color);
+                DrawLine(frame, x1, y0, x1, y1, color);
+                DrawLine(frame, x1, y1, x0, y1, color);
+                DrawLine(frame, x0, y1, x0, y0, color);
+            }
+        }
+        else
+        {
+            DrawLine(frame, x0, y0, x1, y0, color);
+            DrawLine(frame, x1, y0, x1, y1, color);
+            DrawLine(frame, x1, y1, x0, y1, color);
+            DrawLine(frame, x0, y1, x0, y0, color);
+            for (int hatch = x0 - (y1 - y0); hatch < x1; hatch += 24)
+                DrawLine(frame, Math.Max(x0, hatch), y1, Math.Min(x1, hatch + y1 - y0), y0, color);
+        }
+    }
+
+    private void DrawCopenhagenEffectLink(
+        uint[] frame, string spriteName, int x0, int y0, int x1, int y1, uint fallbackColor)
+    {
+        if (_sprites?.TryGet(spriteName, out Sprite link) != true)
+        {
+            DrawLine(frame, x0, y0, x1, y1, fallbackColor);
+            return;
+        }
+        double dx = x1 - x0;
+        double dy = y1 - y0;
+        int steps = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(dx * dx + dy * dy) / 12.0));
+        for (int step = 1; step < steps; step++)
+        {
+            int x = (int)Math.Round(x0 + dx * step / steps);
+            int y = (int)Math.Round(y0 + dy * step / steps);
+            DrawSpriteScaled(frame, link, x - 6, y - 3, 12, 6);
+        }
     }
 
     private void DrawCopenhagenSuperSupport(uint[] frame, CopenhagenWorldState state)
@@ -18131,9 +18254,15 @@ internal sealed class StormaktGame
             int side = ally % 2 == 0 ? -1 : 1;
             int x = _width / 2 + side * (132 + ally / 2 * 18);
             int y = _height - 55 - ally * 14;
-            FillTriangle(frame, x, y - 7, x - 7, y + 6, x + 7, y + 6,
-                state.SorenOathComplete && ally == 0 ? 0xff315b42 : 0xff293c43);
-            DrawLine(frame, x, y - 9, x, y - 15, 0xff77e6a0);
+            string allyName = state.SorenOathComplete && ally == 0 ? "cph_detail_soren_ally" : "cph_detail_ally";
+            if (_sprites?.TryGet(allyName, out Sprite allyShip) == true)
+                DrawSprite(frame, allyShip, x - allyShip.Width / 2, y - allyShip.Height / 2);
+            else
+            {
+                FillTriangle(frame, x, y - 7, x - 7, y + 6, x + 7, y + 6,
+                    state.SorenOathComplete && ally == 0 ? 0xff315b42 : 0xff293c43);
+                DrawLine(frame, x, y - 9, x, y - 15, 0xff77e6a0);
+            }
             if (state.SuperSupportFlash > 0 && (state.SuperSupportFlash / 4 + ally & 1) == 0)
                 DrawLine(frame, x, y - 16, _width / 2, 82, 0xffffd66b);
         }
@@ -18297,8 +18426,13 @@ internal sealed class StormaktGame
         for (int forge = 0; forge < 5; forge++)
         {
             int x = 24 + forge * (_width - 48) / 4;
-            FillCircle(frame, x, 31, 7, 0xff592531);
-            FillCircle(frame, x, 31, 3 + ((((ground?.Age ?? 0) / 6) + forge) & 1), 0xffff8a4a);
+            if (_sprites?.TryGet("cph_forge_brazier", out Sprite brazier) == true)
+                DrawSpriteScaled(frame, brazier, x - 12, 18, 24, 26);
+            else
+            {
+                FillCircle(frame, x, 31, 7, 0xff592531);
+                FillCircle(frame, x, 31, 3 + ((((ground?.Age ?? 0) / 6) + forge) & 1), 0xffff8a4a);
+            }
         }
         if (_sprites?.TryGet("holmen_arsenal_furnace", out Sprite furnace) == true)
         {
@@ -18567,7 +18701,10 @@ internal sealed class StormaktGame
         (double coreXD, double coreYD) = CopenhagenRosenborgCorePosition();
         int coreX = (int)Math.Round(coreXD);
         int coreY = (int)Math.Round(coreYD);
-        if (_sprites?.TryGet("dungeon_twisted_silver", out Sprite silver) == true)
+        string coreName = ground.RosenborgCoreHealth > 0 ? "cph_rosen_core" : "cph_rosen_core_broken";
+        if (_sprites?.TryGet(coreName, out Sprite rosenCore) == true)
+            DrawSprite(frame, rosenCore, coreX - rosenCore.Width / 2, coreY - rosenCore.Height / 2);
+        else if (_sprites?.TryGet("dungeon_twisted_silver", out Sprite silver) == true)
             DrawSpriteScaled(frame, silver, coreX - 24, coreY - 25, 48, 48);
         else
         {
@@ -18622,15 +18759,20 @@ internal sealed class StormaktGame
             DrawSpriteScaled(frame, gate, centerX - 28, 20, 56, 43);
         else DrawCircleOutline(frame, centerX, 42, 21, ground.DoorReady ? 0xff77e6a0 : 0xff765139);
 
-        if (_sprites?.TryGet("dungeon_runic_arch", out Sprite arch) == true)
+        Sprite memoryMachine = default;
+        bool packedMemory = _sprites is not null && _sprites.TryGet("cph_memory_machine", out memoryMachine);
+        if (packedMemory)
+            DrawSprite(frame, memoryMachine, centerX - memoryMachine.Width / 2, centerY - memoryMachine.Height / 2);
+        else if (_sprites?.TryGet("dungeon_runic_arch", out Sprite arch) == true)
             DrawSpriteScaled(frame, arch, centerX - 38, centerY - 36, 76, 70);
         for (int ring = 0; ring < 4; ring++)
         {
             int pulse = (ground.Age / (5 + ring) + ring * 3) % 7;
             uint color = ring % 2 == 0 ? 0xff7fc7ff : 0xffffd66b;
-            DrawCircleOutline(frame, centerX, centerY, 18 + ring * 9 + pulse, color);
+            if (!packedMemory || ring == 3)
+                DrawCircleOutline(frame, centerX, centerY, 18 + ring * 9 + pulse, color);
         }
-        for (int spoke = 0; spoke < 8; spoke++)
+        if (!packedMemory) for (int spoke = 0; spoke < 8; spoke++)
         {
             double angle = ground.Age * 0.012 * (spoke % 2 == 0 ? 1 : -1) + spoke * Math.PI / 4;
             DrawLine(frame, centerX, centerY,
@@ -18657,12 +18799,16 @@ internal sealed class StormaktGame
         if (phase == 0 && _sprites?.TryGet("dungeon_temple_altar", out Sprite altar) == true)
             DrawSpriteScaled(frame, altar, centerX - 22, _height - 74, 44, 38);
 
+        Sprite claimCircuit = default;
+        bool packedCircuit = _sprites is not null && _sprites.TryGet("cph_wrath_circuit", out claimCircuit);
+        if (packedCircuit)
+            DrawSprite(frame, claimCircuit, centerX - claimCircuit.Width / 2, circuitY - claimCircuit.Height / 2);
         uint circuitColor = phase == 3 ? 0xffbdf8ff : 0xff344d5c;
-        for (int ring = 0; ring < 4; ring++)
+        if (!packedCircuit) for (int ring = 0; ring < 4; ring++)
             DrawCircleOutline(frame, centerX, circuitY,
                 24 + ring * 11 + (phase == 3 ? ground.WrathAge / 7 % 4 : 0),
                 ring % 2 == 0 ? circuitColor : 0xffffd66b);
-        for (int spoke = 0; spoke < 8; spoke++)
+        if (!packedCircuit) for (int spoke = 0; spoke < 8; spoke++)
         {
             double angle = spoke * Math.PI / 4 + (phase == 3 ? ground.WrathAge * 0.008 : 0);
             DrawLine(frame, centerX, circuitY,
@@ -18921,8 +19067,13 @@ internal sealed class StormaktGame
             int y = (int)Math.Round(penYD);
             if (ground.KorrektoriusPenHealth[pen] <= 0)
             {
-                DrawLine(frame, x - 12, y + 7, x + 11, y - 5, 0xff592531);
-                DrawLine(frame, x - 7, y - 3, x + 7, y + 5, 0xff29343a);
+                if (_sprites?.TryGet("cph_pen_broken", out Sprite brokenPen) == true)
+                    DrawSprite(frame, brokenPen, x - brokenPen.Width / 2, y - brokenPen.Height / 2);
+                else
+                {
+                    DrawLine(frame, x - 12, y + 7, x + 11, y - 5, 0xff592531);
+                    DrawLine(frame, x - 7, y - 3, x + 7, y + 5, 0xff29343a);
+                }
                 continue;
             }
             double angle = ground.KorrektoriusAge * 0.025 * (pen % 2 == 0 ? 1 : -1) + pen;
@@ -18931,8 +19082,16 @@ internal sealed class StormaktGame
             uint penColor = ground.KorrektoriusPenHitFlash[pen] > 0 ? 0xffffffff :
                 pen == ground.KorrektoriusActivePen ? 0xffff8a4a : 0xffb7c7d6;
             DrawLine(frame, x, y, tipX, tipY, penColor);
-            FillTriangle(frame, tipX, tipY, x - 7, y - 5, x + 6, y + 6, penColor);
-            DrawCircleOutline(frame, x, y, pen == ground.KorrektoriusActivePen ? 15 : 11, penColor);
+            if (_sprites?.TryGet("cph_pen", out Sprite penSprite) == true)
+            {
+                DrawSprite(frame, penSprite, x - penSprite.Width / 2, y - penSprite.Height / 2);
+                if (pen == ground.KorrektoriusActivePen) DrawCircleOutline(frame, x, y, 15, penColor);
+            }
+            else
+            {
+                FillTriangle(frame, tipX, tipY, x - 7, y - 5, x + 6, y + 6, penColor);
+                DrawCircleOutline(frame, x, y, pen == ground.KorrektoriusActivePen ? 15 : 11, penColor);
+            }
             int maximum = ground.TestFixture ? 18 : CopenhagenKorrektoriusPenHealth;
             DrawRect(frame, x - 13, y + 16, 26 * ground.KorrektoriusPenHealth[pen] / maximum, 3, 0xff7fc7ff);
         }
@@ -19063,9 +19222,17 @@ internal sealed class StormaktGame
             for (int lion = -1; lion <= 1; lion += 2)
             {
                 int lionX = bossX + lion * 37;
-                FillCircle(frame, lionX, bossY + 5, 8, 0xffff8a4a);
-                FillTriangle(frame, lionX, bossY - 8, lionX - 8, bossY + 8,
-                    lionX + 8, bossY + 8, 0xffffd66b);
+                if (_sprites?.TryGet("cph_saga_lion", out Sprite sagaLion) == true)
+                {
+                    if (lion < 0) DrawSprite(frame, sagaLion, lionX - sagaLion.Width / 2, bossY - sagaLion.Height / 2);
+                    else DrawSpriteFlippedX(frame, sagaLion, lionX - sagaLion.Width / 2, bossY - sagaLion.Height / 2);
+                }
+                else
+                {
+                    FillCircle(frame, lionX, bossY + 5, 8, 0xffff8a4a);
+                    FillTriangle(frame, lionX, bossY - 8, lionX - 8, bossY + 8,
+                        lionX + 8, bossY + 8, 0xffffd66b);
+                }
             }
         }
     }

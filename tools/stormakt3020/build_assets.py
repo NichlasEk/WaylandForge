@@ -1394,7 +1394,10 @@ def append_copenhagen_midgame_assets(
         right = (column + 1) * frederik_eye_source.width // 4
         bottom = (row + 1) * frederik_eye_source.height // 2
         sprite = trim_alpha(frederik_eye_source.crop((left, top, right, bottom)).convert("RGBA"))
-        sprite = sprite.resize(target, Image.Resampling.LANCZOS)
+        if name.startswith("cph_eye_"):
+            sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        else:
+            sprite = sprite.resize(target, Image.Resampling.LANCZOS)
         entries.append((name, sprite))
 
     armada = [
@@ -1428,6 +1431,76 @@ def append_copenhagen_midgame_assets(
             canvas = Image.new("RGBA", (38, 38), (0, 0, 0, 0))
             canvas.alpha_composite(portrait, ((38 - portrait.width) // 2, 38 - portrait.height))
             entries.append((f"{base}_{state}", canvas))
+
+
+def append_copenhagen_detail_assets(
+    entries: list[tuple[str, Image.Image]], space_source: Image.Image, ground_source: Image.Image,
+    effect_source: Image.Image,
+) -> None:
+    space = [
+        ("cph_detail_blade", 0, 0, (30, 58)),
+        ("cph_detail_ally", 1, 0, (30, 24)),
+        ("cph_detail_ally_seized", 2, 0, (30, 24)),
+        ("cph_detail_repair_node", 3, 0, (26, 26)),
+        ("cph_detail_eye_lens", 0, 1, (26, 26)),
+        ("cph_detail_eye_lens_broken", 1, 1, (26, 26)),
+        ("cph_detail_shield_node", 2, 1, (24, 24)),
+        ("cph_detail_turret", 3, 1, (20, 20)),
+        ("cph_detail_repair_drone", 0, 2, (22, 22)),
+        ("cph_detail_royal_drone", 1, 2, (22, 18)),
+        ("cph_detail_soren_ally", 2, 2, (26, 22)),
+        ("cph_detail_cross_node", 3, 2, (24, 24)),
+    ]
+    for name, column, row, target in space:
+        left = column * space_source.width // 4
+        top = row * space_source.height // 3
+        right = (column + 1) * space_source.width // 4
+        bottom = (row + 1) * space_source.height // 3
+        if name == "cph_detail_blade":
+            # The generated blade intentionally fills more than one nominal row.
+            # Its measured alpha run ends at y=408; the next object begins at y=424.
+            bottom = min(space_source.height, 416)
+        sprite = trim_alpha(space_source.crop((left, top, right, bottom)).convert("RGBA"))
+        sprite = sprite.resize(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+    effects = [
+        ("cph_fx_quadrant", 0, 0, (96, 96)),
+        ("cph_fx_white_link", 1, 0, (32, 10)),
+        ("cph_fx_orange_link", 2, 0, (32, 10)),
+        ("cph_fx_cyan_lance", 3, 0, (12, 24)),
+        ("cph_fx_plasma_orb", 0, 1, (14, 14)),
+        ("cph_fx_royal_bolt", 1, 1, (12, 24)),
+        ("cph_fx_fracture", 2, 1, (40, 40)),
+        ("cph_fx_hit_ring", 3, 1, (40, 40)),
+    ]
+    for name, column, row, target in effects:
+        left = column * effect_source.width // 4
+        top = row * effect_source.height // 2
+        right = (column + 1) * effect_source.width // 4
+        bottom = (row + 1) * effect_source.height // 2
+        sprite = trim_alpha(effect_source.crop((left, top, right, bottom)).convert("RGBA"))
+        sprite = sprite.resize(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+    ground = [
+        ("cph_forge_brazier", 0, 0, (34, 36)),
+        ("cph_rosen_core", 1, 0, (48, 48)),
+        ("cph_rosen_core_broken", 2, 0, (48, 48)),
+        ("cph_memory_machine", 3, 0, (96, 72)),
+        ("cph_pen", 0, 1, (24, 42)),
+        ("cph_pen_broken", 1, 1, (24, 30)),
+        ("cph_saga_lion", 2, 1, (36, 34)),
+        ("cph_wrath_circuit", 3, 1, (120, 88)),
+    ]
+    for name, column, row, target in ground:
+        left = column * ground_source.width // 4
+        top = row * ground_source.height // 2
+        right = (column + 1) * ground_source.width // 4
+        bottom = (row + 1) * ground_source.height // 2
+        sprite = trim_alpha(ground_source.crop((left, top, right, bottom)).convert("RGBA"))
+        sprite = sprite.resize(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
 
 
 def build(
@@ -1495,6 +1568,9 @@ def build(
     copenhagen_frederik_eye_input_path: Path,
     copenhagen_armada_input_path: Path,
     copenhagen_portraits_input_path: Path,
+    copenhagen_space_details_input_path: Path,
+    copenhagen_ground_details_input_path: Path,
+    copenhagen_effects_input_path: Path,
     copenhagen_holmen_input_path: Path,
     copenhagen_holmen_guard_input_path: Path,
     copenhagen_codex_input_path: Path,
@@ -1595,6 +1671,9 @@ def build(
     copenhagen_frederik_eye_source = Image.open(copenhagen_frederik_eye_input_path).convert("RGBA")
     copenhagen_armada_source = Image.open(copenhagen_armada_input_path).convert("RGBA")
     copenhagen_portraits_source = Image.open(copenhagen_portraits_input_path).convert("RGBA")
+    copenhagen_space_details_source = Image.open(copenhagen_space_details_input_path).convert("RGBA")
+    copenhagen_ground_details_source = Image.open(copenhagen_ground_details_input_path).convert("RGBA")
+    copenhagen_effects_source = Image.open(copenhagen_effects_input_path).convert("RGBA")
     copenhagen_holmen_source = Image.open(copenhagen_holmen_input_path).convert("RGBA")
     copenhagen_holmen_guard_source = Image.open(copenhagen_holmen_guard_input_path).convert("RGBA")
     copenhagen_codex_source = Image.open(copenhagen_codex_input_path).convert("RGBA")
@@ -1726,6 +1805,8 @@ def build(
     append_copenhagen_ring_assets(entries, copenhagen_ring_machinery_source)
     append_copenhagen_midgame_assets(
         entries, copenhagen_frederik_eye_source, copenhagen_armada_source, copenhagen_portraits_source)
+    append_copenhagen_detail_assets(
+        entries, copenhagen_space_details_source, copenhagen_ground_details_source, copenhagen_effects_source)
     append_copenhagen_holmen_assets(entries, copenhagen_holmen_source)
     append_copenhagen_holmen_guard(entries, copenhagen_holmen_guard_source)
     append_copenhagen_codex_assets(entries, copenhagen_codex_source)
@@ -1977,6 +2058,9 @@ def main() -> None:
     parser.add_argument("--copenhagen-frederik-eye-input", type=Path, default=Path("assets/stormakt3020/copenhagen-frederik-eye-v1.png"))
     parser.add_argument("--copenhagen-armada-input", type=Path, default=Path("assets/stormakt3020/copenhagen-royal-armada-v1.png"))
     parser.add_argument("--copenhagen-portraits-input", type=Path, default=Path("assets/stormakt3020/copenhagen-radio-portraits-v1.png"))
+    parser.add_argument("--copenhagen-space-details-input", type=Path, default=Path("assets/stormakt3020/copenhagen-space-details-v1.png"))
+    parser.add_argument("--copenhagen-ground-details-input", type=Path, default=Path("assets/stormakt3020/copenhagen-ground-details-v1.png"))
+    parser.add_argument("--copenhagen-effects-input", type=Path, default=Path("assets/stormakt3020/copenhagen-combat-effects-v1.png"))
     parser.add_argument("--copenhagen-holmen-input", type=Path, default=Path("assets/stormakt3020/copenhagen-holmen-environment-v1.png"))
     parser.add_argument("--copenhagen-holmen-guard-input", type=Path, default=Path("assets/stormakt3020/copenhagen-holmen-guard-v1.png"))
     parser.add_argument("--copenhagen-codex-input", type=Path, default=Path("assets/stormakt3020/copenhagen-codex-v1.png"))
@@ -2082,6 +2166,9 @@ def main() -> None:
         args.copenhagen_frederik_eye_input,
         args.copenhagen_armada_input,
         args.copenhagen_portraits_input,
+        args.copenhagen_space_details_input,
+        args.copenhagen_ground_details_input,
+        args.copenhagen_effects_input,
         args.copenhagen_holmen_input,
         args.copenhagen_holmen_guard_input,
         args.copenhagen_codex_input,
