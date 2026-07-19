@@ -17208,6 +17208,14 @@ internal sealed class StormaktGame
 
     private void DrawCopenhagenBackground(uint[] frame, int age)
     {
+        string backgroundName = _width <= 320 ? "copenhagen_background" : "copenhagen_background_wide";
+        if (_sprites?.TryGet(backgroundName, out Sprite background) == true)
+        {
+            int scroll = (age / 3) % background.Height;
+            DrawSprite(frame, background, 0, scroll - background.Height);
+            DrawSprite(frame, background, 0, scroll);
+            return;
+        }
         for (int y = 17; y < _height - 12; y++)
         {
             int depth = y * 24 / Math.Max(1, _height);
@@ -17260,8 +17268,19 @@ internal sealed class StormaktGame
         int centerX = (int)Math.Round(centerXD);
         int centerY = (int)Math.Round(centerYD);
         uint ring = state.GateFallAge > 0 ? 0xff8f2635 : state.HitFlash > 0 ? 0xffffec9a : 0xffd6b25e;
-        DrawCircleOutline(frame, centerX, centerY, 72, ring);
-        DrawCircleOutline(frame, centerX, centerY, 61, 0xff344d5c);
+        string ringName = state.GateFallAge > 0 ? "copenhagen_gate_ring_broken" : "copenhagen_gate_ring";
+        Sprite gateRing = default;
+        bool packedRing = _sprites is not null && _sprites.TryGet(ringName, out gateRing);
+        if (packedRing)
+        {
+            DrawSprite(frame, gateRing, centerX - gateRing.Width / 2, centerY - gateRing.Height / 2);
+            if (state.HitFlash > 0) DrawCircleOutline(frame, centerX, centerY, 72, ring);
+        }
+        else
+        {
+            DrawCircleOutline(frame, centerX, centerY, 72, ring);
+            DrawCircleOutline(frame, centerX, centerY, 61, 0xff344d5c);
+        }
         for (int node = 0; node < state.GateHealth.Length; node++)
         {
             (double nodeXD, double nodeYD) = CopenhagenGateNodePosition(state, node, centerXD, centerYD);
@@ -17275,9 +17294,20 @@ internal sealed class StormaktGame
                 continue;
             }
             uint crownColor = node switch { 0 => 0xff7fc7ff, 1 => 0xffff6b62, _ => 0xff77e6a0 };
-            FillCircle(frame, x, y, 13, 0xff17212a);
-            DrawCircleOutline(frame, x, y, 14, crownColor);
-            DrawCrown(frame, x - 4, y - 3, crownColor);
+            string nodeName = node switch
+            {
+                0 => "copenhagen_gate_node_blue",
+                1 => "copenhagen_gate_node_red",
+                _ => "copenhagen_gate_node_green",
+            };
+            if (_sprites?.TryGet(nodeName, out Sprite crownNode) == true)
+                DrawSprite(frame, crownNode, x - crownNode.Width / 2, y - crownNode.Height / 2);
+            else
+            {
+                FillCircle(frame, x, y, 13, 0xff17212a);
+                DrawCircleOutline(frame, x, y, 14, crownColor);
+                DrawCrown(frame, x - 4, y - 3, crownColor);
+            }
             int healthWidth = 22 * state.GateHealth[node] / CopenhagenGateNodeMaxHealth;
             DrawRect(frame, x - 11, y + 17, 22, 3, 0xff291b20);
             DrawRect(frame, x - 11, y + 17, healthWidth, 3, crownColor);
@@ -17287,8 +17317,13 @@ internal sealed class StormaktGame
                 DrawLine(frame, centerX, centerY, x, y, 0xff77e6a0);
             }
         }
-        FillCircle(frame, centerX, centerY, 9, 0xff101820);
-        DrawCrown(frame, centerX - 4, centerY - 3, 0xffffd66b);
+        if (_sprites?.TryGet("copenhagen_gate_core", out Sprite gateCore) == true)
+            DrawSprite(frame, gateCore, centerX - gateCore.Width / 2, centerY - gateCore.Height / 2);
+        else
+        {
+            FillCircle(frame, centerX, centerY, 9, 0xff101820);
+            DrawCrown(frame, centerX - 4, centerY - 3, 0xffffd66b);
+        }
         if (state.GateFallAge > 0)
         {
             int burst = Math.Min(45, state.GateFallAge / 2);
@@ -17330,8 +17365,21 @@ internal sealed class StormaktGame
         int centerX = (int)Math.Round(centerXD);
         int centerY = (int)Math.Round(centerYD);
         uint outer = state.NoonFlash > 0 && (state.NoonFlash / 4 & 1) == 0 ? 0xffff6b62 : 0xffd6b25e;
-        DrawCircleOutline(frame, centerX, centerY, 108, outer);
-        DrawCircleOutline(frame, centerX, centerY, 94, 0xff344d5c);
+        string clockName = state.AdmiraltyDeathAge > 0
+            ? "cph_admiralty_clock_broken"
+            : "cph_admiralty_clock";
+        Sprite clock = default;
+        bool packedClock = _sprites is not null && _sprites.TryGet(clockName, out clock);
+        if (packedClock)
+        {
+            DrawSprite(frame, clock, centerX - clock.Width / 2, centerY - clock.Height / 2);
+            if (state.NoonFlash > 0) DrawCircleOutline(frame, centerX, centerY, 104, outer);
+        }
+        else
+        {
+            DrawCircleOutline(frame, centerX, centerY, 108, outer);
+            DrawCircleOutline(frame, centerX, centerY, 94, 0xff344d5c);
+        }
         for (int hour = 0; hour < state.HourHealth.Length; hour++)
         {
             (double hourXD, double hourYD) = CopenhagenHourPosition(hour, centerXD, centerYD);
@@ -17342,7 +17390,7 @@ internal sealed class StormaktGame
             bool hit = state.HourHitFlash > 0 && state.LastHitHour == hour;
             uint color = broken ? 0xff263744 : hit ? 0xffffffff : current ? 0xffff8a4a :
                 state.HourArmed[hour] ? 0xffff6b62 : 0xff9bd4dc;
-            DrawLine(frame, centerX, centerY, x, y, broken ? 0xff202b33 : 0xff493c29);
+            if (!packedClock) DrawLine(frame, centerX, centerY, x, y, broken ? 0xff202b33 : 0xff493c29);
             if (broken)
             {
                 DrawLine(frame, x - 5, y - 5, x + 5, y + 5, 0xff315b42);
@@ -17363,12 +17411,20 @@ internal sealed class StormaktGame
         DrawLine(frame, centerX, centerY, centerX + (int)Math.Round(Math.Cos(minuteAngle) * 61),
             centerY + (int)Math.Round(Math.Sin(minuteAngle) * 30), 0xff7fc7ff);
 
-        uint core = state.AdmiraltyDeathAge > 0 ? 0xff8f2635 :
-            state.AdmiraltyHitFlash > 0 ? 0xffffec9a : 0xff172536;
-        FillCircle(frame, centerX, centerY, 22, core);
-        DrawCircleOutline(frame, centerX, centerY, 24, 0xffffd66b);
-        DrawCrown(frame, centerX - 4, centerY - 4, 0xffff8a4a);
-        DrawLine(frame, centerX - 13, centerY + 9, centerX + 13, centerY + 9, 0xff9bd4dc);
+        if (packedClock)
+        {
+            if (state.AdmiraltyHitFlash > 0)
+                DrawCircleOutline(frame, centerX, centerY, 25 + state.AdmiraltyHitFlash % 3, 0xffffec9a);
+        }
+        else
+        {
+            uint core = state.AdmiraltyDeathAge > 0 ? 0xff8f2635 :
+                state.AdmiraltyHitFlash > 0 ? 0xffffec9a : 0xff172536;
+            FillCircle(frame, centerX, centerY, 22, core);
+            DrawCircleOutline(frame, centerX, centerY, 24, 0xffffd66b);
+            DrawCrown(frame, centerX - 4, centerY - 4, 0xffff8a4a);
+            DrawLine(frame, centerX - 13, centerY + 9, centerX + 13, centerY + 9, 0xff9bd4dc);
+        }
         if (state.AdmiraltyDeathAge > 0)
         {
             int burst = Math.Min(70, state.AdmiraltyDeathAge / 2);

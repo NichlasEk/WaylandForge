@@ -141,6 +141,8 @@ The Silverkroppen dungeon extension adds versioned transparent sheets for Karl o
 
 `copenhagen-codex-v1.png` supplies three coherent physical states for Codex Argentum, one dormant instance contour, the vault wall, cold clock seal, incomplete marginal flare and Karl's silver-recognition ring. The runtime pack uses these over the deterministic room state while retaining code-drawn fallbacks. Its flat-green source and exact two-reference built-in generation prompt are preserved beside the alpha-cleaned production sheet.
 
+`copenhagen-ring-background-v1.png` begins Bana 7's production-art pass with a tall orbital city corridor: black-iron ring arcs, royal machinery, suspended bastions and restrained cyan silver seams frame a deliberately dark playable center. `copenhagen-ring-machinery-v1.png` replaces the opening Trekroner lock, its three colored crown nodes and central core, then supplies matched intact/broken states for both the lock ring and Urverksamiralens clock fortress. The untouched chroma-key machinery source and both exact built-in generation prompts are preserved in `copenhagen-ring-opening-v1.prompt.md`; every new draw path retains its former code-rendered fallback.
+
 ## Resolution
 
 Stormakt defaults to a 400x280 logical framebuffer. Assets retain their native gameplay pixel size, providing 25 percent more field in both directions and making ships smaller relative to the world. WaylandForge scales the WFEX frame to its viewport. Set `WAYLANDFORGE_STORMAKT_LEGACY_320=1` to A/B test the original 320x224 field; the pack contains a correctly sized background for both modes.

@@ -1351,6 +1351,27 @@ def append_copenhagen_codex_assets(entries: list[tuple[str, Image.Image]], sourc
         entries.append((name, sprite))
 
 
+def append_copenhagen_ring_assets(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    definitions = [
+        ("copenhagen_gate_ring", 0, 0, (150, 150)),
+        ("copenhagen_gate_ring_broken", 1, 0, (150, 150)),
+        ("copenhagen_gate_node_blue", 2, 0, (36, 36)),
+        ("copenhagen_gate_node_red", 3, 0, (36, 36)),
+        ("copenhagen_gate_node_green", 0, 1, (36, 36)),
+        ("copenhagen_gate_core", 1, 1, (52, 52)),
+        ("cph_admiralty_clock", 2, 1, (210, 210)),
+        ("cph_admiralty_clock_broken", 3, 1, (210, 210)),
+    ]
+    for name, column, row, target in definitions:
+        left = column * source.width // 4
+        top = row * source.height // 2
+        right = (column + 1) * source.width // 4
+        bottom = (row + 1) * source.height // 2
+        sprite = trim_alpha(source.crop((left, top, right, bottom)).convert("RGBA"))
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def build(
     input_path: Path,
     danish_input_path: Path,
@@ -1411,6 +1432,8 @@ def build(
     snapphane_route_input_path: Path,
     snapphane_red_hounds_input_path: Path,
     red_hound_admirals_input_path: Path,
+    copenhagen_ring_background_input_path: Path,
+    copenhagen_ring_machinery_input_path: Path,
     copenhagen_holmen_input_path: Path,
     copenhagen_holmen_guard_input_path: Path,
     copenhagen_codex_input_path: Path,
@@ -1506,6 +1529,8 @@ def build(
     snapphane_route_source = Image.open(snapphane_route_input_path).convert("RGBA")
     snapphane_red_hounds_source = Image.open(snapphane_red_hounds_input_path).convert("RGBA")
     red_hound_admirals_source = Image.open(red_hound_admirals_input_path).convert("RGBA")
+    copenhagen_ring_background_source = Image.open(copenhagen_ring_background_input_path).convert("RGBA")
+    copenhagen_ring_machinery_source = Image.open(copenhagen_ring_machinery_input_path).convert("RGBA")
     copenhagen_holmen_source = Image.open(copenhagen_holmen_input_path).convert("RGBA")
     copenhagen_holmen_guard_source = Image.open(copenhagen_holmen_guard_input_path).convert("RGBA")
     copenhagen_codex_source = Image.open(copenhagen_codex_input_path).convert("RGBA")
@@ -1634,6 +1659,7 @@ def build(
     append_snapphane_route_assets(entries, snapphane_route_source)
     append_snapphane_red_hounds_assets(entries, snapphane_red_hounds_source)
     append_red_hound_admiral_portraits(entries, red_hound_admirals_source)
+    append_copenhagen_ring_assets(entries, copenhagen_ring_machinery_source)
     append_copenhagen_holmen_assets(entries, copenhagen_holmen_source)
     append_copenhagen_holmen_guard(entries, copenhagen_holmen_guard_source)
     append_copenhagen_codex_assets(entries, copenhagen_codex_source)
@@ -1680,6 +1706,8 @@ def build(
     entries.append(("oresund_background_wide", mirrored_background(oresund_background_source, 400, 875)))
     entries.append(("snapphane_background", mirrored_background(snapphane_background_source, 320, 700)))
     entries.append(("snapphane_background_wide", mirrored_background(snapphane_background_source, 400, 875)))
+    entries.append(("copenhagen_background", mirrored_background(copenhagen_ring_background_source, 320, 700)))
+    entries.append(("copenhagen_background_wide", mirrored_background(copenhagen_ring_background_source, 400, 875)))
     logo_wide = logo_source.copy()
     logo_wide.thumbnail((210, 105), Image.Resampling.LANCZOS)
     entries.append(("stormakt_logo_wide", logo_wide))
@@ -1878,6 +1906,8 @@ def main() -> None:
     parser.add_argument("--snapphane-route-input", type=Path, default=Path("assets/stormakt3020/snapphane-route-v1.png"))
     parser.add_argument("--snapphane-red-hounds-input", type=Path, default=Path("assets/stormakt3020/snapphane-red-hounds-v1.png"))
     parser.add_argument("--red-hound-admirals-input", type=Path, default=Path("assets/stormakt3020/red-hound-admiral-triplets-v1.png"))
+    parser.add_argument("--copenhagen-ring-background-input", type=Path, default=Path("assets/stormakt3020/copenhagen-ring-background-v1.png"))
+    parser.add_argument("--copenhagen-ring-machinery-input", type=Path, default=Path("assets/stormakt3020/copenhagen-ring-machinery-v1.png"))
     parser.add_argument("--copenhagen-holmen-input", type=Path, default=Path("assets/stormakt3020/copenhagen-holmen-environment-v1.png"))
     parser.add_argument("--copenhagen-holmen-guard-input", type=Path, default=Path("assets/stormakt3020/copenhagen-holmen-guard-v1.png"))
     parser.add_argument("--copenhagen-codex-input", type=Path, default=Path("assets/stormakt3020/copenhagen-codex-v1.png"))
@@ -1978,6 +2008,8 @@ def main() -> None:
         args.snapphane_route_input,
         args.snapphane_red_hounds_input,
         args.red_hound_admirals_input,
+        args.copenhagen_ring_background_input,
+        args.copenhagen_ring_machinery_input,
         args.copenhagen_holmen_input,
         args.copenhagen_holmen_guard_input,
         args.copenhagen_codex_input,
