@@ -84,8 +84,9 @@ Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen rende
 - tangentbord, WCP-handkontroll och pekarens click-to-move delar samma rörelsegränser; digital controllerinput dubbleras inte med den analoga axeln;
 - ett separat `copenhagen-holmen.json` autosave gör att en vanlig Bana 7-start återupptar markrummet i stället för att spela om Superarmadan;
 - developer-läget visar och tillämpar `DEVSKÖLD` på både rymd- och markakten; publik Bana 7 får vanlig skada när den senare låses upp.
+- Bana 7 öppnar en egen developer-submeny från kampanjraden: ringen kan startas om, landningen kan provas direkt och Holmens arsenal återupptas från sitt separata save; Rosenborg, Marginalvalvet och Codexen visas som låsta kommande djup.
 
-Miljön, bossarna, landningen, Holmens första rum, HUD och barriärer har kodritade fallbackformer i wide och legacy. De tidigare Köpenhamns-fixturerna kompletteras av `WAYLANDFORGE_STORMAKT_COPENHAGEN_LANDING_TEST=1` och `WAYLANDFORGE_STORMAKT_COPENHAGEN_GROUND_TEST=1`. Upprepade fulla landnings- och markspår är deterministiska i 400x280 och 320x224; markspåret ger samma framebuffer genom WFEX v2 raw, PACKRLE och shared memory. Nästa utvecklingssvep börjar vid silverhjärtat och gör marginalsatsen **Hjertat är ej brutet. Hjertat är en port.** spelbar.
+Miljön, bossarna, landningen, Holmens första rum, HUD och barriärer har kodritade fallbackformer i wide och legacy. Holmens första grafikpass återanvänder Silverkroppens riktiga Karl-animationer och tempelgolv, men packar egna ankare, kedja, docksmide, arsenalugn, vrakgods, silverhjärta och en full åttaframars Holmen-vakt. Vaktens idle, två gångsteg, telegraph, kontakt, träff, fall och lik följer simulationens verkliga faser; dödsriktningen fryses och kan inte spegelvändas när Karl passerar. De tidigare Köpenhamns-fixturerna kompletteras av `WAYLANDFORGE_STORMAKT_COPENHAGEN_LANDING_TEST=1` och `WAYLANDFORGE_STORMAKT_COPENHAGEN_GROUND_TEST=1`. Upprepade fulla landnings- och markspår är deterministiska i 400x280 och 320x224; markspåret ger samma framebuffer genom WFEX v2 raw, PACKRLE och shared memory. Nästa utvecklingssvep börjar vid silverhjärtat och gör marginalsatsen **Hjertat är ej brutet. Hjertat är en port.** spelbar.
 
 ## Kärna
 
@@ -308,6 +309,14 @@ Första assetfamiljer:
 - `holmen_floor`, `rosenborg_memory`, `christiansborg_margin`, `codex_vault`;
 - silverhjärtats port-/bro-/vapenformer;
 - Korrektorius pennor, Sagokonungen, Vredens rustning och de 254 släckta konturerna.
+
+Landat Holmen-pass:
+
+- `copenhagen-holmen-environment-v1-source.png` -> alpharensad produktions-PNG med åtta miljösprites;
+- `copenhagen-holmen-guard-v1-source.png` -> alpharensad produktions-PNG med åtta separata vaktposer;
+- båda bladens exakta built-in-prompter och referensroller ligger i syskonfilerna `.prompt.md`;
+- `build_assets.py` använder uppmätta ojämna miljöceller där AI-kompositionen korsar den matematiska 75-procentsgränsen, så arsenalugnen och vrakhögen inte klipper in i varandra;
+- Karl och stengolvet återbrukas från Silverkroppen; all Holmen-specifik geometri behåller kodfallback.
 
 Alla genererade sprites behöver kodritade fallbacks och packas genom befintlig WFSA-pipeline. Farliga projektiler använder inte samma silvervita färg som passiv marginaltext.
 

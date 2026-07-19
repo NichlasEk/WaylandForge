@@ -1287,6 +1287,49 @@ def append_red_hound_admiral_portraits(entries: list[tuple[str, Image.Image]], s
         entries.append((name, sprite))
 
 
+def append_copenhagen_holmen_assets(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    # The generated sheet is visually four columns, but the right-hand props
+    # cross the mathematical 75% split. Keep the measured gutter at 71% so
+    # the furnace never inherits debris and the debris keeps its left edge.
+    x_bounds = [0.0, 0.25, 0.50, 0.71, 1.0]
+    definitions = [
+        ("holmen_anchor_intact", 0, 0, (56, 76)),
+        ("holmen_anchor_broken", 1, 0, (62, 70)),
+        ("holmen_chain", 2, 0, (28, 52)),
+        ("holmen_dock_forge", 3, 0, (82, 82)),
+        ("holmen_heart_sealed", 0, 1, (82, 72)),
+        ("holmen_heart_open", 1, 1, (82, 72)),
+        ("holmen_arsenal_furnace", 2, 1, (74, 70)),
+        ("holmen_naval_debris", 3, 1, (90, 58)),
+    ]
+    for name, column, row, target in definitions:
+        left = int(source.width * x_bounds[column])
+        top = row * source.height // 2
+        right = int(source.width * x_bounds[column + 1])
+        bottom = (row + 1) * source.height // 2
+        sprite = trim_alpha(source.crop((left, top, right, bottom)).convert("RGBA"))
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
+def append_copenhagen_holmen_guard(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    names = [
+        "holmen_guard_idle", "holmen_guard_walk_a", "holmen_guard_walk_b", "holmen_guard_telegraph",
+        "holmen_guard_attack", "holmen_guard_hit", "holmen_guard_fall", "holmen_guard_dead",
+    ]
+    for index, name in enumerate(names):
+        column, row = index % 4, index // 4
+        left = column * source.width // 4
+        top = row * source.height // 2
+        right = (column + 1) * source.width // 4
+        bottom = (row + 1) * source.height // 2
+        sprite = trim_alpha(source.crop((left, top, right, bottom)).convert("RGBA"))
+        sprite.thumbnail((72, 60), Image.Resampling.LANCZOS)
+        canvas = Image.new("RGBA", (76, 64), (0, 0, 0, 0))
+        canvas.alpha_composite(sprite, ((canvas.width - sprite.width) // 2, canvas.height - sprite.height))
+        entries.append((name, canvas))
+
+
 def build(
     input_path: Path,
     danish_input_path: Path,
@@ -1347,6 +1390,8 @@ def build(
     snapphane_route_input_path: Path,
     snapphane_red_hounds_input_path: Path,
     red_hound_admirals_input_path: Path,
+    copenhagen_holmen_input_path: Path,
+    copenhagen_holmen_guard_input_path: Path,
     rts_road_input_path: Path,
     dungeon_karl_input_path: Path,
     dungeon_mine_input_path: Path,
@@ -1439,6 +1484,8 @@ def build(
     snapphane_route_source = Image.open(snapphane_route_input_path).convert("RGBA")
     snapphane_red_hounds_source = Image.open(snapphane_red_hounds_input_path).convert("RGBA")
     red_hound_admirals_source = Image.open(red_hound_admirals_input_path).convert("RGBA")
+    copenhagen_holmen_source = Image.open(copenhagen_holmen_input_path).convert("RGBA")
+    copenhagen_holmen_guard_source = Image.open(copenhagen_holmen_guard_input_path).convert("RGBA")
     rts_road_source = Image.open(rts_road_input_path).convert("RGBA")
     dungeon_karl_source = Image.open(dungeon_karl_input_path).convert("RGBA")
     dungeon_mine_source = Image.open(dungeon_mine_input_path).convert("RGBA")
@@ -1564,6 +1611,8 @@ def build(
     append_snapphane_route_assets(entries, snapphane_route_source)
     append_snapphane_red_hounds_assets(entries, snapphane_red_hounds_source)
     append_red_hound_admiral_portraits(entries, red_hound_admirals_source)
+    append_copenhagen_holmen_assets(entries, copenhagen_holmen_source)
+    append_copenhagen_holmen_guard(entries, copenhagen_holmen_guard_source)
     append_rts_frontier_road(entries, rts_road_source)
     append_dungeon_assets(entries, dungeon_karl_source, dungeon_mine_source)
     append_dungeon_loot(entries, dungeon_loot_source)
@@ -1805,6 +1854,8 @@ def main() -> None:
     parser.add_argument("--snapphane-route-input", type=Path, default=Path("assets/stormakt3020/snapphane-route-v1.png"))
     parser.add_argument("--snapphane-red-hounds-input", type=Path, default=Path("assets/stormakt3020/snapphane-red-hounds-v1.png"))
     parser.add_argument("--red-hound-admirals-input", type=Path, default=Path("assets/stormakt3020/red-hound-admiral-triplets-v1.png"))
+    parser.add_argument("--copenhagen-holmen-input", type=Path, default=Path("assets/stormakt3020/copenhagen-holmen-environment-v1.png"))
+    parser.add_argument("--copenhagen-holmen-guard-input", type=Path, default=Path("assets/stormakt3020/copenhagen-holmen-guard-v1.png"))
     parser.add_argument("--rts-road-input", type=Path, default=Path("assets/stormakt3020/rts-danish-frontier-road-v1.png"))
     parser.add_argument("--dungeon-karl-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-v1.png"))
     parser.add_argument("--dungeon-mine-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva1-environment-v1.png"))
@@ -1902,6 +1953,8 @@ def main() -> None:
         args.snapphane_route_input,
         args.snapphane_red_hounds_input,
         args.red_hound_admirals_input,
+        args.copenhagen_holmen_input,
+        args.copenhagen_holmen_guard_input,
         args.rts_road_input,
         args.dungeon_karl_input,
         args.dungeon_mine_input,

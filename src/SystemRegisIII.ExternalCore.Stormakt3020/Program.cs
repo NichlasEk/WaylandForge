@@ -654,7 +654,9 @@ internal sealed class StormaktGame
     private bool _inLevelSelect;
     private bool _inLevelPreview;
     private bool _inSilverkroppenSelect;
+    private bool _inCopenhagenSelect;
     private int _silverkroppenSelection;
+    private int _copenhagenSelection;
     private int _previewLevel;
     private int _levelId;
     private int _levelSelection;
@@ -680,6 +682,11 @@ internal sealed class StormaktGame
         if (_inSilverkroppenSelect)
         {
             StepSilverkroppenSelect(buttons);
+            return;
+        }
+        if (_inCopenhagenSelect)
+        {
+            StepCopenhagenSelect(buttons);
             return;
         }
         if (_inLevelPreview)
@@ -941,6 +948,13 @@ internal sealed class StormaktGame
             DrawSky(frame);
             DrawNebula(frame);
             DrawSilverkroppenSelect(frame);
+            return;
+        }
+        if (_inCopenhagenSelect)
+        {
+            DrawSky(frame);
+            DrawNebula(frame);
+            DrawCopenhagenSelect(frame);
             return;
         }
         if (_levelId == 3 && !_inLevelSelect && !_inLevelPreview)
@@ -1368,6 +1382,7 @@ internal sealed class StormaktGame
         _inLevelSelect = false;
         _inLevelPreview = false;
         _inSilverkroppenSelect = false;
+        _inCopenhagenSelect = false;
         _audio?.Trigger(StormaktSound.Deploy);
     }
 
@@ -1398,6 +1413,7 @@ internal sealed class StormaktGame
         _stageClearAge = 0;
         _inLevelPreview = false;
         _inSilverkroppenSelect = false;
+        _inCopenhagenSelect = false;
         _inLevelSelect = true;
         _levelSelection = Math.Clamp(selection, 0, CampaignNames.Length - 1);
         _lockedLevelNoticeFrames = 0;
@@ -1425,6 +1441,15 @@ internal sealed class StormaktGame
                 _inLevelSelect = false;
                 _inSilverkroppenSelect = true;
                 _silverkroppenSelection = File.Exists(DungeonSavePath("autosave")) ? 1 : 0;
+                _audio?.Trigger(StormaktSound.Deploy);
+                _previousButtons = buttons;
+                return;
+            }
+            if (_levelSelection == 6 && _developerMode)
+            {
+                _inLevelSelect = false;
+                _inCopenhagenSelect = true;
+                _copenhagenSelection = File.Exists(DungeonSavePath("copenhagen-holmen")) ? 2 : 0;
                 _audio?.Trigger(StormaktSound.Deploy);
                 _previousButtons = buttons;
                 return;
@@ -1489,6 +1514,53 @@ internal sealed class StormaktGame
             {
                 StartLevel(3, fresh: true);
                 BeginDungeon();
+            }
+            else
+            {
+                _lockedLevelNoticeFrames = 90;
+                _audio?.Trigger(StormaktSound.HullHit);
+            }
+        }
+        _lockedLevelNoticeFrames = Math.Max(0, _lockedLevelNoticeFrames - 1);
+        _previousButtons = buttons;
+    }
+
+    private void StepCopenhagenSelect(uint buttons)
+    {
+        const int choices = 6;
+        if (Pressed(buttons, Up))
+        {
+            _copenhagenSelection = (_copenhagenSelection + choices - 1) % choices;
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        if (Pressed(buttons, Down))
+        {
+            _copenhagenSelection = (_copenhagenSelection + 1) % choices;
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        if (Pressed(buttons, AltFire) || Pressed(buttons, Fire))
+        {
+            _inCopenhagenSelect = false;
+            _inLevelSelect = true;
+            _audio?.Trigger(StormaktSound.Deploy);
+            _previousButtons = buttons;
+            return;
+        }
+        if (Pressed(buttons, Start))
+        {
+            if (_copenhagenSelection == 0)
+            {
+                StartLevel(6, fresh: true);
+            }
+            else if (_copenhagenSelection == 1)
+            {
+                StartLevel(6, fresh: true);
+                if (_copenhagenWorld is CopenhagenWorldState copenhagen)
+                    BeginCopenhagenLanding(copenhagen);
+            }
+            else if (_copenhagenSelection == 2 && File.Exists(DungeonSavePath("copenhagen-holmen")))
+            {
+                StartLevel(6);
             }
             else
             {
@@ -7114,6 +7186,8 @@ internal sealed class StormaktGame
     private void BeginCopenhagenLanding(CopenhagenWorldState state, bool testFixture = false)
     {
         state.LandingActive = true;
+        state.GroundActive = false;
+        state.Ground = null;
         state.LandingTestFixture = testFixture;
         state.LandingAge = 0;
         state.LandingReleaseAge = 0;
@@ -7235,6 +7309,7 @@ internal sealed class StormaktGame
         ground.AttackAge = Math.Max(0, ground.AttackAge - 1);
         ground.AttackCooldown = Math.Max(0, ground.AttackCooldown - 1);
         ground.PotionFlash = Math.Max(0, ground.PotionFlash - 1);
+        ground.Moving = false;
 
         if (ground.Dead)
         {
@@ -7249,6 +7324,8 @@ internal sealed class StormaktGame
         }
 
         int speed = (buttons & Slow) != 0 ? 2 : 3;
+        double previousKarlX = ground.KarlX;
+        double previousKarlY = ground.KarlY;
         uint directions = Up | Down | Left | Right;
         uint controllerDirections = controller.Buttons & directions;
         uint keyboardDirections = (buttons & directions) & ~controllerDirections;
@@ -7296,6 +7373,11 @@ internal sealed class StormaktGame
         }
         ground.KarlX = Math.Clamp(ground.KarlX, 18, _width - 18);
         ground.KarlY = Math.Clamp(ground.KarlY, 47, _height - 17);
+        double travelledX = ground.KarlX - previousKarlX;
+        double travelledY = ground.KarlY - previousKarlY;
+        double travelled = Math.Sqrt(travelledX * travelledX + travelledY * travelledY);
+        ground.Moving = travelled > 0.01;
+        ground.GaitDistance += travelled;
 
         bool pointerAttack = (pointer.Buttons & 1) != 0 && pointer.Inside;
         if (((buttons & Fire) != 0 || pointerAttack) && ground.AttackCooldown == 0)
@@ -7371,6 +7453,7 @@ internal sealed class StormaktGame
         foreach (CopenhagenGroundEnemy enemy in ground.Enemies)
         {
             enemy.HitFlash = Math.Max(0, enemy.HitFlash - 1);
+            enemy.Moving = false;
             if (enemy.Health <= 0)
             {
                 enemy.DeathAge++;
@@ -7384,11 +7467,13 @@ internal sealed class StormaktGame
             double dx = ground.KarlX - enemy.X;
             double dy = ground.KarlY - enemy.Y;
             double distance = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
+            enemy.FacingLeft = dx < 0;
             if (distance > 34)
             {
                 double speed = 0.68 + enemy.Id * 0.05;
                 enemy.X += dx / distance * speed;
                 enemy.Y += dy / distance * speed;
+                enemy.Moving = true;
                 enemy.AttackAge = 0;
             }
             else
@@ -16397,10 +16482,17 @@ internal sealed class StormaktGame
         {
             int x = pier * _width / 3 - 18;
             int height = 54 + (pier * 17 % 31);
-            DrawRect(frame, x, dockTop, 38, height, 0xff211b1c);
-            DrawLine(frame, x, dockTop + height, x + 37, dockTop + height, 0xff765139);
-            for (int window = dockTop + 12; window < dockTop + height - 5; window += 17)
-                FillCircle(frame, x + 19, window, 3 + (state.LandingAge / 7 + pier & 1), 0xffff8a4a);
+            if (_sprites?.TryGet("holmen_dock_forge", out Sprite dockForge) == true)
+            {
+                DrawSprite(frame, dockForge, x + 19 - dockForge.Width / 2, dockTop - 17 + (pier & 1) * 9);
+            }
+            else
+            {
+                DrawRect(frame, x, dockTop, 38, height, 0xff211b1c);
+                DrawLine(frame, x, dockTop + height, x + 37, dockTop + height, 0xff765139);
+                for (int window = dockTop + 12; window < dockTop + height - 5; window += 17)
+                    FillCircle(frame, x + 19, window, 3 + (state.LandingAge / 7 + pier & 1), 0xffff8a4a);
+            }
         }
         for (int anchor = 0; anchor < state.LandingAnchorHealth.Length; anchor++)
         {
@@ -16410,24 +16502,36 @@ internal sealed class StormaktGame
             bool broken = state.LandingAnchorHealth[anchor] <= 0;
             bool hit = state.LandingHitFlash > 0 && state.LandingLastHitAnchor == anchor;
             uint color = broken ? 0xff315b42 : hit ? 0xffffffff : 0xffd6b25e;
-            for (int link = 0; link < 5; link++)
+            string anchorAsset = broken ? "holmen_anchor_broken" : "holmen_anchor_intact";
+            if (_sprites?.TryGet(anchorAsset, out Sprite anchorSprite) == true)
             {
-                int linkY = 18 + (y - 18) * link / 5;
-                DrawCircleOutline(frame, x, linkY, 3, broken ? 0xff263744 : 0xff765139);
-            }
-            if (broken)
-            {
-                DrawLine(frame, x - 10, y - 9, x + 10, y + 9, color);
-                DrawLine(frame, x + 10, y - 9, x - 10, y + 9, color);
+                DrawSprite(frame, anchorSprite, x - anchorSprite.Width / 2, y + 22 - anchorSprite.Height);
+                if (hit) DrawCircleOutline(frame, x, y, 15, color);
             }
             else
             {
-                DrawCircleOutline(frame, x, y, 13, color);
-                DrawLine(frame, x, y - 12, x, y + 15, color);
-                DrawLine(frame, x - 10, y + 8, x, y + 15, color);
-                DrawLine(frame, x + 10, y + 8, x, y + 15, color);
+                for (int link = 0; link < 5; link++)
+                {
+                    int linkY = 18 + (y - 18) * link / 5;
+                    DrawCircleOutline(frame, x, linkY, 3, broken ? 0xff263744 : 0xff765139);
+                }
+                if (broken)
+                {
+                    DrawLine(frame, x - 10, y - 9, x + 10, y + 9, color);
+                    DrawLine(frame, x + 10, y - 9, x - 10, y + 9, color);
+                }
+                else
+                {
+                    DrawCircleOutline(frame, x, y, 13, color);
+                    DrawLine(frame, x, y - 12, x, y + 15, color);
+                    DrawLine(frame, x - 10, y + 8, x, y + 15, color);
+                    DrawLine(frame, x + 10, y + 8, x, y + 15, color);
+                }
+            }
+            if (!broken)
+            {
                 int maximum = state.LandingTestFixture ? 12 : CopenhagenLandingAnchorHealth;
-                DrawRect(frame, x - 13, y + 18, 26 * state.LandingAnchorHealth[anchor] / maximum, 3, 0xffff8a4a);
+                DrawRect(frame, x - 13, y + 23, 26 * state.LandingAnchorHealth[anchor] / maximum, 3, 0xffff8a4a);
             }
         }
         if (state.LandingReleaseAge > 0)
@@ -16462,13 +16566,25 @@ internal sealed class StormaktGame
     {
         CopenhagenGroundState? ground = state.Ground;
         Clear(frame, 0xff0b1012);
-        for (int y = 18; y < _height - 12; y += 24)
+        if (_sprites?.TryGet("dungeon_temple_floor", out Sprite holmenFloor) == true)
         {
-            for (int x = (y / 24 & 1) == 0 ? -18 : -6; x < _width; x += 42)
+            for (int y = 17; y < _height; y += 68)
             {
-                DrawRect(frame, x, y, 39, 21, 0xff151b1e);
-                DrawLine(frame, x, y + 20, x + 38, y + 20, 0xff29343a);
-                DrawLine(frame, x + 38, y, x + 38, y + 20, 0xff765139);
+                int offset = ((y - 17) / 68 & 1) == 0 ? -8 : -54;
+                for (int x = offset; x < _width; x += 92)
+                    DrawSpriteScaled(frame, holmenFloor, x, y, 96, 72);
+            }
+        }
+        else
+        {
+            for (int y = 18; y < _height - 12; y += 24)
+            {
+                for (int x = (y / 24 & 1) == 0 ? -18 : -6; x < _width; x += 42)
+                {
+                    DrawRect(frame, x, y, 39, 21, 0xff151b1e);
+                    DrawLine(frame, x, y + 20, x + 38, y + 20, 0xff29343a);
+                    DrawLine(frame, x + 38, y, x + 38, y + 20, 0xff765139);
+                }
             }
         }
         DrawRect(frame, 0, 18, _width, 27, 0xff211b1c);
@@ -16478,11 +16594,21 @@ internal sealed class StormaktGame
             FillCircle(frame, x, 31, 7, 0xff592531);
             FillCircle(frame, x, 31, 3 + ((((ground?.Age ?? 0) / 6) + forge) & 1), 0xffff8a4a);
         }
+        if (_sprites?.TryGet("holmen_arsenal_furnace", out Sprite furnace) == true)
+        {
+            DrawSprite(frame, furnace, 42 - furnace.Width / 2, 67 - furnace.Height / 2);
+            DrawSpriteFlippedX(frame, furnace, _width - 42 - furnace.Width / 2, 67 - furnace.Height / 2);
+        }
+        if (_sprites?.TryGet("holmen_naval_debris", out Sprite debris) == true)
+        {
+            DrawSprite(frame, debris, 58 - debris.Width / 2, _height - 48 - debris.Height / 2);
+            DrawSpriteFlippedX(frame, debris, _width - 60 - debris.Width / 2, _height / 2 - debris.Height / 2);
+        }
         DrawCopenhagenGroundHeartDoor(frame, ground);
         if (ground is null) return;
 
         foreach (CopenhagenGroundEnemy enemy in ground.Enemies.OrderBy(enemy => enemy.Y))
-            DrawCopenhagenGroundEnemy(frame, enemy);
+            DrawCopenhagenGroundEnemy(frame, ground, enemy);
         DrawCopenhagenGroundKarl(frame, ground);
         DrawBorder(frame);
         DrawCopenhagenGroundHud(frame, ground);
@@ -16512,6 +16638,14 @@ internal sealed class StormaktGame
     {
         int x = _width / 2;
         int y = 42;
+        string heartAsset = ground?.DoorReady == true ? "holmen_heart_open" : "holmen_heart_sealed";
+        if (_sprites?.TryGet(heartAsset, out Sprite heart) == true)
+        {
+            DrawSprite(frame, heart, x - heart.Width / 2, 18);
+            if (ground?.DoorReady == true)
+                DrawCircleOutline(frame, x, y + 5, 25 + ground.Age / 6 % 5, 0xffd6b25e);
+            return;
+        }
         uint color = ground?.DoorReady == true ? 0xff7fc7ff : 0xff4b5358;
         FillCircle(frame, x - 8, y, 11, 0xff29343a);
         FillCircle(frame, x + 8, y, 11, 0xff29343a);
@@ -16524,10 +16658,37 @@ internal sealed class StormaktGame
             DrawCircleOutline(frame, x, y + 5, 24 + ground.Age / 6 % 5, 0xffd6b25e);
     }
 
-    private void DrawCopenhagenGroundEnemy(uint[] frame, CopenhagenGroundEnemy enemy)
+    private void DrawCopenhagenGroundEnemy(uint[] frame, CopenhagenGroundState ground, CopenhagenGroundEnemy enemy)
     {
         int x = (int)Math.Round(enemy.X);
         int y = (int)Math.Round(enemy.Y);
+        bool facingLeft = enemy.FacingLeft;
+        string spriteName = enemy.Health <= 0
+            ? enemy.DeathAge < 18 ? "holmen_guard_fall" : "holmen_guard_dead"
+            : enemy.HitFlash > 0 || enemy.StaggerAge > 0 ? "holmen_guard_hit"
+            : enemy.AttackAge is >= 28 and < 40 ? "holmen_guard_attack"
+            : enemy.AttackAge is > 0 and < 28 ? "holmen_guard_telegraph"
+            : enemy.Moving ? ((ground.Age / 10 + enemy.Id) & 1) == 0
+                ? "holmen_guard_walk_a" : "holmen_guard_walk_b"
+            : "holmen_guard_idle";
+        if (_sprites?.TryGet(spriteName, out Sprite guard) == true)
+        {
+            int sink = enemy.Health <= 0 ? Math.Min(5, enemy.DeathAge / 10) : 0;
+            int drawX = x - guard.Width / 2;
+            int drawY = y - guard.Height + 12 + sink;
+            if (facingLeft) DrawSpriteFlippedX(frame, guard, drawX, drawY);
+            else DrawSprite(frame, guard, drawX, drawY);
+            if (enemy.Health <= 0) return;
+            bool spriteTelegraph = enemy.AttackAge is >= 12 and < 28;
+            if (spriteTelegraph) DrawCircleOutline(frame, x, y, 19 + enemy.AttackAge / 4, 0xffff8a4a);
+            if (enemy.HitFlash > 0)
+            {
+                DrawCircleOutline(frame, x, y - 8, 13 + enemy.HitFlash, 0xffffffff);
+                DrawLine(frame, x - 15, y - 12, x + 15, y + 4, 0xffbdf8ff);
+            }
+            DrawRect(frame, x - 11, y + 19, 22 * enemy.Health / enemy.MaxHealth, 3, 0xffff8a4a);
+            return;
+        }
         if (enemy.Health <= 0)
         {
             int sink = Math.Min(9, enemy.DeathAge / 5);
@@ -16549,6 +16710,41 @@ internal sealed class StormaktGame
     {
         int x = (int)Math.Round(ground.KarlX);
         int y = (int)Math.Round(ground.KarlY);
+        bool horizontal = Math.Abs(ground.FacingX) > Math.Abs(ground.FacingY);
+        bool north = !horizontal && ground.FacingY < 0;
+        bool west = horizontal && ground.FacingX < 0;
+        int gait = (int)(ground.GaitDistance / 16.0) & 3;
+        string karlAsset;
+        if (ground.HitFlash > 0) karlAsset = "karl_hit";
+        else if (ground.AttackAge > 0 && horizontal)
+            karlAsset = ground.AttackAge > 6 ? "karl_slash_e_windup" : "karl_slash_e_contact";
+        else if (ground.AttackAge > 0 && north)
+            karlAsset = ground.AttackAge > 8 ? "karl_slash_n_windup" :
+                ground.AttackAge > 3 ? "karl_slash_n_contact" : "karl_slash_n_follow";
+        else if (ground.AttackAge > 0)
+            karlAsset = ground.AttackAge > 8 ? "karl_slash_windup" :
+                ground.AttackAge > 3 ? "karl_slash_contact" : "karl_slash_follow";
+        else if (north) karlAsset = ground.Moving && gait is 1 or 3 ? "dungeon_karl_n_walk" : "dungeon_karl_n_idle";
+        else if (horizontal) karlAsset = ground.Moving && gait is 1 or 3 ? "dungeon_karl_e_walk" : "dungeon_karl_e_idle";
+        else karlAsset = !ground.Moving || gait is 0 or 2 ? "dungeon_karl_s_idle" :
+            gait == 1 ? "dungeon_karl_s_walk_a" : "dungeon_karl_s_walk_b";
+        if (_sprites?.TryGet(karlAsset, out Sprite karl) == true)
+        {
+            int footAnchor = karlAsset switch
+            {
+                "karl_slash_windup" or "karl_slash_contact" or "karl_slash_follow" => 20,
+                "karl_slash_e_windup" or "karl_slash_e_contact" => 22,
+                "karl_slash_n_windup" or "karl_slash_n_contact" or "karl_slash_n_follow" => 16,
+                "karl_hit" => 25,
+                _ => 12,
+            };
+            int drawX = x - karl.Width / 2;
+            int drawY = y - karl.Height + footAnchor;
+            if (west) DrawSpriteFlippedX(frame, karl, drawX, drawY);
+            else DrawSprite(frame, karl, drawX, drawY);
+            if (ground.HasTarget) DrawCircleOutline(frame, (int)ground.TargetX, (int)ground.TargetY, 6, 0xff7fc7ff);
+            return;
+        }
         uint silver = ground.HitFlash > 0 ? 0xffffffff : 0xffb7c7d6;
         FillCircle(frame, x, y - 10, 6, 0xffffd6b0);
         FillTriangle(frame, x, y - 5, x - 11, y + 17, x + 11, y + 17, silver);
@@ -18197,6 +18393,42 @@ internal sealed class StormaktGame
             _lockedLevelNoticeFrames > 0 ? 0xffff6b62 : 0xffb7c7d6);
     }
 
+    private void DrawCopenhagenSelect(uint[] frame)
+    {
+        int panelWidth = Math.Min(340, _width - 24);
+        int panelX = (_width - panelWidth) / 2;
+        int panelTop = _height <= 224 ? 28 : 50;
+        int rowHeight = _height <= 224 ? 27 : 33;
+        int panelBottom = panelTop + 28 + rowHeight * 6;
+        DrawRect(frame, panelX, panelTop, panelWidth, panelBottom - panelTop, 0xf2080d12);
+        DrawLine(frame, panelX, panelTop, panelX + panelWidth - 1, panelTop, 0xffffd66b);
+        DrawLine(frame, panelX, panelBottom - 1, panelX + panelWidth - 1, panelBottom - 1, 0xff2f74c9);
+        DrawText(frame, panelX + (panelWidth - 90) / 2, panelTop + 9, "KÖPENHAMNS RING", 0xffffd66b);
+        string[] titles =
+        [
+            "KONUNG CHRISTIANS VREDE",
+            "HOLMENS LANDNING",
+            "HOLMENS ARSENAL",
+            "ROSENBORGS MINNESMASKIN",
+            "CHRISTIANSBORGS MARGINALVALV",
+            "CODEX ARGENTUM",
+        ];
+        bool hasHolmenSave = File.Exists(DungeonSavePath("copenhagen-holmen"));
+        for (int index = 0; index < titles.Length; index++)
+        {
+            bool available = index is 0 or 1 || index == 2 && hasHolmenSave;
+            string status = index == 0 ? "NYTT" : index == 1 ? "LANDNING" :
+                index == 2 ? hasHolmenSave ? "FORTSÄTT" : "EJ SPARAD" : "LÅST";
+            DrawLevelOption(frame, panelX + 12, panelTop + 25 + index * rowHeight, panelWidth - 24,
+                rowHeight - 3, index, titles[index], status, _copenhagenSelection == index);
+            if (!available && _copenhagenSelection == index)
+                DrawText(frame, panelX + panelWidth - 50, panelTop + 34 + index * rowHeight, "LÅST", 0xff697680);
+        }
+        string footer = _lockedLevelNoticeFrames > 0 ? "DJUPET HAR INTE ÖPPNATS ÄN" : "START VÄLJ  ELD TILLBAKA";
+        DrawText(frame, (_width - footer.Length * 6) / 2, Math.Min(_height - 9, panelBottom + 5), footer,
+            _lockedLevelNoticeFrames > 0 ? 0xffff6b62 : 0xffb7c7d6);
+    }
+
     private void DrawLevelSelect(uint[] frame)
     {
         int panelWidth = Math.Min(340, _width - 24);
@@ -18234,8 +18466,7 @@ internal sealed class StormaktGame
         string footer = _lockedLevelNoticeFrames > 0 ? "FÄLTTÅGET ÄR LÅST" :
             _levelSelection == 3 && File.Exists(DungeonSavePath("autosave")) ? "START FORTSÄTT  SLOW+START NYTT" :
             _levelSelection == 4 && File.Exists(DungeonSavePath("campaign")) ? "START KIT  SLOW+START STANDARD" :
-            _developerMode && _levelSelection == 6 && File.Exists(DungeonSavePath("copenhagen-holmen")) ?
-                "START HOLMEN  SLOW+START RING" :
+            _developerMode && _levelSelection == 6 ? "START VÄLJ DEL" :
             _developerMode ? "UTVECKLARLÄGE  ALLT UPPLÅST" : "UPP NER VÄLJ  START";
         DrawText(frame, (_width - footer.Length * 6) / 2, panelBottom - 9, footer,
             _lockedLevelNoticeFrames > 0 ? 0xff65c58a : 0xffb7c7d6);
@@ -19509,6 +19740,8 @@ internal sealed class StormaktGame
         public double TargetX { get; set; }
         public double TargetY { get; set; }
         public bool HasTarget { get; set; }
+        public bool Moving { get; set; }
+        public double GaitDistance { get; set; }
         public double FacingX { get; set; }
         public double FacingY { get; set; }
         public int Health { get; set; }
@@ -19536,6 +19769,8 @@ internal sealed class StormaktGame
         public int HitFlash { get; set; }
         public int StaggerAge { get; set; }
         public int AttackAge { get; set; }
+        public bool Moving { get; set; }
+        public bool FacingLeft { get; set; }
         public int LastHitSerial { get; set; }
         public int DeathAge { get; set; }
     }
