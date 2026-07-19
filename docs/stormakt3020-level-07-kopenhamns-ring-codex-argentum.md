@@ -1,10 +1,10 @@
 # Stormakt 3020 - Bana 7: Köpenhamns ring och Codex Argentum
 
-Status: aktiv utvecklingsplan för kampanjens sjunde rad, level id `6`. Rymdakten, Holmens landning och markaktens första rum är developer-startbara; hela banan förblir låst i publik kampanj tills båda akterna är färdiga. Den här planen ersätter den tidigare idén att Superarmadans reträtt ensam avslutar kampanjen.
+Status: aktiv utvecklingsplan för kampanjens sjunde rad, level id `6`. Rymdakten, Holmens landning och markaktens två första rum med Codexens första marginal är developer-startbara; hela banan förblir låst i publik kampanj tills båda akterna är färdiga. Den här planen ersätter den tidigare idén att Superarmadans reträtt ensam avslutar kampanjen.
 
 ## Nuvarande spelbara checkpoint
 
-Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen render/step-dispatch och kampanjens sparade Bana 5-lastning. Den spelbara kedjan leder efter en kort inflygning genom tre bossportar, tre fullstora bossar och en fregattduo, vidare genom en aktiv landning och in i Holmens första top-down-rum.
+Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen render/step-dispatch och kampanjens sparade Bana 5-lastning. Den spelbara kedjan leder efter en kort inflygning genom tre bossportar, tre fullstora bossar och en fregattduo, vidare genom en aktiv landning, Holmens första top-down-rum, Codexens första marginalval och kanongången.
 
 **Trekroners lås:**
 
@@ -77,16 +77,18 @@ Level id `6` äger nu seed `3707`, en separat `CopenhagenWorldState`, egen rende
 - ankarnas egna skott fortsätter pressa Karl tills vart och ett har skjutits sönder;
 - när det tredje ankaret brister vrids spelrummet direkt till top-down och markmusiken tar över utan kampanjmeny eller levelreset.
 
-**Holmens omvända arsenal - första rummet:**
+**Holmens omvända arsenal - första två rummen:**
 
 - Karl har separat markposition, hälsa, potion, riktat närstridshugg och stagger; inget av detta muterar Silverkroppens `DungeonState`;
-- fyra dockvakter jagar, telegraferar hugg, kan staggras och måste besegras innan silverhjärtats port öppnas;
+- fyra dockvakter jagar, telegraferar hugg, kan staggras och måste besegras innan silverhjärtat kan användas;
 - tangentbord, WCP-handkontroll och pekarens click-to-move delar samma rörelsegränser; digital controllerinput dubbleras inte med den analoga axeln;
-- ett separat `copenhagen-holmen.json` autosave gör att en vanlig Bana 7-start återupptar markrummet i stället för att spela om Superarmadan;
+- vid hjärtat väljer spelaren mellan två författade marginaler: **Hjertat är en port** kompilerar en fysisk passage, medan **Hjertat är öppet** bokstavligen öppnar hjärtat, skadar Karl och återställer försöket utan att skapa en port;
+- den korrekta lagen blir kvar som en synlig HUD-marginal och leder till kanongången, där tre nya vakter och en fysisk bredsidekanon måste besegras medan kanonens skjutlinje telegraferas över golvet;
+- ett separat schema-2-save i `copenhagen-holmen.json` gör att en vanlig Bana 7-start återupptar rätt markrum med aktiv marginal, portläge, vakter och kanonhälsa i stället för att spela om Superarmadan;
 - developer-läget visar och tillämpar `DEVSKÖLD` på både rymd- och markakten; publik Bana 7 får vanlig skada när den senare låses upp.
 - Bana 7 öppnar en egen developer-submeny från kampanjraden: ringen kan startas om, landningen kan provas direkt och Holmens arsenal återupptas från sitt separata save; Rosenborg, Marginalvalvet och Codexen visas som låsta kommande djup.
 
-Miljön, bossarna, landningen, Holmens första rum, HUD och barriärer har kodritade fallbackformer i wide och legacy. Holmens första grafikpass återanvänder Silverkroppens riktiga Karl-animationer och tempelgolv, men packar egna ankare, kedja, docksmide, arsenalugn, vrakgods, silverhjärta och en full åttaframars Holmen-vakt. Vaktens idle, två gångsteg, telegraph, kontakt, träff, fall och lik följer simulationens verkliga faser; dödsriktningen fryses och kan inte spegelvändas när Karl passerar. De tidigare Köpenhamns-fixturerna kompletteras av `WAYLANDFORGE_STORMAKT_COPENHAGEN_LANDING_TEST=1` och `WAYLANDFORGE_STORMAKT_COPENHAGEN_GROUND_TEST=1`. Upprepade fulla landnings- och markspår är deterministiska i 400x280 och 320x224; markspåret ger samma framebuffer genom WFEX v2 raw, PACKRLE och shared memory. Nästa utvecklingssvep börjar vid silverhjärtat och gör marginalsatsen **Hjertat är ej brutet. Hjertat är en port.** spelbar.
+Miljön, bossarna, landningen, Holmens två rum, HUD och barriärer har kodritade fallbackformer i wide och legacy. Holmens första grafikpass återanvänder Silverkroppens riktiga Karl-animationer och tempelgolv, men packar egna ankare, kedja, docksmide, arsenalugn, vrakgods, silverhjärta och en full åttaframars Holmen-vakt. Vaktens idle, två gångsteg, telegraph, kontakt, träff, fall och lik följer simulationens verkliga faser; dödsriktningen fryses och kan inte spegelvändas när Karl passerar. Kanongångens vapen återbrukar den befintliga bryggkanonen som ett riktigt stridsobjekt med egen hälsa, varningslinje och vrakbild. De tidigare Köpenhamns-fixturerna kompletteras av `WAYLANDFORGE_STORMAKT_COPENHAGEN_LANDING_TEST=1` och `WAYLANDFORGE_STORMAKT_COPENHAGEN_GROUND_TEST=1`. Korrekt marginal, bokstavsfel och hela kanongången är deterministiska i 400x280 och 320x224; samma provbild är bitidentisk genom WFEX v2 raw, PACKRLE och shared memory. Nästa utvecklingssvep kan bygga Rosenborg och introducera den första marginalen som rekonfigurerar silvermateria i strid.
 
 ## Kärna
 

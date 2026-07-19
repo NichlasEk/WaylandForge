@@ -277,6 +277,7 @@ internal sealed class StormaktGame
     private const int CopenhagenSuperMemoryHealth = 360;
     private const int CopenhagenSuperReactorHealth = 540;
     private const int CopenhagenLandingAnchorHealth = 72;
+    private const int CopenhagenArsenalCannonHealth = 72;
     private const int RtsSalvagedSilverGoal = 1_200;
     private const int DungeonFirstSigilMask = 1 << 8;
     private const int DungeonFogdeRescuedMask = 1 << 9;
@@ -624,6 +625,12 @@ internal sealed class StormaktGame
         new(0, 330, false, "EBBA GRIP", "DU ÄR PÅ HOLMEN", "VI STANNAR OVAN", null, "portrait_ebba");
     private static readonly RadioCard CopenhagenGroundClearRadio =
         new(0, 300, false, "KARL CCLV", "HJERTAT ÄR EJ BRUTET", "HJERTAT ÄR EN PORT", null, "portrait_karl");
+    private static readonly RadioCard CopenhagenMarginalFaultRadio =
+        new(0, 270, false, "CODEX MARGINAL", "HJERTAT ÖPPNADES", "MEN BLEF EJ EN PORT", null, "portrait_karl");
+    private static readonly RadioCard CopenhagenArsenalRadio =
+        new(0, 300, false, "EBBA GRIP", "DU ÄR UNDER HOLMEN", "KANONGÅNGEN VAKNAR", null, "portrait_ebba");
+    private static readonly RadioCard CopenhagenArsenalClearRadio =
+        new(0, 300, false, "KARL CCLV", "PORTEN LYDDE", "ROSENBORG VÄNTAR", null, "portrait_karl");
     private int _shipX;
     private int _shipY;
     private int _cooldown;
@@ -5352,10 +5359,11 @@ internal sealed class StormaktGame
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             string temporary = path + ".tmp";
             string backup = path + ".bak";
-            var save = new CopenhagenGroundSave(1, _width, _height, ground.Age, ground.KarlX, ground.KarlY,
+            var save = new CopenhagenGroundSave(2, _width, _height, ground.Age, ground.KarlX, ground.KarlY,
                 ground.Health, ground.MaxHealth, ground.Potions, ground.RoomClear, ground.DoorReady,
                 ground.Enemies.Select(enemy => new CopenhagenGroundEnemySave(enemy.Id, enemy.X, enemy.Y,
-                    enemy.Health, enemy.MaxHealth, enemy.DeathAge)).ToList());
+                    enemy.Health, enemy.MaxHealth, enemy.DeathAge)).ToList(), ground.Room,
+                ground.ActiveMarginal, ground.HeartPortOpen, ground.ArsenalCannonHealth);
             File.WriteAllText(temporary, JsonSerializer.Serialize(save));
             if (File.Exists(path)) File.Copy(path, backup, true);
             File.Move(temporary, path, true);
@@ -5376,8 +5384,8 @@ internal sealed class StormaktGame
             {
                 if (!File.Exists(candidate)) continue;
                 save = JsonSerializer.Deserialize<CopenhagenGroundSave>(File.ReadAllText(candidate));
-                if (save.Schema == 1 && save.Width >= 320 && save.Height >= 224 && save.MaxHealth > 0 &&
-                    save.Enemies is { Count: <= 16 }) return true;
+                if (save.Schema is 1 or 2 && save.Width >= 320 && save.Height >= 224 && save.MaxHealth > 0 &&
+                    save.Enemies is { Count: <= 16 } && Enum.IsDefined(save.ActiveMarginal)) return true;
             }
             catch (JsonException)
             {
@@ -5408,6 +5416,10 @@ internal sealed class StormaktGame
             DoorReady = save.DoorReady,
             FacingX = 0,
             FacingY = -1,
+            Room = save.Schema >= 2 ? Math.Clamp(save.Room, 0, 1) : 0,
+            ActiveMarginal = save.Schema >= 2 ? save.ActiveMarginal : CopenhagenMarginalLaw.None,
+            HeartPortOpen = save.Schema >= 2 && save.HeartPortOpen,
+            ArsenalCannonHealth = save.Schema >= 2 ? Math.Max(0, save.ArsenalCannonHealth) : 0,
         };
         ground.TargetX = ground.KarlX;
         ground.TargetY = ground.KarlY;
@@ -7322,6 +7334,16 @@ internal sealed class StormaktGame
             }
             return;
         }
+        if (ground.MarginalChoosing)
+        {
+            StepCopenhagenMarginalChoice(ground, buttons, pointer);
+            return;
+        }
+        if (ground.MarginalCompileAge > 0)
+        {
+            StepCopenhagenMarginalCompile(ground);
+            return;
+        }
 
         int speed = (buttons & Slow) != 0 ? 2 : 3;
         double previousKarlX = ground.KarlX;
@@ -7400,16 +7422,33 @@ internal sealed class StormaktGame
             _audio?.Trigger(StormaktSound.Deploy);
         }
         StepCopenhagenGroundEnemies(ground);
-        if (!ground.RoomClear && ground.Enemies.All(enemy => enemy.Health <= 0))
+        if (ground.Room == 1) StepCopenhagenArsenalCannon(ground);
+        bool threatsCleared = ground.Enemies.All(enemy => enemy.Health <= 0) &&
+            (ground.Room == 0 || ground.ArsenalCannonHealth <= 0);
+        if (!ground.RoomClear && threatsCleared)
         {
             ground.RoomClear = true;
             ground.DoorReady = true;
-            ActivateBossRadio(CopenhagenGroundClearRadio);
+            ActivateBossRadio(ground.Room == 0 ? CopenhagenGroundClearRadio : CopenhagenArsenalClearRadio);
             _score += 2_400;
             _audio?.Trigger(StormaktSound.DungeonSilverShatter);
             if (!ground.TestFixture && !CopenhagenFixtureActive) WriteCopenhagenGroundSave(ground);
         }
-        if (ground.DoorReady && DistanceSquared(ground.KarlX, ground.KarlY, _width / 2.0, 43) < 29 * 29 &&
+        bool atHeart = DistanceSquared(ground.KarlX, ground.KarlY, _width / 2.0, 43) < 29 * 29;
+        if (ground.Room == 0 && ground.DoorReady && atHeart && !ground.HeartPortOpen &&
+            ((buttons & Fire) != 0 || pointerAttack))
+        {
+            ground.MarginalChoosing = true;
+            ground.MarginalSelection = 0;
+            ground.HasTarget = false;
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        else if (ground.Room == 0 && ground.HeartPortOpen && atHeart &&
+            ((buttons & Up) != 0 || Pressed(buttons, Fire) || pointerAttack))
+        {
+            BeginCopenhagenArsenalRoom(ground);
+        }
+        else if (ground.Room == 1 && ground.DoorReady && atHeart &&
             ((buttons & Fire) != 0 || pointerAttack))
         {
             ground.CheckpointReady = true;
@@ -7445,7 +7484,129 @@ internal sealed class StormaktGame
                 _audio?.Trigger(StormaktSound.DungeonSwordHit);
             }
         }
+        if (ground.Room == 1 && ground.ArsenalCannonHealth > 0)
+        {
+            (double cannonX, double cannonY) = CopenhagenArsenalCannonPosition();
+            double dx = cannonX - ground.KarlX;
+            double dy = cannonY - ground.KarlY;
+            double distance = Math.Sqrt(dx * dx + dy * dy);
+            if (distance <= 46 && distance >= 1 &&
+                dx / distance * ground.FacingX + dy / distance * ground.FacingY >= -0.05)
+            {
+                ground.ArsenalCannonHealth = Math.Max(0, ground.ArsenalCannonHealth - 18);
+                ground.ArsenalCannonHitFlash = 7;
+                _audio?.Trigger(ground.ArsenalCannonHealth == 0
+                    ? StormaktSound.DungeonSilverShatter : StormaktSound.DungeonSwordHit);
+                if (ground.ArsenalCannonHealth == 0) _score += 700;
+            }
+        }
         _audio?.Trigger(StormaktSound.DungeonSwordSlash);
+    }
+
+    private void StepCopenhagenMarginalChoice(CopenhagenGroundState ground, uint buttons, RtsPointer pointer)
+    {
+        if (Pressed(buttons, Left))
+        {
+            ground.MarginalSelection = 0;
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        if (Pressed(buttons, Right))
+        {
+            ground.MarginalSelection = 1;
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        if (pointer.Inside) ground.MarginalSelection = pointer.X < _width / 2 ? 0 : 1;
+        if (Pressed(buttons, AltFire))
+        {
+            ground.MarginalChoosing = false;
+            _audio?.Trigger(StormaktSound.Deploy);
+            return;
+        }
+        bool pointerCompile = pointer.Inside && (pointer.Buttons & 1) != 0;
+        if (!Pressed(buttons, Start) && !Pressed(buttons, Fire) && !pointerCompile) return;
+        ground.MarginalChoosing = false;
+        ground.ActiveMarginal = ground.MarginalSelection == 0
+            ? CopenhagenMarginalLaw.HeartIsPort : CopenhagenMarginalLaw.HeartIsOpen;
+        ground.MarginalCompileAge = 1;
+        ground.HeartPortOpen = false;
+        _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+    }
+
+    private void StepCopenhagenMarginalCompile(CopenhagenGroundState ground)
+    {
+        ground.MarginalCompileAge++;
+        if (ground.ActiveMarginal == CopenhagenMarginalLaw.HeartIsPort)
+        {
+            if (ground.MarginalCompileAge == 62)
+            {
+                ground.HeartPortOpen = true;
+                _audio?.Trigger(StormaktSound.OresundCrownCoreOpen);
+            }
+            if (ground.MarginalCompileAge >= 112) ground.MarginalCompileAge = 0;
+            return;
+        }
+        if (ground.ActiveMarginal != CopenhagenMarginalLaw.HeartIsOpen) return;
+        if (ground.MarginalCompileAge == 54)
+        {
+            ground.HeartPortOpen = true;
+            DamageCopenhagenGround(ground);
+            ActivateBossRadio(CopenhagenMarginalFaultRadio);
+            _audio?.Trigger(StormaktSound.OresundTrainCrash);
+        }
+        if (ground.MarginalCompileAge < 128) return;
+        ground.MarginalCompileAge = 0;
+        ground.ActiveMarginal = CopenhagenMarginalLaw.None;
+        ground.HeartPortOpen = false;
+        ground.MarginalChoosing = true;
+        ground.MarginalSelection = 0;
+    }
+
+    private void BeginCopenhagenArsenalRoom(CopenhagenGroundState ground)
+    {
+        ground.Room = 1;
+        ground.Age = 0;
+        ground.KarlX = _width / 2.0;
+        ground.KarlY = _height - 45;
+        ground.TargetX = ground.KarlX;
+        ground.TargetY = ground.KarlY;
+        ground.HasTarget = false;
+        ground.FacingX = 0;
+        ground.FacingY = -1;
+        ground.RoomClear = false;
+        ground.DoorReady = false;
+        ground.CheckpointReady = false;
+        ground.ArsenalCannonAttackAge = 0;
+        ground.ArsenalCannonHitFlash = 0;
+        ground.ArsenalCannonHealth = ground.TestFixture ? 18 : CopenhagenArsenalCannonHealth;
+        ground.Enemies.Clear();
+        int enemyHealth = ground.TestFixture ? 12 : 42;
+        (double X, double Y)[] positions =
+        [
+            (_width * 0.28, _height * 0.50),
+            (_width * 0.72, _height * 0.46),
+            (_width * 0.36, _height * 0.31),
+        ];
+        for (int index = 0; index < positions.Length; index++)
+            ground.Enemies.Add(new CopenhagenGroundEnemy(10 + index, positions[index].X, positions[index].Y, enemyHealth));
+        ClearBossRadio();
+        ActivateBossRadio(CopenhagenArsenalRadio);
+        _audio?.Trigger(StormaktSound.OresundTrainRumble);
+        if (!ground.TestFixture && !CopenhagenFixtureActive) WriteCopenhagenGroundSave(ground);
+    }
+
+    private (double X, double Y) CopenhagenArsenalCannonPosition() => (_width / 2.0, 115);
+
+    private void StepCopenhagenArsenalCannon(CopenhagenGroundState ground)
+    {
+        ground.ArsenalCannonHitFlash = Math.Max(0, ground.ArsenalCannonHitFlash - 1);
+        if (ground.ArsenalCannonHealth <= 0) return;
+        ground.ArsenalCannonAttackAge++;
+        int cycle = ground.ArsenalCannonAttackAge % 120;
+        if (cycle != 72) return;
+        (double cannonX, double cannonY) = CopenhagenArsenalCannonPosition();
+        if (Math.Abs(ground.KarlX - cannonX) < 17 && ground.KarlY > cannonY)
+            DamageCopenhagenGround(ground);
+        _audio?.Trigger(StormaktSound.Broadside);
     }
 
     private void StepCopenhagenGroundEnemies(CopenhagenGroundState ground)
@@ -16606,6 +16767,7 @@ internal sealed class StormaktGame
         }
         DrawCopenhagenGroundHeartDoor(frame, ground);
         if (ground is null) return;
+        if (ground.Room == 1) DrawCopenhagenArsenalCannon(frame, ground);
 
         foreach (CopenhagenGroundEnemy enemy in ground.Enemies.OrderBy(enemy => enemy.Y))
             DrawCopenhagenGroundEnemy(frame, ground, enemy);
@@ -16614,6 +16776,8 @@ internal sealed class StormaktGame
         DrawCopenhagenGroundHud(frame, ground);
         DrawRadio(frame);
         DrawPause(frame);
+        if (ground.MarginalChoosing) DrawCopenhagenMarginalChoice(frame, ground);
+        else if (ground.MarginalCompileAge > 0) DrawCopenhagenMarginalCompile(frame, ground);
         if (ground.Dead)
         {
             int x = (_width - 184) / 2;
@@ -16629,8 +16793,8 @@ internal sealed class StormaktGame
             int y = (_height - 45) / 2;
             DrawRect(frame, x, y, width, 45, 0xee080d12);
             DrawLine(frame, x, y, x + width - 1, y, 0xff7fc7ff);
-            DrawText(frame, x + (width - 132) / 2, y + 10, "HOLMENS ARSENAL SÄKRAD", 0xffffd66b);
-            DrawText(frame, x + (width - 126) / 2, y + 27, "SILVERHJÄRTAT VÄNTAR", 0xff9bd4dc);
+            DrawText(frame, x + (width - 132) / 2, y + 10, "KANONGÅNGEN SÄKRAD", 0xffffd66b);
+            DrawText(frame, x + (width - 102) / 2, y + 27, "ROSENBORG VÄNTAR", 0xff9bd4dc);
         }
     }
 
@@ -16638,15 +16802,20 @@ internal sealed class StormaktGame
     {
         int x = _width / 2;
         int y = 42;
-        string heartAsset = ground?.DoorReady == true ? "holmen_heart_open" : "holmen_heart_sealed";
+        bool open = ground?.HeartPortOpen == true;
+        string heartAsset = open ? "holmen_heart_open" : "holmen_heart_sealed";
         if (_sprites?.TryGet(heartAsset, out Sprite heart) == true)
         {
             DrawSprite(frame, heart, x - heart.Width / 2, 18);
-            if (ground?.DoorReady == true)
-                DrawCircleOutline(frame, x, y + 5, 25 + ground.Age / 6 % 5, 0xffd6b25e);
+            if (open)
+            {
+                uint pulse = ground?.ActiveMarginal == CopenhagenMarginalLaw.HeartIsOpen
+                    ? 0xffff6b7f : 0xffd6b25e;
+                DrawCircleOutline(frame, x, y + 5, 25 + (ground?.Age ?? 0) / 6 % 5, pulse);
+            }
             return;
         }
-        uint color = ground?.DoorReady == true ? 0xff7fc7ff : 0xff4b5358;
+        uint color = open ? 0xff7fc7ff : 0xff4b5358;
         FillCircle(frame, x - 8, y, 11, 0xff29343a);
         FillCircle(frame, x + 8, y, 11, 0xff29343a);
         FillTriangle(frame, x, y + 22, x - 18, y, x + 18, y, 0xff29343a);
@@ -16654,8 +16823,91 @@ internal sealed class StormaktGame
         DrawCircleOutline(frame, x + 8, y, 12, color);
         DrawLine(frame, x - 17, y, x, y + 22, color);
         DrawLine(frame, x + 17, y, x, y + 22, color);
-        if (ground?.DoorReady == true)
-            DrawCircleOutline(frame, x, y + 5, 24 + ground.Age / 6 % 5, 0xffd6b25e);
+        if (open)
+            DrawCircleOutline(frame, x, y + 5, 24 + (ground?.Age ?? 0) / 6 % 5, 0xffd6b25e);
+    }
+
+    private void DrawCopenhagenArsenalCannon(uint[] frame, CopenhagenGroundState ground)
+    {
+        (double cannonXD, double cannonYD) = CopenhagenArsenalCannonPosition();
+        int x = (int)Math.Round(cannonXD);
+        int y = (int)Math.Round(cannonYD);
+        bool live = ground.ArsenalCannonHealth > 0;
+        string asset = live ? "enemy_bridge_cannon" : "enemy_bridge_cannon_wreck";
+        if (_sprites?.TryGet(asset, out Sprite cannon) == true)
+            DrawSprite(frame, cannon, x - cannon.Width / 2, y - cannon.Height / 2);
+        else
+        {
+            FillCircle(frame, x, y, 13, live ? 0xff29343a : 0xff171b1e);
+            DrawLine(frame, x, y, x, y + 25, live ? 0xffd6b25e : 0xff592531);
+        }
+        if (!live) return;
+        int cycle = ground.ArsenalCannonAttackAge % 120;
+        if (cycle is >= 36 and < 72)
+        {
+            uint warning = (cycle & 7) < 4 ? 0xffff6b7f : 0xff8f2635;
+            DrawLine(frame, x - 7, y + 13, x - 7, _height - 14, warning);
+            DrawLine(frame, x + 7, y + 13, x + 7, _height - 14, warning);
+        }
+        if (ground.ArsenalCannonHitFlash > 0)
+            DrawCircleOutline(frame, x, y, 17 + ground.ArsenalCannonHitFlash, 0xffffffff);
+        int maximum = ground.TestFixture ? 18 : CopenhagenArsenalCannonHealth;
+        DrawRect(frame, x - 19, y + 24, 38 * ground.ArsenalCannonHealth / maximum, 4, 0xff7fc7ff);
+    }
+
+    private void DrawCopenhagenMarginalChoice(uint[] frame, CopenhagenGroundState ground)
+    {
+        int width = Math.Min(376, _width - 16);
+        int x = (_width - width) / 2;
+        int y = _height <= 224 ? 73 : 96;
+        int height = 91;
+        DrawRect(frame, x, y, width, height, 0xf2080d12);
+        DrawLine(frame, x, y, x + width - 1, y, 0xff7fc7ff);
+        DrawText(frame, x + (width - 186) / 2, y + 8, "CODEX ARGENTUM · VÄLJ MARGINAL", 0xffffd66b);
+        DrawText(frame, x + (width - 132) / 2, y + 27, "HJERTAT ÄR EJ BRUTET.", 0xffbdf8ff);
+        int gap = 6;
+        int choiceWidth = (width - 18 - gap) / 2;
+        for (int choice = 0; choice < 2; choice++)
+        {
+            int choiceX = x + 9 + choice * (choiceWidth + gap);
+            uint border = ground.MarginalSelection == choice ? 0xffffd66b : 0xff344d5c;
+            DrawRect(frame, choiceX, y + 42, choiceWidth, 27, 0xff101820);
+            DrawLine(frame, choiceX, y + 42, choiceX + choiceWidth - 1, y + 42, border);
+            DrawLine(frame, choiceX, y + 68, choiceX + choiceWidth - 1, y + 68, border);
+            DrawText(frame, choiceX + 5, y + 51,
+                choice == 0 ? "HJERTAT ÄR EN PORT." : "HJERTAT ÄR ÖPPET.",
+                choice == 0 ? 0xff77e6a0 : 0xffff8a4a);
+        }
+        DrawText(frame, x + (width - 210) / 2, y + 75, "VÄNSTER HÖGER · START KOMPILERA", 0xff9bd4dc);
+    }
+
+    private void DrawCopenhagenMarginalCompile(uint[] frame, CopenhagenGroundState ground)
+    {
+        bool correct = ground.ActiveMarginal == CopenhagenMarginalLaw.HeartIsPort;
+        int width = Math.Min(286, _width - 26);
+        int x = (_width - width) / 2;
+        int y = _height <= 224 ? 128 : 166;
+        DrawRect(frame, x, y, width, 37, 0xe6080d12);
+        uint color = correct ? 0xff7fc7ff : 0xffff6b7f;
+        DrawLine(frame, x, y, x + width - 1, y, color);
+        string law = correct ? "HJERTAT ÄR EN PORT" : "HJERTAT ÄR ÖPPET";
+        DrawText(frame, x + (width - law.Length * 6) / 2, y + 8, law, color);
+        int progress = Math.Min(width - 12, (width - 12) * ground.MarginalCompileAge / (correct ? 112 : 128));
+        DrawRect(frame, x + 6, y + 25, progress, 4, color);
+        int heartX = _width / 2;
+        int heartY = 47;
+        int radius = 25 + ground.MarginalCompileAge / 5 % 14;
+        DrawCircleOutline(frame, heartX, heartY, radius, color);
+        if (!correct && ground.MarginalCompileAge is >= 45 and < 90)
+        {
+            for (int ray = 0; ray < 8; ray++)
+            {
+                double angle = ray * Math.PI / 4.0;
+                DrawLine(frame, heartX, heartY,
+                    heartX + (int)Math.Round(Math.Cos(angle) * (32 + ray)),
+                    heartY + (int)Math.Round(Math.Sin(angle) * (32 + ray)), 0xffff8a4a);
+            }
+        }
     }
 
     private void DrawCopenhagenGroundEnemy(uint[] frame, CopenhagenGroundState ground, CopenhagenGroundEnemy enemy)
@@ -16770,7 +17022,7 @@ internal sealed class StormaktGame
     private void DrawCopenhagenGroundHud(uint[] frame, CopenhagenGroundState ground)
     {
         DrawRect(frame, 0, 0, _width, 17, 0xff080d12);
-        DrawText(frame, 6, 5, "KARL CCLV · HOLMEN", 0xffffd66b);
+        DrawText(frame, 6, 5, ground.Room == 0 ? "KARL CCLV · HOLMEN" : "KARL CCLV · KANONGÅNGEN", 0xffffd66b);
         int barX = _width - 105;
         DrawRect(frame, barX, 5, 72, 5, 0xff29343a);
         DrawRect(frame, barX, 5, 72 * ground.Health / Math.Max(1, ground.MaxHealth), 5,
@@ -16779,8 +17031,14 @@ internal sealed class StormaktGame
         DrawText(frame, 6, _height - 9, "Z HUGG  RMB GÅ  Q BRYG", 0xffb7c7d6);
         if (_developerMode && _levelId == 6)
             DrawText(frame, 6, 19, "DEVSKÖLD", 0xff77e6a0);
-        if (ground.DoorReady && !ground.CheckpointReady)
+        if (ground.ActiveMarginal == CopenhagenMarginalLaw.HeartIsPort && ground.MarginalCompileAge == 0)
+            DrawText(frame, 6, _height - 19, "MARGINAL · HJERTAT ÄR EN PORT", 0xff7fc7ff);
+        if (ground.MarginalCompileAge == 0 && ground.Room == 0 && ground.DoorReady && !ground.HeartPortOpen)
             DrawText(frame, _width - 138, _height - 9, "HJÄRTAT · Z", 0xff7fc7ff);
+        else if (ground.MarginalCompileAge == 0 && ground.Room == 0 && ground.HeartPortOpen)
+            DrawText(frame, _width - 120, _height - 9, "PORT · UPP", 0xff7fc7ff);
+        else if (ground.Room == 1 && ground.DoorReady && !ground.CheckpointReady)
+            DrawText(frame, _width - 138, _height - 9, "ROSENBORG · Z", 0xff7fc7ff);
     }
 
     private void DrawCopenhagenCheckpointBanner(uint[] frame, CopenhagenWorldState state)
@@ -19411,7 +19669,9 @@ internal sealed class StormaktGame
         bool SorenOathComplete = false);
     private readonly record struct CopenhagenGroundSave(int Schema, int Width, int Height, int Age,
         double KarlX, double KarlY, int Health, int MaxHealth, int Potions, bool RoomClear, bool DoorReady,
-        List<CopenhagenGroundEnemySave> Enemies);
+        List<CopenhagenGroundEnemySave> Enemies, int Room = 0,
+        CopenhagenMarginalLaw ActiveMarginal = CopenhagenMarginalLaw.None,
+        bool HeartPortOpen = false, int ArsenalCannonHealth = 0);
     private readonly record struct CopenhagenGroundEnemySave(int Id, double X, double Y,
         int Health, int MaxHealth, int DeathAge);
 
@@ -19700,6 +19960,7 @@ internal sealed class StormaktGame
     }
 
     private enum CopenhagenPrediction { Up, Down, Left, Right }
+    private enum CopenhagenMarginalLaw { None, HeartIsPort, HeartIsOpen }
 
     private sealed class CopenhagenTollWall(bool vertical, int coordinate, int gap, int serial)
     {
@@ -19756,6 +20017,15 @@ internal sealed class StormaktGame
         public bool DoorReady { get; set; }
         public bool CheckpointReady { get; set; }
         public bool Dead { get; set; }
+        public int Room { get; set; }
+        public bool MarginalChoosing { get; set; }
+        public int MarginalSelection { get; set; }
+        public int MarginalCompileAge { get; set; }
+        public CopenhagenMarginalLaw ActiveMarginal { get; set; }
+        public bool HeartPortOpen { get; set; }
+        public int ArsenalCannonHealth { get; set; }
+        public int ArsenalCannonAttackAge { get; set; }
+        public int ArsenalCannonHitFlash { get; set; }
         public List<CopenhagenGroundEnemy> Enemies { get; } = [];
     }
 
