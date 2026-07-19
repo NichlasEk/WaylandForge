@@ -1488,7 +1488,7 @@ internal sealed class StormaktGame
         {
             RestoreCopenhagenGround(copenhagenResume, groundSave);
             ClearBossRadio();
-            _audio?.SwitchMusic(StormaktMusicTrack.Dungeon);
+            _audio?.SwitchMusic(groundSave.Room == 7 ? StormaktMusicTrack.Codex : StormaktMusicTrack.Dungeon);
         }
         if (levelId == 5 && _redHoundsFinalTestMode) _audio?.SwitchMusic(StormaktMusicTrack.RedHoundsBoss);
         _inLevelSelect = false;
@@ -1566,7 +1566,7 @@ internal sealed class StormaktGame
                 _previousButtons = buttons;
                 return;
             }
-            if (_levelSelection is 0 or 1 or 2 or 4 || _developerMode && _levelSelection is 5 or 6)
+            if (_levelSelection is 0 or 1 or 2 or 4 or 6 || _developerMode && _levelSelection == 5)
             {
                 StartLevel(_levelSelection, fresh: (buttons & Slow) != 0);
             }
@@ -1682,6 +1682,23 @@ internal sealed class StormaktGame
                     BeginCopenhagenGround(copenhagen, suppressSave: true);
                     if (copenhagen.Ground is CopenhagenGroundState ground)
                         BeginCopenhagenRosenborgRoom(ground);
+                }
+            }
+            else if (_copenhagenSelection is 4 or 5)
+            {
+                bool startCodex = _copenhagenSelection == 5;
+                StartLevel(6, fresh: true);
+                if (_copenhagenWorld is CopenhagenWorldState copenhagen)
+                {
+                    BeginCopenhagenGround(copenhagen, suppressSave: true);
+                    if (copenhagen.Ground is CopenhagenGroundState ground)
+                    {
+                        ground.ActiveMarginal = CopenhagenMarginalLaw.SilverIsBlade;
+                        ground.CompiledLegend = CopenhagenLegend.OneMooseCarolean;
+                        ground.LocalLaw = CopenhagenLocalLaw.SilverLighterThanGuilt;
+                        if (startCodex) BeginCopenhagenCodexRoom(ground);
+                        else BeginCopenhagenKorrektoriusRoom(ground);
+                    }
                 }
             }
             else
@@ -8427,6 +8444,7 @@ internal sealed class StormaktGame
         ground.SagaKarlHitCooldown = 0;
         ClearBossRadio();
         ActivateBossRadio(CopenhagenSagaKingRadio);
+        _audio?.SwitchMusic(StormaktMusicTrack.Boss);
         _audio?.Trigger(StormaktSound.OresundTrainRumble);
         if (!ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
             WriteCopenhagenGroundSave(ground);
@@ -8551,6 +8569,7 @@ internal sealed class StormaktGame
         }
         ClearBossRadio();
         ActivateBossRadio(CopenhagenKorrektoriusRadio);
+        _audio?.SwitchMusic(StormaktMusicTrack.Boss);
         _audio?.Trigger(StormaktSound.OresundTrainRumble);
         if (!ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
             WriteCopenhagenGroundSave(ground);
@@ -8768,6 +8787,7 @@ internal sealed class StormaktGame
         }
         ClearBossRadio();
         ActivateBossRadio(CopenhagenWrathRadio);
+        _audio?.SwitchMusic(StormaktMusicTrack.Boss);
         _audio?.Trigger(StormaktSound.OresundCrownCoreOpen);
         if (!ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
             WriteCopenhagenGroundSave(ground);
@@ -8792,6 +8812,7 @@ internal sealed class StormaktGame
         ground.CodexAge = 0;
         ground.Enemies.Clear();
         ClearBossRadio();
+        _audio?.SwitchMusic(StormaktMusicTrack.Codex);
         _audio?.Trigger(StormaktSound.OresundCrownCoreOpen);
         if (!ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
             WriteCopenhagenGroundSave(ground);
@@ -18238,6 +18259,9 @@ internal sealed class StormaktGame
         }
 
         int sideWidth = _width <= 320 ? 44 : 54;
+        Sprite instanceSprite = default;
+        bool hasInstanceSprite = _sprites is not null &&
+            _sprites.TryGet("codex_instance_dormant", out instanceSprite);
         for (int side = 0; side < 2; side++)
         {
             for (int index = 0; index < 127; index++)
@@ -18246,20 +18270,31 @@ internal sealed class StormaktGame
                 int row = index / 7;
                 int x = side == 0 ? 5 + column * 6 : _width - sideWidth + 3 + column * 6;
                 int y = 25 + row * Math.Max(7, (_height - 53) / 17);
-                DrawCodexInstanceContour(frame, x, y, index, ground.CodexOpened);
+                if (hasInstanceSprite)
+                    DrawSpriteScaled(frame, instanceSprite, x, y - 1, 5, 7);
+                else DrawCodexInstanceContour(frame, x, y, index, ground.CodexOpened);
             }
         }
 
         int centerX = _width / 2;
         int bookY = _height <= 224 ? 78 : 91;
-        if (_sprites?.TryGet("dungeon_runic_arch", out Sprite arch) == true)
+        if (_sprites?.TryGet("codex_wall_panel", out Sprite wallPanel) == true)
+            DrawSpriteScaled(frame, wallPanel, centerX - 63, 20, 126, 58);
+        if (_sprites?.TryGet("codex_clock_seal", out Sprite clockSeal) == true)
+            DrawSpriteScaled(frame, clockSeal, centerX - 43, bookY - 61, 86, 86);
+        else if (_sprites?.TryGet("dungeon_runic_arch", out Sprite arch) == true)
             DrawSpriteScaled(frame, arch, centerX - 54, bookY - 65, 108, 74);
         else
         {
             DrawCircleOutline(frame, centerX, bookY - 18, 51, 0xff354c59);
             DrawCircleOutline(frame, centerX, bookY - 18, 43, 0xff172c35);
         }
-        if (_sprites?.TryGet("dungeon_temple_altar", out Sprite altar) == true)
+
+        string bookName = !ground.CodexOpened ? "codex_book_closed" :
+            ground.CodexAge < 52 ? "codex_book_open" : "codex_book_awake";
+        if (_sprites?.TryGet(bookName, out Sprite codexBook) == true)
+            DrawSpriteScaled(frame, codexBook, centerX - 47, bookY - 34, 94, 72);
+        else if (_sprites?.TryGet("dungeon_temple_altar", out Sprite altar) == true)
             DrawSpriteScaled(frame, altar, centerX - 31, bookY - 4, 62, 54);
         else
         {
@@ -18267,15 +18302,20 @@ internal sealed class StormaktGame
             DrawLine(frame, centerX - 27, bookY + 3, centerX + 27, bookY + 3, 0xffb58a53);
         }
 
-        int opening = ground.CodexOpened ? Math.Min(18, ground.CodexAge / 3) : 0;
-        uint page = ground.CodexOpened ? 0xffd7e4df : 0xff6b7776;
-        DrawRect(frame, centerX - 4 - opening, bookY - 7, 4 + opening, 11, page);
-        DrawRect(frame, centerX, bookY - 7, 4 + opening, 11, page);
-        DrawLine(frame, centerX, bookY - 8, centerX, bookY + 5, 0xffffd66b);
-        DrawLine(frame, centerX - 5 - opening, bookY + 5, centerX + 5 + opening, bookY + 5, 0xff7fc7ff);
+        if (_sprites?.TryGet(bookName, out _) != true)
+        {
+            int opening = ground.CodexOpened ? Math.Min(18, ground.CodexAge / 3) : 0;
+            uint page = ground.CodexOpened ? 0xffd7e4df : 0xff6b7776;
+            DrawRect(frame, centerX - 4 - opening, bookY - 7, 4 + opening, 11, page);
+            DrawRect(frame, centerX, bookY - 7, 4 + opening, 11, page);
+            DrawLine(frame, centerX, bookY - 8, centerX, bookY + 5, 0xffffd66b);
+            DrawLine(frame, centerX - 5 - opening, bookY + 5, centerX + 5 + opening, bookY + 5, 0xff7fc7ff);
+        }
 
         int pulse = ground.CodexOpened ? 22 + ground.CodexAge / 5 % 10 : 18 + ground.Age / 8 % 5;
         DrawCircleOutline(frame, centerX, bookY, pulse, ground.CodexOpened ? 0xffbdf8ff : 0xff39545f);
+        if (ground.CodexOpened && _sprites?.TryGet("codex_recognition_ring", out Sprite ring) == true)
+            DrawSpriteScaled(frame, ring, (int)ground.KarlX - 34, (int)ground.KarlY - 28, 68, 56);
         if (!ground.CodexOpened)
             DrawText(frame, centerX - 51, bookY + 51, "SILVERKROPP IGENKÄND", 0xff66828c);
     }
@@ -21012,9 +21052,10 @@ internal sealed class StormaktGame
         bool hasHolmenSave = File.Exists(DungeonSavePath("copenhagen-holmen"));
         for (int index = 0; index < titles.Length; index++)
         {
-            bool available = index is 0 or 1 or 3 || index == 2 && hasHolmenSave;
+            bool available = index is 0 or 1 or 3 or 4 or 5 || index == 2 && hasHolmenSave;
             string status = index == 0 ? "NYTT" : index == 1 ? "LANDNING" :
-                index == 2 ? hasHolmenSave ? "FORTSÄTT" : "EJ SPARAD" : index == 3 ? "MATERIA" : "LÅST";
+                index == 2 ? hasHolmenSave ? "FORTSÄTT" : "EJ SPARAD" : index == 3 ? "MATERIA" :
+                index == 4 ? "LAG" : "CODEX";
             DrawLevelOption(frame, panelX + 12, panelTop + 25 + index * rowHeight, panelWidth - 24,
                 rowHeight - 3, index, titles[index], status, _copenhagenSelection == index);
             if (!available && _copenhagenSelection == index)
@@ -21053,8 +21094,8 @@ internal sealed class StormaktGame
         for (int index = 0; index < CampaignNames.Length; index++)
         {
             string status = index == 3 && File.Exists(DungeonSavePath("autosave")) ? "FORTSÄTT" :
-                _developerMode && index == 6 && File.Exists(DungeonSavePath("copenhagen-holmen")) ? "FORTSÄTT" :
-                index is 0 or 1 or 2 or 3 or 4 ? "STRID" : _developerMode ? "DEV" : "LÅST";
+                index == 6 && File.Exists(DungeonSavePath("copenhagen-holmen")) ? "FORTSÄTT" :
+                index is 0 or 1 or 2 or 3 or 4 or 6 ? "STRID" : _developerMode ? "DEV" : "LÅST";
             DrawLevelOption(frame, panelX + 12, listY + index * rowHeight, panelWidth - 24,
                 rowHeight - 2, index, $"{index + 1}  {CampaignNames[index]}", status);
         }
@@ -21063,6 +21104,7 @@ internal sealed class StormaktGame
             _levelSelection == 3 && File.Exists(DungeonSavePath("autosave")) ? "START FORTSÄTT  SLOW+START NYTT" :
             _levelSelection == 4 && File.Exists(DungeonSavePath("campaign")) ? "START KIT  SLOW+START STANDARD" :
             _developerMode && _levelSelection == 6 ? "START VÄLJ DEL" :
+            _levelSelection == 6 && File.Exists(DungeonSavePath("copenhagen-holmen")) ? "START FORTSÄTT  SLOW+START NYTT" :
             _developerMode ? "UTVECKLARLÄGE  ALLT UPPLÅST" : "UPP NER VÄLJ  START";
         DrawText(frame, (_width - footer.Length * 6) / 2, panelBottom - 9, footer,
             _lockedLevelNoticeFrames > 0 ? 0xff65c58a : 0xffb7c7d6);

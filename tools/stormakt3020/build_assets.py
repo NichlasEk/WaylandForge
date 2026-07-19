@@ -1330,6 +1330,27 @@ def append_copenhagen_holmen_guard(entries: list[tuple[str, Image.Image]], sourc
         entries.append((name, canvas))
 
 
+def append_copenhagen_codex_assets(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
+    definitions = [
+        ("codex_book_closed", 0, 0, (88, 68)),
+        ("codex_book_open", 1, 0, (88, 68)),
+        ("codex_book_awake", 2, 0, (88, 68)),
+        ("codex_instance_dormant", 3, 0, (30, 58)),
+        ("codex_wall_panel", 0, 1, (104, 58)),
+        ("codex_clock_seal", 1, 1, (72, 72)),
+        ("codex_margin_flare", 2, 1, (72, 72)),
+        ("codex_recognition_ring", 3, 1, (82, 82)),
+    ]
+    for name, column, row, target in definitions:
+        left = column * source.width // 4
+        top = row * source.height // 2
+        right = (column + 1) * source.width // 4
+        bottom = (row + 1) * source.height // 2
+        sprite = trim_alpha(source.crop((left, top, right, bottom)).convert("RGBA"))
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+
 def build(
     input_path: Path,
     danish_input_path: Path,
@@ -1392,6 +1413,7 @@ def build(
     red_hound_admirals_input_path: Path,
     copenhagen_holmen_input_path: Path,
     copenhagen_holmen_guard_input_path: Path,
+    copenhagen_codex_input_path: Path,
     rts_road_input_path: Path,
     dungeon_karl_input_path: Path,
     dungeon_mine_input_path: Path,
@@ -1486,6 +1508,7 @@ def build(
     red_hound_admirals_source = Image.open(red_hound_admirals_input_path).convert("RGBA")
     copenhagen_holmen_source = Image.open(copenhagen_holmen_input_path).convert("RGBA")
     copenhagen_holmen_guard_source = Image.open(copenhagen_holmen_guard_input_path).convert("RGBA")
+    copenhagen_codex_source = Image.open(copenhagen_codex_input_path).convert("RGBA")
     rts_road_source = Image.open(rts_road_input_path).convert("RGBA")
     dungeon_karl_source = Image.open(dungeon_karl_input_path).convert("RGBA")
     dungeon_mine_source = Image.open(dungeon_mine_input_path).convert("RGBA")
@@ -1613,6 +1636,7 @@ def build(
     append_red_hound_admiral_portraits(entries, red_hound_admirals_source)
     append_copenhagen_holmen_assets(entries, copenhagen_holmen_source)
     append_copenhagen_holmen_guard(entries, copenhagen_holmen_guard_source)
+    append_copenhagen_codex_assets(entries, copenhagen_codex_source)
     append_rts_frontier_road(entries, rts_road_source)
     append_dungeon_assets(entries, dungeon_karl_source, dungeon_mine_source)
     append_dungeon_loot(entries, dungeon_loot_source)
@@ -1856,6 +1880,7 @@ def main() -> None:
     parser.add_argument("--red-hound-admirals-input", type=Path, default=Path("assets/stormakt3020/red-hound-admiral-triplets-v1.png"))
     parser.add_argument("--copenhagen-holmen-input", type=Path, default=Path("assets/stormakt3020/copenhagen-holmen-environment-v1.png"))
     parser.add_argument("--copenhagen-holmen-guard-input", type=Path, default=Path("assets/stormakt3020/copenhagen-holmen-guard-v1.png"))
+    parser.add_argument("--copenhagen-codex-input", type=Path, default=Path("assets/stormakt3020/copenhagen-codex-v1.png"))
     parser.add_argument("--rts-road-input", type=Path, default=Path("assets/stormakt3020/rts-danish-frontier-road-v1.png"))
     parser.add_argument("--dungeon-karl-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-v1.png"))
     parser.add_argument("--dungeon-mine-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva1-environment-v1.png"))
@@ -1955,6 +1980,7 @@ def main() -> None:
         args.red_hound_admirals_input,
         args.copenhagen_holmen_input,
         args.copenhagen_holmen_guard_input,
+        args.copenhagen_codex_input,
         args.rts_road_input,
         args.dungeon_karl_input,
         args.dungeon_mine_input,

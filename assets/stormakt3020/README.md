@@ -139,6 +139,8 @@ The Silverkroppen dungeon extension adds versioned transparent sheets for Karl o
 
 `dungeon-karl-moose-gallop-v2.png` replaces the single sliding charge pose with a three-frame landing, push-off and airborne stride. The packer identifies the three alpha-connected riders instead of cutting mathematical thirds, preventing legs from adjacent poses becoming loose debris. The ship remains parked while the moose visibly approaches and stops; the riderless dismount shot retains that exact screen anchor.
 
+`copenhagen-codex-v1.png` supplies three coherent physical states for Codex Argentum, one dormant instance contour, the vault wall, cold clock seal, incomplete marginal flare and Karl's silver-recognition ring. The runtime pack uses these over the deterministic room state while retaining code-drawn fallbacks. Its flat-green source and exact two-reference built-in generation prompt are preserved beside the alpha-cleaned production sheet.
+
 ## Resolution
 
 Stormakt defaults to a 400x280 logical framebuffer. Assets retain their native gameplay pixel size, providing 25 percent more field in both directions and making ships smaller relative to the world. WaylandForge scales the WFEX frame to its viewport. Set `WAYLANDFORGE_STORMAKT_LEGACY_320=1` to A/B test the original 320x224 field; the pack contains a correctly sized background for both modes.
@@ -183,6 +185,7 @@ Additional scored roles live under `music/`:
 - `music/rode-hunde-drev-loop-v1.wav`: aktiv tystnadsfri 22-takters, 120 BPM-bossloop.
 - `music/snapphanens-ed-seger-v1.wav`: bevarad 24-sekunders segergeneration med fast seed `30201803`.
 - `music/snapphanens-ed-seger-loop-v1.wav`: aktiv tystnadsfri 8-takters, 120 BPM-segerloop som ligger kvar över resultatkortet.
+- `music/codex-argentum-clock-loop-v1.wav`: aktiv deterministisk 20-sekunders slutloop där det kungliga motivet bryts ned till en låg silverdrönare och kall halvsekundspuls; byggs utan externa bibliotek med `python tools/stormakt3020/build_codex_music.py`.
 
 `kronans-sista-salva-v1.wav` is the preserved 60-second generation; its final 12.09 seconds are effectively silent. `kronans-sista-salva-loop-v2.wav` is the active non-destructive edit: 40.000 seconds, exactly 14 four-beat bars at 84 BPM, cut before the generated fade. Rebuild it with `python tools/stormakt3020/build_music_loops.py`.
 

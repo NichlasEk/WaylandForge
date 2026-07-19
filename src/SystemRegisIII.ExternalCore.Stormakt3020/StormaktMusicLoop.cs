@@ -27,6 +27,7 @@ internal sealed class StormaktMusicLoop : IDisposable
     private readonly float[] _snapphaneSamples;
     private readonly float[] _redHoundsBossSamples;
     private readonly float[] _snapphaneVictorySamples;
+    private readonly float[] _codexSamples;
     private readonly Dictionary<StormaktSound, LoadedEffect> _effects;
     private readonly Dictionary<StormaktVoice, LoadedEffect> _voices;
     private readonly ConcurrentQueue<StormaktSound> _pendingEffects = new();
@@ -62,6 +63,7 @@ internal sealed class StormaktMusicLoop : IDisposable
         float[] snapphaneSamples,
         float[] redHoundsBossSamples,
         float[] snapphaneVictorySamples,
+        float[] codexSamples,
         Dictionary<StormaktSound, LoadedEffect> effects,
         Dictionary<StormaktVoice, LoadedEffect> voices,
         string socketPath)
@@ -80,6 +82,7 @@ internal sealed class StormaktMusicLoop : IDisposable
         _snapphaneSamples = snapphaneSamples;
         _redHoundsBossSamples = redHoundsBossSamples;
         _snapphaneVictorySamples = snapphaneVictorySamples;
+        _codexSamples = codexSamples;
         _effects = effects;
         _voices = voices;
         _totalFrames = samples.Length / Channels;
@@ -154,6 +157,8 @@ internal sealed class StormaktMusicLoop : IDisposable
                 float[] redHoundsBossSamples = File.Exists(redHoundsBossPath) ? LoadPcm16StereoWav(redHoundsBossPath) : bossSamples ?? samples;
                 string snapphaneVictoryPath = Path.Combine(musicDirectory, "snapphanens-ed-seger-loop-v1.wav");
                 float[] snapphaneVictorySamples = File.Exists(snapphaneVictoryPath) ? LoadPcm16StereoWav(snapphaneVictoryPath) : reliefSamples ?? snapphaneSamples;
+                string codexPath = Path.Combine(musicDirectory, "codex-argentum-clock-loop-v1.wav");
+                float[] codexSamples = File.Exists(codexPath) ? LoadPcm16StereoWav(codexPath) : dungeonSamples ?? reliefSamples ?? samples;
                 Dictionary<StormaktSound, LoadedEffect> effects = LoadEffects(path);
                 Dictionary<StormaktVoice, LoadedEffect> voices = LoadVoices(path);
                 string socketPath = Environment.GetEnvironmentVariable("WAYLANDFORGE_AUDIO_SOCKET") ?? DefaultSocketPath;
@@ -176,13 +181,15 @@ internal sealed class StormaktMusicLoop : IDisposable
                     ? $"ready ({redHoundsBossSamples.Length / Channels / SampleRate}s)" : "boss fallback";
                 string snapphaneVictoryDescription = File.Exists(snapphaneVictoryPath)
                     ? $"ready ({snapphaneVictorySamples.Length / Channels / SampleRate}s)" : "relief fallback";
+                string codexDescription = File.Exists(codexPath)
+                    ? $"ready ({codexSamples.Length / Channels / SampleRate}s)" : "dungeon fallback";
                 Console.Error.WriteLine($"Stormakt audio: loaded {Path.GetFileName(path)} ({samples.Length / Channels / SampleRate}s), " +
                     $"menu march={menuDescription}, Skanska score={skanskaDescription}, Oresund score={oresundDescription}, RTS score={rtsDescription}, dungeon score={dungeonDescription}, boss score={bossDescription}, Tithe boss={titheBossDescription}, " +
-                    $"escape score={escapeDescription}, relief score={reliefDescription}, Snapphane chase={snapphaneDescription}, Red Hounds boss={redHoundsBossDescription}, Snapphane victory={snapphaneVictoryDescription}, " +
+                    $"escape score={escapeDescription}, relief score={reliefDescription}, Snapphane chase={snapphaneDescription}, Red Hounds boss={redHoundsBossDescription}, Snapphane victory={snapphaneVictoryDescription}, Codex clock={codexDescription}, " +
                     $"{effects.Count} effects and {voices.Count} radio voices.");
                 return new StormaktMusicLoop(samples, menuSamples, skanskaSamples, oresundSamples, rtsSamples, dungeonSamples,
                     bossSamples, titheBossSamples, escapeSamples, reliefSamples, snapphaneSamples, redHoundsBossSamples,
-                    snapphaneVictorySamples, effects, voices, socketPath);
+                    snapphaneVictorySamples, codexSamples, effects, voices, socketPath);
             }
             catch (Exception exception)
             {
@@ -332,6 +339,7 @@ internal sealed class StormaktMusicLoop : IDisposable
                 StormaktMusicTrack.Snapphane => _snapphaneSamples,
                 StormaktMusicTrack.RedHoundsBoss => _redHoundsBossSamples,
                 StormaktMusicTrack.SnapphaneVictory => _snapphaneVictorySamples,
+                StormaktMusicTrack.Codex => _codexSamples,
                 _ => null,
             };
             if (requestedSamples is not null && _currentTrack != track && _transitionTrack != track)
@@ -979,4 +987,5 @@ internal enum StormaktMusicTrack
     Snapphane,
     RedHoundsBoss,
     SnapphaneVictory,
+    Codex,
 }
