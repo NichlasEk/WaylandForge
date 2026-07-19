@@ -56,6 +56,25 @@ Default keyboard mapping:
 
 The reusable UI style skeleton lives in `SystemRegisIII.WaylandForge.Ui`: canvas, rectangles, pointer state, panels, text, row/column helpers, button colors, border thickness, padding, hover/active states, and click state are theme-driven so other WaylandForge apps can use the same low-level controls. Dark is the default theme.
 
+## Standalone applications
+
+`SystemRegisIII.WaylandForge.App` exposes the low-level Wayland window as a
+small reusable application host without emulator, game, or external-core
+dependencies. Applications implement `IForgeApplication` and render through a
+bound `SoftwareCanvas` in each `ForgeFrame`; raw key, pointer, text, and scroll
+input arrive through the same frame boundary.
+
+Build the standalone example with:
+
+```sh
+dotnet build examples/SystemRegisIII.WaylandForge.AppExample/SystemRegisIII.WaylandForge.AppExample.csproj
+dotnet run --project examples/SystemRegisIII.WaylandForge.AppExample
+```
+
+The app project builds the existing native Wayland bridge into its output. An
+executable consuming it as a project reference currently copies
+`libwaylandforge_native.so` beside its managed output, as shown by the example.
+
 The fake core draws a controllable blob so every mapped button has visible output before a real emulator core is wired in.
 
 ## External Core Protocol

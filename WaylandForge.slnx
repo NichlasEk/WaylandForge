@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/examples/">
+    <Project Path="examples/SystemRegisIII.WaylandForge.AppExample/SystemRegisIII.WaylandForge.AppExample.csproj" />
     <Project Path="examples/SystemRegisIII.WfexProducerExample/SystemRegisIII.WfexProducerExample.csproj" />
   </Folder>
   <Folder Name="/src/">
@@ -7,6 +8,7 @@
     <Project Path="src/SystemRegisIII.ExternalCore.Dummy/SystemRegisIII.ExternalCore.Dummy.csproj" />
     <Project Path="src/SystemRegisIII.ExternalCore.ProcessProbe/SystemRegisIII.ExternalCore.ProcessProbe.csproj" />
     <Project Path="src/SystemRegisIII.Host.WaylandForge/SystemRegisIII.Host.WaylandForge.csproj" />
+    <Project Path="src/SystemRegisIII.WaylandForge.App/SystemRegisIII.WaylandForge.App.csproj" />
     <Project Path="src/SystemRegisIII.WayControlProtocol/SystemRegisIII.WayControlProtocol.csproj" />
     <Project Path="src/SystemRegisIII.WayControlProbe/SystemRegisIII.WayControlProbe.csproj" />
     <Project Path="src/SystemRegisIII.WfexConformance/SystemRegisIII.WfexConformance.csproj" />
