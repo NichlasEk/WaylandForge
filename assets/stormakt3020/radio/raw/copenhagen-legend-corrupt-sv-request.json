@@ -1,0 +1,13 @@
+{
+  "text": "Ordren var storma. Den kan ej stanna.",
+  "language": "sv",
+  "model_backend": "dots.tts-mf",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Marginalen läser den skrivna lagen bokstavligt. Ett ord är ett verktyg, en sats är ett ingrepp och en felaktig beskrivning blir ändå utförd. Silvret lyder inte avsikten. Silvret lyder formuleringen.",
+  "voice_instruction": "A nonhuman marginal annotation spoken by programmable silver, low clear androgynous Swedish voice assembled from scratching quills and distant human harmonics, archaic exact diction, literal and dispassionate, intelligible and restrained, never comic, ghostly, noisy or distorted.",
+  "seed": 302139,
+  "dots_num_steps": 4,
+  "dots_guidance_scale": 1.2,
+  "dots_speaker_scale": 1.5
+}

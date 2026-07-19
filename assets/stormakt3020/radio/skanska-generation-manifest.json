@@ -1057,6 +1057,590 @@
       "sha256": "ea05db0d35dfc41bb6d3bf5cd79dfb029dc81f75f51192955a6020a8aab6b91a",
       "request": "assets/stormakt3020/radio/raw/soren-red-hounds-victory-sv-request.json",
       "reference_sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b"
+    },
+    {
+      "kind": "reference",
+      "role": "trekroner-lock",
+      "job_id": "69d0bec3cb66467eaa1637d8627c8e30",
+      "file": "assets/stormakt3020/radio/references/trekroner-lock-reference.wav",
+      "sha256": "fb20d94789f83ca2acae4820de3793680d2445c3c28c8b07e1ff4c590ddc64a0",
+      "request": {
+        "text": "Tre Kronors lås vakar över infarten. Varje krona bär sin del av sigillet, varje port håller stadens tyngd. När kretsen sluts finns ingen väg genom ringen och ingen främmande köl når Köpenhamn.",
+        "language": "sv",
+        "voice_instruction": "A wholly synthetic Scandinavian fortress lock, deep synchronized male and female bronze voices, slow severe Swedish diction with a faint Danish color, ceremonial and mechanical without beeps, distortion, comedy or loss of intelligibility.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302033
+      }
+    },
+    {
+      "kind": "reference",
+      "role": "clock-admiral",
+      "job_id": "33e164e6344047e5bbe86def8460edd0",
+      "file": "assets/stormakt3020/radio/references/clock-admiral-reference.wav",
+      "sha256": "e546fc74b64717666f5337e836731190ccba55c32ef393dcd13dda8cf087a5b5",
+      "request": {
+        "text": "Amiralitetets urverk räknar varje kurs och varje skott. Tolv slag delar striden, kuggarna fördelar elden och ingen timme lämnas obevakad. Flottan lyder den takt som staden har fastställt.",
+        "language": "sv",
+        "voice_instruction": "A synthetic Scandinavian clockwork admiral, stern mature male bass layered with a precise metallic female undertone, measured Swedish naval diction timed like a great clock, commanding and intelligible, never comic, glitchy or robotic beeps.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302034
+      }
+    },
+    {
+      "kind": "reference",
+      "role": "frederik-null",
+      "job_id": "a388e2a993204e3289765cfb456e411b",
+      "file": "assets/stormakt3020/radio/references/frederik-null-reference.wav",
+      "sha256": "db4ec5bcb319c6ed1136f135df9da3e93898679742034ebe1365f93aa918ce8a",
+      "request": {
+        "text": "Jeg er Frederik Null. Under mit segl bliver skibe, våben og mandskab ført tilbage til Kronens register. Intet tab er endeligt, når regnskabet kan lukke posten og skrive rustningen hel igen.",
+        "language": "da",
+        "voice_instruction": "A wholly synthetic Danish royal auditor embodied in an armored throne, cold adult male basso profundo with a dry metallic double, exact natural Danish chancery diction, absolute and contemptuous, never comic, weak, distorted or unintelligible.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302035
+      }
+    },
+    {
+      "kind": "reference",
+      "role": "oresund-eye",
+      "job_id": "563b3a2b625f42e998f311fa04c871ce",
+      "file": "assets/stormakt3020/radio/references/oresund-eye-reference.wav",
+      "sha256": "755bb44353a87c759adac993e57fe5a37ebe9e70f8c3ef9cdaf7f7b13fc531ac",
+      "request": {
+        "text": "Öresunds öga ser kursen innan rodret rör sig. Varje undanmanöver registreras, varje framtida läge vägs och beskattas. Linsen behöver inte jaga det som redan finns i dess beräkning.",
+        "language": "sv",
+        "voice_instruction": "A synthetic Scandinavian surveillance intelligence, calm low androgynous voice with several tightly synchronized whispers, precise Swedish diction, observant and inhumanly certain, faint glass resonance, never horror-comic, noisy, distorted or hard to understand.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302036
+      }
+    },
+    {
+      "kind": "reference",
+      "role": "absalon",
+      "job_id": "3816b0b5a3134ce1805dbc15d1978b76",
+      "file": "assets/stormakt3020/radio/references/absalon-reference.wav",
+      "sha256": "a28ceafc8fa172222e85fe3a00bfd12268fc5c90fd23291983d92e90d932d50a",
+      "request": {
+        "text": "Jeg er Absalon. Skjoldene låser kant mod kant, og min mur flytter sig kun på mit tegn. Hold linjen, luk himlen og lad fjenden knække sig selv mod København.",
+        "language": "da",
+        "voice_instruction": "An adult Danish fortress commander, massive disciplined baritone projected through a closed iron helmet, terse natural Danish battlefield diction, immovable defensive confidence, never old, theatrical, comic, muffled or distorted.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302037
+      }
+    },
+    {
+      "kind": "reference",
+      "role": "elefanten",
+      "job_id": "4bd9812d88a549db9c64e10554bd5d30",
+      "file": "assets/stormakt3020/radio/references/elefanten-reference.wav",
+      "sha256": "05c79cda0f51951348f6074729f741c45630df066032aa0b3adf0c6d806cc743",
+      "request": {
+        "text": "De kalder mig Elefanten. Når skjoldmuren binder fjenden, tager jeg åbningen med hele skibets vægt. Hold jer fri af stævnen, for jeg standser først på den anden side.",
+        "language": "da",
+        "voice_instruction": "An enormous adult Danish shock commander, muscular roaring bass-baritone with heavy chest resonance, blunt natural Danish diction, joyful controlled aggression and unstoppable momentum, never animal noises, comic, slurred or unintelligible.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302038
+      }
+    },
+    {
+      "kind": "reference",
+      "role": "codex-margin",
+      "job_id": "f10f2f74a95f479c87982f88bfba73d1",
+      "file": "assets/stormakt3020/radio/references/codex-margin-reference.wav",
+      "sha256": "ec18eb07aec268b776bf1e0be72112f89c442fc9c2b4067ff23db0fe9cf9deb4",
+      "request": {
+        "text": "Marginalen läser den skrivna lagen bokstavligt. Ett ord är ett verktyg, en sats är ett ingrepp och en felaktig beskrivning blir ändå utförd. Silvret lyder inte avsikten. Silvret lyder formuleringen.",
+        "language": "sv",
+        "voice_instruction": "A nonhuman marginal annotation spoken by programmable silver, low clear androgynous Swedish voice assembled from scratching quills and distant human harmonics, archaic exact diction, literal and dispassionate, intelligible and restrained, never comic, ghostly, noisy or distorted.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302039
+      }
+    },
+    {
+      "kind": "reference",
+      "role": "saga-king",
+      "job_id": "873113ffaad44311a7495c14848e6af0",
+      "file": "assets/stormakt3020/radio/references/saga-king-reference.wav",
+      "sha256": "ad843680c00a264a78453d100b7a543177c4539d2e4bc2a6cb3860f31e1bfe55",
+      "request": {
+        "text": "Jag är konungen som sångerna gjorde större än livet. Hundra fanor föll för min blick, tusen svärd brast mot min hand och varje ny berättare lade ännu en seger till mitt namn.",
+        "language": "sv",
+        "voice_instruction": "A legendary Scandinavian warrior king compiled from centuries of exaggeration, huge mature male heroic bass-baritone, grand natural Swedish diction, proud and dangerously sincere, strength swelling with every false memory, never comedic parody, elderly or breathy.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302040
+      }
+    },
+    {
+      "kind": "reference",
+      "role": "korrektorius",
+      "job_id": "d4db356c4a514930ada553933f6783b2",
+      "file": "assets/stormakt3020/radio/references/korrektorius-reference.wav",
+      "sha256": "a25bebe5da617c9e350ee0a5b96dd414cee9cf03cf89d47d7aae0e765ec2f558",
+      "request": {
+        "text": "Jag är Korrektorius. Riket faller inte genom svärd utan genom slarviga satser. Jag stryker det tvetydiga, rättar det omöjliga och lämnar endast den mening som Kronan kan godkänna.",
+        "language": "sv",
+        "voice_instruction": "A severe adult Scandinavian royal proofreader and duelist, narrow controlled male baritone, razor-sharp natural Swedish diction with faint Danish cadence, pedantic absolute confidence, each correction delivered like a blade stroke, never comic, nasal, old or breathy.",
+        "model_backend": "voxcpm2",
+        "output_format": "wav",
+        "normalize": false,
+        "seed": 302041
+      }
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-approach",
+      "role": "ebba-grip",
+      "job_id": "646f81269ca34731806a6f7591fc003b",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-approach-sv-raw.wav",
+      "sha256": "66e4b8d090dbdb8a8af4af9496f0fac19196bd0a8e0ea69aae426085d0a7487d",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-approach-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-gate",
+      "role": "trekroner-lock",
+      "job_id": "6d957be156db45fcac388fe1ff5f6820",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-gate-sv-raw.wav",
+      "sha256": "870f8e89a01393eebcc67cb25fbe4e26f94acd3edb5e396125f56ad05bebac5e",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-gate-sv-request.json",
+      "reference_sha256": "fb20d94789f83ca2acae4820de3793680d2445c3c28c8b07e1ff4c590ddc64a0"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-gate-fall",
+      "role": "ebba-grip",
+      "job_id": "f5296b0bdc6e4d9487af99b26bb444da",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-gate-fall-sv-raw.wav",
+      "sha256": "b87e1eb0f705edb2ac5f407ea2932b6820d586704db17cd354b85f4b0c162c26",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-gate-fall-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-admiralty",
+      "role": "clock-admiral",
+      "job_id": "4e47d98deef941b4b5a785fa9ba77af5",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-admiralty-sv-raw.wav",
+      "sha256": "8e403db0b7f20a114f3a801f9a4ac528e1a40e6ee54d34eb2d3a2ba45f86e7ea",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-admiralty-sv-request.json",
+      "reference_sha256": "e546fc74b64717666f5337e836731190ccba55c32ef393dcd13dda8cf087a5b5"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-noon",
+      "role": "ebba-grip",
+      "job_id": "ec79daf8f1d54a5cba325d9ef24d0f40",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-noon-sv-raw.wav",
+      "sha256": "4c0f99ed9512449a18d19174a3876dfa968162d2b21a9d57c90e2fcd8b3c0432",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-noon-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-admiralty-fall",
+      "role": "ebba-grip",
+      "job_id": "31e840879ab8481996e6be875832c3af",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-admiralty-fall-sv-raw.wav",
+      "sha256": "2f51f9c4cecf0abfe5989ea5ea81c7b22a0629dc51439f9ff52647413b6b9237",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-admiralty-fall-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-frederik",
+      "role": "frederik-null",
+      "job_id": "62acd7b7af1d4cefb6fd6c3a4911d91b",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-frederik-da-raw.wav",
+      "sha256": "01baadd39c6a665a71596a36efdc782266a0774399a0664df99a4263fa650190",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-frederik-da-request.json",
+      "reference_sha256": "db4ec5bcb319c6ed1136f135df9da3e93898679742034ebe1365f93aa918ce8a"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-frederik-blades",
+      "role": "ebba-grip",
+      "job_id": "5c9a4d33677e4c7c8928fc3ddab15c0b",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-frederik-blades-sv-raw.wav",
+      "sha256": "3af08489fa461ab32fb0c551a8a0518424eaaba7f71a88b85d54705168a01c20",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-frederik-blades-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-frederik-repair",
+      "role": "frederik-null",
+      "job_id": "d25e6fe7835b4b718774839a80210e0a",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-frederik-repair-da-raw.wav",
+      "sha256": "1ab98242c8abb2dcbc3dc2a12f1bd65a829cc2407c6afcbfb289325811c94df8",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-frederik-repair-da-request.json",
+      "reference_sha256": "db4ec5bcb319c6ed1136f135df9da3e93898679742034ebe1365f93aa918ce8a"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-frederik-fall",
+      "role": "frederik-null",
+      "job_id": "02f26414cb4d49c3ae825e31816cdcc8",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-frederik-fall-da-raw.wav",
+      "sha256": "8c59aa860af11f189735f17bfbcd8ff14ee3de63d45888eb1f52e7a2c2dc4317",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-frederik-fall-da-request.json",
+      "reference_sha256": "db4ec5bcb319c6ed1136f135df9da3e93898679742034ebe1365f93aa918ce8a"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-eye",
+      "role": "ebba-grip",
+      "job_id": "bc1339e093dc4689a69980f143e8f9a0",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-eye-sv-raw.wav",
+      "sha256": "41ff948deb13d8fc226fcab68fa03cbf59e29885cd3f0d178ecce5fbd01c2268",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-eye-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-eye-lens",
+      "role": "oresund-eye",
+      "job_id": "2b075df40c3541808778c9779451dff7",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-eye-lens-sv-raw.wav",
+      "sha256": "8ef3254256f64193430877409a215eae86a79d01026adced9abcc770cb04511e",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-eye-lens-sv-request.json",
+      "reference_sha256": "755bb44353a87c759adac993e57fe5a37ebe9e70f8c3ef9cdaf7f7b13fc531ac"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-eye-soren",
+      "role": "soren-svartkrut",
+      "job_id": "9cdded8b681448299aa42746863472b3",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-eye-soren-sv-raw.wav",
+      "sha256": "fbae00c3f95c564cb6ba1a16c6943bfb27d7fc8e4226741c0f60dd7beae1e876",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-eye-soren-sv-request.json",
+      "reference_sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-eye-fall",
+      "role": "ebba-grip",
+      "job_id": "f644741f362140a092229e6d9433320e",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-eye-fall-sv-raw.wav",
+      "sha256": "70819a4d0dcca728c831d0f8591f6b57594bec8e6c42c8f2f765fea273385126",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-eye-fall-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-dannebrog",
+      "role": "kung-christian",
+      "job_id": "70bd160fd3b641108859fe699f2a4c32",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-dannebrog-da-raw.wav",
+      "sha256": "5d82d5e08a46ad8eec721e5149836a760b835cb4481cb73c3317e611fd0f1dc6",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-dannebrog-da-request.json",
+      "reference_sha256": "391fd7d3d32e09408e2fa6cb3e1fc64b8d57600861322173df6e27cffcd70bf9"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-dannebrog-gap",
+      "role": "ebba-grip",
+      "job_id": "dc31ec19b05a4539a43637bf05c642e6",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-dannebrog-gap-sv-raw.wav",
+      "sha256": "0a8db2ba84739912c8a3746a91087c542d61abe8a5290352f11a2e419e5a3ce2",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-dannebrog-gap-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-dannebrog-fall",
+      "role": "soren-svartkrut",
+      "job_id": "fb0ee49166114fde8c91abdcc0d408b6",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-dannebrog-fall-sv-raw.wav",
+      "sha256": "ad6331f0a6f4e41349cd0c69f237e727fc17351e6becda8e46353fe8b5676742",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-dannebrog-fall-sv-request.json",
+      "reference_sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-duo",
+      "role": "ebba-grip",
+      "job_id": "c3e451ee0d044463ac97b85503259ad5",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-duo-sv-raw.wav",
+      "sha256": "ae70b9dafdcba64e8511582552b7ea6af9abfb6cb971d2babac341ae7c653a26",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-duo-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-absalon-wall",
+      "role": "absalon",
+      "job_id": "e09e5ca907b846a1b048cf482eb2a001",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-absalon-wall-da-raw.wav",
+      "sha256": "b9a3b0ac9fb9b66c9834b314e781d3311cc10f4920209ae89cbea0d8ad295d3a",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-absalon-wall-da-request.json",
+      "reference_sha256": "a28ceafc8fa172222e85fe3a00bfd12268fc5c90fd23291983d92e90d932d50a"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-elefanten-charge",
+      "role": "elefanten",
+      "job_id": "cd266f93dd834c87b71a3f19b700225d",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-elefanten-charge-da-raw.wav",
+      "sha256": "5c9668df0b456a45ff69f70334c4449a76f0c9ca40f5f6a6e07b48d57c84ee68",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-elefanten-charge-da-request.json",
+      "reference_sha256": "05c79cda0f51951348f6074729f741c45630df066032aa0b3adf0c6d806cc743"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-duo-fall",
+      "role": "kung-christian",
+      "job_id": "069f70330014410ca4f9db683b70f952",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-duo-fall-da-raw.wav",
+      "sha256": "ccabd7aeb411a1696a9df4d69653c3560fd18d8c799e9fa8b8b4c3b09335203b",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-duo-fall-da-request.json",
+      "reference_sha256": "391fd7d3d32e09408e2fa6cb3e1fc64b8d57600861322173df6e27cffcd70bf9"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-super",
+      "role": "kung-christian",
+      "job_id": "40b3aaaa052841c29e727645aba51058",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-super-da-raw.wav",
+      "sha256": "a727785625f8bd6376279ff3cf62b5d5fc551b774cf78b0b3c5e9bd9e4577556",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-super-da-request.json",
+      "reference_sha256": "391fd7d3d32e09408e2fa6cb3e1fc64b8d57600861322173df6e27cffcd70bf9"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-super-cross",
+      "role": "ebba-grip",
+      "job_id": "3a0e4237dc3d403883c1bad87758f5f1",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-super-cross-sv-raw.wav",
+      "sha256": "54f2c670e6a8f62f4d4c3e2410bf59ed50aa49e4b2343dd236f4e5082f2940f7",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-super-cross-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-super-memory",
+      "role": "kung-christian",
+      "job_id": "242820bff2da42d98ab12ba33829d4e5",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-super-memory-da-raw.wav",
+      "sha256": "110f33b5f4e70de5e2451734988c8e6527c68de9ee4bb8dabd03d4f3b85c002f",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-super-memory-da-request.json",
+      "reference_sha256": "391fd7d3d32e09408e2fa6cb3e1fc64b8d57600861322173df6e27cffcd70bf9"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-super-hold",
+      "role": "soren-svartkrut",
+      "job_id": "e8d980209f394e8ba552972bb39b2ba2",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-super-hold-sv-raw.wav",
+      "sha256": "6b122b1a946946be7e91b0d22086133a103f4dc4f4bcb550472b281bdb94fee3",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-super-hold-sv-request.json",
+      "reference_sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-super-fall",
+      "role": "kung-christian",
+      "job_id": "b7b91cf204304d8dba10d39100a90d66",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-super-fall-da-raw.wav",
+      "sha256": "adb525f774557b44aef21448cb194fbcafb283a5b9c0f87c08acb168ddf4de1f",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-super-fall-da-request.json",
+      "reference_sha256": "391fd7d3d32e09408e2fa6cb3e1fc64b8d57600861322173df6e27cffcd70bf9"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-landing",
+      "role": "ebba-grip",
+      "job_id": "bc96800189094ff4bfe2acc5555c06a9",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-landing-sv-raw.wav",
+      "sha256": "ba178641fbb6a1143ac76e296fcda9f4ac455515c7bac43ef66622ac4532f1cf",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-landing-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-landing-clear",
+      "role": "soren-svartkrut",
+      "job_id": "62cb388a9a1343abb7abb2398a18ff53",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-landing-clear-sv-raw.wav",
+      "sha256": "af71487523d419d7ccd6154977dddb98da5a1ae511763e15c90102208513aba9",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-landing-clear-sv-request.json",
+      "reference_sha256": "e19709a51ae6c6812929fd449432e783b80c766992bb3aefca1a3a3be5f88b0b"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-ground",
+      "role": "ebba-grip",
+      "job_id": "b889a35b2ff34bf1ae36d048ef003584",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-ground-sv-raw.wav",
+      "sha256": "1ed2c731d5219fd5cc5e65364b54c4e1d1f2e7d459ddd070fd1487a5f003a86f",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-ground-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-ground-clear",
+      "role": "karl-cclv",
+      "job_id": "3d8c9b585a504abbaacd2389c692a451",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-ground-clear-sv-raw.wav",
+      "sha256": "ca43bdc8da95673862cd151f5ad9ec99d51c7e19c382e72a05cbf719fba89f2c",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-ground-clear-sv-request.json",
+      "reference_sha256": "768fb86a95a5cf2c0d14543289abd4c2ca4fe2c9c824af820a1796c6e87aec1d"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-marginal-fault",
+      "role": "codex-margin",
+      "job_id": "a9aad642b32f4f47962c06060815f3e2",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-marginal-fault-sv-raw.wav",
+      "sha256": "85ceb9487e56379842e10289ce908757b1bc9135e78f4ebaaa37ca72544fba9f",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-marginal-fault-sv-request.json",
+      "reference_sha256": "ec18eb07aec268b776bf1e0be72112f89c442fc9c2b4067ff23db0fe9cf9deb4"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-arsenal",
+      "role": "ebba-grip",
+      "job_id": "a7384bef14674a5fbe9d5ced97832c0c",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-arsenal-sv-raw.wav",
+      "sha256": "5e34a45bcc5ee930f98ae7b000fc6cd2f17efeb6ce8ecce09e1d31cabc879ca7",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-arsenal-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-arsenal-clear",
+      "role": "karl-cclv",
+      "job_id": "f56463de26ea40ebb5c1e0dac1225ad3",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-arsenal-clear-sv-raw.wav",
+      "sha256": "d0c14abafff115940e42d5aaeb8c752cd828e7e86d15d22d2f3ee99f6071b432",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-arsenal-clear-sv-request.json",
+      "reference_sha256": "768fb86a95a5cf2c0d14543289abd4c2ca4fe2c9c824af820a1796c6e87aec1d"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-rosenborg",
+      "role": "ebba-grip",
+      "job_id": "40aeab65560e4e2681da63ece198b8ca",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-rosenborg-sv-raw.wav",
+      "sha256": "9a739694a974687f38ad38b08bfd2eb620e77d4a30d2b8167d774daf35295d55",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-rosenborg-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-rosenborg-clear",
+      "role": "karl-cclv",
+      "job_id": "a40adfbf7ff748239e0af307bb15f8ed",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-rosenborg-clear-sv-raw.wav",
+      "sha256": "3f6ec1b7ba52527a326ab8e1daca5a8cfe0c9fc46c00c256a1a4aa5885e7f4a2",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-rosenborg-clear-sv-request.json",
+      "reference_sha256": "768fb86a95a5cf2c0d14543289abd4c2ca4fe2c9c824af820a1796c6e87aec1d"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-memory-machine",
+      "role": "ebba-grip",
+      "job_id": "aa4fa13aa027405f9951b58ebb53efb4",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-memory-machine-sv-raw.wav",
+      "sha256": "ab9e4a0ef9ee405e21d9cd8d36e3e777e8ba961eeee4239f54e0dd0f7059d024",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-memory-machine-sv-request.json",
+      "reference_sha256": "d32886ab56bcb4ca3658e8832e9f41187467337fce0ee9992db8d6ea2b65e0b1"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-legend-corrupt",
+      "role": "codex-margin",
+      "job_id": "f313b9f479064d6c83e46f7d110f1afa",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-legend-corrupt-sv-raw.wav",
+      "sha256": "d93dddfa60c83edce781e1b97ec03752af0984a6035f7a6d469a8353867cbd91",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-legend-corrupt-sv-request.json",
+      "reference_sha256": "ec18eb07aec268b776bf1e0be72112f89c442fc9c2b4067ff23db0fe9cf9deb4"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-memory-clear",
+      "role": "karl-cclv",
+      "job_id": "c4ad251ca7cf4402b089fc84a881a37a",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-memory-clear-sv-raw.wav",
+      "sha256": "3c32fe0b19673118f2da3d188ce4caf89fbf7499276508f573ca13c2abcd852e",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-memory-clear-sv-request.json",
+      "reference_sha256": "768fb86a95a5cf2c0d14543289abd4c2ca4fe2c9c824af820a1796c6e87aec1d"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-saga-king",
+      "role": "saga-king",
+      "job_id": "53cb2e7110274a209c26905e80415bb8",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-saga-king-sv-raw.wav",
+      "sha256": "c33e7b9314aa8f7604ab2ede74ac20d69dcc1d29816c1f1056dd985ea3d5ab93",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-saga-king-sv-request.json",
+      "reference_sha256": "ad843680c00a264a78453d100b7a543177c4539d2e4bc2a6cb3860f31e1bfe55"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-saga-king-clear",
+      "role": "karl-cclv",
+      "job_id": "6b4d8d8b039c4731afe5446308ac3ddd",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-saga-king-clear-sv-raw.wav",
+      "sha256": "43e560b5496ccbd3aa9cd511d51efff103c3a5ce472d0a1d949dee7f3e81c16f",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-saga-king-clear-sv-request.json",
+      "reference_sha256": "768fb86a95a5cf2c0d14543289abd4c2ca4fe2c9c824af820a1796c6e87aec1d"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-korrektorius",
+      "role": "korrektorius",
+      "job_id": "28aec8ef82524ff2a9680689c04e4fad",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-korrektorius-sv-raw.wav",
+      "sha256": "ecb749ca36d699fd2353fadb007d131e894d966ad4109a9869e130ab1fa99e92",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-korrektorius-sv-request.json",
+      "reference_sha256": "a25bebe5da617c9e350ee0a5b96dd414cee9cf03cf89d47d7aae0e765ec2f558"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-korrektorius-clear",
+      "role": "karl-cclv",
+      "job_id": "a36f793c3d3043d4a562166c9f9ba5d2",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-korrektorius-clear-sv-raw.wav",
+      "sha256": "f57600749f16ad6f247fddba58e86b4df9cd761274d2aa6b5f3fe69593d93f31",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-korrektorius-clear-sv-request.json",
+      "reference_sha256": "768fb86a95a5cf2c0d14543289abd4c2ca4fe2c9c824af820a1796c6e87aec1d"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-wrath",
+      "role": "kung-christian",
+      "job_id": "3403aa0262504b02bd48989dc14512fa",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-wrath-da-raw.wav",
+      "sha256": "bab62413eff76d2402247fdf1ce1dde46bec3fdb58e9709da587f4f5aefd0335",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-wrath-da-request.json",
+      "reference_sha256": "391fd7d3d32e09408e2fa6cb3e1fc64b8d57600861322173df6e27cffcd70bf9"
+    },
+    {
+      "kind": "line",
+      "line": "copenhagen-wrath-clear",
+      "role": "kung-christian",
+      "job_id": "f2592c35655b45fda91c3dd0abbca359",
+      "file": "assets/stormakt3020/radio/raw/copenhagen-wrath-clear-da-raw.wav",
+      "sha256": "15f1606a6b6a67a9bf95133e64d81616c4f1dad2ce5b463413c891a33ac8a576",
+      "request": "assets/stormakt3020/radio/raw/copenhagen-wrath-clear-da-request.json",
+      "reference_sha256": "391fd7d3d32e09408e2fa6cb3e1fc64b8d57600861322173df6e27cffcd70bf9"
     }
   ],
   "service": "http://127.0.0.1:8765",

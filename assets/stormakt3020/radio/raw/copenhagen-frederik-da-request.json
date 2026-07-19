@@ -1,0 +1,13 @@
+{
+  "text": "Alle skibe er beslaglagt. Jeg nulstiller jer.",
+  "language": "da",
+  "model_backend": "dots.tts-mf",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Jeg er Frederik Null. Under mit segl bliver skibe, våben og mandskab ført tilbage til Kronens register. Intet tab er endeligt, når regnskabet kan lukke posten og skrive rustningen hel igen.",
+  "voice_instruction": "A wholly synthetic Danish royal auditor embodied in an armored throne, cold adult male basso profundo with a dry metallic double, exact natural Danish chancery diction, absolute and contemptuous, never comic, weak, distorted or unintelligible.",
+  "seed": 302135,
+  "dots_num_steps": 4,
+  "dots_guidance_scale": 1.2,
+  "dots_speaker_scale": 1.5
+}

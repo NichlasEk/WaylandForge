@@ -1,0 +1,13 @@
+{
+  "text": "Jeg tager åbningen. Flyt jer!",
+  "language": "da",
+  "model_backend": "dots.tts-mf",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "De kalder mig Elefanten. Når skjoldmuren binder fjenden, tager jeg åbningen med hele skibets vægt. Hold jer fri af stævnen, for jeg standser først på den anden side.",
+  "voice_instruction": "An enormous adult Danish shock commander, muscular roaring bass-baritone with heavy chest resonance, blunt natural Danish diction, joyful controlled aggression and unstoppable momentum, never animal noises, comic, slurred or unintelligible.",
+  "seed": 302138,
+  "dots_num_steps": 4,
+  "dots_guidance_scale": 1.2,
+  "dots_speaker_scale": 1.5
+}

@@ -1,0 +1,13 @@
+{
+  "text": "Landningslinan är fri. Jag håller ringen.",
+  "language": "sv",
+  "model_backend": "dots.tts-mf",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Ni blårockar färdas långt från era kartor. Här bär varje sten ett namn och varje mörk signal har ett minne. Jag heter Sören Svartkrut. Håll fingret från avtryckaren, så kanske skogen låter er passera med både skepp och stolthet i behåll.",
+  "voice_instruction": "An adult Scanian male outlaw captain, rugged baritone, dry wit and controlled menace, clear Swedish with a subtle southern Scanian color, intelligent and charismatic, never comic or exaggerated.",
+  "seed": 302122,
+  "dots_num_steps": 4,
+  "dots_guidance_scale": 1.2,
+  "dots_speaker_scale": 1.5
+}

@@ -1,0 +1,13 @@
+{
+  "text": "Skjoldmur frem! Luk himlen!",
+  "language": "da",
+  "model_backend": "dots.tts-mf",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Jeg er Absalon. Skjoldene låser kant mod kant, og min mur flytter sig kun på mit tegn. Hold linjen, luk himlen og lad fjenden knække sig selv mod København.",
+  "voice_instruction": "An adult Danish fortress commander, massive disciplined baritone projected through a closed iron helmet, terse natural Danish battlefield diction, immovable defensive confidence, never old, theatrical, comic, muffled or distorted.",
+  "seed": 302137,
+  "dots_num_steps": 4,
+  "dots_guidance_scale": 1.2,
+  "dots_speaker_scale": 1.5
+}

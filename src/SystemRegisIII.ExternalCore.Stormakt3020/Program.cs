@@ -586,93 +586,93 @@ internal sealed class StormaktGame
         new(0, 390, true, "FOGDE RASMUS", "SLOTTENE FALDER", "SUNDET ER FRIT",
             StormaktVoice.RasmusOresundFall, "portrait_rasmus");
     private static readonly RadioCard CopenhagenApproachRadio =
-        new(0, 300, false, "EBBA GRIP", "RINGEN ÄR ETT LÅS", "BRYT TRE KRONOR", null, "portrait_ebba");
+        new(0, 300, false, "EBBA GRIP", "RINGEN ÄR ETT LÅS", "BRYT TRE KRONOR", StormaktVoice.CopenhagenApproach, "portrait_ebba");
     private static readonly RadioCard CopenhagenGateRadio =
-        new(0, 330, true, "TREKRONERS LÅS", "KRONAN HÅLLER", "STADEN FÖRBLIR SLUTEN", null, "rigsregnskabet");
+        new(0, 330, true, "TREKRONERS LÅS", "KRONAN HÅLLER", "STADEN FÖRBLIR SLUTEN", StormaktVoice.CopenhagenGate, "rigsregnskabet");
     private static readonly RadioCard CopenhagenGateFallRadio =
-        new(0, 300, false, "EBBA GRIP", "FÖRSTA LÅSET BRUSTET", "AMIRALITETET VÄNTAR", null, "portrait_ebba");
+        new(0, 300, false, "EBBA GRIP", "FÖRSTA LÅSET BRUSTET", "AMIRALITETET VÄNTAR", StormaktVoice.CopenhagenGateFall, "portrait_ebba");
     private static readonly RadioCard CopenhagenAdmiraltyRadio =
-        new(0, 330, true, "URVERKSAMIRALEN", "TOLV SLAG REGISTRERADE", "INGEN TIMME ÄR FRI", null, "rigsregnskabet");
+        new(0, 330, true, "URVERKSAMIRALEN", "TOLV SLAG REGISTRERADE", "INGEN TIMME ÄR FRI", StormaktVoice.CopenhagenAdmiralty, "rigsregnskabet");
     private static readonly RadioCard CopenhagenNoonRadio =
-        new(0, 270, false, "EBBA GRIP", "URTAVLAN EXEKVERAR", "SÖK EN BRUTEN TIMME", null, "portrait_ebba");
+        new(0, 270, false, "EBBA GRIP", "URTAVLAN EXEKVERAR", "SÖK EN BRUTEN TIMME", StormaktVoice.CopenhagenNoon, "portrait_ebba");
     private static readonly RadioCard CopenhagenAdmiraltyFallRadio =
-        new(0, 300, false, "EBBA GRIP", "AMIRALITETET BRUSTET", "FREDERIK NULL VÄNTAR", null, "portrait_ebba");
+        new(0, 300, false, "EBBA GRIP", "AMIRALITETET BRUSTET", "FREDERIK NULL VÄNTAR", StormaktVoice.CopenhagenAdmiraltyFall, "portrait_ebba");
     private static readonly RadioCard CopenhagenFrederikRadio =
-        new(0, 360, true, "FREDERIK NULL", "ALLE SKIBE BESLAGT", "JEG NULSTILLER JER", null, "rigsregnskabet");
+        new(0, 360, true, "FREDERIK NULL", "ALLE SKIBE BESLAGT", "JEG NULSTILLER JER", StormaktVoice.CopenhagenFrederik, "rigsregnskabet");
     private static readonly RadioCard CopenhagenFrederikBladesRadio =
-        new(0, 300, false, "EBBA GRIP", "TRONEN SLÄPPER", "REGISTERBLAD IN", null, "portrait_ebba");
+        new(0, 300, false, "EBBA GRIP", "TRONEN SLÄPPER", "REGISTERBLAD IN", StormaktVoice.CopenhagenFrederikBlades, "portrait_ebba");
     private static readonly RadioCard CopenhagenFrederikRepairRadio =
-        new(0, 300, true, "FREDERIK NULL", "REGNSKABET LUKKER", "RUSTNING ÅTERFÖRS", null, "rigsregnskabet");
+        new(0, 300, true, "FREDERIK NULL", "REGNSKABET LUKKER", "RUSTNING ÅTERFÖRS", StormaktVoice.CopenhagenFrederikRepair, "rigsregnskabet");
     private static readonly RadioCard CopenhagenFrederikFallRadio =
-        new(0, 300, true, "FREDERIK NULL", "NUL KAN EJ VARA", "EN SKULD", null, "rigsregnskabet");
+        new(0, 300, true, "FREDERIK NULL", "NUL KAN EJ VARA", "EN SKULD", StormaktVoice.CopenhagenFrederikFall, "rigsregnskabet");
     private static readonly RadioCard CopenhagenEyeRadio =
-        new(0, 330, false, "EBBA GRIP", "TULLKÄRNAN SER OSS", "BRYT DIN EGEN KURS", null, "portrait_ebba");
+        new(0, 330, false, "EBBA GRIP", "TULLKÄRNAN SER OSS", "BRYT DIN EGEN KURS", StormaktVoice.CopenhagenEye, "portrait_ebba");
     private static readonly RadioCard CopenhagenEyeLensRadio =
-        new(0, 300, true, "ØRESUNDS ØJE", "RÖRELSE REGISTRERAD", "FRAMTID BESKATTAS", null, "rigsregnskabet");
+        new(0, 300, true, "ØRESUNDS ØJE", "RÖRELSE REGISTRERAD", "FRAMTID BESKATTAS", StormaktVoice.CopenhagenEyeLens, "rigsregnskabet");
     private static readonly RadioCard CopenhagenEyeSorenRadio =
-        new(0, 270, false, "SÖREN SVARTKRUT", "EN LINS ÄR MIN", "RESTEN ÄR DIN", null, "portrait_soren", true);
+        new(0, 270, false, "SÖREN SVARTKRUT", "EN LINS ÄR MIN", "RESTEN ÄR DIN", StormaktVoice.CopenhagenEyeSoren, "portrait_soren", true);
     private static readonly RadioCard CopenhagenEyeFallRadio =
-        new(0, 300, false, "EBBA GRIP", "ÖGAT HAR BLINDNAT", "PORTEN KOMPILERAR", null, "portrait_ebba");
+        new(0, 300, false, "EBBA GRIP", "ÖGAT HAR BLINDNAT", "PORTEN KOMPILERAR", StormaktVoice.CopenhagenEyeFall, "portrait_ebba");
     private static readonly RadioCard CopenhagenDannebrogRadio =
-        new(0, 360, true, "KUNG CHRISTIAN", "MARGINALEN LYDER", "MIN FLOTTA MINNS", null, "portrait_christian");
+        new(0, 360, true, "KUNG CHRISTIAN", "MARGINALEN LYDER", "MIN FLOTTA MINNS", StormaktVoice.CopenhagenDannebrog, "portrait_christian");
     private static readonly RadioCard CopenhagenDannebrogGapRadio =
-        new(0, 300, false, "EBBA GRIP", "BRYT ETT HÖRN", "FLYG GENOM ÄRRET", null, "portrait_ebba");
+        new(0, 300, false, "EBBA GRIP", "BRYT ETT HÖRN", "FLYG GENOM ÄRRET", StormaktVoice.CopenhagenDannebrogGap, "portrait_ebba");
     private static readonly RadioCard CopenhagenDannebrogFallRadio =
-        new(0, 300, false, "SÖREN SVARTKRUT", "VINGARNA FALLER", "TVÅ FREGATTER KVAR", null, "portrait_soren", true);
+        new(0, 300, false, "SÖREN SVARTKRUT", "VINGARNA FALLER", "TVÅ FREGATTER KVAR", StormaktVoice.CopenhagenDannebrogFall, "portrait_soren", true);
     private static readonly RadioCard CopenhagenDuoRadio =
-        new(0, 330, false, "EBBA GRIP", "TVÅ SKÄRMFREGATTER", "MUREN OCH BETEN", null, "portrait_ebba");
+        new(0, 330, false, "EBBA GRIP", "TVÅ SKÄRMFREGATTER", "MUREN OCH BETEN", StormaktVoice.CopenhagenDuo, "portrait_ebba");
     private static readonly RadioCard CopenhagenAbsalonWallRadio =
-        new(0, 270, true, "ABSALON", "SKJOLDMUR FREM", "LUK HIMLEN", null, "rigsregnskabet");
+        new(0, 270, true, "ABSALON", "SKJOLDMUR FREM", "LUK HIMLEN", StormaktVoice.CopenhagenAbsalonWall, "rigsregnskabet");
     private static readonly RadioCard CopenhagenElefantenChargeRadio =
-        new(0, 270, true, "ELEFANTEN", "JEG TAGER ÅBNINGEN", "FLYT JER", null, "rigsregnskabet");
+        new(0, 270, true, "ELEFANTEN", "JEG TAGER ÅBNINGEN", "FLYT JER", StormaktVoice.CopenhagenElefantenCharge, "rigsregnskabet");
     private static readonly RadioCard CopenhagenDuoFallRadio =
-        new(0, 300, true, "KUNG CHRISTIAN", "MINE SKÆRME FALDER", "FLAGSKIB FREM", null, "portrait_christian");
+        new(0, 300, true, "KUNG CHRISTIAN", "MINE SKÆRME FALDER", "FLAGSKIB FREM", StormaktVoice.CopenhagenDuoFall, "portrait_christian");
     private static readonly RadioCard CopenhagenSuperRadio =
-        new(0, 390, true, "KUNG CHRISTIAN", "HISTORIEN ER MIN", "JEG RETTER DEN", null, "portrait_christian");
+        new(0, 390, true, "KUNG CHRISTIAN", "HISTORIEN ER MIN", "JEG RETTER DEN", StormaktVoice.CopenhagenSuper, "portrait_christian");
     private static readonly RadioCard CopenhagenSuperCrossRadio =
-        new(0, 300, false, "EBBA GRIP", "VITA KORSRAMEN", "BRYT EN SÄKER SÖM", null, "portrait_ebba");
+        new(0, 300, false, "EBBA GRIP", "VITA KORSRAMEN", "BRYT EN SÄKER SÖM", StormaktVoice.CopenhagenSuperCross, "portrait_ebba");
     private static readonly RadioCard CopenhagenSuperMemoryRadio =
-        new(0, 330, true, "KUNG CHRISTIAN", "KANONER VAR RAKETTER", "DET MINNS JEG", null, "portrait_christian");
+        new(0, 330, true, "KUNG CHRISTIAN", "KANONER VAR RAKETTER", "DET MINNS JEG", StormaktVoice.CopenhagenSuperMemory, "portrait_christian");
     private static readonly RadioCard CopenhagenSuperHoldRadio =
-        new(0, 330, false, "SÖREN SVARTKRUT", "JAG HÅLLER FLOTTAN", "ÖPPNA KRONAN", null, "portrait_soren", true);
+        new(0, 330, false, "SÖREN SVARTKRUT", "JAG HÅLLER FLOTTAN", "ÖPPNA KRONAN", StormaktVoice.CopenhagenSuperHold, "portrait_soren", true);
     private static readonly RadioCard CopenhagenSuperFallRadio =
-        new(0, 360, true, "KUNG CHRISTIAN", "BYEN LÅSER SIG", "I KOMMER EJ NED", null, "portrait_christian");
+        new(0, 360, true, "KUNG CHRISTIAN", "BYEN LÅSER SIG", "I KOMMER EJ NED", StormaktVoice.CopenhagenSuperFall, "portrait_christian");
     private static readonly RadioCard CopenhagenLandingRadio =
-        new(0, 330, false, "EBBA GRIP", "DOCKORNA BRINNER", "SKJUT TRE ANKARE", null, "portrait_ebba");
+        new(0, 330, false, "EBBA GRIP", "DOCKORNA BRINNER", "SKJUT TRE ANKARE", StormaktVoice.CopenhagenLanding, "portrait_ebba");
     private static readonly RadioCard CopenhagenLandingClearRadio =
-        new(0, 300, false, "SÖREN SVARTKRUT", "LANDNINGSLINAN FRI", "JAG HÅLLER RINGEN", null, "portrait_soren", true);
+        new(0, 300, false, "SÖREN SVARTKRUT", "LANDNINGSLINAN FRI", "JAG HÅLLER RINGEN", StormaktVoice.CopenhagenLandingClear, "portrait_soren", true);
     private static readonly RadioCard CopenhagenGroundRadio =
-        new(0, 330, false, "EBBA GRIP", "DU ÄR PÅ HOLMEN", "VI STANNAR OVAN", null, "portrait_ebba");
+        new(0, 330, false, "EBBA GRIP", "DU ÄR PÅ HOLMEN", "VI STANNAR OVAN", StormaktVoice.CopenhagenGround, "portrait_ebba");
     private static readonly RadioCard CopenhagenGroundClearRadio =
-        new(0, 300, false, "KARL CCLV", "HJERTAT ÄR EJ BRUTET", "HJERTAT ÄR EN PORT", null, "portrait_karl");
+        new(0, 300, false, "KARL CCLV", "HJERTAT ÄR EJ BRUTET", "HJERTAT ÄR EN PORT", StormaktVoice.CopenhagenGroundClear, "portrait_karl");
     private static readonly RadioCard CopenhagenMarginalFaultRadio =
-        new(0, 270, false, "CODEX MARGINAL", "HJERTAT ÖPPNADES", "MEN BLEF EJ EN PORT", null, "portrait_karl");
+        new(0, 270, false, "CODEX MARGINAL", "HJERTAT ÖPPNADES", "MEN BLEF EJ EN PORT", StormaktVoice.CopenhagenMarginalFault, "portrait_karl");
     private static readonly RadioCard CopenhagenArsenalRadio =
-        new(0, 300, false, "EBBA GRIP", "DU ÄR UNDER HOLMEN", "KANONGÅNGEN VAKNAR", null, "portrait_ebba");
+        new(0, 300, false, "EBBA GRIP", "DU ÄR UNDER HOLMEN", "KANONGÅNGEN VAKNAR", StormaktVoice.CopenhagenArsenal, "portrait_ebba");
     private static readonly RadioCard CopenhagenArsenalClearRadio =
-        new(0, 300, false, "KARL CCLV", "PORTEN LYDDE", "ROSENBORG VÄNTAR", null, "portrait_karl");
+        new(0, 300, false, "KARL CCLV", "PORTEN LYDDE", "ROSENBORG VÄNTAR", StormaktVoice.CopenhagenArsenalClear, "portrait_karl");
     private static readonly RadioCard CopenhagenRosenborgRadio =
-        new(0, 300, false, "EBBA GRIP", "ROSENBORG MINNS INTE", "DET UPPREPAR", null, "portrait_ebba");
+        new(0, 300, false, "EBBA GRIP", "ROSENBORG MINNS INTE", "DET UPPREPAR", StormaktVoice.CopenhagenRosenborg, "portrait_ebba");
     private static readonly RadioCard CopenhagenRosenborgClearRadio =
-        new(0, 300, false, "KARL CCLV", "FÖRGÅRDEN GLÖMMER", "MASKINEN VÄNTAR", null, "portrait_karl");
+        new(0, 300, false, "KARL CCLV", "FÖRGÅRDEN GLÖMMER", "MASKINEN VÄNTAR", StormaktVoice.CopenhagenRosenborgClear, "portrait_karl");
     private static readonly RadioCard CopenhagenMemoryMachineRadio =
-        new(0, 300, false, "EBBA GRIP", "MASKINEN MINNS EDER", "STARKT ÄR EJ SANT", null, "portrait_ebba");
+        new(0, 300, false, "EBBA GRIP", "MASKINEN MINNS EDER", "STARKT ÄR EJ SANT", StormaktVoice.CopenhagenMemoryMachine, "portrait_ebba");
     private static readonly RadioCard CopenhagenLegendCorruptRadio =
-        new(0, 270, false, "CODEX MARGINAL", "ORDREN VAR STORMA", "DEN KAN EJ STANNA", null, "portrait_karl");
+        new(0, 270, false, "CODEX MARGINAL", "ORDREN VAR STORMA", "DEN KAN EJ STANNA", StormaktVoice.CopenhagenLegendCorrupt, "portrait_karl");
     private static readonly RadioCard CopenhagenMemoryClearRadio =
-        new(0, 300, false, "KARL CCLV", "MINNET HAR STRIDIT", "SAGOKONUNGEN VÄNTAR", null, "portrait_karl");
+        new(0, 300, false, "KARL CCLV", "MINNET HAR STRIDIT", "SAGOKONUNGEN VÄNTAR", StormaktVoice.CopenhagenMemoryClear, "portrait_karl");
     private static readonly RadioCard CopenhagenSagaKingRadio =
-        new(0, 330, false, "SAGOKONUNGEN", "JAG MINNS MIG STÖRRE", "ÄN JAG NÅGONSIN VAR", null, "portrait_christian");
+        new(0, 330, false, "SAGOKONUNGEN", "JAG MINNS MIG STÖRRE", "ÄN JAG NÅGONSIN VAR", StormaktVoice.CopenhagenSagaKing, "portrait_christian");
     private static readonly RadioCard CopenhagenSagaKingClearRadio =
-        new(0, 300, false, "KARL CCLV", "SAGAN HAR TYSTNAT", "MARGINALFOGDEN VÄNTAR", null, "portrait_karl");
+        new(0, 300, false, "KARL CCLV", "SAGAN HAR TYSTNAT", "MARGINALFOGDEN VÄNTAR", StormaktVoice.CopenhagenSagaKingClear, "portrait_karl");
     private static readonly RadioCard CopenhagenKorrektoriusRadio =
-        new(0, 330, false, "KORREKTORIUS", "JAG RÄTTAR EJ VÄRLDEN", "JAG RÄTTAR MENINGEN", null, "portrait_frederik");
+        new(0, 330, false, "KORREKTORIUS", "JAG RÄTTAR EJ VÄRLDEN", "JAG RÄTTAR MENINGEN", StormaktVoice.CopenhagenKorrektorius, "portrait_frederik");
     private static readonly RadioCard CopenhagenKorrektoriusClearRadio =
-        new(0, 300, false, "KARL CCLV", "PENNORNA HAR TYSTNAT", "CHRISTIANS VREDE VÄNTAR", null, "portrait_karl");
+        new(0, 300, false, "KARL CCLV", "PENNORNA HAR TYSTNAT", "CHRISTIANS VREDE VÄNTAR", StormaktVoice.CopenhagenKorrektoriusClear, "portrait_karl");
     private static readonly RadioCard CopenhagenWrathRadio =
-        new(0, 360, false, "KONUNG CHRISTIAN", "STADEN BEVISAR MIN RÄTT", "DU ÄR BLOTT SILVER", null, "portrait_christian");
+        new(0, 360, false, "KONUNG CHRISTIAN", "STADEN BEVISAR MIN RÄTT", "DU ÄR BLOTT SILVER", StormaktVoice.CopenhagenWrath, "portrait_christian");
     private static readonly RadioCard CopenhagenWrathClearRadio =
-        new(0, 360, false, "KONUNG CHRISTIAN", "DU ER IKKE DEN FØRSTE", "CODEXEN HAR SETT DIG FÖRR", null, "portrait_christian");
+        new(0, 360, false, "KONUNG CHRISTIAN", "DU ER IKKE DEN FØRSTE", "CODEXEN HAR SETT DIG FÖRR", StormaktVoice.CopenhagenWrathClear, "portrait_christian");
     private int _shipX;
     private int _shipY;
     private int _cooldown;

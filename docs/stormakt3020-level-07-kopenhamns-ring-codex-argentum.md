@@ -305,6 +305,8 @@ Obligatoriska röster:
 - Christian går från ceremoniell vrede till igenkänning och rädsla.
 - Codexen har ingen mänsklig röst; text, mekaniskt sidljud och silverklocka räcker.
 
+Röstpasset landade 2026-07-19 med 44 fasta radiorepliker från ringinflygningen till Christians igenkänning under staden. Ebba, Karl, Sören och Christian behåller sina etablerade syntetiska rollidentiteter. Trekroners lås, Urverksamiralen, Frederik Null, Øresunds Øje, Absalon, Elefanten, Codex Marginal, Sagokonungen och Korrektorius har var sin helt syntetisk seedlåst referens och egen Dots-leverans. Codex Marginal är programmerbart silvers mekaniska marginalanteckning, inte Codexens mänskliga röst; slutbokens instanssida förblir text, sidmekanik och klockpuls.
+
 Ingen radio får säga **instans**, **254** eller **körning** före sista kammaren. Christian får antyda upprepning men inte lösa gåtan.
 
 ## Musik

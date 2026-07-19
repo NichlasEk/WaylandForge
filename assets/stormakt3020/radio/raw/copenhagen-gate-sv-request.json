@@ -1,0 +1,13 @@
+{
+  "text": "Kronan håller. Staden förblir sluten.",
+  "language": "sv",
+  "model_backend": "dots.tts-mf",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Tre Kronors lås vakar över infarten. Varje krona bär sin del av sigillet, varje port håller stadens tyngd. När kretsen sluts finns ingen väg genom ringen och ingen främmande köl når Köpenhamn.",
+  "voice_instruction": "A wholly synthetic Scandinavian fortress lock, deep synchronized male and female bronze voices, slow severe Swedish diction with a faint Danish color, ceremonial and mechanical without beeps, distortion, comedy or loss of intelligibility.",
+  "seed": 302133,
+  "dots_num_steps": 4,
+  "dots_guidance_scale": 1.2,
+  "dots_speaker_scale": 1.5
+}

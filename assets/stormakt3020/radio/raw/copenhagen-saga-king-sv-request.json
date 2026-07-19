@@ -1,0 +1,13 @@
+{
+  "text": "Jag minns mig större än jag någonsin var.",
+  "language": "sv",
+  "model_backend": "dots.tts-mf",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Jag är konungen som sångerna gjorde större än livet. Hundra fanor föll för min blick, tusen svärd brast mot min hand och varje ny berättare lade ännu en seger till mitt namn.",
+  "voice_instruction": "A legendary Scandinavian warrior king compiled from centuries of exaggeration, huge mature male heroic bass-baritone, grand natural Swedish diction, proud and dangerously sincere, strength swelling with every false memory, never comedic parody, elderly or breathy.",
+  "seed": 302140,
+  "dots_num_steps": 4,
+  "dots_guidance_scale": 1.2,
+  "dots_speaker_scale": 1.5
+}

@@ -1,0 +1,13 @@
+{
+  "text": "Tolv slag registrerade. Ingen timme är fri.",
+  "language": "sv",
+  "model_backend": "dots.tts-mf",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Amiralitetets urverk räknar varje kurs och varje skott. Tolv slag delar striden, kuggarna fördelar elden och ingen timme lämnas obevakad. Flottan lyder den takt som staden har fastställt.",
+  "voice_instruction": "A synthetic Scandinavian clockwork admiral, stern mature male bass layered with a precise metallic female undertone, measured Swedish naval diction timed like a great clock, commanding and intelligible, never comic, glitchy or robotic beeps.",
+  "seed": 302134,
+  "dots_num_steps": 4,
+  "dots_guidance_scale": 1.2,
+  "dots_speaker_scale": 1.5
+}

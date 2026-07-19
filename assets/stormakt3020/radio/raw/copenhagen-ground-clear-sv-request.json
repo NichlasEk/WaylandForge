@@ -1,0 +1,13 @@
+{
+  "text": "Hjertat är ej brutet. Hjertat är en port.",
+  "language": "sv",
+  "model_backend": "dots.tts-mf",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Jag heter Karl tvåhundrafemtiofem. Kronan väger lättare än ett löfte, och ett löfte väger mindre än laddad järnmalm. Håll skeppet stadigt. Om vägen inte finns rider vi fram en, och om kartan protesterar får kartan lära sig bättre seder.",
+  "voice_instruction": "An adult Swedish Carolean king-soldier, assured medium-low baritone, dry eccentric confidence, crisp natural Swedish diction, battle-worn but energetic, aristocratic without sounding theatrical, old or comedic.",
+  "seed": 302128,
+  "dots_num_steps": 4,
+  "dots_guidance_scale": 1.2,
+  "dots_speaker_scale": 1.5
+}

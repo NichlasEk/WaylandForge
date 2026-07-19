@@ -1,0 +1,13 @@
+{
+  "text": "Rörelse registrerad. Framtiden beskattas.",
+  "language": "sv",
+  "model_backend": "dots.tts-mf",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Öresunds öga ser kursen innan rodret rör sig. Varje undanmanöver registreras, varje framtida läge vägs och beskattas. Linsen behöver inte jaga det som redan finns i dess beräkning.",
+  "voice_instruction": "A synthetic Scandinavian surveillance intelligence, calm low androgynous voice with several tightly synchronized whispers, precise Swedish diction, observant and inhumanly certain, faint glass resonance, never horror-comic, noisy, distorted or hard to understand.",
+  "seed": 302136,
+  "dots_num_steps": 4,
+  "dots_guidance_scale": 1.2,
+  "dots_speaker_scale": 1.5
+}

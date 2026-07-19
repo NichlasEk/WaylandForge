@@ -1,0 +1,13 @@
+{
+  "text": "Jag rättar ej världen. Jag rättar meningen.",
+  "language": "sv",
+  "model_backend": "dots.tts-mf",
+  "output_format": "wav",
+  "normalize": false,
+  "prompt_text": "Jag är Korrektorius. Riket faller inte genom svärd utan genom slarviga satser. Jag stryker det tvetydiga, rättar det omöjliga och lämnar endast den mening som Kronan kan godkänna.",
+  "voice_instruction": "A severe adult Scandinavian royal proofreader and duelist, narrow controlled male baritone, razor-sharp natural Swedish diction with faint Danish cadence, pedantic absolute confidence, each correction delivered like a blade stroke, never comic, nasal, old or breathy.",
+  "seed": 302141,
+  "dots_num_steps": 4,
+  "dots_guidance_scale": 1.2,
+  "dots_speaker_scale": 1.5
+}

@@ -120,6 +120,87 @@
       "reference_text": "Jeg er Dagmar Rød, og koblet adlyder min hånd. Sporet løber foran mig, biddet følger mit tegn, og Fyns røde jagt sejler som ét dyr. Når jeg strammer linen, findes der ingen åbning og ingen nåde.",
       "reference_seed": 302032,
       "dialogue_seed": 302132
+    },
+    {
+      "id": "trekroner-lock",
+      "speaker": "TREKRONERS LÅS",
+      "language": "sv",
+      "voice_instruction": "A wholly synthetic Scandinavian fortress lock, deep synchronized male and female bronze voices, slow severe Swedish diction with a faint Danish color, ceremonial and mechanical without beeps, distortion, comedy or loss of intelligibility.",
+      "reference_text": "Tre Kronors lås vakar över infarten. Varje krona bär sin del av sigillet, varje port håller stadens tyngd. När kretsen sluts finns ingen väg genom ringen och ingen främmande köl når Köpenhamn.",
+      "reference_seed": 302033,
+      "dialogue_seed": 302133
+    },
+    {
+      "id": "clock-admiral",
+      "speaker": "URVERKSAMIRALEN",
+      "language": "sv",
+      "voice_instruction": "A synthetic Scandinavian clockwork admiral, stern mature male bass layered with a precise metallic female undertone, measured Swedish naval diction timed like a great clock, commanding and intelligible, never comic, glitchy or robotic beeps.",
+      "reference_text": "Amiralitetets urverk räknar varje kurs och varje skott. Tolv slag delar striden, kuggarna fördelar elden och ingen timme lämnas obevakad. Flottan lyder den takt som staden har fastställt.",
+      "reference_seed": 302034,
+      "dialogue_seed": 302134
+    },
+    {
+      "id": "frederik-null",
+      "speaker": "FREDERIK NULL",
+      "language": "da",
+      "voice_instruction": "A wholly synthetic Danish royal auditor embodied in an armored throne, cold adult male basso profundo with a dry metallic double, exact natural Danish chancery diction, absolute and contemptuous, never comic, weak, distorted or unintelligible.",
+      "reference_text": "Jeg er Frederik Null. Under mit segl bliver skibe, våben og mandskab ført tilbage til Kronens register. Intet tab er endeligt, når regnskabet kan lukke posten og skrive rustningen hel igen.",
+      "reference_seed": 302035,
+      "dialogue_seed": 302135
+    },
+    {
+      "id": "oresund-eye",
+      "speaker": "ØRESUNDS ØJE",
+      "language": "sv",
+      "voice_instruction": "A synthetic Scandinavian surveillance intelligence, calm low androgynous voice with several tightly synchronized whispers, precise Swedish diction, observant and inhumanly certain, faint glass resonance, never horror-comic, noisy, distorted or hard to understand.",
+      "reference_text": "Öresunds öga ser kursen innan rodret rör sig. Varje undanmanöver registreras, varje framtida läge vägs och beskattas. Linsen behöver inte jaga det som redan finns i dess beräkning.",
+      "reference_seed": 302036,
+      "dialogue_seed": 302136
+    },
+    {
+      "id": "absalon",
+      "speaker": "ABSALON",
+      "language": "da",
+      "voice_instruction": "An adult Danish fortress commander, massive disciplined baritone projected through a closed iron helmet, terse natural Danish battlefield diction, immovable defensive confidence, never old, theatrical, comic, muffled or distorted.",
+      "reference_text": "Jeg er Absalon. Skjoldene låser kant mod kant, og min mur flytter sig kun på mit tegn. Hold linjen, luk himlen og lad fjenden knække sig selv mod København.",
+      "reference_seed": 302037,
+      "dialogue_seed": 302137
+    },
+    {
+      "id": "elefanten",
+      "speaker": "ELEFANTEN",
+      "language": "da",
+      "voice_instruction": "An enormous adult Danish shock commander, muscular roaring bass-baritone with heavy chest resonance, blunt natural Danish diction, joyful controlled aggression and unstoppable momentum, never animal noises, comic, slurred or unintelligible.",
+      "reference_text": "De kalder mig Elefanten. Når skjoldmuren binder fjenden, tager jeg åbningen med hele skibets vægt. Hold jer fri af stævnen, for jeg standser først på den anden side.",
+      "reference_seed": 302038,
+      "dialogue_seed": 302138
+    },
+    {
+      "id": "codex-margin",
+      "speaker": "CODEX MARGINAL",
+      "language": "sv",
+      "voice_instruction": "A nonhuman marginal annotation spoken by programmable silver, low clear androgynous Swedish voice assembled from scratching quills and distant human harmonics, archaic exact diction, literal and dispassionate, intelligible and restrained, never comic, ghostly, noisy or distorted.",
+      "reference_text": "Marginalen läser den skrivna lagen bokstavligt. Ett ord är ett verktyg, en sats är ett ingrepp och en felaktig beskrivning blir ändå utförd. Silvret lyder inte avsikten. Silvret lyder formuleringen.",
+      "reference_seed": 302039,
+      "dialogue_seed": 302139
+    },
+    {
+      "id": "saga-king",
+      "speaker": "SAGOKONUNGEN",
+      "language": "sv",
+      "voice_instruction": "A legendary Scandinavian warrior king compiled from centuries of exaggeration, huge mature male heroic bass-baritone, grand natural Swedish diction, proud and dangerously sincere, strength swelling with every false memory, never comedic parody, elderly or breathy.",
+      "reference_text": "Jag är konungen som sångerna gjorde större än livet. Hundra fanor föll för min blick, tusen svärd brast mot min hand och varje ny berättare lade ännu en seger till mitt namn.",
+      "reference_seed": 302040,
+      "dialogue_seed": 302140
+    },
+    {
+      "id": "korrektorius",
+      "speaker": "KORREKTORIUS",
+      "language": "sv",
+      "voice_instruction": "A severe adult Scandinavian royal proofreader and duelist, narrow controlled male baritone, razor-sharp natural Swedish diction with faint Danish cadence, pedantic absolute confidence, each correction delivered like a blade stroke, never comic, nasal, old or breathy.",
+      "reference_text": "Jag är Korrektorius. Riket faller inte genom svärd utan genom slarviga satser. Jag stryker det tvetydiga, rättar det omöjliga och lämnar endast den mening som Kronan kan godkänna.",
+      "reference_seed": 302041,
+      "dialogue_seed": 302141
     }
   ],
   "lines": [
@@ -1070,6 +1151,50 @@
       "subtitle_lines": ["SKYD SKYD SKYD", "HELE FYNS SOL"],
       "seed": 302130,
       "model_backend": "dots.tts-soar"
-    }
+    },
+    {"id":"copenhagen-approach","role":"ebba-grip","level":7,"frame":-1,"cue":"copenhagen_approach","text":"Ringen är ett lås. Bryt de tre kronorna.","subtitle_lines":["RINGEN ÄR ETT LÅS","BRYT TRE KRONOR"]},
+    {"id":"copenhagen-gate","role":"trekroner-lock","level":7,"frame":-1,"cue":"copenhagen_gate","text":"Kronan håller. Staden förblir sluten.","subtitle_lines":["KRONAN HÅLLER","STADEN FÖRBLIR SLUTEN"]},
+    {"id":"copenhagen-gate-fall","role":"ebba-grip","level":7,"frame":-1,"cue":"copenhagen_gate_fall","text":"Första låset är brustet. Amiralitetet väntar.","subtitle_lines":["FÖRSTA LÅSET BRUSTET","AMIRALITETET VÄNTAR"]},
+    {"id":"copenhagen-admiralty","role":"clock-admiral","level":7,"frame":-1,"cue":"copenhagen_admiralty","text":"Tolv slag registrerade. Ingen timme är fri.","subtitle_lines":["TOLV SLAG REGISTRERADE","INGEN TIMME ÄR FRI"]},
+    {"id":"copenhagen-noon","role":"ebba-grip","level":7,"frame":-1,"cue":"copenhagen_noon","text":"Urtavlan exekverar. Sök en bruten timme.","subtitle_lines":["URTAVLAN EXEKVERAR","SÖK EN BRUTEN TIMME"]},
+    {"id":"copenhagen-admiralty-fall","role":"ebba-grip","level":7,"frame":-1,"cue":"copenhagen_admiralty_fall","text":"Amiralitetet är brustet. Frederik Null väntar.","subtitle_lines":["AMIRALITETET BRUSTET","FREDERIK NULL VÄNTAR"]},
+    {"id":"copenhagen-frederik","role":"frederik-null","level":7,"frame":-1,"cue":"copenhagen_frederik","text":"Alle skibe er beslaglagt. Jeg nulstiller jer.","subtitle_lines":["ALLE SKIBE BESLAGT","JEG NULSTILLER JER"]},
+    {"id":"copenhagen-frederik-blades","role":"ebba-grip","level":7,"frame":-1,"cue":"copenhagen_frederik_blades","text":"Tronen släpper registerblad. Inkommande!","subtitle_lines":["TRONEN SLÄPPER","REGISTERBLAD IN"]},
+    {"id":"copenhagen-frederik-repair","role":"frederik-null","level":7,"frame":-1,"cue":"copenhagen_frederik_repair","text":"Regnskabet lukker. Rustningen tilbageføres.","subtitle_lines":["REGNSKABET LUKKER","RUSTNING ÅTERFÖRS"]},
+    {"id":"copenhagen-frederik-fall","role":"frederik-null","level":7,"frame":-1,"cue":"copenhagen_frederik_fall","text":"Nul kan ikke være en gæld.","subtitle_lines":["NUL KAN EJ VARA","EN SKULD"]},
+    {"id":"copenhagen-eye","role":"ebba-grip","level":7,"frame":-1,"cue":"copenhagen_eye","text":"Tullkärnan ser oss. Bryt din egen kurs.","subtitle_lines":["TULLKÄRNAN SER OSS","BRYT DIN EGEN KURS"]},
+    {"id":"copenhagen-eye-lens","role":"oresund-eye","level":7,"frame":-1,"cue":"copenhagen_eye_lens","text":"Rörelse registrerad. Framtiden beskattas.","subtitle_lines":["RÖRELSE REGISTRERAD","FRAMTID BESKATTAS"]},
+    {"id":"copenhagen-eye-soren","role":"soren-svartkrut","level":7,"frame":-1,"cue":"copenhagen_eye_soren","text":"En lins är min. Resten är din.","subtitle_lines":["EN LINS ÄR MIN","RESTEN ÄR DIN"]},
+    {"id":"copenhagen-eye-fall","role":"ebba-grip","level":7,"frame":-1,"cue":"copenhagen_eye_fall","text":"Ögat har blindnat. Porten kompilerar.","subtitle_lines":["ÖGAT HAR BLINDNAT","PORTEN KOMPILERAR"]},
+    {"id":"copenhagen-dannebrog","role":"kung-christian","level":7,"frame":-1,"cue":"copenhagen_dannebrog","text":"Marginalen lyder. Min flåde husker.","subtitle_lines":["MARGINALEN LYDER","MIN FLOTTA MINNS"]},
+    {"id":"copenhagen-dannebrog-gap","role":"ebba-grip","level":7,"frame":-1,"cue":"copenhagen_dannebrog_gap","text":"Bryt ett hörn. Flyg genom ärret.","subtitle_lines":["BRYT ETT HÖRN","FLYG GENOM ÄRRET"]},
+    {"id":"copenhagen-dannebrog-fall","role":"soren-svartkrut","level":7,"frame":-1,"cue":"copenhagen_dannebrog_fall","text":"Vingarna faller. Två fregatter kvar.","subtitle_lines":["VINGARNA FALLER","TVÅ FREGATTER KVAR"]},
+    {"id":"copenhagen-duo","role":"ebba-grip","level":7,"frame":-1,"cue":"copenhagen_duo","text":"Två skärmfregatter. Muren och beten.","subtitle_lines":["TVÅ SKÄRMFREGATTER","MUREN OCH BETEN"]},
+    {"id":"copenhagen-absalon-wall","role":"absalon","level":7,"frame":-1,"cue":"copenhagen_absalon_wall","text":"Skjoldmur frem! Luk himlen!","subtitle_lines":["SKJOLDMUR FREM","LUK HIMLEN"]},
+    {"id":"copenhagen-elefanten-charge","role":"elefanten","level":7,"frame":-1,"cue":"copenhagen_elefanten_charge","text":"Jeg tager åbningen. Flyt jer!","subtitle_lines":["JEG TAGER ÅBNINGEN","FLYT JER"]},
+    {"id":"copenhagen-duo-fall","role":"kung-christian","level":7,"frame":-1,"cue":"copenhagen_duo_fall","text":"Mine skærme falder. Flagskib frem!","subtitle_lines":["MINE SKÆRME FALDER","FLAGSKIB FREM"]},
+    {"id":"copenhagen-super","role":"kung-christian","level":7,"frame":-1,"cue":"copenhagen_super","text":"Historien er min. Jeg retter den!","subtitle_lines":["HISTORIEN ER MIN","JEG RETTER DEN"]},
+    {"id":"copenhagen-super-cross","role":"ebba-grip","level":7,"frame":-1,"cue":"copenhagen_super_cross","text":"Den vita korsramen. Bryt en säker söm.","subtitle_lines":["VITA KORSRAMEN","BRYT EN SÄKER SÖM"]},
+    {"id":"copenhagen-super-memory","role":"kung-christian","level":7,"frame":-1,"cue":"copenhagen_super_memory","text":"Kanoner var raketter. Det husker jeg!","subtitle_lines":["KANONER VAR RAKETTER","DET MINNS JEG"]},
+    {"id":"copenhagen-super-hold","role":"soren-svartkrut","level":7,"frame":-1,"cue":"copenhagen_super_hold","text":"Jag håller flottan. Öppna kronan.","subtitle_lines":["JAG HÅLLER FLOTTAN","ÖPPNA KRONAN"]},
+    {"id":"copenhagen-super-fall","role":"kung-christian","level":7,"frame":-1,"cue":"copenhagen_super_fall","text":"Byen låser sig. I kommer ikke ned!","subtitle_lines":["BYEN LÅSER SIG","I KOMMER EJ NED"]},
+    {"id":"copenhagen-landing","role":"ebba-grip","level":7,"frame":-1,"cue":"copenhagen_landing","text":"Dockorna brinner. Skjut de tre ankarna.","subtitle_lines":["DOCKORNA BRINNER","SKJUT TRE ANKARE"]},
+    {"id":"copenhagen-landing-clear","role":"soren-svartkrut","level":7,"frame":-1,"cue":"copenhagen_landing_clear","text":"Landningslinan är fri. Jag håller ringen.","subtitle_lines":["LANDNINGSLINAN FRI","JAG HÅLLER RINGEN"]},
+    {"id":"copenhagen-ground","role":"ebba-grip","level":7,"frame":-1,"cue":"copenhagen_ground","text":"Du är på Holmen. Vi stannar ovanför.","subtitle_lines":["DU ÄR PÅ HOLMEN","VI STANNAR OVAN"]},
+    {"id":"copenhagen-ground-clear","role":"karl-cclv","level":7,"frame":-1,"cue":"copenhagen_ground_clear","text":"Hjertat är ej brutet. Hjertat är en port.","subtitle_lines":["HJERTAT ÄR EJ BRUTET","HJERTAT ÄR EN PORT"]},
+    {"id":"copenhagen-marginal-fault","role":"codex-margin","level":7,"frame":-1,"cue":"copenhagen_marginal_fault","text":"Hjertat öppnades, men blef ej en port.","subtitle_lines":["HJERTAT ÖPPNADES","MEN BLEF EJ EN PORT"]},
+    {"id":"copenhagen-arsenal","role":"ebba-grip","level":7,"frame":-1,"cue":"copenhagen_arsenal","text":"Du är under Holmen. Kanongången vaknar.","subtitle_lines":["DU ÄR UNDER HOLMEN","KANONGÅNGEN VAKNAR"]},
+    {"id":"copenhagen-arsenal-clear","role":"karl-cclv","level":7,"frame":-1,"cue":"copenhagen_arsenal_clear","text":"Porten lydde. Rosenborg väntar.","subtitle_lines":["PORTEN LYDDE","ROSENBORG VÄNTAR"]},
+    {"id":"copenhagen-rosenborg","role":"ebba-grip","level":7,"frame":-1,"cue":"copenhagen_rosenborg","text":"Rosenborg minns inte. Det upprepar.","subtitle_lines":["ROSENBORG MINNS INTE","DET UPPREPAR"]},
+    {"id":"copenhagen-rosenborg-clear","role":"karl-cclv","level":7,"frame":-1,"cue":"copenhagen_rosenborg_clear","text":"Förgården glömmer. Maskinen väntar.","subtitle_lines":["FÖRGÅRDEN GLÖMMER","MASKINEN VÄNTAR"]},
+    {"id":"copenhagen-memory-machine","role":"ebba-grip","level":7,"frame":-1,"cue":"copenhagen_memory_machine","text":"Maskinen minns eder. Starkt är inte sant.","subtitle_lines":["MASKINEN MINNS EDER","STARKT ÄR EJ SANT"]},
+    {"id":"copenhagen-legend-corrupt","role":"codex-margin","level":7,"frame":-1,"cue":"copenhagen_legend_corrupt","text":"Ordren var storma. Den kan ej stanna.","subtitle_lines":["ORDREN VAR STORMA","DEN KAN EJ STANNA"]},
+    {"id":"copenhagen-memory-clear","role":"karl-cclv","level":7,"frame":-1,"cue":"copenhagen_memory_clear","text":"Minnet har stridit. Sagokonungen väntar.","subtitle_lines":["MINNET HAR STRIDIT","SAGOKONUNGEN VÄNTAR"]},
+    {"id":"copenhagen-saga-king","role":"saga-king","level":7,"frame":-1,"cue":"copenhagen_saga_king","text":"Jag minns mig större än jag någonsin var.","subtitle_lines":["JAG MINNS MIG STÖRRE","ÄN JAG NÅGONSIN VAR"]},
+    {"id":"copenhagen-saga-king-clear","role":"karl-cclv","level":7,"frame":-1,"cue":"copenhagen_saga_king_clear","text":"Sagan har tystnat. Marginalfogden väntar.","subtitle_lines":["SAGAN HAR TYSTNAT","MARGINALFOGDEN VÄNTAR"]},
+    {"id":"copenhagen-korrektorius","role":"korrektorius","level":7,"frame":-1,"cue":"copenhagen_korrektorius","text":"Jag rättar ej världen. Jag rättar meningen.","subtitle_lines":["JAG RÄTTAR EJ VÄRLDEN","JAG RÄTTAR MENINGEN"]},
+    {"id":"copenhagen-korrektorius-clear","role":"karl-cclv","level":7,"frame":-1,"cue":"copenhagen_korrektorius_clear","text":"Pennorna har tystnat. Christians vrede väntar.","subtitle_lines":["PENNORNA HAR TYSTNAT","CHRISTIANS VREDE VÄNTAR"]},
+    {"id":"copenhagen-wrath","role":"kung-christian","level":7,"frame":-1,"cue":"copenhagen_wrath","text":"Staden beviser min ret. Du er blot sølv!","subtitle_lines":["STADEN BEVISAR MIN RÄTT","DU ÄR BLOTT SILVER"]},
+    {"id":"copenhagen-wrath-clear","role":"kung-christian","level":7,"frame":-1,"cue":"copenhagen_wrath_clear","text":"Du er ikke den første. Codexen har set dig før.","subtitle_lines":["DU ER IKKE DEN FØRSTE","CODEXEN HAR SETT DIG FÖRR"]}
   ]
 }
