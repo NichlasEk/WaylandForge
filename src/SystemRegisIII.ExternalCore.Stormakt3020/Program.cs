@@ -282,6 +282,8 @@ internal sealed class StormaktGame
     private const int CopenhagenStableLegendIntegrity = 900;
     private const int CopenhagenWildLegendIntegrity = 180;
     private const int CopenhagenSagaKingHealth = 432;
+    private const int CopenhagenKorrektoriusHealth = 360;
+    private const int CopenhagenKorrektoriusPenHealth = 72;
     private const int RtsSalvagedSilverGoal = 1_200;
     private const int DungeonFirstSigilMask = 1 << 8;
     private const int DungeonFogdeRescuedMask = 1 << 9;
@@ -365,10 +367,13 @@ internal sealed class StormaktGame
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_SAGA_KING_TEST"), "1", StringComparison.Ordinal);
     private readonly bool _copenhagenSagaKingWildTestMode = string.Equals(
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_SAGA_KING_WILD_TEST"), "1", StringComparison.Ordinal);
+    private readonly bool _copenhagenKorrektoriusTestMode = string.Equals(
+        Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_COPENHAGEN_KORREKTORIUS_TEST"), "1", StringComparison.Ordinal);
     private bool CopenhagenFixtureActive => _copenhagenGateTestMode || _copenhagenAdmiraltyTestMode ||
         _copenhagenFrederikTestMode || _copenhagenEyeTestMode || _copenhagenDannebrogTestMode ||
         _copenhagenDuoTestMode || _copenhagenSuperTestMode || _copenhagenLandingTestMode ||
-        _copenhagenGroundTestMode || _copenhagenSagaKingTestMode || _copenhagenSagaKingWildTestMode;
+        _copenhagenGroundTestMode || _copenhagenSagaKingTestMode || _copenhagenSagaKingWildTestMode ||
+        _copenhagenKorrektoriusTestMode;
     private readonly SpritePack? _sprites;
     private readonly StormaktMusicLoop? _audio;
     private Random _random = new(3020);
@@ -654,6 +659,10 @@ internal sealed class StormaktGame
         new(0, 330, false, "SAGOKONUNGEN", "JAG MINNS MIG STÖRRE", "ÄN JAG NÅGONSIN VAR", null, "portrait_christian");
     private static readonly RadioCard CopenhagenSagaKingClearRadio =
         new(0, 300, false, "KARL CCLV", "SAGAN HAR TYSTNAT", "MARGINALFOGDEN VÄNTAR", null, "portrait_karl");
+    private static readonly RadioCard CopenhagenKorrektoriusRadio =
+        new(0, 330, false, "KORREKTORIUS", "JAG RÄTTAR EJ VÄRLDEN", "JAG RÄTTAR MENINGEN", null, "portrait_frederik");
+    private static readonly RadioCard CopenhagenKorrektoriusClearRadio =
+        new(0, 300, false, "KARL CCLV", "PENNORNA HAR TYSTNAT", "CHRISTIANS VREDE VÄNTAR", null, "portrait_karl");
     private int _shipX;
     private int _shipY;
     private int _cooldown;
@@ -1236,6 +1245,21 @@ internal sealed class StormaktGame
                     ? CopenhagenLegend.SevenMooseCaroleans
                     : CopenhagenLegend.OneMooseCarolean;
                 BeginCopenhagenSagaKingRoom(resetCopenhagen.Ground);
+            }
+            if (_copenhagenKorrektoriusTestMode)
+            {
+                resetCopenhagen.Age = 7_200;
+                resetCopenhagen.GateActive = true;
+                resetCopenhagen.SuperActive = true;
+                resetCopenhagen.SuperSectionHealth[3] = 0;
+                resetCopenhagen.SuperDeathAge = 400;
+                resetCopenhagen.LandingActive = true;
+                for (int anchor = 0; anchor < resetCopenhagen.LandingAnchorHealth.Length; anchor++)
+                    resetCopenhagen.LandingAnchorHealth[anchor] = 0;
+                BeginCopenhagenGround(resetCopenhagen, testFixture: true);
+                resetCopenhagen.Ground!.ActiveMarginal = CopenhagenMarginalLaw.SilverIsBlade;
+                resetCopenhagen.Ground.CompiledLegend = CopenhagenLegend.OneMooseCarolean;
+                BeginCopenhagenKorrektoriusRoom(resetCopenhagen.Ground);
             }
         }
         if (_snapphaneWorld is SnapphaneWorldState resetSnapphane)
@@ -5408,7 +5432,7 @@ internal sealed class StormaktGame
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             string temporary = path + ".tmp";
             string backup = path + ".bak";
-            var save = new CopenhagenGroundSave(5, _width, _height, ground.Age, ground.KarlX, ground.KarlY,
+            var save = new CopenhagenGroundSave(6, _width, _height, ground.Age, ground.KarlX, ground.KarlY,
                 ground.Health, ground.MaxHealth, ground.Potions, ground.RoomClear, ground.DoorReady,
                 ground.Enemies.Select(enemy => new CopenhagenGroundEnemySave(enemy.Id, enemy.X, enemy.Y,
                     enemy.Health, enemy.MaxHealth, enemy.DeathAge)).ToList(), ground.Room,
@@ -5417,7 +5441,11 @@ internal sealed class StormaktGame
                 ground.LegendIntegrity, ground.LegendX, ground.LegendY, ground.LegendCorrupted,
                 ground.LegendLastOrderAge, ground.LegendVx, ground.LegendVy, ground.CompiledLegend,
                 ground.SagaKingHealth, ground.SagaKingAge, ground.SagaTargetX, ground.SagaTargetY,
-                ground.SagaOrderSerial, ground.SagaHorseX, ground.SagaHorseDirection);
+                ground.SagaOrderSerial, ground.SagaHorseX, ground.SagaHorseDirection,
+                ground.LocalLaw, ground.KorrektoriusHealth, ground.KorrektoriusAge,
+                ground.KorrektoriusPenHealth.ToArray(), ground.KorrektoriusActivePen,
+                ground.KorrektoriusOrderSerial, ground.KorrektoriusCorruption,
+                ground.KorrektoriusCorruptionAge, ground.KorrektoriusTargetX, ground.KorrektoriusTargetY);
             File.WriteAllText(temporary, JsonSerializer.Serialize(save));
             if (File.Exists(path)) File.Copy(path, backup, true);
             File.Move(temporary, path, true);
@@ -5438,9 +5466,11 @@ internal sealed class StormaktGame
             {
                 if (!File.Exists(candidate)) continue;
                 save = JsonSerializer.Deserialize<CopenhagenGroundSave>(File.ReadAllText(candidate));
-                if (save.Schema is >= 1 and <= 5 && save.Width >= 320 && save.Height >= 224 && save.MaxHealth > 0 &&
+                if (save.Schema is >= 1 and <= 6 && save.Width >= 320 && save.Height >= 224 && save.MaxHealth > 0 &&
                     save.Enemies is { Count: <= 16 } && Enum.IsDefined(save.ActiveMarginal) &&
-                    Enum.IsDefined(save.ActiveLegend) && Enum.IsDefined(save.CompiledLegend)) return true;
+                    Enum.IsDefined(save.ActiveLegend) && Enum.IsDefined(save.CompiledLegend) &&
+                    Enum.IsDefined(save.LocalLaw) && Enum.IsDefined(save.KorrektoriusCorruption) &&
+                    (save.KorrektoriusPenHealth is null or { Length: <= 4 })) return true;
             }
             catch (JsonException)
             {
@@ -5471,7 +5501,7 @@ internal sealed class StormaktGame
             DoorReady = save.DoorReady,
             FacingX = 0,
             FacingY = -1,
-            Room = save.Schema >= 2 ? Math.Clamp(save.Room, 0, 4) : 0,
+            Room = save.Schema >= 2 ? Math.Clamp(save.Room, 0, 5) : 0,
             ActiveMarginal = save.Schema >= 2 ? save.ActiveMarginal : CopenhagenMarginalLaw.None,
             HeartPortOpen = save.Schema >= 2 && save.HeartPortOpen,
             ArsenalCannonHealth = save.Schema >= 2 ? Math.Max(0, save.ArsenalCannonHealth) : 0,
@@ -5493,7 +5523,25 @@ internal sealed class StormaktGame
             SagaOrderSerial = save.Schema >= 5 ? Math.Max(0, save.SagaOrderSerial) : 0,
             SagaHorseX = save.Schema >= 5 ? save.SagaHorseX * scaleX : _width / 2.0,
             SagaHorseDirection = save.Schema >= 5 && save.SagaHorseDirection < 0 ? -1 : 1,
+            LocalLaw = save.Schema >= 6 ? save.LocalLaw : CopenhagenLocalLaw.None,
+            KorrektoriusHealth = save.Schema >= 6 ? Math.Max(0, save.KorrektoriusHealth) : 0,
+            KorrektoriusAge = save.Schema >= 6 ? Math.Max(0, save.KorrektoriusAge) : 0,
+            KorrektoriusActivePen = save.Schema >= 6 ? Math.Clamp(save.KorrektoriusActivePen, -1, 3) : -1,
+            KorrektoriusOrderSerial = save.Schema >= 6 ? Math.Max(0, save.KorrektoriusOrderSerial) : 0,
+            KorrektoriusCorruption = save.Schema >= 6
+                ? save.KorrektoriusCorruption : CopenhagenCorruption.None,
+            KorrektoriusCorruptionAge = save.Schema >= 6 ? Math.Max(0, save.KorrektoriusCorruptionAge) : 0,
+            KorrektoriusTargetX = save.Schema >= 6 ? save.KorrektoriusTargetX * scaleX : _width / 2.0,
+            KorrektoriusTargetY = save.Schema >= 6 ? save.KorrektoriusTargetY * scaleY : _height / 2.0,
         };
+        if (save.Schema >= 6 && save.KorrektoriusPenHealth is { } savedPens)
+            for (int pen = 0; pen < Math.Min(ground.KorrektoriusPenHealth.Length, savedPens.Length); pen++)
+                ground.KorrektoriusPenHealth[pen] = Math.Max(0, savedPens[pen]);
+        if (ground.Room == 5 && ground.LocalLaw == CopenhagenLocalLaw.None)
+        {
+            ground.LocalLawChoosing = true;
+            ground.LocalLawSelection = 0;
+        }
         if (ground.LegendCorrupted && Math.Abs(ground.LegendVx) + Math.Abs(ground.LegendVy) < 0.1)
             ground.LegendVx = 3.4;
         ground.TargetX = ground.KarlX;
@@ -7415,7 +7463,8 @@ internal sealed class StormaktGame
                     {
                         BeginCopenhagenRosenborgRoom(restarted);
                         if (restartRoom >= 3) BeginCopenhagenMemoryMachineRoom(restarted);
-                        if (restartRoom == 4) BeginCopenhagenSagaKingRoom(restarted);
+                        if (restartRoom >= 4) BeginCopenhagenSagaKingRoom(restarted);
+                        if (restartRoom == 5) BeginCopenhagenKorrektoriusRoom(restarted);
                     }
                 }
             }
@@ -7441,8 +7490,19 @@ internal sealed class StormaktGame
             StepCopenhagenLegendCompile(ground);
             return;
         }
+        if (ground.LocalLawChoosing)
+        {
+            StepCopenhagenLocalLawChoice(ground, buttons, pointer);
+            return;
+        }
+        if (ground.LocalLawCompileAge > 0)
+        {
+            StepCopenhagenLocalLawCompile(ground);
+            return;
+        }
 
-        int speed = (buttons & Slow) != 0 ? 2 : 3;
+        int speed = (buttons & Slow) != 0 ? 2 :
+            ground.Room == 5 && ground.LocalLaw == CopenhagenLocalLaw.SilverLighterThanGuilt ? 4 : 3;
         double previousKarlX = ground.KarlX;
         double previousKarlY = ground.KarlY;
         uint directions = Up | Down | Left | Right;
@@ -7527,10 +7587,12 @@ internal sealed class StormaktGame
         }
         else if (ground.Room == 3) StepCopenhagenLegend(ground);
         else if (ground.Room == 4) StepCopenhagenSagaKing(ground);
+        else if (ground.Room == 5) StepCopenhagenKorrektorius(ground);
         bool threatsCleared = ground.Enemies.All(enemy => enemy.Health <= 0) &&
             (ground.Room != 1 || ground.ArsenalCannonHealth <= 0) &&
             (ground.Room != 2 || ground.RosenborgCoreHealth <= 0) &&
-            (ground.Room != 4 || ground.SagaKingHealth <= 0);
+            (ground.Room != 4 || ground.SagaKingHealth <= 0) &&
+            (ground.Room != 5 || ground.KorrektoriusHealth <= 0);
         if (!ground.RoomClear && threatsCleared)
         {
             ground.RoomClear = true;
@@ -7541,7 +7603,8 @@ internal sealed class StormaktGame
                 1 => CopenhagenArsenalClearRadio,
                 2 => CopenhagenRosenborgClearRadio,
                 3 => CopenhagenMemoryClearRadio,
-                _ => CopenhagenSagaKingClearRadio,
+                4 => CopenhagenSagaKingClearRadio,
+                _ => CopenhagenKorrektoriusClearRadio,
             });
             _score += 2_400;
             _audio?.Trigger(StormaktSound.DungeonSilverShatter);
@@ -7588,6 +7651,20 @@ internal sealed class StormaktGame
             BeginCopenhagenSagaKingRoom(ground);
         }
         else if (ground.Room == 4 && ground.DoorReady && atHeart &&
+            ((buttons & Fire) != 0 || pointerAttack))
+        {
+            BeginCopenhagenKorrektoriusRoom(ground);
+        }
+        else if (ground.Room == 5 && atLectern && Pressed(buttons, AltFire) &&
+            ground.KorrektoriusHealth > 0)
+        {
+            ground.LocalLawChoosing = true;
+            ground.LocalLawSelection = Math.Max(0, (int)ground.LocalLaw - 1);
+            ground.ChoicePointerSeen = false;
+            ground.HasTarget = false;
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        else if (ground.Room == 5 && ground.DoorReady && atHeart &&
             ((buttons & Fire) != 0 || pointerAttack))
         {
             ground.CheckpointReady = true;
@@ -7660,6 +7737,38 @@ internal sealed class StormaktGame
             if (distance <= 55 && distance >= 1 &&
                 dx / distance * ground.FacingX + dy / distance * ground.FacingY >= -0.05)
                 DamageCopenhagenSagaKing(ground, 18);
+        }
+        if (ground.Room == 5 && ground.KorrektoriusHealth > 0)
+        {
+            int damage = ground.LocalLaw == CopenhagenLocalLaw.SilverLighterThanGuilt ? 21 : 18;
+            int targetPen = Enumerable.Range(0, ground.KorrektoriusPenHealth.Length)
+                .Where(pen => ground.KorrektoriusPenHealth[pen] > 0)
+                .Where(pen =>
+                {
+                    (double penX, double penY) = CopenhagenKorrektoriusPenPosition(ground, pen);
+                    double dx = penX - ground.KarlX;
+                    double dy = penY - ground.KarlY;
+                    double distance = Math.Sqrt(dx * dx + dy * dy);
+                    return distance is >= 1 and <= 48 &&
+                        dx / distance * ground.FacingX + dy / distance * ground.FacingY >= -0.05;
+                })
+                .OrderBy(pen =>
+                {
+                    (double penX, double penY) = CopenhagenKorrektoriusPenPosition(ground, pen);
+                    return DistanceSquared(ground.KarlX, ground.KarlY, penX, penY);
+                })
+                .DefaultIfEmpty(-1).First();
+            if (targetPen >= 0) DamageCopenhagenKorrektoriusPen(ground, targetPen, damage);
+            else if (ground.KorrektoriusPenHealth.All(health => health <= 0))
+            {
+                (double bossX, double bossY) = CopenhagenKorrektoriusPosition(ground);
+                double dx = bossX - ground.KarlX;
+                double dy = bossY - ground.KarlY;
+                double distance = Math.Sqrt(dx * dx + dy * dy);
+                if (distance is >= 1 and <= 58 &&
+                    dx / distance * ground.FacingX + dy / distance * ground.FacingY >= -0.05)
+                    DamageCopenhagenKorrektorius(ground, damage);
+            }
         }
         _audio?.Trigger(StormaktSound.DungeonSwordSlash);
     }
@@ -7877,6 +7986,26 @@ internal sealed class StormaktGame
             (double bossX, double bossY) = CopenhagenSagaKingPosition(ground);
             if (DistanceSquared(ground.KarlX, ground.KarlY, bossX, bossY) <= 112 * 112)
                 DamageCopenhagenSagaKing(ground, 9);
+        }
+        else if (ground.Room == 5 && ground.KorrektoriusHealth > 0)
+        {
+            int targetPen = Enumerable.Range(0, ground.KorrektoriusPenHealth.Length)
+                .Where(pen => ground.KorrektoriusPenHealth[pen] > 0)
+                .Where(pen =>
+                {
+                    (double penX, double penY) = CopenhagenKorrektoriusPenPosition(ground, pen);
+                    return DistanceSquared(ground.KarlX, ground.KarlY, penX, penY) <= 112 * 112;
+                })
+                .OrderBy(pen => ground.KorrektoriusPenHealth[pen])
+                .ThenBy(pen => pen)
+                .DefaultIfEmpty(-1).First();
+            if (targetPen >= 0) DamageCopenhagenKorrektoriusPen(ground, targetPen, 9);
+            else if (ground.KorrektoriusPenHealth.All(health => health <= 0))
+            {
+                (double bossX, double bossY) = CopenhagenKorrektoriusPosition(ground);
+                if (DistanceSquared(ground.KarlX, ground.KarlY, bossX, bossY) <= 118 * 118)
+                    DamageCopenhagenKorrektorius(ground, 9);
+            }
         }
     }
 
@@ -8226,6 +8355,224 @@ internal sealed class StormaktGame
         if (ground.SagaKingHealth == 0)
         {
             _score += 3_600;
+            _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+        }
+        else _audio?.Trigger(StormaktSound.DungeonSwordHit);
+    }
+
+    private void BeginCopenhagenKorrektoriusRoom(CopenhagenGroundState ground)
+    {
+        ground.Room = 5;
+        ground.Age = 0;
+        ground.KarlX = _width / 2.0;
+        ground.KarlY = _height - 48;
+        ground.TargetX = ground.KarlX;
+        ground.TargetY = ground.KarlY;
+        ground.HasTarget = false;
+        ground.FacingX = 0;
+        ground.FacingY = -1;
+        ground.RoomClear = false;
+        ground.DoorReady = false;
+        ground.CheckpointReady = false;
+        ground.Enemies.Clear();
+        ground.LocalLaw = CopenhagenLocalLaw.None;
+        ground.LocalLawChoosing = true;
+        ground.LocalLawSelection = 0;
+        ground.LocalLawCompileAge = 0;
+        ground.ChoicePointerSeen = false;
+        ground.KorrektoriusHealth = ground.TestFixture ? 72 : CopenhagenKorrektoriusHealth;
+        ground.KorrektoriusAge = 0;
+        ground.KorrektoriusActivePen = -1;
+        ground.KorrektoriusOrderSerial = 0;
+        ground.KorrektoriusCorruption = CopenhagenCorruption.None;
+        ground.KorrektoriusCorruptionAge = 0;
+        ground.KorrektoriusTargetX = _width / 2.0;
+        ground.KorrektoriusTargetY = _height / 2.0;
+        int penHealth = ground.TestFixture ? 18 : CopenhagenKorrektoriusPenHealth;
+        for (int pen = 0; pen < ground.KorrektoriusPenHealth.Length; pen++)
+        {
+            ground.KorrektoriusPenHealth[pen] = penHealth;
+            ground.KorrektoriusPenHitFlash[pen] = 0;
+        }
+        ClearBossRadio();
+        ActivateBossRadio(CopenhagenKorrektoriusRadio);
+        _audio?.Trigger(StormaktSound.OresundTrainRumble);
+        if (!ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
+            WriteCopenhagenGroundSave(ground);
+    }
+
+    private void StepCopenhagenLocalLawChoice(
+        CopenhagenGroundState ground, uint buttons, RtsPointer pointer)
+    {
+        const int choices = 3;
+        if (Pressed(buttons, Left) || Pressed(buttons, Up))
+        {
+            ground.LocalLawSelection = (ground.LocalLawSelection + choices - 1) % choices;
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        if (Pressed(buttons, Right) || Pressed(buttons, Down))
+        {
+            ground.LocalLawSelection = (ground.LocalLawSelection + 1) % choices;
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        bool pointerMoved = ground.ChoicePointerSeen &&
+            (pointer.X != ground.ChoicePointerX || pointer.Y != ground.ChoicePointerY);
+        if (pointer.Inside && (pointerMoved || pointer.Buttons != 0))
+            ground.LocalLawSelection = Math.Clamp(pointer.X * choices / Math.Max(1, _width), 0, choices - 1);
+        ground.ChoicePointerSeen = pointer.Inside;
+        ground.ChoicePointerX = pointer.X;
+        ground.ChoicePointerY = pointer.Y;
+        if (Pressed(buttons, AltFire) && ground.LocalLaw != CopenhagenLocalLaw.None)
+        {
+            ground.LocalLawChoosing = false;
+            _audio?.Trigger(StormaktSound.Deploy);
+            return;
+        }
+        bool pointerCompile = pointer.Inside && (pointer.Buttons & 1) != 0;
+        if (!Pressed(buttons, Start) && !Pressed(buttons, Fire) && !pointerCompile) return;
+        ground.LocalLawChoosing = false;
+        ground.LocalLaw = (CopenhagenLocalLaw)(ground.LocalLawSelection + 1);
+        ground.LocalLawCompileAge = 1;
+        ground.KorrektoriusCorruption = CopenhagenCorruption.None;
+        ground.KorrektoriusCorruptionAge = 0;
+        _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+    }
+
+    private void StepCopenhagenLocalLawCompile(CopenhagenGroundState ground)
+    {
+        ground.LocalLawCompileAge++;
+        if (ground.LocalLawCompileAge == 38)
+            _audio?.Trigger(StormaktSound.DungeonSilverWave);
+        if (ground.LocalLawCompileAge < 76) return;
+        ground.LocalLawCompileAge = 0;
+        if (!ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
+            WriteCopenhagenGroundSave(ground);
+    }
+
+    private (double X, double Y) CopenhagenKorrektoriusPosition(CopenhagenGroundState ground) =>
+        (_width / 2.0 + Math.Sin(ground.KorrektoriusAge * 0.018) * 38, 87);
+
+    private (double X, double Y) CopenhagenKorrektoriusPenPosition(
+        CopenhagenGroundState ground, int pen)
+    {
+        double angle = ground.KorrektoriusAge * 0.012 + pen * Math.PI / 2;
+        return (_width / 2.0 + Math.Cos(angle) * (_width <= 320 ? 78 : 98),
+            122 + Math.Sin(angle) * 55);
+    }
+
+    private void StepCopenhagenKorrektorius(CopenhagenGroundState ground)
+    {
+        ground.KorrektoriusHitFlash = Math.Max(0, ground.KorrektoriusHitFlash - 1);
+        for (int pen = 0; pen < ground.KorrektoriusPenHitFlash.Length; pen++)
+            ground.KorrektoriusPenHitFlash[pen] = Math.Max(0, ground.KorrektoriusPenHitFlash[pen] - 1);
+        if (ground.KorrektoriusCorruptionAge > 0)
+        {
+            ground.KorrektoriusCorruptionAge--;
+            if (ground.KorrektoriusCorruptionAge == 0)
+                ground.KorrektoriusCorruption = CopenhagenCorruption.None;
+        }
+        if (ground.KorrektoriusHealth <= 0) return;
+        ground.KorrektoriusAge++;
+
+        List<int> livingPens = Enumerable.Range(0, ground.KorrektoriusPenHealth.Length)
+            .Where(pen => ground.KorrektoriusPenHealth[pen] > 0).ToList();
+        if (livingPens.Count == 0)
+        {
+            int exposedCycle = ground.KorrektoriusAge % 82;
+            if (exposedCycle == 18)
+            {
+                ground.KorrektoriusTargetX = ground.KarlX;
+                ground.KorrektoriusTargetY = ground.KarlY;
+            }
+            if (exposedCycle == 52)
+            {
+                if (Math.Abs(ground.KarlX - ground.KorrektoriusTargetX) < 18 ||
+                    Math.Abs(ground.KarlY - ground.KorrektoriusTargetY) < 15)
+                    DamageCopenhagenGround(ground);
+                _audio?.Trigger(StormaktSound.Broadside);
+            }
+            return;
+        }
+
+        int period = ground.LocalLaw switch
+        {
+            CopenhagenLocalLaw.NoDanishWorkMayFly => 198,
+            CopenhagenLocalLaw.SilverLighterThanGuilt => 180,
+            _ => 168,
+        };
+        int cycle = ground.KorrektoriusAge % period;
+        if (cycle == 18)
+        {
+            ground.KorrektoriusActivePen = livingPens[ground.KorrektoriusOrderSerial % livingPens.Count];
+            ground.KorrektoriusOrderSerial++;
+            ground.KorrektoriusCorruption = (CopenhagenCorruption)
+                (1 + (ground.KorrektoriusOrderSerial - 1) % 4);
+            ground.KorrektoriusTargetX = ground.KarlX;
+            ground.KorrektoriusTargetY = ground.KarlY;
+        }
+        if (cycle == 52 && ground.LocalLaw == CopenhagenLocalLaw.NoDanishWorkMayFly &&
+            ground.KorrektoriusActivePen is >= 0 and < 4 &&
+            ground.KorrektoriusPenHealth[ground.KorrektoriusActivePen] > 0)
+            DamageCopenhagenKorrektoriusPen(ground, ground.KorrektoriusActivePen, 6);
+        if (cycle != 102 || ground.KorrektoriusActivePen is < 0 or >= 4) return;
+        if (ground.KorrektoriusPenHealth[ground.KorrektoriusActivePen] <= 0)
+        {
+            ground.KorrektoriusCorruption = CopenhagenCorruption.None;
+            ground.KorrektoriusCorruptionAge = 0;
+            _audio?.Trigger(StormaktSound.DungeonSilverWave);
+            return;
+        }
+
+        ground.KorrektoriusCorruptionAge = 108;
+        bool hit = ground.KorrektoriusCorruption switch
+        {
+            CopenhagenCorruption.Negation => DistanceSquared(ground.KarlX, ground.KarlY,
+                ground.KorrektoriusTargetX, ground.KorrektoriusTargetY) < 38 * 38,
+            CopenhagenCorruption.NationSwap =>
+                Math.Abs(ground.KarlX - ground.KorrektoriusTargetX) < 17 ||
+                Math.Abs(ground.KarlY - ground.KorrektoriusTargetY) < 14,
+            CopenhagenCorruption.Punctuation =>
+                (ground.KarlX < _width / 2.0) == (ground.KorrektoriusTargetX < _width / 2.0),
+            _ => Enumerable.Range(-1, 3).Any(offset => DistanceSquared(
+                ground.KarlX, ground.KarlY, ground.KorrektoriusTargetX + offset * 48,
+                ground.KorrektoriusTargetY + Math.Abs(offset) * 13) < 20 * 20),
+        };
+        if (hit) DamageCopenhagenGround(ground);
+        _audio?.Trigger(ground.KorrektoriusCorruption == CopenhagenCorruption.WeightSwap
+            ? StormaktSound.OresundTrainCrash : StormaktSound.Broadside);
+    }
+
+    private void DamageCopenhagenKorrektoriusPen(
+        CopenhagenGroundState ground, int pen, int damage)
+    {
+        if (pen is < 0 or >= 4 || ground.KorrektoriusPenHealth[pen] <= 0) return;
+        ground.KorrektoriusPenHealth[pen] = Math.Max(0, ground.KorrektoriusPenHealth[pen] - damage);
+        ground.KorrektoriusPenHitFlash[pen] = 7;
+        if (ground.KorrektoriusPenHealth[pen] == 0)
+        {
+            _score += 540;
+            if (pen == ground.KorrektoriusActivePen)
+            {
+                ground.KorrektoriusCorruption = CopenhagenCorruption.None;
+                ground.KorrektoriusCorruptionAge = 0;
+            }
+            if (ground.LocalLaw == CopenhagenLocalLaw.CrownOwnsOnlyWhatItCarries)
+                DamageCopenhagenKorrektorius(ground, 18);
+            _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+        }
+        else _audio?.Trigger(StormaktSound.DungeonSwordHit);
+    }
+
+    private void DamageCopenhagenKorrektorius(CopenhagenGroundState ground, int damage)
+    {
+        if (ground.KorrektoriusHealth <= 0) return;
+        ground.KorrektoriusHealth = Math.Max(0, ground.KorrektoriusHealth - damage);
+        ground.KorrektoriusHitFlash = 7;
+        if (ground.KorrektoriusHealth == 0)
+        {
+            ground.KorrektoriusCorruption = CopenhagenCorruption.None;
+            ground.KorrektoriusCorruptionAge = 0;
+            _score += 4_800;
             _audio?.Trigger(StormaktSound.DungeonSilverShatter);
         }
         else _audio?.Trigger(StormaktSound.DungeonSwordHit);
@@ -17394,7 +17741,8 @@ internal sealed class StormaktGame
             DrawSprite(frame, debris, 58 - debris.Width / 2, _height - 48 - debris.Height / 2);
             DrawSpriteFlippedX(frame, debris, _width - 60 - debris.Width / 2, _height / 2 - debris.Height / 2);
         }
-        if (ground?.Room == 4) DrawCopenhagenSagaKingRoom(frame, ground);
+        if (ground?.Room == 5) DrawCopenhagenKorrektoriusRoom(frame, ground);
+        else if (ground?.Room == 4) DrawCopenhagenSagaKingRoom(frame, ground);
         else if (ground?.Room == 3) DrawCopenhagenMemoryMachineRoom(frame, ground);
         else if (ground?.Room == 2) DrawCopenhagenRosenborgRoom(frame, ground);
         else DrawCopenhagenGroundHeartDoor(frame, ground);
@@ -17414,6 +17762,8 @@ internal sealed class StormaktGame
         else if (ground.MarginalCompileAge > 0) DrawCopenhagenMarginalCompile(frame, ground);
         else if (ground.LegendChoosing) DrawCopenhagenLegendChoice(frame, ground);
         else if (ground.LegendCompileAge > 0) DrawCopenhagenLegendCompile(frame, ground);
+        else if (ground.LocalLawChoosing) DrawCopenhagenLocalLawChoice(frame, ground);
+        else if (ground.LocalLawCompileAge > 0) DrawCopenhagenLocalLawCompile(frame, ground);
         if (ground.Dead)
         {
             int x = (_width - 184) / 2;
@@ -17434,6 +17784,7 @@ internal sealed class StormaktGame
                 2 => "ROSENBORGS FÖRGÅRD SÄKRAD",
                 3 => "MINNESMASKINEN LYDER",
                 4 => "SAGOKONUNGEN TYSTAD",
+                5 => "MARGINALFOGDEN RÄTTAD",
                 _ => "KANONGÅNGEN SÄKRAD",
             };
             string line2 = ground.Room switch
@@ -17441,6 +17792,7 @@ internal sealed class StormaktGame
                 2 => "MINNESMASKINEN VÄNTAR",
                 3 => "SAGOKONUNGEN VÄNTAR",
                 4 => "MARGINALFOGDEN VÄNTAR",
+                5 => "CHRISTIANS VREDE VÄNTAR",
                 _ => "ROSENBORG VÄNTAR",
             };
             DrawText(frame, x + (width - line1.Length * 6) / 2, y + 10, line1, 0xffffd66b);
@@ -17593,6 +17945,152 @@ internal sealed class StormaktGame
         if (ground.LegendChoosing || ground.LegendCompileAge > 0)
             DrawCircleOutline(frame, centerX, _height - 68, 27 + ground.Age / 8 % 4, 0xffffd66b);
     }
+
+    private void DrawCopenhagenKorrektoriusRoom(uint[] frame, CopenhagenGroundState ground)
+    {
+        int centerX = _width / 2;
+        string gateName = ground.DoorReady ? "dungeon_temple_gate_open" : "dungeon_temple_gate_closed";
+        if (_sprites?.TryGet(gateName, out Sprite gate) == true)
+            DrawSpriteScaled(frame, gate, centerX - 28, 20, 56, 43);
+        if (_sprites?.TryGet("dungeon_runic_arch", out Sprite arch) == true)
+        {
+            DrawSpriteScaled(frame, arch, 7, 54, 54, 95);
+            DrawSpriteScaled(frame, arch, _width - 61, 54, 54, 95);
+        }
+        if (_sprites?.TryGet("dungeon_temple_altar", out Sprite altar) == true)
+            DrawSpriteScaled(frame, altar, centerX - 23, _height - 76, 46, 39);
+        DrawCircleOutline(frame, centerX, _height - 52, 24 + ground.Age / 8 % 3, 0xff7fc7ff);
+
+        if (ground.LocalLaw == CopenhagenLocalLaw.NoDanishWorkMayFly)
+        {
+            for (int line = 0; line < 7; line++)
+            {
+                int x = 30 + line * (_width - 60) / 6;
+                int y = 54 + (ground.KorrektoriusAge * 3 + line * 29) % Math.Max(1, _height - 96);
+                DrawLine(frame, x, y - 11, x, y + 11, 0xff7fc7ff);
+            }
+        }
+        else if (ground.LocalLaw == CopenhagenLocalLaw.SilverLighterThanGuilt)
+        {
+            for (int ring = 0; ring < 3; ring++)
+                DrawCircleOutline(frame, (int)ground.KarlX, (int)ground.KarlY - 7,
+                    17 + ring * 7 + ground.Age / 7 % 3, ring == 0 ? 0xffffffff : 0xff7fc7ff);
+        }
+        else if (ground.LocalLaw == CopenhagenLocalLaw.CrownOwnsOnlyWhatItCarries)
+        {
+            for (int pen = 0; pen < ground.KorrektoriusPenHealth.Length; pen++)
+            {
+                if (ground.KorrektoriusPenHealth[pen] <= 0) continue;
+                (double penXD, double penYD) = CopenhagenKorrektoriusPenPosition(ground, pen);
+                DrawCrown(frame, (int)penXD - 2, (int)penYD - 19, 0xffffd66b);
+            }
+        }
+
+        int period = ground.LocalLaw switch
+        {
+            CopenhagenLocalLaw.NoDanishWorkMayFly => 198,
+            CopenhagenLocalLaw.SilverLighterThanGuilt => 180,
+            _ => 168,
+        };
+        int cycle = ground.KorrektoriusAge % period;
+        bool warning = ground.KorrektoriusActivePen is >= 0 and < 4 && cycle is >= 18 and < 102 &&
+            ground.KorrektoriusPenHealth[ground.KorrektoriusActivePen] > 0;
+        if (warning || ground.KorrektoriusCorruptionAge > 0)
+        {
+            uint ink = warning ? 0xffff8a4a : 0xffff6b7f;
+            int targetX = (int)ground.KorrektoriusTargetX;
+            int targetY = (int)ground.KorrektoriusTargetY;
+            switch (ground.KorrektoriusCorruption)
+            {
+                case CopenhagenCorruption.Negation:
+                    DrawCircleOutline(frame, targetX, targetY, 28 + (ground.Age / 4 % 9), ink);
+                    break;
+                case CopenhagenCorruption.NationSwap:
+                    DrawLine(frame, targetX - 17, 46, targetX - 17, _height - 14, ink);
+                    DrawLine(frame, targetX + 17, 46, targetX + 17, _height - 14, ink);
+                    DrawLine(frame, 8, targetY - 14, _width - 8, targetY - 14, ink);
+                    DrawLine(frame, 8, targetY + 14, _width - 8, targetY + 14, ink);
+                    break;
+                case CopenhagenCorruption.Punctuation:
+                    int leftEdge = targetX < centerX ? 8 : centerX;
+                    int rightEdge = targetX < centerX ? centerX : _width - 8;
+                    for (int stripeY = 52; stripeY < _height - 20; stripeY += 16)
+                        DrawLine(frame, leftEdge, stripeY, rightEdge, stripeY + 8, 0xff592531);
+                    DrawLine(frame, centerX, 46, centerX, _height - 14, ink);
+                    break;
+                case CopenhagenCorruption.WeightSwap:
+                    for (int offset = -1; offset <= 1; offset++)
+                        DrawCircleOutline(frame, targetX + offset * 48,
+                            targetY + Math.Abs(offset) * 13, 18 + ground.Age / 5 % 6, ink);
+                    break;
+            }
+            DrawText(frame, 8, 29, CopenhagenCorruptionText(ground.KorrektoriusCorruption), ink);
+        }
+
+        for (int pen = 0; pen < ground.KorrektoriusPenHealth.Length; pen++)
+        {
+            (double penXD, double penYD) = CopenhagenKorrektoriusPenPosition(ground, pen);
+            int x = (int)Math.Round(penXD);
+            int y = (int)Math.Round(penYD);
+            if (ground.KorrektoriusPenHealth[pen] <= 0)
+            {
+                DrawLine(frame, x - 12, y + 7, x + 11, y - 5, 0xff592531);
+                DrawLine(frame, x - 7, y - 3, x + 7, y + 5, 0xff29343a);
+                continue;
+            }
+            double angle = ground.KorrektoriusAge * 0.025 * (pen % 2 == 0 ? 1 : -1) + pen;
+            int tipX = x + (int)Math.Round(Math.Cos(angle) * 25);
+            int tipY = y + (int)Math.Round(Math.Sin(angle) * 25);
+            uint penColor = ground.KorrektoriusPenHitFlash[pen] > 0 ? 0xffffffff :
+                pen == ground.KorrektoriusActivePen ? 0xffff8a4a : 0xffb7c7d6;
+            DrawLine(frame, x, y, tipX, tipY, penColor);
+            FillTriangle(frame, tipX, tipY, x - 7, y - 5, x + 6, y + 6, penColor);
+            DrawCircleOutline(frame, x, y, pen == ground.KorrektoriusActivePen ? 15 : 11, penColor);
+            int maximum = ground.TestFixture ? 18 : CopenhagenKorrektoriusPenHealth;
+            DrawRect(frame, x - 13, y + 16, 26 * ground.KorrektoriusPenHealth[pen] / maximum, 3, 0xff7fc7ff);
+        }
+
+        (double bossXD, double bossYD) = CopenhagenKorrektoriusPosition(ground);
+        int bossX = (int)Math.Round(bossXD);
+        int bossY = (int)Math.Round(bossYD);
+        bool exposed = ground.KorrektoriusPenHealth.All(health => health <= 0);
+        if (_sprites?.TryGet("dk_silver_fogde_idle", out Sprite fogde) == true)
+        {
+            if (ground.KorrektoriusHealth <= 0)
+                DrawSpriteScaledAlpha(frame, fogde, bossX - 31, bossY - 28, 62, 70, 120);
+            else DrawSpriteScaled(frame, fogde, bossX - 31, bossY - 48, 62, 70);
+        }
+        else
+        {
+            FillCircle(frame, bossX, bossY - 23, 10, 0xffffd6b0);
+            FillTriangle(frame, bossX, bossY - 13, bossX - 25, bossY + 22,
+                bossX + 25, bossY + 22, 0xff29343a);
+        }
+        if (ground.KorrektoriusHealth > 0)
+            DrawCircleOutline(frame, bossX, bossY - 10, exposed ? 25 : 34,
+                ground.KorrektoriusHitFlash > 0 ? 0xffffffff : exposed ? 0xffff6b7f : 0xff7fc7ff);
+        else
+        {
+            DrawLine(frame, bossX - 25, bossY + 19, bossX + 25, bossY + 19, 0xff592531);
+            DrawLine(frame, bossX - 13, bossY + 13, bossX + 11, bossY + 24, 0xff765139);
+        }
+        if (!exposed && ground.KorrektoriusHealth > 0)
+            for (int pen = 0; pen < 4; pen++)
+            {
+                (double penX, double penY) = CopenhagenKorrektoriusPenPosition(ground, pen);
+                if (ground.KorrektoriusPenHealth[pen] > 0)
+                    DrawLine(frame, bossX, bossY - 10, (int)penX, (int)penY, 0xff52636a);
+            }
+    }
+
+    private static string CopenhagenCorruptionText(CopenhagenCorruption corruption) => corruption switch
+    {
+        CopenhagenCorruption.Negation => "PENNAN INSKRIVER · ICKE",
+        CopenhagenCorruption.NationSwap => "DANSKT BLIR · SVENSKT",
+        CopenhagenCorruption.Punctuation => "PUNKTEN FLYTTAS",
+        CopenhagenCorruption.WeightSwap => "SILVER BYTS MOT · SKULD",
+        _ => "MARGINALEN ÄR REN",
+    };
 
     private void DrawCopenhagenSagaKingRoom(uint[] frame, CopenhagenGroundState ground)
     {
@@ -17768,6 +18266,65 @@ internal sealed class StormaktGame
         for (int ring = 0; ring < (stable ? 2 : 5); ring++)
             DrawCircleOutline(frame, summonX, summonY, 13 + ring * 5 + ground.LegendCompileAge / 6 % 5, color);
     }
+
+    private void DrawCopenhagenLocalLawChoice(uint[] frame, CopenhagenGroundState ground)
+    {
+        int width = Math.Min(388, _width - 12);
+        int x = (_width - width) / 2;
+        int y = _height <= 224 ? 60 : 82;
+        DrawRect(frame, x, y, width, 116, 0xf5080d12);
+        DrawLine(frame, x, y, x + width - 1, y, 0xff7fc7ff);
+        DrawText(frame, x + (width - 210) / 2, y + 8, "CHRISTIANSBORG · SKRIV LOKAL LAG", 0xffffd66b);
+        DrawText(frame, x + (width - 174) / 2, y + 27, "EN NY LAG ERSÄTTER DEN GAMLA.", 0xffbdf8ff);
+        int gap = 4;
+        int choiceWidth = (width - 16 - gap * 2) / 3;
+        string[] top = ["INTET DANSKT", "SILVER VÄGER", "KRONAN ÄGER"];
+        string[] bottom = ["VERK MÅ FLYGA", "MINDRE ÄN SKULD", "BLOTT VAD DEN BÄR"];
+        uint[] colors = [0xff7fc7ff, 0xffffffff, 0xffffd66b];
+        for (int choice = 0; choice < 3; choice++)
+        {
+            int choiceX = x + 8 + choice * (choiceWidth + gap);
+            uint border = ground.LocalLawSelection == choice ? 0xffffd66b : 0xff344d5c;
+            DrawRect(frame, choiceX, y + 45, choiceWidth, 44, 0xff101820);
+            DrawLine(frame, choiceX, y + 45, choiceX + choiceWidth - 1, y + 45, border);
+            DrawLine(frame, choiceX, y + 88, choiceX + choiceWidth - 1, y + 88, border);
+            DrawText(frame, choiceX + Math.Max(3, (choiceWidth - top[choice].Length * 6) / 2),
+                y + 56, top[choice], colors[choice]);
+            DrawText(frame, choiceX + Math.Max(3, (choiceWidth - bottom[choice].Length * 6) / 2),
+                y + 72, bottom[choice], colors[choice]);
+        }
+        DrawText(frame, x + (width - 180) / 2, y + 98, "PILAR · Z KOMPILERA · C ÅNGRA", 0xff9bd4dc);
+    }
+
+    private void DrawCopenhagenLocalLawCompile(uint[] frame, CopenhagenGroundState ground)
+    {
+        int width = Math.Min(332, _width - 20);
+        int x = (_width - width) / 2;
+        int y = _height <= 224 ? 124 : 161;
+        string law = CopenhagenLocalLawText(ground.LocalLaw);
+        uint color = ground.LocalLaw switch
+        {
+            CopenhagenLocalLaw.NoDanishWorkMayFly => 0xff7fc7ff,
+            CopenhagenLocalLaw.SilverLighterThanGuilt => 0xffffffff,
+            _ => 0xffffd66b,
+        };
+        DrawRect(frame, x, y, width, 39, 0xee080d12);
+        DrawLine(frame, x, y, x + width - 1, y, color);
+        DrawText(frame, x + Math.Max(6, (width - law.Length * 6) / 2), y + 8, law, color);
+        DrawRect(frame, x + 6, y + 27,
+            Math.Min(width - 12, (width - 12) * ground.LocalLawCompileAge / 76), 4, color);
+        for (int ring = 0; ring < 3; ring++)
+            DrawCircleOutline(frame, _width / 2, _height - 52,
+                16 + ring * 7 + ground.LocalLawCompileAge / 6 % 5, color);
+    }
+
+    private static string CopenhagenLocalLawText(CopenhagenLocalLaw law) => law switch
+    {
+        CopenhagenLocalLaw.NoDanishWorkMayFly => "INTET DANSKT VERK MÅ FLYGA",
+        CopenhagenLocalLaw.SilverLighterThanGuilt => "SILVER VÄGER MINDRE ÄN SKULD",
+        CopenhagenLocalLaw.CrownOwnsOnlyWhatItCarries => "KRONAN ÄGER BLOTT VAD DEN BÄR",
+        _ => "INGEN LOKAL LAG",
+    };
 
     private void DrawCopenhagenMaterialForm(uint[] frame, CopenhagenGroundState ground)
     {
@@ -17987,7 +18544,8 @@ internal sealed class StormaktGame
             1 => "KARL CCLV · KANONGÅNGEN",
             2 => "KARL CCLV · ROSENBORGS FÖRGÅRD",
             3 => "KARL CCLV · MINNESMASKINEN",
-            _ => "KARL CCLV · SAGOKONUNGEN",
+            4 => "KARL CCLV · SAGOKONUNGEN",
+            _ => "KARL CCLV · MARGINALVALVET",
         };
         DrawText(frame, 6, 5, title, 0xffffd66b);
         int barX = _width - 105;
@@ -18024,6 +18582,21 @@ internal sealed class StormaktGame
                 ? "MOTLEGEND · DEN ENSAMME" : "MOTLEGEND · DE SJU";
             DrawText(frame, 6, _height - 29, counter, 0xffffd66b);
         }
+        if (ground.Room == 5)
+        {
+            int maximum = ground.TestFixture ? 72 : CopenhagenKorrektoriusHealth;
+            int bossBarX = _width - 105;
+            DrawRect(frame, bossBarX, 19, 72, 4, 0xff29343a);
+            DrawRect(frame, bossBarX, 19, 72 * ground.KorrektoriusHealth / Math.Max(1, maximum), 4,
+                ground.KorrektoriusPenHealth.All(health => health <= 0) ? 0xffff6b7f : 0xff7fc7ff);
+            int livingPens = ground.KorrektoriusPenHealth.Count(health => health > 0);
+            DrawText(frame, _width - 29, 18, $"P{livingPens}", 0xffffd66b);
+            string law = ground.KorrektoriusCorruptionAge > 0
+                ? CopenhagenCorruptionText(ground.KorrektoriusCorruption)
+                : CopenhagenLocalLawText(ground.LocalLaw);
+            DrawText(frame, 6, _height - 29, law,
+                ground.KorrektoriusCorruptionAge > 0 ? 0xffff6b7f : 0xff7fc7ff);
+        }
         string? activeLaw = ground.ActiveMarginal switch
         {
             CopenhagenMarginalLaw.HeartIsPort => "MARGINAL · HJERTAT ÄR EN PORT",
@@ -18048,6 +18621,10 @@ internal sealed class StormaktGame
             DrawText(frame, _width - 150, _height - 9, "SAGOKONUNG · Z", 0xff7fc7ff);
         else if (ground.Room == 4 && ground.DoorReady && !ground.CheckpointReady)
             DrawText(frame, _width - 162, _height - 9, "MARGINALFOGDE · Z", 0xff7fc7ff);
+        else if (ground.Room == 5 && ground.DoorReady && !ground.CheckpointReady)
+            DrawText(frame, _width - 150, _height - 9, "CHRISTIANS VREDE · Z", 0xff7fc7ff);
+        else if (ground.Room == 5 && !ground.LocalLawChoosing && ground.LocalLawCompileAge == 0)
+            DrawText(frame, _width - 120, _height - 9, "LEKTOR · C", 0xff7fc7ff);
     }
 
     private void DrawCopenhagenCheckpointBanner(uint[] frame, CopenhagenWorldState state)
@@ -20687,7 +21264,13 @@ internal sealed class StormaktGame
         int LegendLastOrderAge = 0, double LegendVx = 0, double LegendVy = -1,
         CopenhagenLegend CompiledLegend = CopenhagenLegend.None, int SagaKingHealth = 0,
         int SagaKingAge = 0, double SagaTargetX = 0, double SagaTargetY = 0,
-        int SagaOrderSerial = 0, double SagaHorseX = 0, int SagaHorseDirection = 1);
+        int SagaOrderSerial = 0, double SagaHorseX = 0, int SagaHorseDirection = 1,
+        CopenhagenLocalLaw LocalLaw = CopenhagenLocalLaw.None, int KorrektoriusHealth = 0,
+        int KorrektoriusAge = 0, int[]? KorrektoriusPenHealth = null,
+        int KorrektoriusActivePen = -1, int KorrektoriusOrderSerial = 0,
+        CopenhagenCorruption KorrektoriusCorruption = CopenhagenCorruption.None,
+        int KorrektoriusCorruptionAge = 0, double KorrektoriusTargetX = 0,
+        double KorrektoriusTargetY = 0);
     private readonly record struct CopenhagenGroundEnemySave(int Id, double X, double Y,
         int Health, int MaxHealth, int DeathAge);
 
@@ -20978,6 +21561,14 @@ internal sealed class StormaktGame
     private enum CopenhagenPrediction { Up, Down, Left, Right }
     private enum CopenhagenMarginalLaw { None, HeartIsPort, HeartIsOpen, SilverIsShield, SilverIsBlade }
     private enum CopenhagenLegend { None, OneMooseCarolean, SevenMooseCaroleans }
+    private enum CopenhagenLocalLaw
+    {
+        None,
+        NoDanishWorkMayFly,
+        SilverLighterThanGuilt,
+        CrownOwnsOnlyWhatItCarries,
+    }
+    private enum CopenhagenCorruption { None, Negation, NationSwap, Punctuation, WeightSwap }
 
     private sealed class CopenhagenTollWall(bool vertical, int coordinate, int gap, int serial)
     {
@@ -21077,6 +21668,21 @@ internal sealed class StormaktGame
         public double SagaHorseX { get; set; }
         public int SagaHorseDirection { get; set; } = 1;
         public int SagaKarlHitCooldown { get; set; }
+        public bool LocalLawChoosing { get; set; }
+        public int LocalLawSelection { get; set; }
+        public int LocalLawCompileAge { get; set; }
+        public CopenhagenLocalLaw LocalLaw { get; set; }
+        public int KorrektoriusHealth { get; set; }
+        public int KorrektoriusAge { get; set; }
+        public int KorrektoriusHitFlash { get; set; }
+        public int KorrektoriusActivePen { get; set; } = -1;
+        public int KorrektoriusOrderSerial { get; set; }
+        public CopenhagenCorruption KorrektoriusCorruption { get; set; }
+        public int KorrektoriusCorruptionAge { get; set; }
+        public double KorrektoriusTargetX { get; set; }
+        public double KorrektoriusTargetY { get; set; }
+        public int[] KorrektoriusPenHealth { get; } = new int[4];
+        public int[] KorrektoriusPenHitFlash { get; } = new int[4];
         public List<CopenhagenGroundEnemy> Enemies { get; } = [];
     }
 
