@@ -625,6 +625,7 @@ public sealed class UiContext
                 }
                 return false;
             case 28:
+            case 96:
                 submitted = true;
                 return false;
             default:
@@ -649,6 +650,18 @@ public sealed class UiContext
         >= 44 and <= 50 => "zxcvbnm"[(int)keyCode - 44],
         >= 2 and <= 10 => "123456789"[(int)keyCode - 2],
         11 => '0',
+        82 => '0',
+        79 => '1',
+        80 => '2',
+        81 => '3',
+        75 => '4',
+        76 => '5',
+        77 => '6',
+        71 => '7',
+        72 => '8',
+        73 => '9',
+        74 => '-',
+        83 => '.',
         12 => '-',
         13 => '=',
         39 => ';',
