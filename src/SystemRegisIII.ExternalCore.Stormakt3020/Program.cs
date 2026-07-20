@@ -235,6 +235,7 @@ internal sealed class StormaktGame
         "TIONDE VÄRLDEN",
         "SNAPPHANENS ED",
         "KÖPENHAMNS RING",
+        "CODEXKRIGET",
     ];
     private static readonly string[] SnapphaneWreckSeaPropNames =
     [
@@ -704,8 +705,13 @@ internal sealed class StormaktGame
     private bool _inLevelPreview;
     private bool _inSilverkroppenSelect;
     private bool _inCopenhagenSelect;
+    private bool _inCodexWarSelect;
     private int _silverkroppenSelection;
     private int _copenhagenSelection;
+    private int _codexWarSelection;
+    private CodexWarEncounter _codexWarEncounter;
+    private int _codexWarStage;
+    private int _codexWarTransitionAge;
     private int _previewLevel;
     private int _levelId;
     private int _levelSelection;
@@ -736,6 +742,11 @@ internal sealed class StormaktGame
         if (_inCopenhagenSelect)
         {
             StepCopenhagenSelect(buttons);
+            return;
+        }
+        if (_inCodexWarSelect)
+        {
+            StepCodexWarSelect(buttons);
             return;
         }
         if (_inLevelPreview)
@@ -819,7 +830,9 @@ internal sealed class StormaktGame
             return;
         }
 
-        if (Pressed(buttons, Start))
+        bool codexDecisionActive = _levelId == 6 &&
+            _copenhagenWorld?.Ground is CopenhagenGroundState { Room: 7, CodexOpened: true, CodexAge: >= 246 };
+        if (Pressed(buttons, Start) && !codexDecisionActive)
         {
             _paused = !_paused;
             _audio?.SetPaused(_paused);
@@ -836,6 +849,8 @@ internal sealed class StormaktGame
         {
             if (_dungeon is not null) StepDungeon(buttons, pointer);
             else StepRts(buttons, pointer);
+            if (_codexWarEncounter is CodexWarEncounter.Silverkroppen or CodexWarEncounter.Mixed)
+                StepCodexWarDungeonProgress();
             _previousButtons = buttons;
             return;
         }
@@ -1004,6 +1019,13 @@ internal sealed class StormaktGame
             DrawSky(frame);
             DrawNebula(frame);
             DrawCopenhagenSelect(frame);
+            return;
+        }
+        if (_inCodexWarSelect)
+        {
+            DrawSky(frame);
+            DrawNebula(frame);
+            DrawCodexWarSelect(frame);
             return;
         }
         if (_levelId == 3 && !_inLevelSelect && !_inLevelPreview)
@@ -1495,6 +1517,7 @@ internal sealed class StormaktGame
         _inLevelPreview = false;
         _inSilverkroppenSelect = false;
         _inCopenhagenSelect = false;
+        _inCodexWarSelect = false;
         _audio?.Trigger(StormaktSound.Deploy);
     }
 
@@ -1548,6 +1571,10 @@ internal sealed class StormaktGame
         _inLevelPreview = false;
         _inSilverkroppenSelect = false;
         _inCopenhagenSelect = false;
+        _inCodexWarSelect = false;
+        _codexWarEncounter = CodexWarEncounter.None;
+        _codexWarStage = 0;
+        _codexWarTransitionAge = 0;
         _inLevelSelect = true;
         _levelSelection = Math.Clamp(selection, 0, CampaignNames.Length - 1);
         _lockedLevelNoticeFrames = 0;
@@ -1558,6 +1585,7 @@ internal sealed class StormaktGame
 
     private void StepLevelSelect(uint buttons)
     {
+        bool warResumed = TryLoadCampaignSave(out StormaktCampaignSave campaign) && campaign.WarResumed;
         if (Pressed(buttons, Up))
         {
             _levelSelection = (_levelSelection + CampaignNames.Length - 1) % CampaignNames.Length;
@@ -1570,6 +1598,15 @@ internal sealed class StormaktGame
         }
         if (Pressed(buttons, Start))
         {
+            if (_levelSelection == 7 && warResumed)
+            {
+                _inLevelSelect = false;
+                _inCodexWarSelect = true;
+                _codexWarSelection = 0;
+                _audio?.Trigger(StormaktSound.CopenhagenCodexRecognize);
+                _previousButtons = buttons;
+                return;
+            }
             if (_levelSelection == 3)
             {
                 _inLevelSelect = false;
@@ -1588,7 +1625,8 @@ internal sealed class StormaktGame
                 _previousButtons = buttons;
                 return;
             }
-            if (_levelSelection is 0 or 1 or 2 or 4 or 6 || _developerMode && _levelSelection == 5)
+            if (_levelSelection is 0 or 1 or 2 or 4 or 6 ||
+                (_levelSelection == 5 && (_developerMode || warResumed)))
             {
                 StartLevel(_levelSelection, fresh: (buttons & Slow) != 0);
             }
@@ -1731,6 +1769,158 @@ internal sealed class StormaktGame
         }
         _lockedLevelNoticeFrames = Math.Max(0, _lockedLevelNoticeFrames - 1);
         _previousButtons = buttons;
+    }
+
+    private void StepCodexWarSelect(uint buttons)
+    {
+        const int choices = 4;
+        if (Pressed(buttons, Up))
+        {
+            _codexWarSelection = (_codexWarSelection + choices - 1) % choices;
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        if (Pressed(buttons, Down))
+        {
+            _codexWarSelection = (_codexWarSelection + 1) % choices;
+            _audio?.Trigger(StormaktSound.Deploy);
+        }
+        if (Pressed(buttons, AltFire) || Pressed(buttons, Fire) ||
+            Pressed(buttons, Start) && _codexWarSelection == 3)
+        {
+            ReturnToCampaignSelect(7);
+            _previousButtons = buttons;
+            return;
+        }
+        if (Pressed(buttons, Start))
+        {
+            if (_codexWarSelection == 0) StartCodexWarDungeon(CodexWarEncounter.Mixed);
+            else if (_codexWarSelection == 1) StartCodexWarDungeon(CodexWarEncounter.Silverkroppen);
+            else if (_codexWarSelection == 2) StartCodexWarRoyalChain(CodexWarEncounter.Royal);
+        }
+        _previousButtons = buttons;
+    }
+
+    private void StartCodexWarDungeon(CodexWarEncounter encounter)
+    {
+        StartLevel(3, fresh: true);
+        _codexWarEncounter = encounter;
+        _codexWarStage = 0;
+        _codexWarTransitionAge = 0;
+        BeginDungeon(codexWar: true);
+        if (_dungeon is DungeonState dungeon) BeginCodexWarDungeonStage(dungeon, 0);
+    }
+
+    private void BeginCodexWarDungeonStage(DungeonState dungeon, int stage)
+    {
+        dungeon.Health = Math.Max(160, dungeon.MaxHealth);
+        dungeon.MaxHealth = Math.Max(160, dungeon.MaxHealth);
+        dungeon.Power = Math.Max(48, dungeon.Power);
+        dungeon.Age = 150;
+        dungeon.HurtAge = 60;
+        dungeon.DeathAge = 0;
+        dungeon.CodexWar = true;
+        dungeon.SuppressSave = true;
+        if (stage == 0)
+        {
+            BeginDungeonDepthTwo(dungeon);
+            dungeon.Enemies.RemoveAll(enemy => enemy.Type != DungeonEnemyType.SilverFogde);
+            dungeon.KarlX = 920; dungeon.KarlY = 390;
+            dungeon.TargetX = dungeon.KarlX; dungeon.TargetY = dungeon.KarlY;
+            dungeon.CameraX = 720; dungeon.CameraY = 250;
+            dungeon.PickupNotice = "CODEXKEDJA 1/3 · SILVERFOGDEN";
+        }
+        else if (stage == 1)
+        {
+            dungeon.DepthThreeOpen = true;
+            BeginDungeonDepthThree(dungeon);
+            dungeon.Enemies.RemoveAll(enemy => enemy.Type != DungeonEnemyType.BlindShepherd);
+            dungeon.KarlX = 1160; dungeon.KarlY = 450;
+            dungeon.TargetX = dungeon.KarlX; dungeon.TargetY = dungeon.KarlY;
+            dungeon.CameraX = 960; dungeon.CameraY = 310;
+            dungeon.PickupNotice = "CODEXKEDJA 2/3 · BLINDE HERDEN";
+        }
+        else
+        {
+            dungeon.TempleOpen = true;
+            BeginDungeonDepthFour(dungeon);
+            dungeon.Enemies.RemoveAll(enemy => enemy.Type != DungeonEnemyType.LemminkainenShadow);
+            dungeon.KarlX = 910; dungeon.KarlY = 380;
+            dungeon.TargetX = dungeon.KarlX; dungeon.TargetY = dungeon.KarlY;
+            dungeon.CameraX = 710; dungeon.CameraY = 240;
+            dungeon.PickupNotice = "CODEXKEDJA 3/3 · LEMMINKÄINENS SKUGGA";
+        }
+        if (_invincibleTestMode)
+        {
+            foreach (DungeonEnemy boss in dungeon.Enemies)
+            {
+                boss.Health = Math.Min(24, boss.Health);
+                boss.MaxHealth = Math.Min(24, boss.MaxHealth);
+            }
+        }
+        dungeon.Chests.Clear();
+        dungeon.Items.RemoveAll(item => item.OnGround);
+        dungeon.PickupNoticeAge = 240;
+        ClearBossRadio();
+        _audio?.SwitchMusic(StormaktMusicTrack.Boss);
+        _audio?.Trigger(StormaktSound.CopenhagenCircuitOpen);
+    }
+
+    private void StepCodexWarDungeonProgress()
+    {
+        if (_dungeon is not DungeonState dungeon || _codexWarStage is < 0 or > 2) return;
+        DungeonEnemyType type = _codexWarStage switch
+        {
+            0 => DungeonEnemyType.SilverFogde,
+            1 => DungeonEnemyType.BlindShepherd,
+            _ => DungeonEnemyType.LemminkainenShadow,
+        };
+        DungeonEnemy? boss = dungeon.Enemies.FirstOrDefault(enemy => enemy.Type == type);
+        if (boss is not null && boss.Health > 0)
+        {
+            _codexWarTransitionAge = 0;
+            return;
+        }
+        _codexWarTransitionAge++;
+        if (_codexWarTransitionAge < 90) return;
+        _codexWarTransitionAge = 0;
+        if (_codexWarStage < 2)
+        {
+            _codexWarStage++;
+            BeginCodexWarDungeonStage(dungeon, _codexWarStage);
+            return;
+        }
+        if (_codexWarEncounter == CodexWarEncounter.Mixed)
+            StartCodexWarRoyalChain(CodexWarEncounter.Mixed);
+        else CompleteCodexWarEncounter(1 << 1);
+    }
+
+    private void StartCodexWarRoyalChain(CodexWarEncounter encounter)
+    {
+        StartLevel(6, fresh: true);
+        _codexWarEncounter = encounter;
+        _codexWarStage = 3;
+        _codexWarTransitionAge = 0;
+        if (_copenhagenWorld is not CopenhagenWorldState copenhagen) return;
+        BeginCopenhagenGround(copenhagen, suppressSave: true);
+        if (copenhagen.Ground is not CopenhagenGroundState ground) return;
+        ground.ActiveMarginal = CopenhagenMarginalLaw.SilverIsBlade;
+        ground.CompiledLegend = CopenhagenLegend.OneMooseCarolean;
+        ground.LocalLaw = CopenhagenLocalLaw.SilverLighterThanGuilt;
+        ground.Health = Math.Max(160, ground.Health);
+        ground.MaxHealth = Math.Max(160, ground.MaxHealth);
+        BeginCopenhagenSagaKingRoom(ground);
+    }
+
+    private void CompleteCodexWarEncounter(int mask)
+    {
+        WriteCampaignSave(0, codexWarMask: mask, force: true);
+        _inLevelSelect = false;
+        _inCodexWarSelect = true;
+        _codexWarEncounter = CodexWarEncounter.None;
+        _codexWarStage = 0;
+        _codexWarTransitionAge = 0;
+        _audio?.SwitchMusic(StormaktMusicTrack.Menu);
+        _audio?.Trigger(StormaktSound.CopenhagenCodexRecognize);
     }
 
     private void StepLevelPreview(uint buttons)
@@ -2432,7 +2622,7 @@ internal sealed class StormaktGame
         if (age == 1_280) BeginDungeon();
     }
 
-    private void BeginDungeon()
+    private void BeginDungeon(bool codexWar = false)
     {
         _stageClear = false;
         ClearBossRadio();
@@ -2450,6 +2640,8 @@ internal sealed class StormaktGame
             MaxHealth = 100,
             Depth = 1,
             DoorHealth = 3,
+            SuppressSave = codexWar,
+            CodexWar = codexWar,
         };
         SeedDungeonInventory(_dungeon);
         if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DUNGEON_HAMMER_TEST"), "1", StringComparison.Ordinal))
@@ -2778,7 +2970,11 @@ internal sealed class StormaktGame
         if (dungeon.DeathAge > 0)
         {
             dungeon.DeathAge++;
-            if (dungeon.DeathAge >= 90) RestartDungeonAfterDeath(dungeon);
+            if (dungeon.DeathAge >= 90)
+            {
+                if (dungeon.CodexWar) BeginCodexWarDungeonStage(dungeon, _codexWarStage);
+                else RestartDungeonAfterDeath(dungeon);
+            }
             return;
         }
         EnsureDungeonRecoveryChest(dungeon);
@@ -5073,7 +5269,7 @@ internal sealed class StormaktGame
 
     private static void DefeatDungeonEnemy(DungeonState dungeon, DungeonEnemy enemy)
     {
-        DropDungeonEnemyLoot(dungeon, enemy);
+        if (!dungeon.CodexWar) DropDungeonEnemyLoot(dungeon, enemy);
         if (enemy.ExperienceAwarded) return;
         if (enemy.Type == DungeonEnemyType.BlindShepherd)
         {
@@ -5262,6 +5458,7 @@ internal sealed class StormaktGame
 
     private static void WriteDungeonSave(DungeonState dungeon, string slot)
     {
+        if (dungeon.SuppressSave) return;
         ValidateDungeonInventory(dungeon);
         try
         {
@@ -5461,19 +5658,31 @@ internal sealed class StormaktGame
         return Path.Combine(stateRoot, "waylandforge", "stormakt3020", "saves", slot + ".json");
     }
 
-    private void WriteCampaignSave(int freedShips)
+    private void WriteCampaignSave(int freedShips, bool? copenhagenCompleted = null,
+        bool? warResumed = null, int codexWarMask = 0, bool force = false)
     {
-        if (_suppressCampaignWrites || _activeLoadout is not StormaktLoadout loadout) return;
+        if (_suppressCampaignWrites && !force) return;
         try
         {
+            bool hasExisting = TryLoadCampaignSave(out StormaktCampaignSave existing);
+            StormaktLoadout? loadout = _activeLoadout;
+            if (loadout is null && hasExisting)
+            {
+                loadout = new StormaktLoadout();
+                loadout.Apply(existing);
+            }
+            if (loadout is null) return;
             string path = DungeonSavePath("campaign");
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             string temporary = path + ".tmp";
-            var save = new StormaktCampaignSave(2, loadout.PrimaryModule, loadout.BroadsideModule,
-                loadout.ShipModule, Math.Max(0, freedShips),
-                _snapphaneWorld?.Route ?? SnapphaneRoute.None,
-                Math.Max(0, _snapphaneWorld?.SnapphaneAllies ?? 0),
-                _snapphaneWorld?.SorenOathComplete ?? false);
+            var save = new StormaktCampaignSave(3, loadout.PrimaryModule, loadout.BroadsideModule,
+                loadout.ShipModule, Math.Max(Math.Max(0, freedShips), hasExisting ? existing.FreedShips : 0),
+                _snapphaneWorld?.Route ?? (hasExisting ? existing.SnapphaneRoute : SnapphaneRoute.None),
+                Math.Max(0, _snapphaneWorld?.SnapphaneAllies ?? (hasExisting ? existing.SnapphaneAllies : 0)),
+                _snapphaneWorld?.SorenOathComplete ?? (hasExisting && existing.SorenOathComplete),
+                copenhagenCompleted ?? (hasExisting && existing.CopenhagenCompleted),
+                warResumed ?? (hasExisting && existing.WarResumed),
+                (hasExisting ? existing.CodexWarDefeatedMask : 0) | codexWarMask);
             File.WriteAllText(temporary, JsonSerializer.Serialize(save));
             File.Move(temporary, path, true);
         }
@@ -5491,7 +5700,7 @@ internal sealed class StormaktGame
             string path = DungeonSavePath("campaign");
             if (!File.Exists(path)) return false;
             save = JsonSerializer.Deserialize<StormaktCampaignSave>(File.ReadAllText(path));
-            return save.Schema is 1 or 2 && Enum.IsDefined(save.PrimaryModule) &&
+            return save.Schema is >= 1 and <= 3 && Enum.IsDefined(save.PrimaryModule) &&
                 Enum.IsDefined(save.BroadsideModule) && Enum.IsDefined(save.ShipModule) &&
                 (save.Schema == 1 || Enum.IsDefined(save.SnapphaneRoute));
         }
@@ -7607,7 +7816,7 @@ internal sealed class StormaktGame
         }
         if (ground.Room == 7 && ground.CodexOpened)
         {
-            StepCopenhagenCodex(ground);
+            StepCopenhagenCodex(ground, buttons);
             return;
         }
 
@@ -7670,7 +7879,7 @@ internal sealed class StormaktGame
 
         if (ground.Room == 7)
         {
-            StepCopenhagenCodex(ground);
+            StepCopenhagenCodex(ground, buttons);
             return;
         }
 
@@ -8856,7 +9065,7 @@ internal sealed class StormaktGame
             WriteCopenhagenGroundSave(ground);
     }
 
-    private void StepCopenhagenCodex(CopenhagenGroundState ground)
+    private void StepCopenhagenCodex(CopenhagenGroundState ground, uint buttons)
     {
         if (!ground.CodexOpened)
         {
@@ -8873,6 +9082,15 @@ internal sealed class StormaktGame
             return;
         }
 
+        if (ground.CodexEndingAge > 0)
+        {
+            ground.CodexEndingAge++;
+            if (ground.CodexEndingAge >= 120 &&
+                (Pressed(buttons, Start) || Pressed(buttons, Fire)))
+                ReturnToCampaignSelect(6);
+            return;
+        }
+
         ground.CodexAge++;
         if (ground.CodexAge is 72 or 156 or 246)
             _audio?.Trigger(StormaktSound.CopenhagenMaterialRewrite);
@@ -8880,6 +9098,34 @@ internal sealed class StormaktGame
             _audio?.Trigger(StormaktSound.CopenhagenClockStrike);
         if (ground.CodexAge is 156 or 330 && !ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
             WriteCopenhagenGroundSave(ground);
+        if (ground.CodexAge < 246) return;
+        if (Pressed(buttons, Left) || Pressed(buttons, Right))
+        {
+            ground.CodexSelection = 1 - ground.CodexSelection;
+            _audio?.Trigger(StormaktSound.CopenhagenMaterialRewrite);
+        }
+        if (!Pressed(buttons, Start) && !Pressed(buttons, Fire)) return;
+        if (_codexWarEncounter != CodexWarEncounter.None)
+        {
+            int mask = _codexWarEncounter == CodexWarEncounter.Mixed ? 1 << 0 : 1 << 2;
+            CompleteCodexWarEncounter(mask);
+            return;
+        }
+        bool resumeWar = ground.CodexSelection == 0;
+        int freedShips = _copenhagenWorld?.IncomingFreedShips ?? 0;
+        if (!ground.TestFixture && !CopenhagenFixtureActive)
+            WriteCampaignSave(freedShips, copenhagenCompleted: true,
+                warResumed: resumeWar, force: true);
+        if (resumeWar)
+        {
+            ReturnToCampaignSelect(7);
+            _audio?.Trigger(StormaktSound.CopenhagenCircuitOpen);
+        }
+        else
+        {
+            ground.CodexEndingAge = 1;
+            _audio?.Trigger(StormaktSound.CopenhagenClockStrike);
+        }
     }
 
     private int CopenhagenWrathPhase(CopenhagenGroundState ground)
@@ -13430,7 +13676,9 @@ internal sealed class StormaktGame
             3 => "GRUVA III  DEN FÖRBANNADE GRUVAN",
             _ => "GRUVA IV  LEMMINKÄINENS TEMPEL",
         }, 0xffffd66b);
-        DrawText(frame, _width - 78, 5, "AUTOSPAR", 0xff65c58a);
+        DrawText(frame, _width - (dungeon.CodexWar ? 84 : 78), 5,
+            dungeon.CodexWar ? "INSTANS 256" : "AUTOSPAR",
+            dungeon.CodexWar ? 0xffbdf8ff : 0xff65c58a);
         DrawDungeonHealth(frame, dungeon);
         DrawDungeonPotionBelt(frame, dungeon);
         if (dungeon.Depth == 3)
@@ -18652,7 +18900,7 @@ internal sealed class StormaktGame
         int width = Math.Min(304, _width - 12);
         int x = (_width - width) / 2;
         int y = _height <= 224 ? 49 : 60;
-        int height = age >= 246 ? 108 : age >= 156 ? 76 : 48;
+        int height = ground.CodexEndingAge > 0 ? 128 : age >= 246 ? 108 : age >= 156 ? 76 : 48;
         DrawRect(frame, x, y, width, height, 0xf2070c11);
         DrawLine(frame, x, y, x + width - 1, y, 0xffffd66b);
         DrawLine(frame, x, y + height - 1, x + width - 1, y + height - 1, 0xff2f74c9);
@@ -18670,10 +18918,38 @@ internal sealed class StormaktGame
         }
         if (age >= 246)
         {
-            const string prompt = "ÅTERUPPTA KRIGET?";
-            uint promptColor = age / 30 % 2 == 0 ? 0xffffd66b : 0xffbdf8ff;
-            DrawText(frame, x + (width - prompt.Length * 6) / 2, y + 72, prompt, promptColor);
-            DrawText(frame, x + (width - 174) / 2, y + 91, "INGET SVAR ÄR SKRIVET", 0xff526973);
+            if (ground.CodexEndingAge > 0)
+            {
+                const string end = "KRIGET SLUTAR HÄR";
+                DrawText(frame, x + (width - end.Length * 6) / 2, y + 72, end, 0xffffd66b);
+                const string credit = "KARL · EBBA · SÖREN · DE FRIGJORDA";
+                DrawText(frame, x + (width - credit.Length * 6) / 2, y + 91, credit, 0xffbdf8ff);
+                if (ground.CodexEndingAge >= 120)
+                {
+                    const string back = "START HUVUDMENY";
+                    DrawText(frame, x + (width - back.Length * 6) / 2, y + 108, back, 0xff748b95);
+                }
+            }
+            else if (_codexWarEncounter != CodexWarEncounter.None)
+            {
+                const string broken = "KEDJAN ÄR BRUTEN";
+                DrawText(frame, x + (width - broken.Length * 6) / 2, y + 72, broken, 0xffffd66b);
+                const string returnText = "START ÅTERVÄNDER TILL INSTANS 256";
+                DrawText(frame, x + (width - returnText.Length * 6) / 2, y + 91,
+                    returnText, 0xffbdf8ff);
+            }
+            else
+            {
+                const string prompt = "ÅTERUPPTA KRIGET?";
+                uint promptColor = age / 30 % 2 == 0 ? 0xffffd66b : 0xffbdf8ff;
+                DrawText(frame, x + (width - prompt.Length * 6) / 2, y + 72, prompt, promptColor);
+                string yes = ground.CodexSelection == 0 ? "> JA · INSTANS 256" : "  JA · INSTANS 256";
+                string no = ground.CodexSelection == 1 ? "> NEJ · KRIGET SLUTAR" : "  NEJ · KRIGET SLUTAR";
+                DrawText(frame, x + 18, y + 91, yes,
+                    ground.CodexSelection == 0 ? 0xffbdf8ff : 0xff526973);
+                DrawText(frame, x + width - 18 - no.Length * 6, y + 91, no,
+                    ground.CodexSelection == 1 ? 0xffbdf8ff : 0xff526973);
+            }
         }
         if (age >= 330)
         {
@@ -21407,6 +21683,40 @@ internal sealed class StormaktGame
             _lockedLevelNoticeFrames > 0 ? 0xffff6b62 : 0xffb7c7d6);
     }
 
+    private void DrawCodexWarSelect(uint[] frame)
+    {
+        int panelWidth = Math.Min(340, _width - 24);
+        int panelX = (_width - panelWidth) / 2;
+        int panelTop = _height <= 224 ? 42 : 70;
+        int rowHeight = _height <= 224 ? 31 : 38;
+        int panelBottom = panelTop + 32 + rowHeight * 4;
+        DrawRect(frame, panelX, panelTop, panelWidth, panelBottom - panelTop, 0xf2080d12);
+        DrawLine(frame, panelX, panelTop, panelX + panelWidth - 1, panelTop, 0xffffd66b);
+        DrawLine(frame, panelX, panelBottom - 1, panelX + panelWidth - 1, panelBottom - 1, 0xff2f74c9);
+        DrawText(frame, panelX + (panelWidth - 102) / 2, panelTop + 9, "INSTANS 256", 0xffbdf8ff);
+        string[] titles =
+        [
+            "BLANDAD KEDJA · SEX BOSSAR",
+            "SILVERKROPPENS TRE",
+            "KUNGLIGA KEDJAN",
+            "TILL FÄLTTÅGEN",
+        ];
+        int defeatedMask = TryLoadCampaignSave(out StormaktCampaignSave campaign)
+            ? campaign.CodexWarDefeatedMask : 0;
+        for (int index = 0; index < titles.Length; index++)
+        {
+            int bit = index switch { 0 => 1 << 0, 1 => 1 << 1, 2 => 1 << 2, _ => 0 };
+            string status = index == 3 ? "TILLBAKA" : (defeatedMask & bit) != 0 ? "BRUTEN" :
+                index == 0 ? "6" : "3";
+            DrawLevelOption(frame, panelX + 12, panelTop + 29 + index * rowHeight,
+                panelWidth - 24, rowHeight - 4, index, titles[index], status,
+                _codexWarSelection == index);
+        }
+        const string footer = "START KÄMPA  ELD TILLBAKA";
+        DrawText(frame, (_width - footer.Length * 6) / 2,
+            Math.Min(_height - 9, panelBottom + 5), footer, 0xffb7c7d6);
+    }
+
     private void DrawLevelSelect(uint[] frame)
     {
         int panelWidth = Math.Min(340, _width - 24);
@@ -21414,8 +21724,8 @@ internal sealed class StormaktGame
         bool legacy = _height <= 224;
         int panelTop = legacy ? 67 : 103;
         int panelBottom = _height - 12;
-        int listY = legacy ? 82 : 120;
-        int rowHeight = legacy ? 16 : 18;
+        int listY = legacy ? 77 : 116;
+        int rowHeight = legacy ? 15 : 17;
         string logoName = legacy ? "stormakt_logo_legacy" : "stormakt_logo_wide";
         if (_sprites?.TryGet(logoName, out Sprite logo) == true)
         {
@@ -21432,11 +21742,14 @@ internal sealed class StormaktGame
         DrawLine(frame, panelX + panelWidth - 103, panelTop + 8, panelX + panelWidth - 13, panelTop + 8, 0xff8a6b38);
         DrawText(frame, (_width - 72) / 2, panelTop + 4, "VÄLJ FÄLTTÅG", 0xff9bd4dc);
 
+        bool warResumed = TryLoadCampaignSave(out StormaktCampaignSave campaign) && campaign.WarResumed;
         for (int index = 0; index < CampaignNames.Length; index++)
         {
             string status = index == 3 && File.Exists(DungeonSavePath("autosave")) ? "FORTSÄTT" :
                 index == 6 && File.Exists(DungeonSavePath("copenhagen-holmen")) ? "FORTSÄTT" :
-                index is 0 or 1 or 2 or 3 or 4 or 6 ? "STRID" : _developerMode ? "DEV" : "LÅST";
+                index == 7 ? warResumed ? "INSTANS 256" : "LÅST" :
+                index is 0 or 1 or 2 or 3 or 4 or 6 || index == 5 && warResumed ?
+                    warResumed ? "OMSTRID" : "STRID" : _developerMode ? "DEV" : "LÅST";
             DrawLevelOption(frame, panelX + 12, listY + index * rowHeight, panelWidth - 24,
                 rowHeight - 2, index, $"{index + 1}  {CampaignNames[index]}", status);
         }
@@ -21446,6 +21759,7 @@ internal sealed class StormaktGame
             _levelSelection == 4 && File.Exists(DungeonSavePath("campaign")) ? "START KIT  SLOW+START STANDARD" :
             _developerMode && _levelSelection == 6 ? "START VÄLJ DEL" :
             _levelSelection == 6 && File.Exists(DungeonSavePath("copenhagen-holmen")) ? "START FORTSÄTT  SLOW+START NYTT" :
+            _levelSelection == 7 && warResumed ? "START ÖPPNA CODEXKRIGET" :
             _developerMode ? "UTVECKLARLÄGE  ALLT UPPLÅST" : "UPP NER VÄLJ  START";
         DrawText(frame, (_width - footer.Length * 6) / 2, panelBottom - 9, footer,
             _lockedLevelNoticeFrames > 0 ? 0xff65c58a : 0xffb7c7d6);
@@ -22173,6 +22487,7 @@ internal sealed class StormaktGame
     private enum DungeonItemRarity { Iron, Carolean, Silverbound, Runic, Unique }
 
     private enum DungeonEnemyType { Stormer, Pikeman, SilverFogde, UndeadMiner, TuonelaGuard, BlindShepherd, LemminkainenShadow, TuonelaSwan, Louhi }
+    private enum CodexWarEncounter { None, Mixed, Silverkroppen, Royal }
     private enum DungeonEnemyState { Approach, Telegraph, Attack, Recover, Stagger, Dead }
 
     private readonly record struct DungeonItemDefinition(string Key, string Name, string Sprite, int Width, int Height,
@@ -22286,6 +22601,8 @@ internal sealed class StormaktGame
 
     private sealed class DungeonState
     {
+        public bool SuppressSave { get; set; }
+        public bool CodexWar { get; set; }
         public int Age { get; set; }
         public int RoomWidth { get; set; }
         public int RoomHeight { get; set; }
@@ -22387,7 +22704,8 @@ internal sealed class StormaktGame
     private readonly record struct StormaktCampaignSave(int Schema, TithePrimaryModule PrimaryModule,
         TitheBroadsideModule BroadsideModule, TitheShipModule ShipModule, int FreedShips,
         SnapphaneRoute SnapphaneRoute = SnapphaneRoute.None, int SnapphaneAllies = 0,
-        bool SorenOathComplete = false);
+        bool SorenOathComplete = false, bool CopenhagenCompleted = false,
+        bool WarResumed = false, int CodexWarDefeatedMask = 0);
     private readonly record struct CopenhagenGroundSave(int Schema, int Width, int Height, int Age,
         double KarlX, double KarlY, int Health, int MaxHealth, int Potions, bool RoomClear, bool DoorReady,
         List<CopenhagenGroundEnemySave> Enemies, int Room = 0,
@@ -22835,6 +23153,8 @@ internal sealed class StormaktGame
         public int WrathCircuitStandAge { get; set; }
         public bool CodexOpened { get; set; }
         public int CodexAge { get; set; }
+        public int CodexSelection { get; set; }
+        public int CodexEndingAge { get; set; }
         public List<CopenhagenGroundEnemy> Enemies { get; } = [];
     }
 

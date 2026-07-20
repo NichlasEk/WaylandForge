@@ -366,6 +366,14 @@ Landat ljudeffekt-pass:
 - `generate_copenhagen_sfx.py` bevarar prompt, seed, rå 44,1 kHz-master och bygger normaliserade 48 kHz stereo PCM16-filer för runtime;
 - effekterna triggas endast av befintliga deterministiska stateövergångar och ändrar aldrig simulation, träffytor eller RNG.
 
+Landat postgame-pass:
+
+- Codexfrågan är ett riktigt JA/NEJ-val; JA öppnar `INSTANS 256`, medan NEJ visar ett kort avslut och behåller Codexkriget låst;
+- kampanjsave schema 3 bevarar äldre loadout-/Snapphanevärden och lägger till Köpenhamnsavslut, återupptaget krig samt en växande bosskedjemask;
+- huvudmenyn visar alla sju fälttåg som `OMSTRID` och en åttonde rad `CODEXKRIGET` efter JA;
+- första bossregistret återanvänder Silverfogden, Blinde herden, Lemminkäinens skugga, Sagokonungen, Korrektorius och Christians vrede i tre valbara kedjor utan att skriva över ordinarie saves;
+- fortsatt roster och tekniskt kontrakt ligger i `docs/stormakt3020-codexkriget-postgame.md`.
+
 Alla genererade sprites behöver kodritade fallbacks och packas genom befintlig WFSA-pipeline. Farliga projektiler använder inte samma silvervita färg som passiv marginaltext.
 
 Den generella grafikriktningen får använda fler **2.5D-/3D-effekter** utan att överge pixelstilen: objekt kan rotera i perspektivlager, passera framför och bakom Karl, kasta riktade skuggor och bära volymetriska ljusspår. Effekten ska alltid följa simulationens verkliga position, form och träffyta; inga frikopplade pyntanimationer får göra striden svårare att läsa.
