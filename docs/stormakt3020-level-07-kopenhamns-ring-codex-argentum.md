@@ -350,8 +350,21 @@ Landat Codex-pass:
 
 - `copenhagen-codex-v1-source.png` -> alpharensad produktions-PNG med tre boklägen, instanskontur, valvpanel, klocksigill, marginalflare och igenkänningsring;
 - `copenhagen-codex-v1.prompt.md` bevarar de två referensrollerna och den exakta built-in-prompten;
-- `build_assets.py` packar åtta namngivna `codex_*`-sprites, medan exakt 254 stateägda väggplaceringar och alla fallbacks stannar i runtime;
+- `build_assets.py` packar åtta namngivna `codex_*`-sprites, medan exakt 254 stateägda väggplaceringar stannar i runtime och visar den riktiga instansasseten bakom en proportionerlig silverkontur i stället för nedskalade teckenglyfer;
 - `build_codex_music.py` bygger den dedikerade kalla slutloopen reproducerbart som 48 kHz stereo PCM16.
+
+Landat kungaboss-pass:
+
+- `copenhagen-saga-king-v1-source.png` ger Sagokonungen fyra sammanhållna fasgestalter, träff/fall och egna kronstämpel-/raketdelar;
+- `copenhagen-christian-wrath-v1-source.png` ger Christian fyra anspråksfaser, exponerad, träffad och fallen kropp samt ett separat kedjeankare;
+- runtime väljer fas- och sårbarhetssprite från verkligt bossstate, medan hitboxar, lagar, minnen och varningsytor förblir deterministiska.
+
+Landat ljudeffekt-pass:
+
+- 23 seedlåsta Small-SFX-effekter ger ringportar, sjöbossar, landning, Holmen, materia, legender, markbossar och Codexkammaren skilda ljudfamiljer;
+- älglegenden använder en tung fysisk laddning av hov, läder och plåtpansar plus ett kort separat hovnedslag i stället för återbrukade laserljud;
+- `generate_copenhagen_sfx.py` bevarar prompt, seed, rå 44,1 kHz-master och bygger normaliserade 48 kHz stereo PCM16-filer för runtime;
+- effekterna triggas endast av befintliga deterministiska stateövergångar och ändrar aldrig simulation, träffytor eller RNG.
 
 Alla genererade sprites behöver kodritade fallbacks och packas genom befintlig WFSA-pipeline. Farliga projektiler använder inte samma silvervita färg som passiv marginaltext.
 

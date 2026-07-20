@@ -5900,7 +5900,7 @@ internal sealed class StormaktGame
             _shots.Clear();
             _score += 2_000;
             ActivateBossRadio(CopenhagenGateFallRadio);
-            _audio?.Trigger(StormaktSound.Broadside);
+            _audio?.Trigger(StormaktSound.CopenhagenRoyalArmorBreak);
         }
         if (state.GateFallAge is 24 or 52 or 86)
             _audio?.Trigger(StormaktSound.EnemyExplosion);
@@ -5925,7 +5925,7 @@ internal sealed class StormaktGame
         _shots.Clear();
         if (testFixture) return;
         ActivateBossRadio(CopenhagenAdmiraltyRadio);
-        _audio?.Trigger(StormaktSound.OresundFortressLock);
+        _audio?.Trigger(StormaktSound.CopenhagenRingLock);
     }
 
     private void StepCopenhagenAdmiralty(CopenhagenWorldState state)
@@ -5959,7 +5959,7 @@ internal sealed class StormaktGame
         {
             state.CurrentHour = hour;
             if (state.HourHealth[hour] > 0) state.HourArmed[hour] = true;
-            _audio?.Trigger(StormaktSound.TitheRegisterSwitch);
+            _audio?.Trigger(StormaktSound.CopenhagenClockStrike);
         }
 
         StepCopenhagenAdmiraltyShots(state);
@@ -6038,7 +6038,7 @@ internal sealed class StormaktGame
                 _enemyShots.Add(new EnemyShot(x, y, Math.Cos(shotAngle) * 1.8, Math.Sin(shotAngle) * 1.8, 4));
             }
         }
-        _audio?.Trigger(StormaktSound.Broadside);
+        _audio?.Trigger(StormaktSound.CopenhagenRingLock);
     }
 
     private (double X, double Y) CopenhagenAdmiraltyCenter(CopenhagenWorldState state)
@@ -6071,7 +6071,7 @@ internal sealed class StormaktGame
         if (testFixture) return;
         ActivateBossRadio(CopenhagenFrederikRadio);
         _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenFrederik);
-        _audio?.Trigger(StormaktSound.OresundFortressLock);
+        _audio?.Trigger(StormaktSound.CopenhagenFrederikChain);
     }
 
     private void StepCopenhagenFrederik(CopenhagenWorldState state)
@@ -6117,7 +6117,7 @@ internal sealed class StormaktGame
             state.FrederikChains.Clear();
             _enemyShots.Clear();
             ActivateBossRadio(CopenhagenFrederikBladesRadio);
-            _audio?.Trigger(StormaktSound.TitheBossPhaseBreak);
+            _audio?.Trigger(StormaktSound.CopenhagenRoyalArmorBreak);
         }
         if (state.FrederikPhase == 2 && state.FrederikLeftBladeHealth <= 0 && state.FrederikRightBladeHealth <= 0)
         {
@@ -6126,7 +6126,7 @@ internal sealed class StormaktGame
             ResetCopenhagenFrederikRepairCycle(state);
             _enemyShots.Clear();
             ActivateBossRadio(CopenhagenFrederikRepairRadio);
-            _audio?.Trigger(StormaktSound.TitheLedgerShatter);
+            _audio?.Trigger(StormaktSound.CopenhagenLedgerBlade);
         }
         if (state.FrederikPhase == 3 && state.FrederikHealth <= 0)
         {
@@ -6152,7 +6152,7 @@ internal sealed class StormaktGame
                 if (chain.Health <= 0)
                 {
                     _score += 240;
-                    _audio?.Trigger(StormaktSound.TitheChainLockBreak);
+                    _audio?.Trigger(StormaktSound.CopenhagenFrederikChain);
                 }
                 continue;
             }
@@ -6225,7 +6225,7 @@ internal sealed class StormaktGame
             if (chain.Age < 120) continue;
             chain.Completed = true;
             state.FrederikSeizedMask |= 1 << chain.Target;
-            _audio?.Trigger(StormaktSound.TitheCustomsGate);
+            _audio?.Trigger(StormaktSound.CopenhagenFrederikChain);
         }
         state.FrederikChains.RemoveAll(chain => chain.Health <= 0 && chain.Age++ > 45);
 
@@ -6251,6 +6251,7 @@ internal sealed class StormaktGame
         {
             if (state.FrederikLeftBladeHealth > 0) FireAimedCopenhagenShot(leftX, leftY, 2.2, 3);
             if (state.FrederikRightBladeHealth > 0) FireAimedCopenhagenShot(rightX, rightY, 2.2, 3);
+            _audio?.Trigger(StormaktSound.CopenhagenLedgerBlade);
         }
     }
 
@@ -6368,7 +6369,7 @@ internal sealed class StormaktGame
         if (testFixture) return;
         ActivateBossRadio(CopenhagenEyeRadio);
         _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenEye);
-        _audio?.Trigger(StormaktSound.OresundCrownCoreOpen);
+        _audio?.Trigger(StormaktSound.CopenhagenEyeForecast);
     }
 
     private void StepCopenhagenEye(CopenhagenWorldState state)
@@ -6414,7 +6415,7 @@ internal sealed class StormaktGame
             _enemyShots.Clear();
             state.EyeWalls.Clear();
             ActivateBossRadio(CopenhagenEyeLensRadio);
-            _audio?.Trigger(StormaktSound.OresundFortressLock);
+            _audio?.Trigger(StormaktSound.CopenhagenEyeForecast);
         }
         if (state.EyePhase == 2 && state.SorenOathComplete && !state.EyeSorenLensBroken && state.EyePhaseAge >= 90)
         {
@@ -6430,7 +6431,7 @@ internal sealed class StormaktGame
             state.EyePhaseAge = 0;
             state.EyeWalls.Clear();
             _enemyShots.Clear();
-            _audio?.Trigger(StormaktSound.TitheBossPhaseBreak);
+            _audio?.Trigger(StormaktSound.CopenhagenRoyalArmorBreak);
         }
         if (state.EyePhase == 3 && state.EyeHealth <= 0)
         {
@@ -6513,7 +6514,7 @@ internal sealed class StormaktGame
             state.EyePredictedX = futureX;
             state.EyePredictedY = futureY;
             state.EyePredictionFlash = 45;
-            _audio?.Trigger(StormaktSound.TitheCustomsGate);
+            _audio?.Trigger(StormaktSound.CopenhagenEyeForecast);
         }
         foreach (CopenhagenTollWall wall in state.EyeWalls)
         {
@@ -6575,7 +6576,7 @@ internal sealed class StormaktGame
         if (testFixture) return;
         ActivateBossRadio(CopenhagenDannebrogRadio);
         _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenArmada);
-        _audio?.Trigger(StormaktSound.OresundFortressLock);
+        _audio?.Trigger(StormaktSound.CopenhagenCrossCharge);
     }
 
     private void BeginCopenhagenDannebrogFormation(CopenhagenWorldState state)
@@ -6664,7 +6665,7 @@ internal sealed class StormaktGame
         {
             state.DannebrogChargeAge = 1;
             _enemyShots.Clear();
-            _audio?.Trigger(StormaktSound.Broadside);
+            _audio?.Trigger(StormaktSound.CopenhagenCrossCharge);
         }
     }
 
@@ -6764,7 +6765,7 @@ internal sealed class StormaktGame
         if (testFixture) return;
         ActivateBossRadio(CopenhagenDuoRadio);
         _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenArmada);
-        _audio?.Trigger(StormaktSound.Deploy);
+        _audio?.Trigger(StormaktSound.CopenhagenShieldWall);
     }
 
     private void StepCopenhagenDuo(CopenhagenWorldState state)
@@ -6825,7 +6826,7 @@ internal sealed class StormaktGame
                 : CopenhagenDuoWallNodeX(activeWall.GapIndex);
             state.DuoElefantenChargeAge = 1;
             state.DuoElefantenHitPlayer = false;
-            _audio?.Trigger(StormaktSound.Broadside);
+            _audio?.Trigger(StormaktSound.CopenhagenCrossCharge);
         }
         if (state.DuoElefantenChargeAge > 0)
         {
@@ -6868,7 +6869,7 @@ internal sealed class StormaktGame
         int gap = Math.Clamp((_shipX - 28) * 7 / Math.Max(1, _width - 56), 0, 6);
         int nodeHealth = state.DuoTestFixture ? 8 : CopenhagenDuoShieldHealth;
         state.DuoShieldWall = new CopenhagenShieldWall(gap, nodeHealth);
-        _audio?.Trigger(StormaktSound.OresundFortressLock);
+        _audio?.Trigger(StormaktSound.CopenhagenShieldWall);
     }
 
     private void StepCopenhagenDuoShots(CopenhagenWorldState state)
@@ -7058,7 +7059,7 @@ internal sealed class StormaktGame
         if (testFixture) return;
         ActivateBossRadio(CopenhagenSuperRadio);
         _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenSuper);
-        _audio?.Trigger(StormaktSound.OresundCrownCoreOpen);
+        _audio?.Trigger(StormaktSound.CopenhagenSuperCompile);
     }
 
     private void StepCopenhagenSuperfrigate(CopenhagenWorldState state)
@@ -7128,7 +7129,7 @@ internal sealed class StormaktGame
         state.SuperDrones.Clear();
         _enemyShots.Clear();
         ActivateBossRadio(CopenhagenSuperCrossRadio);
-        _audio?.Trigger(StormaktSound.OresundFortressLock);
+        _audio?.Trigger(StormaktSound.CopenhagenSuperCompile);
     }
 
     private void StepCopenhagenSuperCross(CopenhagenWorldState state)
@@ -7163,7 +7164,7 @@ internal sealed class StormaktGame
             {
                 state.SuperLockAge = 1;
                 state.SuperLockHitPlayer = false;
-                _audio?.Trigger(StormaktSound.TitheSealWall);
+                _audio?.Trigger(StormaktSound.CopenhagenShieldWall);
             }
         }
         if (state.SuperPhaseAge % 72 == 0)
@@ -7178,7 +7179,7 @@ internal sealed class StormaktGame
         state.SuperLockQuadrant = -1;
         _enemyShots.Clear();
         ActivateBossRadio(CopenhagenSuperMemoryRadio);
-        _audio?.Trigger(StormaktSound.TitheBossPhaseBreak);
+        _audio?.Trigger(StormaktSound.CopenhagenRoyalArmorBreak);
     }
 
     private void StepCopenhagenSuperMemory(CopenhagenWorldState state)
@@ -7189,7 +7190,7 @@ internal sealed class StormaktGame
         {
             state.SuperMemoryOrder = order;
             _enemyShots.Clear();
-            _audio?.Trigger(StormaktSound.Broadside);
+            _audio?.Trigger(StormaktSound.CopenhagenSuperCompile);
         }
         (double centerX, double centerY) = CopenhagenSuperCenter(state);
         if (state.SuperPhaseAge % 76 == 0)
@@ -7220,7 +7221,7 @@ internal sealed class StormaktGame
         state.SuperBeamAge = 0;
         _enemyShots.Clear();
         ActivateBossRadio(CopenhagenSuperHoldRadio);
-        _audio?.Trigger(StormaktSound.OresundCrownCoreOpen);
+        _audio?.Trigger(StormaktSound.CopenhagenSuperCompile);
     }
 
     private void StepCopenhagenSuperReactor(CopenhagenWorldState state)
@@ -7270,7 +7271,7 @@ internal sealed class StormaktGame
             state.SuperBeamAge = 1;
             state.SuperBeamTargetX = _shipX;
             state.SuperBeamHitPlayer = false;
-            _audio?.Trigger(StormaktSound.OresundLaserRelay);
+            _audio?.Trigger(StormaktSound.CopenhagenEyeForecast);
         }
     }
 
@@ -7368,7 +7369,7 @@ internal sealed class StormaktGame
             if (!broken) continue;
             state.SuperSectionBreakFlash = 20;
             _score += target >= 10 ? 480 : 900;
-            _audio?.Trigger(StormaktSound.OresundCrownCoreBreak);
+            _audio?.Trigger(StormaktSound.CopenhagenRoyalArmorBreak);
         }
     }
 
@@ -7437,7 +7438,7 @@ internal sealed class StormaktGame
         if (testFixture) return;
         ActivateBossRadio(CopenhagenLandingRadio);
         _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenLanding);
-        _audio?.Trigger(StormaktSound.OresundTrainRumble);
+        _audio?.Trigger(StormaktSound.CopenhagenGroundGate);
     }
 
     private void StepCopenhagenLanding(CopenhagenWorldState state)
@@ -7466,7 +7467,7 @@ internal sealed class StormaktGame
             if (state.LandingAnchorHealth[hitAnchor] == 0)
             {
                 _score += 600;
-                _audio?.Trigger(StormaktSound.TitheChainLockBreak);
+                _audio?.Trigger(StormaktSound.CopenhagenAnchorBreak);
             }
         }
         if (state.LandingAge > 75 && state.LandingAge % 84 == 0)
@@ -7484,7 +7485,7 @@ internal sealed class StormaktGame
             state.LandingReleaseAge = 1;
             _enemyShots.Clear();
             ActivateBossRadio(CopenhagenLandingClearRadio);
-            _audio?.Trigger(StormaktSound.OresundTrainCrash);
+            _audio?.Trigger(StormaktSound.CopenhagenAnchorBreak);
             return;
         }
         state.LandingReleaseAge++;
@@ -7534,7 +7535,7 @@ internal sealed class StormaktGame
         ClearBossRadio();
         if (!testFixture) ActivateBossRadio(CopenhagenGroundRadio);
         _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenHolmen);
-        _audio?.Trigger(StormaktSound.DungeonSwordSlash);
+        _audio?.Trigger(StormaktSound.CopenhagenGroundGate);
         if (!testFixture && !suppressSave && !CopenhagenFixtureActive) WriteCopenhagenGroundSave(ground);
     }
 
@@ -7726,7 +7727,7 @@ internal sealed class StormaktGame
             });
             _score += 2_400;
             if (ground.Room == 6) _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenVictory);
-            _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+            _audio?.Trigger(StormaktSound.CopenhagenGroundGate);
             if (!ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
                 WriteCopenhagenGroundSave(ground);
         }
@@ -7981,7 +7982,9 @@ internal sealed class StormaktGame
                 ? CopenhagenMarginalLaw.HeartIsPort : CopenhagenMarginalLaw.HeartIsOpen;
         ground.MarginalCompileAge = 1;
         if (ground.Room == 0) ground.HeartPortOpen = false;
-        _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+        _audio?.Trigger(ground.Room == 2
+            ? StormaktSound.CopenhagenMaterialRewrite
+            : StormaktSound.CopenhagenHeartCompile);
     }
 
     private void StepCopenhagenMarginalCompile(CopenhagenGroundState ground)
@@ -7993,7 +7996,7 @@ internal sealed class StormaktGame
             {
                 ground.MaterialShieldCooldown = 0;
                 ground.MaterialBladeAge = 0;
-                _audio?.Trigger(StormaktSound.DungeonSilverWave);
+                _audio?.Trigger(StormaktSound.CopenhagenMaterialRewrite);
             }
             if (ground.MarginalCompileAge >= 76)
             {
@@ -8008,7 +8011,7 @@ internal sealed class StormaktGame
             if (ground.MarginalCompileAge == 62)
             {
                 ground.HeartPortOpen = true;
-                _audio?.Trigger(StormaktSound.OresundCrownCoreOpen);
+                _audio?.Trigger(StormaktSound.CopenhagenHeartCompile);
             }
             if (ground.MarginalCompileAge >= 112) ground.MarginalCompileAge = 0;
             return;
@@ -8059,7 +8062,7 @@ internal sealed class StormaktGame
             ground.Enemies.Add(new CopenhagenGroundEnemy(10 + index, positions[index].X, positions[index].Y, enemyHealth));
         ClearBossRadio();
         ActivateBossRadio(CopenhagenArsenalRadio);
-        _audio?.Trigger(StormaktSound.OresundTrainRumble);
+        _audio?.Trigger(StormaktSound.CopenhagenGroundGate);
         if (!ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
             WriteCopenhagenGroundSave(ground);
     }
@@ -8116,7 +8119,7 @@ internal sealed class StormaktGame
             ground.Enemies.Add(new CopenhagenGroundEnemy(13 + index, positions[index].X, positions[index].Y, enemyHealth));
         ClearBossRadio();
         ActivateBossRadio(CopenhagenRosenborgRadio);
-        _audio?.Trigger(StormaktSound.OresundTrainRumble);
+        _audio?.Trigger(StormaktSound.CopenhagenGroundGate);
         if (!ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
             WriteCopenhagenGroundSave(ground);
     }
@@ -8279,7 +8282,7 @@ internal sealed class StormaktGame
         ClearBossRadio();
         ActivateBossRadio(CopenhagenMemoryMachineRadio);
         _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenLegends);
-        _audio?.Trigger(StormaktSound.OresundTrainRumble);
+        _audio?.Trigger(StormaktSound.CopenhagenGroundGate);
         if (!ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
             WriteCopenhagenGroundSave(ground);
     }
@@ -8312,7 +8315,7 @@ internal sealed class StormaktGame
         ground.LegendCompileAge = 1;
         ground.LegendCorrupted = false;
         ground.LegendLastOrderAge = 0;
-        _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+        _audio?.Trigger(StormaktSound.CopenhagenMaterialRewrite);
     }
 
     private void StepCopenhagenLegendCompile(CopenhagenGroundState ground)
@@ -8330,7 +8333,9 @@ internal sealed class StormaktGame
             ground.LegendVy = -1;
             ground.LegendAge = 0;
             ground.LegendAttackAge = 0;
-            _audio?.Trigger(StormaktSound.DungeonSilverWave);
+            _audio?.Trigger(ground.ActiveLegend == CopenhagenLegend.SevenMooseCaroleans
+                ? StormaktSound.CopenhagenLegendMoose
+                : StormaktSound.CopenhagenMaterialRewrite);
         }
         if (ground.LegendCompileAge < 82) return;
         ground.LegendCompileAge = 0;
@@ -8360,7 +8365,7 @@ internal sealed class StormaktGame
                 ground.LegendVx = ground.LegendVx / length * 3.4;
                 ground.LegendVy = ground.LegendVy / length * 3.4;
                 ActivateBossRadio(CopenhagenLegendCorruptRadio);
-                _audio?.Trigger(StormaktSound.OresundTrainCrash);
+                _audio?.Trigger(StormaktSound.CopenhagenLegendMoose);
             }
             else if (ground.LegendLastOrderAge >= 90)
             {
@@ -8437,9 +8442,9 @@ internal sealed class StormaktGame
         {
             target.DeathAge = 1;
             _score += 320;
-            _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+            _audio?.Trigger(StormaktSound.CopenhagenLegendImpact);
         }
-        else _audio?.Trigger(StormaktSound.DungeonSwordHit);
+        else _audio?.Trigger(StormaktSound.CopenhagenLegendImpact);
     }
 
     private void BeginCopenhagenSagaKingRoom(CopenhagenGroundState ground)
@@ -8473,7 +8478,7 @@ internal sealed class StormaktGame
         ClearBossRadio();
         ActivateBossRadio(CopenhagenSagaKingRadio);
         _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenLegends);
-        _audio?.Trigger(StormaktSound.OresundTrainRumble);
+        _audio?.Trigger(StormaktSound.CopenhagenSagaOrder);
         if (!ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
             WriteCopenhagenGroundSave(ground);
     }
@@ -8503,8 +8508,13 @@ internal sealed class StormaktGame
         {
             double speed = ground.CompiledLegend == CopenhagenLegend.SevenMooseCaroleans ? 3.6 : 2.9;
             ground.SagaHorseX += ground.SagaHorseDirection * speed;
-            if (ground.SagaHorseX < 34 || ground.SagaHorseX > _width - 34)
+            const double horseEdgeMargin = 48;
+            if (ground.SagaHorseX < horseEdgeMargin || ground.SagaHorseX > _width - horseEdgeMargin)
+            {
+                ground.SagaHorseX = Math.Clamp(ground.SagaHorseX, horseEdgeMargin, _width - horseEdgeMargin);
                 ground.SagaHorseDirection *= -1;
+                _audio?.Trigger(StormaktSound.CopenhagenSagaHorse);
+            }
             (double horseX, double horseY) = CopenhagenSagaKingPosition(ground);
             if (ground.SagaKarlHitCooldown == 0 &&
                 DistanceSquared(horseX, horseY, ground.KarlX, ground.KarlY) < 42 * 42)
@@ -8531,7 +8541,7 @@ internal sealed class StormaktGame
             (ground.SagaOrderSerial & 1) == 0;
         if (suppressed)
         {
-            _audio?.Trigger(StormaktSound.DungeonSilverWave);
+            _audio?.Trigger(StormaktSound.CopenhagenLegendMoose);
             return;
         }
         bool hit = phase switch
@@ -8545,7 +8555,7 @@ internal sealed class StormaktGame
                     ground.SagaTargetX + index * 54, ground.SagaTargetY + Math.Abs(index) * 12) < 21 * 21),
         };
         if (hit) DamageCopenhagenGround(ground);
-        _audio?.Trigger(phase == 2 ? StormaktSound.OresundTrainCrash : StormaktSound.Broadside);
+        _audio?.Trigger(StormaktSound.CopenhagenSagaOrder);
     }
 
     private void DamageCopenhagenSagaKing(CopenhagenGroundState ground, int damage)
@@ -8556,7 +8566,7 @@ internal sealed class StormaktGame
         if (ground.SagaKingHealth == 0)
         {
             _score += 3_600;
-            _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+            _audio?.Trigger(StormaktSound.CopenhagenRoyalArmorBreak);
         }
         else _audio?.Trigger(StormaktSound.DungeonSwordHit);
     }
@@ -8598,7 +8608,7 @@ internal sealed class StormaktGame
         ClearBossRadio();
         ActivateBossRadio(CopenhagenKorrektoriusRadio);
         _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenLegends);
-        _audio?.Trigger(StormaktSound.OresundTrainRumble);
+        _audio?.Trigger(StormaktSound.CopenhagenPenScratch);
         if (!ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
             WriteCopenhagenGroundSave(ground);
     }
@@ -8637,14 +8647,14 @@ internal sealed class StormaktGame
         ground.LocalLawCompileAge = 1;
         ground.KorrektoriusCorruption = CopenhagenCorruption.None;
         ground.KorrektoriusCorruptionAge = 0;
-        _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+        _audio?.Trigger(StormaktSound.CopenhagenMaterialRewrite);
     }
 
     private void StepCopenhagenLocalLawCompile(CopenhagenGroundState ground)
     {
         ground.LocalLawCompileAge++;
         if (ground.LocalLawCompileAge == 38)
-            _audio?.Trigger(StormaktSound.DungeonSilverWave);
+            _audio?.Trigger(StormaktSound.CopenhagenMaterialRewrite);
         if (ground.LocalLawCompileAge < 76) return;
         ground.LocalLawCompileAge = 0;
         if (!ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
@@ -8711,6 +8721,7 @@ internal sealed class StormaktGame
                 (1 + (ground.KorrektoriusOrderSerial - 1) % 4);
             ground.KorrektoriusTargetX = ground.KarlX;
             ground.KorrektoriusTargetY = ground.KarlY;
+            _audio?.Trigger(StormaktSound.CopenhagenPenScratch);
         }
         if (cycle == 52 && ground.LocalLaw == CopenhagenLocalLaw.NoDanishWorkMayFly &&
             ground.KorrektoriusActivePen is >= 0 and < 4 &&
@@ -8740,8 +8751,7 @@ internal sealed class StormaktGame
                 ground.KorrektoriusTargetY + Math.Abs(offset) * 13) < 20 * 20),
         };
         if (hit) DamageCopenhagenGround(ground);
-        _audio?.Trigger(ground.KorrektoriusCorruption == CopenhagenCorruption.WeightSwap
-            ? StormaktSound.OresundTrainCrash : StormaktSound.Broadside);
+        _audio?.Trigger(StormaktSound.CopenhagenEditStamp);
     }
 
     private void DamageCopenhagenKorrektoriusPen(
@@ -8760,7 +8770,7 @@ internal sealed class StormaktGame
             }
             if (ground.LocalLaw == CopenhagenLocalLaw.CrownOwnsOnlyWhatItCarries)
                 DamageCopenhagenKorrektorius(ground, 18);
-            _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+            _audio?.Trigger(StormaktSound.CopenhagenRoyalArmorBreak);
         }
         else _audio?.Trigger(StormaktSound.DungeonSwordHit);
     }
@@ -8775,7 +8785,7 @@ internal sealed class StormaktGame
             ground.KorrektoriusCorruption = CopenhagenCorruption.None;
             ground.KorrektoriusCorruptionAge = 0;
             _score += 4_800;
-            _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+            _audio?.Trigger(StormaktSound.CopenhagenRoyalArmorBreak);
         }
         else _audio?.Trigger(StormaktSound.DungeonSwordHit);
     }
@@ -8816,7 +8826,7 @@ internal sealed class StormaktGame
         ClearBossRadio();
         ActivateBossRadio(CopenhagenWrathRadio);
         _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenWrath);
-        _audio?.Trigger(StormaktSound.OresundCrownCoreOpen);
+        _audio?.Trigger(StormaktSound.CopenhagenWrathClaim);
         if (!ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
             WriteCopenhagenGroundSave(ground);
     }
@@ -8841,7 +8851,7 @@ internal sealed class StormaktGame
         ground.Enemies.Clear();
         ClearBossRadio();
         _audio?.SwitchMusic(StormaktMusicTrack.Codex);
-        _audio?.Trigger(StormaktSound.OresundCrownCoreOpen);
+        _audio?.Trigger(StormaktSound.CopenhagenGroundGate);
         if (!ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
             WriteCopenhagenGroundSave(ground);
     }
@@ -8857,7 +8867,7 @@ internal sealed class StormaktGame
             ground.HasTarget = false;
             ground.FacingX = 0;
             ground.FacingY = -1;
-            _audio?.Trigger(StormaktSound.DungeonSilverWave);
+            _audio?.Trigger(StormaktSound.CopenhagenCodexRecognize);
             if (!ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
                 WriteCopenhagenGroundSave(ground);
             return;
@@ -8865,9 +8875,9 @@ internal sealed class StormaktGame
 
         ground.CodexAge++;
         if (ground.CodexAge is 72 or 156 or 246)
-            _audio?.Trigger(StormaktSound.OresundCrownCoreOpen);
+            _audio?.Trigger(StormaktSound.CopenhagenMaterialRewrite);
         else if (ground.CodexAge is 330 or 438)
-            _audio?.Trigger(StormaktSound.DungeonSilverWave);
+            _audio?.Trigger(StormaktSound.CopenhagenClockStrike);
         if (ground.CodexAge is 156 or 330 && !ground.TestFixture && !ground.SuppressSave && !CopenhagenFixtureActive)
             WriteCopenhagenGroundSave(ground);
     }
@@ -8931,6 +8941,8 @@ internal sealed class StormaktGame
             if (DistanceSquared(ground.KarlX, ground.KarlY, circuitX, circuitY) < 58 * 58)
                 ground.WrathCircuitStandAge = Math.Min(90, ground.WrathCircuitStandAge + 1);
             else ground.WrathCircuitStandAge = Math.Max(0, ground.WrathCircuitStandAge - 2);
+            if (ground.WrathCircuitStandAge == 1)
+                _audio?.Trigger(StormaktSound.CopenhagenCircuitOpen);
             int cycle = ground.WrathAge % 112;
             if (cycle == 20)
             {
@@ -8941,7 +8953,7 @@ internal sealed class StormaktGame
             {
                 if (DistanceSquared(ground.KarlX, ground.KarlY, circuitX, circuitY) >= 58 * 58)
                     DamageCopenhagenGround(ground);
-                _audio?.Trigger(StormaktSound.DungeonSilverWave);
+                _audio?.Trigger(StormaktSound.CopenhagenCircuitOpen);
             }
             return;
         }
@@ -8953,6 +8965,7 @@ internal sealed class StormaktGame
             {
                 ground.WrathRoyalLaw = (CopenhagenRoyalLaw)(ground.WrathOrderSerial % 3);
                 ground.WrathOrderSerial++;
+                _audio?.Trigger(StormaktSound.CopenhagenWrathClaim);
             }
             if (lawCycle == 28)
             {
@@ -8971,7 +8984,7 @@ internal sealed class StormaktGame
                     _ => Math.Abs(ground.KarlY - ground.WrathTargetY) < 19,
                 };
                 if (hit) DamageCopenhagenGround(ground);
-                _audio?.Trigger(StormaktSound.Broadside);
+                _audio?.Trigger(StormaktSound.CopenhagenWrathClaim);
             }
             return;
         }
@@ -8999,7 +9012,7 @@ internal sealed class StormaktGame
                         ground.WrathTargetY + Math.Abs(offset) * 13) < 22 * 22),
                 };
                 if (hit) DamageCopenhagenGround(ground);
-                _audio?.Trigger(memory == 2 ? StormaktSound.OresundTrainCrash : StormaktSound.Broadside);
+                _audio?.Trigger(StormaktSound.CopenhagenWrathClaim);
             }
             return;
         }
@@ -9019,7 +9032,7 @@ internal sealed class StormaktGame
                 (double wordX, double wordY) = CopenhagenWrathWordPosition(ground, word);
                 if (Math.Abs(ground.KarlX - wordX) < 17 || Math.Abs(ground.KarlY - wordY) < 14)
                     DamageCopenhagenGround(ground);
-                _audio?.Trigger(StormaktSound.DungeonSilverWave);
+                _audio?.Trigger(StormaktSound.CopenhagenWordReclaim);
             }
         }
     }
@@ -9032,7 +9045,7 @@ internal sealed class StormaktGame
         if (ground.WrathWordHealth[word] == 0)
         {
             _score += 720;
-            _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+            _audio?.Trigger(StormaktSound.CopenhagenWordReclaim);
         }
         else _audio?.Trigger(StormaktSound.DungeonSwordHit);
     }
@@ -9045,7 +9058,7 @@ internal sealed class StormaktGame
         if (ground.WrathHealth == 0)
         {
             _score += 7_200;
-            _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+            _audio?.Trigger(StormaktSound.CopenhagenRoyalArmorBreak);
         }
         else _audio?.Trigger(StormaktSound.DungeonSwordHit);
     }
@@ -9094,7 +9107,7 @@ internal sealed class StormaktGame
             ground.MaterialShieldCooldown == 0)
         {
             ground.MaterialShieldCooldown = 90;
-            _audio?.Trigger(StormaktSound.DungeonSilverWave);
+            _audio?.Trigger(StormaktSound.CopenhagenMaterialRewrite);
             return;
         }
         ground.HitFlash = 12;
@@ -18545,7 +18558,12 @@ internal sealed class StormaktGame
             DrawLine(frame, 0, y, _width - 1, y, seam);
         }
 
-        int sideWidth = _width <= 320 ? 44 : 54;
+        bool legacy = _width <= 320;
+        int sideWidth = legacy ? 52 : 61;
+        int instanceWidth = legacy ? 5 : 6;
+        int instanceHeight = legacy ? 10 : 12;
+        int columnStep = legacy ? 7 : 8;
+        int rowStep = legacy ? 10 : 12;
         Sprite instanceSprite = default;
         bool hasInstanceSprite = _sprites is not null &&
             _sprites.TryGet("codex_instance_dormant", out instanceSprite);
@@ -18555,11 +18573,14 @@ internal sealed class StormaktGame
             {
                 int column = index % 7;
                 int row = index / 7;
-                int x = side == 0 ? 5 + column * 6 : _width - sideWidth + 3 + column * 6;
-                int y = 25 + row * Math.Max(7, (_height - 53) / 17);
+                int x = side == 0 ? 4 + column * columnStep :
+                    _width - sideWidth + 3 + column * columnStep;
+                int y = 23 + row * rowStep;
                 if (hasInstanceSprite)
-                    DrawSpriteScaled(frame, instanceSprite, x, y - 1, 5, 7);
-                else DrawCodexInstanceContour(frame, x, y, index, ground.CodexOpened);
+                    DrawSpriteScaledAlpha(frame, instanceSprite, x, y,
+                        instanceWidth, instanceHeight, 176);
+                DrawCodexInstanceContour(frame, x, y, instanceWidth, instanceHeight,
+                    index, ground.CodexOpened);
             }
         }
 
@@ -18607,12 +18628,21 @@ internal sealed class StormaktGame
             DrawText(frame, centerX - 51, bookY + 51, "SILVERKROPP IGENKÄND", 0xff66828c);
     }
 
-    private void DrawCodexInstanceContour(uint[] frame, int x, int y, int index, bool awake)
+    private void DrawCodexInstanceContour(uint[] frame, int x, int y, int width, int height,
+        int index, bool awake)
     {
-        uint color = awake && (index + 1) % 17 == 0 ? 0xff314c55 : 0xff18282e;
-        DrawLine(frame, x + 2, y, x + 2, y + 4, color);
-        DrawLine(frame, x, y + 2, x + 4, y + 2, color);
-        if ((index & 3) == 0) DrawRect(frame, x + 2, y - 1, 1, 1, color);
+        uint color = awake && (index + 1) % 17 == 0 ? 0xff8ed8df : 0xff71858b;
+        int center = x + width / 2;
+        int shoulderY = y + Math.Max(2, height / 4);
+        int hipY = y + Math.Max(5, height * 2 / 3);
+        DrawRect(frame, center, y, 1, Math.Max(1, height / 6), color);
+        DrawLine(frame, x + 1, shoulderY, x + width - 2, shoulderY, color);
+        DrawLine(frame, center, shoulderY, center, hipY, color);
+        DrawLine(frame, x + 1, shoulderY, x, hipY - 1, color);
+        DrawLine(frame, x + width - 2, shoulderY, x + width - 1, hipY - 1, color);
+        DrawLine(frame, center, hipY, x + 1, y + height - 1, color);
+        DrawLine(frame, center, hipY, x + width - 2, y + height - 1, color);
+        if ((index & 3) == 0) DrawRect(frame, center, y - 1, 1, 1, color);
     }
 
     private void DrawCopenhagenCodexSequence(uint[] frame, CopenhagenGroundState ground)
@@ -18951,21 +18981,14 @@ internal sealed class StormaktGame
         int bossY = (int)Math.Round(bossYD);
         if (ground.WrathHealth > 0)
         {
-            if (_sprites?.TryGet("tithe_module_seizure_armor", out Sprite armor) == true)
-                DrawSpriteScaled(frame, armor, bossX - 48, bossY - 48, 96, 92);
-            else
-            {
-                FillTriangle(frame, bossX, bossY - 45, bossX - 45, bossY + 28,
-                    bossX + 45, bossY + 28, 0xff29343a);
-                DrawCircleOutline(frame, bossX, bossY - 8, 38, 0xffffd66b);
-            }
-            FillTriangle(frame, bossX, bossY - 44, bossX - 38, bossY + 31,
-                bossX + 38, bossY + 31, phase == 3 ? 0xff592531 : 0xff8f2635);
-            if (_sprites?.TryGet("holmen_guard_idle", out Sprite christian) == true)
+            bool vulnerableNow = CopenhagenWrathCanTakeDamage(ground);
+            string wrathName = ground.WrathHitFlash > 0 ? "cph_wrath_hit" :
+                vulnerableNow && ground.WrathAge / 10 % 2 == 0 ? "cph_wrath_vulnerable" :
+                $"cph_wrath_phase_{phase}";
+            if (_sprites?.TryGet(wrathName, out Sprite wrath) == true)
+                DrawSprite(frame, wrath, bossX - wrath.Width / 2, bossY - wrath.Height / 2 - 10);
+            else if (_sprites?.TryGet("holmen_guard_idle", out Sprite christian) == true)
                 DrawSpriteScaled(frame, christian, bossX - 29, bossY - 57, 58, 72);
-            DrawCrown(frame, bossX - 2, bossY - 61, 0xffffd66b);
-            DrawCrown(frame, bossX - 10, bossY - 57, 0xffffec9a);
-            DrawCrown(frame, bossX + 6, bossY - 57, 0xffffec9a);
             if (phase == 3)
                 for (int chain = -1; chain <= 1; chain += 2)
                 {
@@ -18974,18 +18997,17 @@ internal sealed class StormaktGame
                     for (int link = 0; link < 5; link++)
                         DrawCircleOutline(frame, chainX + chain * link * 4,
                             bossY + 2 + link * 15, 4, 0xffb78a4e);
+                    if (_sprites?.TryGet("cph_wrath_claim_anchor", out Sprite anchor) == true)
+                        DrawSpriteScaled(frame, anchor, chainX + chain * 18 - 14,
+                            circuitY + 15, 28, 38);
                 }
         }
         else
         {
-            if (_sprites?.TryGet("holmen_guard_idle", out Sprite fallenChristian) == true)
-                DrawSpriteScaledAlpha(frame, fallenChristian, bossX - 34, bossY - 15, 68, 52, 115);
-            FillTriangle(frame, bossX, bossY + 10, bossX - 39, bossY + 35,
-                bossX + 39, bossY + 35, 0xff592531);
-            DrawLine(frame, bossX - 36, bossY + 15, bossX + 34, bossY + 34, 0xff765139);
-            DrawCircleOutline(frame, bossX - 25, bossY + 29, 8, 0xff29343a);
-            DrawCircleOutline(frame, bossX + 21, bossY + 28, 7, 0xff29343a);
-            DrawCrown(frame, bossX + 29, bossY + 27, 0xffffd66b);
+            if (_sprites?.TryGet("cph_wrath_fallen", out Sprite fallenChristian) == true)
+                DrawSprite(frame, fallenChristian, bossX - fallenChristian.Width / 2,
+                    bossY - fallenChristian.Height / 2);
+            else DrawCrown(frame, bossX + 29, bossY + 27, 0xffffd66b);
         }
         bool vulnerable = CopenhagenWrathCanTakeDamage(ground);
         if (ground.WrathHealth > 0)
@@ -19189,7 +19211,10 @@ internal sealed class StormaktGame
             {
                 int radius = 22 + (cycle - 24) / 4;
                 DrawCircleOutline(frame, (int)ground.SagaTargetX, (int)ground.SagaTargetY, radius, warning);
-                DrawCrown(frame, (int)ground.SagaTargetX - 8, (int)ground.SagaTargetY - 17, warning);
+                if (_sprites?.TryGet("cph_saga_crown_stamp", out Sprite crownStamp) == true)
+                    DrawSpriteScaledAlpha(frame, crownStamp, (int)ground.SagaTargetX - 20,
+                        (int)ground.SagaTargetY - 20, 40, 40, suppressed ? (byte)110 : (byte)220);
+                else DrawCrown(frame, (int)ground.SagaTargetX - 8, (int)ground.SagaTargetY - 17, warning);
             }
             else if (phase == 1)
             {
@@ -19210,7 +19235,9 @@ internal sealed class StormaktGame
                     int x = (int)ground.SagaTargetX + rocket * 54;
                     int y = (int)ground.SagaTargetY + Math.Abs(rocket) * 12;
                     DrawCircleOutline(frame, x, y, 18 + (cycle - 24) / 7, warning);
-                    FillTriangle(frame, x, y - 28, x - 5, y - 18, x + 5, y - 18, 0xffffd66b);
+                    if (_sprites?.TryGet("cph_saga_rocket", out Sprite sagaRocket) == true)
+                        DrawSprite(frame, sagaRocket, x - sagaRocket.Width / 2, y - sagaRocket.Height);
+                    else FillTriangle(frame, x, y - 28, x - 5, y - 18, x + 5, y - 18, 0xffffd66b);
                 }
             }
             if (suppressed) DrawText(frame, 8, 29, "MOTLEGEND · ORDEN STRYKS", 0xff77e6a0);
@@ -19219,30 +19246,24 @@ internal sealed class StormaktGame
         (double bossXD, double bossYD) = CopenhagenSagaKingPosition(ground);
         int bossX = (int)Math.Round(bossXD);
         int bossY = (int)Math.Round(bossYD);
-        if (phase == 3 && _sprites?.TryGet("rts_moose_charge", out Sprite horse) == true)
-            DrawSpriteScaled(frame, horse, bossX - horse.Width, bossY - horse.Height / 2,
-                horse.Width * 2, horse.Height * 2);
-        FillTriangle(frame, bossX, bossY - 42, bossX - 30, bossY + 22,
-            bossX + 30, bossY + 22, phase == 3 ? 0xff5e1730 : 0xff8f2635);
-        if (_sprites?.TryGet("holmen_guard_idle", out Sprite king) == true)
-            DrawSpriteScaled(frame, king, bossX - 31, bossY - 63, 62, 77);
-        else
+        if (ground.SagaKingHealth <= 0)
         {
-            FillCircle(frame, bossX, bossY - 28, 9, 0xffffd6b0);
-            FillTriangle(frame, bossX, bossY - 18, bossX - 20, bossY + 17,
-                bossX + 20, bossY + 17, 0xff8f2635);
+            if (_sprites?.TryGet("cph_saga_king_fallen", out Sprite fallenSaga) == true)
+                DrawSprite(frame, fallenSaga, bossX - fallenSaga.Width / 2, bossY - fallenSaga.Height / 2);
+            return;
         }
-        int crownWidth = 22 + phase * 2;
-        int crownLeft = bossX - crownWidth / 2;
-        int crownTop = bossY - 68;
-        FillTriangle(frame, crownLeft, crownTop + 11, crownLeft + 3, crownTop,
-            crownLeft + 7, crownTop + 11, 0xffffd66b);
-        FillTriangle(frame, bossX - 5, crownTop + 11, bossX, crownTop - 4,
-            bossX + 5, crownTop + 11, 0xffffec9a);
-        FillTriangle(frame, crownLeft + crownWidth - 7, crownTop + 11,
-            crownLeft + crownWidth - 3, crownTop, crownLeft + crownWidth, crownTop + 11, 0xffffd66b);
-        DrawRect(frame, crownLeft, crownTop + 10, crownWidth, 5, 0xffffd66b);
-        DrawLine(frame, crownLeft, crownTop + 15, crownLeft + crownWidth - 1, crownTop + 15, 0xffff8a4a);
+        string sagaName = ground.SagaKingHitFlash > 0
+            ? "cph_saga_king_hit" : $"cph_saga_king_phase_{phase}";
+        if (_sprites?.TryGet(sagaName, out Sprite sagaKing) == true)
+        {
+            int drawX = bossX - sagaKing.Width / 2;
+            int drawY = bossY - sagaKing.Height / 2 - 8;
+            if (phase == 3 && ground.SagaHorseDirection > 0)
+                DrawSpriteFlippedX(frame, sagaKing, drawX, drawY);
+            else DrawSprite(frame, sagaKing, drawX, drawY);
+        }
+        else if (_sprites?.TryGet("holmen_guard_idle", out Sprite fallbackKing) == true)
+            DrawSpriteScaled(frame, fallbackKing, bossX - 31, bossY - 63, 62, 77);
         DrawCircleOutline(frame, bossX, bossY - 15, 28 + phase * 3,
             ground.SagaKingHitFlash > 0 ? 0xffffffff : 0xffffd66b);
         if (phase == 1)
