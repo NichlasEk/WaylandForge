@@ -934,7 +934,9 @@ internal sealed class StormaktGame
                 _cooldown = 6;
                 if (snapphaneRescueChanneling) _cooldown *= 2;
                 _heat = Math.Min(120, _heat + 7);
-                _audio?.Trigger(StormaktSound.TwinCannon);
+                _audio?.Trigger(_levelId == 0
+                    ? ((_missionFrame / 6 & 1) == 0 ? StormaktSound.StoraBaltPlayerPiowA : StormaktSound.StoraBaltPlayerPiowB)
+                    : StormaktSound.TwinCannon);
             }
         }
         if ((buttons & AltFire) != 0 && _altCooldown == 0 && !snapphaneRescueChanneling)
@@ -11972,8 +11974,14 @@ internal sealed class StormaktGame
                 Shot shot = _shots[shotIndex];
                 if (Math.Abs(shot.X - target.X) <= halfWidth && Math.Abs(shot.Y - target.Y) <= halfHeight)
                 {
+                    int previousHealth = target.Health;
                     target.Health -= shot.Power;
                     _shots.RemoveAt(shotIndex);
+                    if (target.Type == GroundTargetType.BridgeSpan && target.Health > 0 &&
+                        (previousHealth > 16 && target.Health <= 16 || previousHealth > 8 && target.Health <= 8))
+                    {
+                        _audio?.Trigger(StormaktSound.StoraBaltBridgeCrack);
+                    }
                     if (target.Health <= 0)
                     {
                         destroyed = true;
@@ -11994,7 +12002,7 @@ internal sealed class StormaktGame
                 if (target.Type == GroundTargetType.BridgeSpan)
                 {
                     CollapseBridgeGroup(target.Group);
-                    _audio?.Trigger(StormaktSound.Broadside);
+                    _audio?.Trigger(StormaktSound.StoraBaltBridgeCollapse);
                     continue;
                 }
                 if (target.Type == GroundTargetType.EnergyNode)
@@ -12032,7 +12040,7 @@ internal sealed class StormaktGame
         double dy = _shipY - y;
         double length = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
         _enemyShots.Add(new EnemyShot(x, y + 7, dx / length * 2.15, dy / length * 2.15, 0));
-        _audio?.Trigger(StormaktSound.TwinCannon);
+        _audio?.Trigger(StormaktSound.StoraBaltTurretPiow);
     }
 
     private void DisableLinkedTurret(int group)
@@ -12116,7 +12124,7 @@ internal sealed class StormaktGame
                 RightCannonHealth = 70,
                 Phase = 1,
             };
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.StoraBaltBossWarning);
             _audio?.SwitchMusic(StormaktMusicTrack.Boss);
         }
     }
@@ -12515,7 +12523,7 @@ internal sealed class StormaktGame
                     _enemyShots.Clear();
                     _anchorHazards.Clear();
                     ActivateBossRadio(RasmusPhaseTwoRadio);
-                    _audio?.Trigger(StormaktSound.Broadside);
+                    _audio?.Trigger(StormaktSound.StoraBaltBossPhaseBreak);
                 }
             }
             else if (boss.Phase == 2 && boss.LeftDockHealth > 0 &&
@@ -12557,7 +12565,7 @@ internal sealed class StormaktGame
                         _enemyShots.Clear();
                         _anchorHazards.Clear();
                         ActivateBossRadio(RasmusPhaseThreeRadio);
-                        _audio?.Trigger(StormaktSound.Broadside);
+                        _audio?.Trigger(StormaktSound.StoraBaltBossPhaseBreak);
                     }
                 }
             }
@@ -12576,7 +12584,7 @@ internal sealed class StormaktGame
                     _enemyShots.Clear();
                     _anchorHazards.Clear();
                     ActivateBossRadio(RasmusDeathRadio);
-                    _audio?.Trigger(StormaktSound.Broadside);
+                    _audio?.Trigger(StormaktSound.StoraBaltBossDeath);
                     break;
                 }
             }
@@ -12867,7 +12875,7 @@ internal sealed class StormaktGame
         {
             FireBossFan((int)Math.Round(boss.X) + BossCannonOffset, y, 0.22);
         }
-        _audio?.Trigger(StormaktSound.Broadside);
+        _audio?.Trigger(StormaktSound.StoraBaltBossSalvo);
     }
 
     private void FireBossFan(int x, int y, double bias)
@@ -12889,7 +12897,7 @@ internal sealed class StormaktGame
             FireSealRing(boss, cycle / 18, attackFrame / 300);
             if (cycle == 0)
             {
-                _audio?.Trigger(StormaktSound.Broadside);
+                _audio?.Trigger(StormaktSound.StoraBaltBossSalvo);
             }
         }
         if (cycle is 90 or 102 or 114)
@@ -12902,7 +12910,7 @@ internal sealed class StormaktGame
             {
                 FireAimedBossShot((int)Math.Round(boss.X) + BossCannonOffset, (int)Math.Round(boss.Y) + 13, 0.12);
             }
-            _audio?.Trigger(StormaktSound.TwinCannon);
+            _audio?.Trigger(StormaktSound.StoraBaltEnemyPiow);
         }
     }
 
@@ -13008,7 +13016,7 @@ internal sealed class StormaktGame
         }
         if (attackFrame is 48 or 178)
         {
-            _audio?.Trigger(StormaktSound.Broadside);
+            _audio?.Trigger(StormaktSound.StoraBaltBossWarning);
         }
         bool rushing = attackFrame is >= 48 and < 120 or >= 178 and < 250;
         if (rushing && attackFrame % 10 == 0)
@@ -13029,7 +13037,8 @@ internal sealed class StormaktGame
         if (boss.PhaseAge is 1 or 30 or 60 or 90 or 120 or 155 or 210 or 270 or 330 or 390 or 480 or 540 or 600)
         {
             bool heavy = boss.PhaseAge is 155 or 330 or 390 or 600;
-            _audio?.Trigger(heavy ? StormaktSound.Broadside : StormaktSound.EnemyExplosion);
+            _audio?.Trigger(boss.PhaseAge == 600 ? StormaktSound.StoraBaltBossDeath :
+                heavy ? StormaktSound.StoraBaltBossSalvo : StormaktSound.EnemyExplosion);
             if (boss.PhaseAge == 600)
             {
                 _audio?.DuckMusic(2_600);
@@ -13226,9 +13235,9 @@ internal sealed class StormaktGame
         double dy = _shipY - y;
         double length = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
         _enemyShots.Add(new EnemyShot(x, y, dx / length * speed, dy / length * speed, kind));
-        _audio?.Trigger(_levelId == 2 && kind == 2
-            ? StormaktSound.OresundGuardShot
-            : StormaktSound.TwinCannon);
+        _audio?.Trigger(_levelId == 0
+            ? StormaktSound.StoraBaltEnemyPiow
+            : _levelId == 2 && kind == 2 ? StormaktSound.OresundGuardShot : StormaktSound.TwinCannon);
     }
 
     private void SpawnGroundEncounters()
@@ -16771,9 +16780,19 @@ internal sealed class StormaktGame
                 continue;
             }
             int radius = Math.Min(13, 2 + age / 3);
-            FillCircle(frame, x + offsetX, y + offsetY, radius, 0xffb33b2e);
-            FillCircle(frame, x + offsetX, y + offsetY, Math.Max(1, radius - 4), 0xffff8a34);
-            PutPixel(frame, x + offsetX, y + offsetY, 0xffffec9a);
+            string burstName = $"stora_balt_burst_{Math.Min(2, age / 14)}";
+            if (_sprites?.TryGet(burstName, out Sprite burst) == true)
+            {
+                uint opacity = (uint)Math.Clamp(255 - Math.Max(0, age - 28) * 18, 60, 255);
+                DrawSpriteAlpha(frame, burst, x + offsetX - burst.Width / 2,
+                    y + offsetY - burst.Height / 2, opacity);
+            }
+            else
+            {
+                FillCircle(frame, x + offsetX, y + offsetY, radius, 0xffb33b2e);
+                FillCircle(frame, x + offsetX, y + offsetY, Math.Max(1, radius - 4), 0xffff8a34);
+                PutPixel(frame, x + offsetX, y + offsetY, 0xffffec9a);
+            }
         }
         if (boss.PhaseAge is >= 150 and < 210)
         {
@@ -16900,7 +16919,10 @@ internal sealed class StormaktGame
                 FillCircle(frame, anchor.X, y + link * 7, 3, 0xff8a6b38);
                 PutPixel(frame, anchor.X, y + link * 7, 0xffe0bd73);
             }
-            FillTriangle(frame, anchor.X, y - 10, anchor.X - 9, y + 5, anchor.X + 9, y + 5, 0xff343d44);
+            if (_sprites?.TryGet("stora_balt_chain_anchor", out Sprite anchorSprite) == true)
+                DrawSprite(frame, anchorSprite, anchor.X - anchorSprite.Width / 2, y - anchorSprite.Height / 2);
+            else
+                FillTriangle(frame, anchor.X, y - 10, anchor.X - 9, y + 5, anchor.X + 9, y + 5, 0xff343d44);
         }
     }
 
@@ -16921,7 +16943,10 @@ internal sealed class StormaktGame
                     DrawSprite(frame, bridge, target.X - bridge.Width / 2, target.Y - bridge.Height / 2);
                     if (target.Health < 9)
                     {
-                        DrawLine(frame, target.X - 20, target.Y - 20, target.X + 13, target.Y + 22, 0xffff6b4a);
+                        if (_sprites.TryGet("stora_balt_bridge_crack", out Sprite crack))
+                            DrawSprite(frame, crack, target.X - crack.Width / 2, target.Y - crack.Height / 2);
+                        else
+                            DrawLine(frame, target.X - 20, target.Y - 20, target.X + 13, target.Y + 22, 0xffff6b4a);
                     }
                     continue;
                 }
@@ -16988,7 +17013,10 @@ internal sealed class StormaktGame
                 int generatedCycle = target.Age % 180;
                 if (target.Enabled && generatedCycle is >= 40 and < 88 && target.Y > 24 && target.Y < _height - 50)
                 {
-                    DrawRect(frame, target.X - 2, target.Y - 19, 5, 3, 0xffff6b62);
+                    if (_sprites.TryGet("stora_balt_lock_marker", out Sprite marker))
+                        DrawSprite(frame, marker, target.X - marker.Width / 2, target.Y - 21 - marker.Height / 2);
+                    else
+                        DrawRect(frame, target.X - 2, target.Y - 19, 5, 3, 0xffff6b62);
                 }
                 continue;
             }
@@ -17032,8 +17060,15 @@ internal sealed class StormaktGame
                 DrawSprite(frame, slab, x - 44, target.Y - 16 + fall / 4);
                 DrawSprite(frame, rail, x - 5, target.Y - 12 + fall / 2);
                 DrawSprite(frame, machine, x + 22, target.Y - 8 + fall * 2 / 3);
-                PutPixel(frame, x - 10, target.Y + fall / 2, ember);
-                PutPixel(frame, x + 18, target.Y + 5 + fall / 2, ember);
+                string burstName = $"stora_balt_burst_{Math.Min(2, fall / 15)}";
+                if (_sprites.TryGet(burstName, out Sprite burst))
+                    DrawSpriteAlpha(frame, burst, x - burst.Width / 2, target.Y + fall / 2 - burst.Height / 2,
+                        (uint)Math.Max(72, 230 - fall * 3));
+                else
+                {
+                    PutPixel(frame, x - 10, target.Y + fall / 2, ember);
+                    PutPixel(frame, x + 18, target.Y + 5 + fall / 2, ember);
+                }
                 return;
             }
             DrawRect(frame, x - 43, target.Y - 8, 25, 13, 0xff4b3c3d);

@@ -5,7 +5,7 @@ import argparse
 import struct
 from pathlib import Path
 
-from PIL import Image, ImageOps
+from PIL import Image, ImageDraw, ImageOps
 
 
 PRIMARY_SPRITES = [
@@ -159,6 +159,55 @@ def append_sprites(
             sprite = sprite.transpose(Image.Transpose.ROTATE_270)
         sprite.thumbnail(size, Image.Resampling.LANCZOS)
         entries.append((name, sprite))
+
+
+def append_stora_balt_effects(entries: list[tuple[str, Image.Image]]) -> None:
+    """Build native-resolution alpha effects that used to be runtime line art."""
+    lock = Image.new("RGBA", (15, 15), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(lock)
+    red = (255, 77, 69, 235)
+    pale = (255, 207, 166, 255)
+    for segment in [(1, 5, 1, 1), (1, 1, 5, 1), (9, 1, 13, 1), (13, 1, 13, 5),
+                    (1, 9, 1, 13), (1, 13, 5, 13), (9, 13, 13, 13), (13, 9, 13, 13)]:
+        draw.line(segment, fill=red, width=2)
+    draw.rectangle((6, 6, 8, 8), fill=pale)
+    entries.append(("stora_balt_lock_marker", lock))
+
+    crack = Image.new("RGBA", (45, 37), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(crack)
+    path = [(7, 2), (15, 10), (11, 16), (24, 23), (20, 29), (36, 35)]
+    draw.line(path, fill=(116, 39, 28, 125), width=5)
+    draw.line(path, fill=(255, 92, 48, 245), width=2)
+    draw.line([(15, 10), (25, 7), (31, 2)], fill=(255, 168, 74, 220), width=1)
+    draw.line([(24, 23), (34, 19), (41, 20)], fill=(255, 168, 74, 220), width=1)
+    entries.append(("stora_balt_bridge_crack", crack))
+
+    anchor = Image.new("RGBA", (23, 29), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(anchor)
+    iron = (47, 58, 66, 255)
+    edge = (143, 112, 63, 255)
+    draw.ellipse((8, 0, 14, 6), outline=edge, width=2)
+    draw.rectangle((10, 5, 12, 21), fill=edge)
+    draw.rectangle((5, 10, 17, 12), fill=iron)
+    draw.line((2, 18, 7, 25, 11, 27, 16, 25, 21, 18), fill=edge, width=2)
+    draw.line((2, 18, 2, 23, 6, 23), fill=iron, width=2)
+    draw.line((21, 18, 21, 23, 17, 23), fill=iron, width=2)
+    entries.append(("stora_balt_chain_anchor", anchor))
+
+    for index, (outer, middle, core) in enumerate(((5, 3, 1), (9, 6, 2), (13, 9, 4))):
+        burst = Image.new("RGBA", (29, 29), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(burst)
+        center = 14
+        draw.ellipse((center - outer, center - outer, center + outer, center + outer),
+                     fill=(177, 49, 31, 185))
+        draw.ellipse((center - middle, center - middle, center + middle, center + middle),
+                     fill=(255, 130, 42, 235))
+        draw.ellipse((center - core, center - core, center + core, center + core),
+                     fill=(255, 238, 154, 255))
+        ray = outer + 3
+        for dx, dy in ((0, -ray), (ray, 0), (0, ray), (-ray, 0), (ray - 2, ray - 2), (-ray + 2, -ray + 2)):
+            draw.point((center + dx, center + dy), fill=(255, 168, 74, 210))
+        entries.append((f"stora_balt_burst_{index}", burst))
 
 
 def append_two_frame_portrait(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
@@ -1876,6 +1925,7 @@ def build(
     append_sprites(entries, player_source, PLAYER_SPRITES)
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
+    append_stora_balt_effects(entries)
     append_oresund_props(entries, oresund_props_source)
     append_oresund_armored_train(entries, oresund_armored_train_source)
     append_oresund_twin_fortress(entries, oresund_twin_fortress_source)

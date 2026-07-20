@@ -1,6 +1,16 @@
 # Bana 1 - Återtåget över Stora Bält-nebulosan
 
-Status: checkpoint 1, 2A-2C, bosscheckpoint 3A-3C och den första grafikpolishen är klara. Bana 1 har nu spelbar genomflygning, tre bossfaser, resultatsekvens, genererad bakgrund och fysiska miljöassets; separat balans- och ljudpolish återstår.
+Status: checkpoint 1, 2A-2C, bosscheckpoint 3A-3C samt grafik- och ljudpolish är klara. Bana 1 har nu spelbar genomflygning, tre bossfaser, resultatsekvens, genererad bakgrund, fysiska miljöassets och en egen komplett SFX-familj; separat balanspolish återstår.
+
+## Grafik- och ljudpolish - 2026-07-20
+
+- Spelarens tidigare skärande generiska kanonljud är ersatt av två korta, mjuka och alternerande `piow`-pulser endast på Bana 1. Danska flygskott och brotorn har egna mörkare pulser och lånar inte längre spelarens `TwinCannon`.
+- Brospricka, brokollaps, bossvarning, bosssalva, fasbrott och bossdöd använder sex separata händelseljud. Tillsammans med de fyra skottvarianterna består Bana 1-sviten av tio fasta Stable Audio 3-effekter med reproducerbara seeds.
+- Runtimefilerna är 48 kHz, stereo, PCM16, lågpassade för att undvika vass laserdiskant och limiterade till högst -1 dB före mixerns per-effekt-gain. Ljudladdarens smoke test hittar nu 76 effekter totalt.
+- Tornets lilla debugliknande låspunkt, brons kritiska kodlinje, kedjeankarets spets och tre explosionssteg är nu sex transparenta native-resolution-assets i WFSA. De byggs deterministiskt av `build_assets.py`; de gamla primitiverna finns kvar enbart som fallback.
+- En riktad capture verifierade lås-/brofönstret och bossankarets både varnings- och aktiva läge. Neutrala wide- och legacy-rutor behöll sina tidigare hashar, vilket bekräftar att timing, bakgrund och hitboxfria scener inte flyttades av polishen.
+- Två fulla 8 501-rutors wide-genomspelningar med samma svepande dubbelkanon/bredsida nådde `BÄLTET ÄR ÖPPET` och gav samma SHA-256 `1972b8e3f1bbbbc7ec1d713e6bd36d4fb8e7f547300cd663645a43c1a458b7d5`. Motsvarande legacy-slutbild är `5c22c4936149ad5e08ead99940d94c5439c2125540f4b06b4fa174692987cdd3`.
+- Det ombyggda WFSA-paketets SHA-256 är `29b7813545cf58025e373c82f0e535782a48200cca56fbf481914b2738a153e2`.
 
 ## Wide field-checkpoint - 2026-07-11
 
