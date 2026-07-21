@@ -934,7 +934,7 @@ internal sealed class StormaktGame
                 _cooldown = 6;
                 if (snapphaneRescueChanneling) _cooldown *= 2;
                 _heat = Math.Min(120, _heat + 7);
-                _audio?.Trigger(_levelId is 0 or 1 or 2 or 4
+                _audio?.Trigger(_levelId is 0 or 1 or 2 or 4 or 5
                     ? ((_missionFrame / 6 & 1) == 0 ? StormaktSound.StoraBaltPlayerPiowA : StormaktSound.StoraBaltPlayerPiowB)
                     : StormaktSound.TwinCannon);
             }
@@ -968,7 +968,7 @@ internal sealed class StormaktGame
                 _shots.Add(new Shot(_shipX + 11, _shipY - 5, 2, -5, 0xff7fc7ff, 5));
                 _altCooldown = 18;
                 _heat = Math.Min(120, _heat + 15);
-                _audio?.Trigger(_levelId == 4 ? StormaktSound.TitheStandardBroadside : StormaktSound.Broadside);
+                _audio?.Trigger(_levelId is 4 or 5 ? StormaktSound.TitheStandardBroadside : StormaktSound.Broadside);
             }
         }
 
@@ -1520,7 +1520,12 @@ internal sealed class StormaktGame
         _inSilverkroppenSelect = false;
         _inCopenhagenSelect = false;
         _inCodexWarSelect = false;
-        _audio?.Trigger(_levelId == 4 ? StormaktSound.TitheArchiveCue : StormaktSound.Deploy);
+        _audio?.Trigger(_levelId switch
+        {
+            4 => StormaktSound.TitheArchiveCue,
+            5 => StormaktSound.SnapphaneSignalCue,
+            _ => StormaktSound.Deploy,
+        });
     }
 
     private StormaktMusicTrack CurrentCopenhagenMusicTrack()
@@ -9543,7 +9548,7 @@ internal sealed class StormaktGame
         _enemyShots.Clear();
         _enemies.Clear();
         state.HuntShots.Clear();
-        _audio?.Trigger(StormaktSound.Deploy);
+        _audio?.Trigger(StormaktSound.SnapphaneSignalCue);
     }
 
     private bool IsSnapphaneRescueChanneling()
@@ -9567,7 +9572,7 @@ internal sealed class StormaktGame
         state.HuntShots.Clear();
         _shots.Clear();
         ActivateBossRadio(SnapphaneRouteOpenRadio);
-        _audio?.Trigger(StormaktSound.Deploy);
+        _audio?.Trigger(StormaktSound.SnapphaneSignalCue);
     }
 
     private void StepSnapphaneRoute(SnapphaneWorldState state)
@@ -9606,7 +9611,7 @@ internal sealed class StormaktGame
             ActivateBossRadio(SnapphaneKrutRouteRadio);
         }
         WriteCampaignSave(state.IncomingFreedShips);
-        _audio?.Trigger(StormaktSound.Deploy);
+        _audio?.Trigger(StormaktSound.SnapphaneSignalCue);
     }
 
     private void StepSnapphaneKaparRoute(SnapphaneWorldState state)
@@ -9638,7 +9643,7 @@ internal sealed class StormaktGame
             state.SnapphaneAllies++;
             _score += 900;
             WriteCampaignSave(state.IncomingFreedShips);
-            _audio?.Trigger(StormaktSound.TitheChainLockBreak);
+            _audio?.Trigger(StormaktSound.SnapphaneRescueRelease);
         }
 
         if ((state.Rescues.Count > 0 && state.Rescues.All(rescue => rescue.Rescued)) || state.RouteAge >= 2_100)
@@ -9722,7 +9727,7 @@ internal sealed class StormaktGame
         state.Hunters.Clear();
         state.HuntShots.Clear();
         state.Presses.Clear();
-        _audio?.Trigger(StormaktSound.Deploy);
+        _audio?.Trigger(StormaktSound.SnapphaneSignalCue);
     }
 
     private void StepDepartingSnapphaneRescues(SnapphaneWorldState state)
@@ -9760,7 +9765,7 @@ internal sealed class StormaktGame
         ActivateBossRadio(RedHoundsDagmarRadio);
         ActivateBossRadio(RedHoundsTripletsRadio);
         _audio?.SwitchMusic(StormaktMusicTrack.RedHoundsBoss);
-        _audio?.Trigger(StormaktSound.Deploy);
+        _audio?.Trigger(StormaktSound.SnapphaneSignalCue);
     }
 
     private RedHoundsBossState CreateRedHoundsBossState()
@@ -9798,7 +9803,7 @@ internal sealed class StormaktGame
                 ship.X += (index - 1) * 0.08;
             }
             if (boss.DeathAge is 1 or 70 or 140 or 220 or 310)
-                _audio?.Trigger(boss.DeathAge is 220 or 310 ? StormaktSound.Broadside : StormaktSound.EnemyExplosion);
+                _audio?.Trigger(StormaktSound.SnapphaneFleetBreak);
             if (boss.DeathAge == 210) ActivateBossRadio(RedHoundsVictoryRadio);
             if (boss.DeathAge >= 570 && _bossRadioCard is null)
             {
@@ -9849,7 +9854,7 @@ internal sealed class StormaktGame
                 if (ship.CannonHealth <= 0) continue;
                 FireRedHoundAimedFan(boss, ship, index, 3, 0.17, 2.48, 1);
             }
-            _audio?.Trigger(StormaktSound.Broadside);
+            _audio?.Trigger(StormaktSound.SnapphaneRedHoundsVolley);
             return;
         }
 
@@ -9858,7 +9863,7 @@ internal sealed class StormaktGame
         if (boss.DesperationAge % 44 == 8)
         {
             FireRedHoundAimedFan(boss, leader, 2, 5, 0.14, 2.78, 1);
-            _audio?.Trigger(StormaktSound.Broadside);
+            _audio?.Trigger(StormaktSound.SnapphaneRedHoundsVolley);
         }
         if (boss.DesperationAge % 86 == 30)
         {
@@ -9874,7 +9879,7 @@ internal sealed class StormaktGame
                 boss.Shots.Add(new RedHoundShot(leader.X, originY,
                     dx / length * 2.62, dy / length * 2.62, 2, 2));
             }
-            _audio?.Trigger(StormaktSound.Broadside);
+            _audio?.Trigger(StormaktSound.SnapphaneRedHoundsVolley);
         }
         if (boss.DesperationAge % 72 == 52)
         {
@@ -9910,7 +9915,7 @@ internal sealed class StormaktGame
                 boss.MegaRadioPlayed = true;
                 ActivateBossRadio(RedHoundsMegaRadio);
             }
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.SnapphaneMegaCharge);
         }
         if (cycle == 108)
         {
@@ -9925,7 +9930,7 @@ internal sealed class StormaktGame
                 boss.Shots.Add(new RedHoundShot(leader.X, originY,
                     dx / length * 2.75, dy / length * 2.75, 2));
             }
-            _audio?.Trigger(StormaktSound.Broadside);
+            _audio?.Trigger(StormaktSound.SnapphaneRedHoundsVolley);
         }
         if (cycle is >= 108 and < 154 && !boss.MegaHit)
         {
@@ -10001,7 +10006,7 @@ internal sealed class StormaktGame
                 dx / length * speed - 0.18, dy / length * speed, index));
             boss.Shots.Add(new RedHoundShot(ship.X + 9, ship.Y + 15,
                 dx / length * speed + 0.18, dy / length * speed, index));
-            _audio?.Trigger(StormaktSound.Broadside);
+            _audio?.Trigger(StormaktSound.SnapphaneRedHoundsVolley);
         }
     }
 
@@ -10042,7 +10047,7 @@ internal sealed class StormaktGame
             {
                 RedHoundShip target = boss.Ships.OrderByDescending(ship => ship.CannonHealth)
                     .ThenBy(ship => ship.Kind).First();
-                target.CannonHealth = Math.Max(0, target.CannonHealth - 10);
+                DamageRedHoundCannon(target, 10);
                 AddRedHoundSupportBolt(state, boss, (target.X, target.Y + 12), true);
             }
             else if (boss.MaskOpen && boss.VentHealth.All(health => health <= 0) && boss.Health > 20)
@@ -10061,7 +10066,7 @@ internal sealed class StormaktGame
                 RedHoundShip target = boss.Ships.OrderByDescending(ship => ship.CannonHealth)
                     .ThenBy(ship => ship.Kind).First();
                 if (target.CannonHealth <= 0) break;
-                target.CannonHealth = Math.Max(0, target.CannonHealth - 5);
+                DamageRedHoundCannon(target, 5);
                 double sourceX = 34 + index * 22;
                 double sourceY = _height - 42 - index * 5;
                 boss.SupportBolts.Add(new RedHoundSupportBolt(sourceX, sourceY, target.X, target.Y + 12, false));
@@ -10094,7 +10099,7 @@ internal sealed class StormaktGame
         boss.Shots.Clear();
         ActivateBossRadio(RedHoundsChainTripletsRadio);
         ActivateBossRadio(RedHoundsChainRadio);
-        _audio?.Trigger(StormaktSound.TitheChainCanister);
+        _audio?.Trigger(StormaktSound.SnapphaneChainDeploy);
     }
 
     private void BeginRedHoundsMask(RedHoundsBossState boss)
@@ -10106,7 +10111,7 @@ internal sealed class StormaktGame
         boss.MaskOpen = false;
         ActivateBossRadio(RedHoundsDagmarMaskRadio);
         ActivateBossRadio(RedHoundsMaskRadio);
-        _audio?.Trigger(StormaktSound.Deploy);
+        _audio?.Trigger(StormaktSound.SnapphaneSignalCue);
     }
 
     private static (double X, double Y) ChainMidpoint(RedHoundsBossState boss, RedHoundChain chain)
@@ -10122,7 +10127,15 @@ internal sealed class StormaktGame
         chain.Broken = true;
         chain.BreakAge = 1;
         _score += 500;
-        _audio?.Trigger(StormaktSound.TitheChainLockBreak);
+        _audio?.Trigger(StormaktSound.SnapphaneChainBreak);
+    }
+
+    private void DamageRedHoundCannon(RedHoundShip ship, int damage)
+    {
+        int previousHealth = ship.CannonHealth;
+        ship.CannonHealth = Math.Max(0, ship.CannonHealth - damage);
+        if (previousHealth > 0 && ship.CannonHealth == 0)
+            _audio?.Trigger(StormaktSound.SnapphaneChainBreak);
     }
 
     private void BeginRedHoundsDeath(RedHoundsBossState boss)
@@ -10153,7 +10166,7 @@ internal sealed class StormaktGame
             ResetSnapphaneWreck(state, wreck);
         ActivateBossRadio(SnapphaneDuelChallengeRadio);
         _audio?.SwitchMusic(StormaktMusicTrack.Snapphane);
-        _audio?.Trigger(StormaktSound.Deploy);
+        _audio?.Trigger(StormaktSound.SnapphaneSignalCue);
     }
 
     private void StepSorenDuel(SnapphaneWorldState state)
@@ -10209,7 +10222,7 @@ internal sealed class StormaktGame
                 duel.PhaseAge = 0;
                 duel.DashAge = 0;
                 ActivateBossRadio(SnapphaneDuelHooksRadio);
-                _audio?.Trigger(StormaktSound.Deploy);
+                _audio?.Trigger(StormaktSound.SnapphaneSignalCue);
             }
         }
         else
@@ -10261,7 +10274,7 @@ internal sealed class StormaktGame
                 duel.Shots.Add(new SorenCopperShot(duel.X, duel.Y - 12,
                     Math.Cos(angle) * 2.9, Math.Sin(angle) * 2.9));
             }
-            _audio?.Trigger(StormaktSound.Broadside);
+            _audio?.Trigger(StormaktSound.SnapphaneCopperVolley);
         }
 
         for (int index = duel.Shots.Count - 1; index >= 0; index--)
@@ -10287,7 +10300,7 @@ internal sealed class StormaktGame
             if (DistanceSquared(shot.X, shot.Y, shotTarget.X, shotTarget.Y) < 10 * 10)
             {
                 shotTarget.Health -= 16;
-                if (shotTarget.Health <= 0) shotTarget.BurstAge = 1;
+                BreakSnapphaneHunter(shotTarget);
                 duel.Shots.RemoveAt(index);
             }
             else if (shot.Age > 180 || shot.X < -18 || shot.X > _width + 18 || shot.Y < -18 || shot.Y > _height + 18)
@@ -10309,7 +10322,7 @@ internal sealed class StormaktGame
             duel.Shots.Add(new SorenCopperShot(duel.X, duel.Y + 12,
                 Math.Cos(angle) * 2.35, Math.Sin(angle) * 2.35));
         }
-        _audio?.Trigger(StormaktSound.Broadside);
+        _audio?.Trigger(StormaktSound.SnapphaneCopperVolley);
     }
 
     private void LaunchSorenHook(SorenDuelState duel)
@@ -10321,7 +10334,7 @@ internal sealed class StormaktGame
         double dy = _shipY - duel.Y;
         double length = Math.Max(1, Math.Sqrt(dx * dx + dy * dy));
         duel.Hooks.Add(new SorenChainHook(startX, duel.Y + 10, dx / length * 2.25, dy / length * 2.25, serial));
-        _audio?.Trigger(StormaktSound.TitheChainCanister);
+        _audio?.Trigger(StormaktSound.SnapphaneChainHook);
     }
 
     private void StepSorenCopperShots(SorenDuelState duel)
@@ -10382,7 +10395,7 @@ internal sealed class StormaktGame
         ActivateBossRadio(SnapphaneOathRadio);
         ActivateBossRadio(SnapphaneEbbaOathRadio);
         _audio?.SwitchMusic(StormaktMusicTrack.Snapphane);
-        _audio?.Trigger(StormaktSound.Deploy);
+        _audio?.Trigger(StormaktSound.SnapphaneSignalCue);
     }
 
     private void ResetSnapphaneWreck(SnapphaneWorldState state, SnapphaneWreck wreck)
@@ -10464,6 +10477,7 @@ internal sealed class StormaktGame
             if (!mine.Turned && DistanceSquared(mine.X, mine.Y, _shipX, _shipY) < 15 * 15)
             {
                 mine.BurstAge = 1;
+                _audio?.Trigger(StormaktSound.SnapphaneMineBurst);
                 DamageShip();
             }
             if (mine.Y < -42 || mine.Y > _height + 42 || mine.X < -42 || mine.X > _width + 42)
@@ -10499,6 +10513,7 @@ internal sealed class StormaktGame
                 if (hunter.Elite)
                     state.HuntShots.Add(new SnapphaneHuntShot(hunter.X, hunter.Y + 10,
                         dx / length * 1.65 + 0.32, dy / length * 1.65, hunter.Serial) { TargetsSoren = targetsSoren });
+                _audio?.Trigger(StormaktSound.SnapphaneHunterShot);
             }
             if (DistanceSquared(hunter.X, hunter.Y, _shipX, _shipY) < 18 * 18) DamageShip();
         }
@@ -10579,7 +10594,7 @@ internal sealed class StormaktGame
             if (hunter.Serial == shot.Serial || hunter.BurstAge > 0 ||
                 DistanceSquared(shot.X, shot.Y, hunter.X, hunter.Y) >= 14 * 14) continue;
             hunter.Health -= 14;
-            if (hunter.Health <= 0) hunter.BurstAge = 1;
+            BreakSnapphaneHunter(hunter);
             state.EnvironmentKills++;
             return true;
         }
@@ -10622,6 +10637,7 @@ internal sealed class StormaktGame
                 if (mine.BurstAge > 0 || DistanceSquared(shot.X, shot.Y, mine.X, mine.Y) >= 13 * 13) continue;
                 if (shot.Kind == TitheShotMagnetRing)
                 {
+                    if (!mine.Turned) _audio?.Trigger(StormaktSound.SnapphaneMineTurn);
                     mine.Turned = true;
                     mine.Vy = Math.Min(mine.Vy, 0.28);
                     _score += 75;
@@ -10629,7 +10645,11 @@ internal sealed class StormaktGame
                 else
                 {
                     mine.Health -= shot.Kind == TitheShotChainShot ? shot.Power * 2 : shot.Power;
-                    if (mine.Health <= 0) mine.BurstAge = 1;
+                    if (mine.Health <= 0)
+                    {
+                        mine.BurstAge = 1;
+                        _audio?.Trigger(StormaktSound.SnapphaneMineBurst);
+                    }
                 }
                 consumed = true;
                 break;
@@ -10653,7 +10673,7 @@ internal sealed class StormaktGame
                     hunter.Health -= shot.Power;
                     if (hunter.Health <= 0)
                     {
-                        hunter.BurstAge = 1;
+                        BreakSnapphaneHunter(hunter);
                         _score += 180;
                     }
                     consumed = true;
@@ -10710,7 +10730,7 @@ internal sealed class StormaktGame
                 if (boss.VentHealth[index] == 0)
                 {
                     _score += 350;
-                    _audio?.Trigger(StormaktSound.TitheChainLockBreak);
+                    _audio?.Trigger(StormaktSound.SnapphaneChainBreak);
                 }
                 return true;
             }
@@ -10730,7 +10750,7 @@ internal sealed class StormaktGame
                 if (boss.VentHealth[nearestVent] == 0)
                 {
                     _score += 350;
-                    _audio?.Trigger(StormaktSound.TitheChainLockBreak);
+                    _audio?.Trigger(StormaktSound.SnapphaneChainBreak);
                 }
                 return true;
             }
@@ -10748,7 +10768,7 @@ internal sealed class StormaktGame
                 Math.Abs(shot.Y - (ship.Y + 10)) < 23;
             if (cannonHit)
             {
-                ship.CannonHealth = Math.Max(0, ship.CannonHealth - shot.Power);
+                DamageRedHoundCannon(ship, shot.Power);
                 if (ship.CannonHealth == 0) _score += 300;
             }
             else if (boss.Phase < 3)
@@ -10776,7 +10796,7 @@ internal sealed class StormaktGame
 
     private void DamageSnapphaneBeacon(SnapphaneWorldState state, SnapphaneBeacon beacon, int damage)
     {
-        if (beacon.TrueSignal) return;
+        if (beacon.TrueSignal || beacon.State == SnapphaneBeaconState.Destroyed) return;
         beacon.State = SnapphaneBeaconState.Revealed;
         beacon.Health -= damage;
         if (!beacon.HunterReleased)
@@ -10790,19 +10810,34 @@ internal sealed class StormaktGame
             beacon.Age = 0;
             _score += 125;
             if (beacon.Group >= 70) state.RouteTargetsDestroyed++;
+            _audio?.Trigger(StormaktSound.SnapphaneBeaconBreak);
         }
     }
 
-    private static void DamageSnapphaneWreck(SnapphaneWreck wreck, int damage, int impulseSeed)
+    private void DamageSnapphaneWreck(SnapphaneWreck wreck, int damage, int impulseSeed)
     {
+        int previousHealth = wreck.Health;
         wreck.Health -= damage;
         if (damage >= 7) wreck.Vx += ((impulseSeed & 1) == 0 ? -1 : 1) * Math.Min(0.8, damage * 0.045);
-        if (wreck.Health <= 0) wreck.BurstAge = 1;
+        if (previousHealth > 0 && wreck.Health <= 0)
+        {
+            wreck.BurstAge = 1;
+            _audio?.Trigger(StormaktSound.SnapphaneWreckBreak);
+        }
+    }
+
+    private void BreakSnapphaneHunter(SnapphaneHunter hunter)
+    {
+        if (hunter.Health > 0 || hunter.BurstAge > 0) return;
+        hunter.BurstAge = 1;
+        _audio?.Trigger(StormaktSound.SnapphaneHunterBreak);
     }
 
     private void BurstSnapphaneMine(SnapphaneWorldState state, SnapphaneScentMine mine)
     {
+        if (mine.BurstAge > 0) return;
         mine.BurstAge = 1;
+        _audio?.Trigger(StormaktSound.SnapphaneMineBurst);
         foreach (SnapphaneWreck wreck in state.Wrecks)
             if (wreck.Physical && wreck.BurstAge == 0 && DistanceSquared(mine.X, mine.Y, wreck.X, wreck.Y) < 58 * 58)
                 DamageSnapphaneWreck(wreck, 24, mine.Serial);
@@ -10814,7 +10849,7 @@ internal sealed class StormaktGame
         {
             if (hunter.BurstAge > 0 || DistanceSquared(mine.X, mine.Y, hunter.X, hunter.Y) >= 58 * 58) continue;
             hunter.Health -= 24;
-            if (hunter.Health <= 0) hunter.BurstAge = 1;
+            BreakSnapphaneHunter(hunter);
         }
         state.EnvironmentKills++;
         _score += 220;
@@ -12069,7 +12104,12 @@ internal sealed class StormaktGame
             armor.ArmorCharge--;
             _heat = Math.Max(_heat, 90);
             _invulnerabilityFrames = 90;
-            _audio?.Trigger(_levelId == 4 ? StormaktSound.TitheHullHit : StormaktSound.HullHit);
+            _audio?.Trigger(_levelId switch
+            {
+                4 => StormaktSound.TitheHullHit,
+                5 => StormaktSound.SnapphaneHullHit,
+                _ => StormaktSound.HullHit,
+            });
             return;
         }
         if (_invincibleTestMode)
@@ -12084,7 +12124,12 @@ internal sealed class StormaktGame
         _lives--;
         _heat = 120;
         _invulnerabilityFrames = 90;
-        _audio?.Trigger(_levelId == 4 ? StormaktSound.TitheHullHit : StormaktSound.HullHit);
+        _audio?.Trigger(_levelId switch
+        {
+            4 => StormaktSound.TitheHullHit,
+            5 => StormaktSound.SnapphaneHullHit,
+            _ => StormaktSound.HullHit,
+        });
         if (_lives <= 0)
         {
             _gameOver = true;
