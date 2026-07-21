@@ -340,6 +340,18 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
             runtime.Scu.AcknowledgeSmpc();
             return true;
         }
+        else if (runtime.Scu.HasPendingDma2End && runtime.Master.RequestInterrupt(6, 0x49))
+        {
+            runtime.Scu.AcknowledgeDma2End();
+        }
+        else if (runtime.Scu.HasPendingDma1End && runtime.Master.RequestInterrupt(6, 0x4A))
+        {
+            runtime.Scu.AcknowledgeDma1End();
+        }
+        else if (runtime.Scu.HasPendingDma0End && runtime.Master.RequestInterrupt(5, 0x4B))
+        {
+            runtime.Scu.AcknowledgeDma0End();
+        }
 
         return false;
     }
