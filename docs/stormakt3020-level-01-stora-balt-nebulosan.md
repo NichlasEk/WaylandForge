@@ -5,7 +5,8 @@ Status: checkpoint 1, 2A-2C, bosscheckpoint 3A-3C samt grafik- och ljudpolish ä
 ## Grafik- och ljudpolish - 2026-07-20
 
 - Spelarens tidigare skärande generiska kanonljud är ersatt av två korta, mjuka och alternerande `piow`-pulser endast på Bana 1. Danska flygskott och brotorn har egna mörkare pulser och lånar inte längre spelarens `TwinCannon`.
-- Brospricka, brokollaps, bossvarning, bosssalva, fasbrott och bossdöd använder sex separata händelseljud. Tillsammans med de fyra skottvarianterna består Bana 1-sviten av tio fasta Stable Audio 3-effekter med reproducerbara seeds.
+- Brospricka, brokollaps, bossvarning, bosssalva, fasbrott och bossdöd använder sex separata händelseljud. Tillsammans med de fyra skottvarianterna består Bana 1-sviten av tio deterministiskt regenererbara effekter: åtta fasta Stable Audio 3-klipp och två rent syntetiserade spelar-pulser.
+- Efter lyssningstestet 2026-07-21 ersattes spelar-pulsernas övertonstäta modellmaterial, som lät som en sammanhängande motorsåg vid sex rutors eldtakt. A/B är nu 0,18 sekunder långa sinusbaserade pitchfall på cirka 1,1/1,3 kHz till 390/465 Hz, med mjuk attack, snabb svans och utan brus. Uppmätt nollgenomgång sjönk från cirka 3,6 kHz till 0,54/0,64 kHz.
 - Runtimefilerna är 48 kHz, stereo, PCM16, lågpassade för att undvika vass laserdiskant och limiterade till högst -1 dB före mixerns per-effekt-gain. Ljudladdarens smoke test hittar nu 76 effekter totalt.
 - Tornets lilla debugliknande låspunkt, brons kritiska kodlinje, kedjeankarets spets och tre explosionssteg är nu sex transparenta native-resolution-assets i WFSA. De byggs deterministiskt av `build_assets.py`; de gamla primitiverna finns kvar enbart som fallback.
 - En riktad capture verifierade lås-/brofönstret och bossankarets både varnings- och aktiva läge. Neutrala wide- och legacy-rutor behöll sina tidigare hashar, vilket bekräftar att timing, bakgrund och hitboxfria scener inte flyttades av polishen.

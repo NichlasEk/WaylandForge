@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
-"""Generate the fixed-seed Stable Audio 3 SFX family for Stora Balt."""
+"""Generate the deterministic hybrid SFX family for Stora Balt.
+
+The rapid player shots are synthesized from clean sine chirps so overlapping
+shots remain individual ``piow`` pulses. Longer mechanical effects use the
+fixed-seed Stable Audio model.
+"""
 from __future__ import annotations
 
 import argparse
+import math
 import os
+import struct
 import subprocess
+import wave
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -14,10 +22,6 @@ os.environ.setdefault("HF_HOME", str(STABLE_ROOT / "huggingface"))
 os.environ.setdefault("HF_HUB_CACHE", str(STABLE_ROOT / "huggingface" / "hub"))
 os.environ.setdefault("TRANSFORMERS_CACHE", str(STABLE_ROOT / "huggingface" / "transformers"))
 os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
-
-import torchaudio
-from stable_audio_3 import StableAudioModel
-
 
 ROOT = Path("assets/stormakt3020/sfx")
 RAW = ROOT / "raw"
@@ -37,10 +41,10 @@ class Effect:
 
 
 EFFECTS = [
-    Effect("stora-balt-player-piow-a", 0.34, 3020101,
-           "One tiny friendly retro spaceship pulse cannon, rounded soft piow, quick falling pitch, warm analog arcade tone, clean short dry game sound", 6200),
-    Effect("stora-balt-player-piow-b", 0.34, 3020102,
-           "One tiny friendly retro spaceship pulse cannon, rounded soft piow at a slightly higher pitch, quick falling tone, clean short dry arcade game sound", 6500),
+    Effect("stora-balt-player-piow-a", 0.18, 3020101,
+           "Procedural clean falling sine pulse", 4800),
+    Effect("stora-balt-player-piow-b", 0.18, 3020102,
+           "Procedural clean falling sine pulse, higher variant", 5200),
     Effect("stora-balt-enemy-piow", 0.42, 3020103,
            "One compact Danish royal drone pulse shot, low rounded pew, muted brass relay click and short descending analog tone, dry retro game sound", 5600),
     Effect("stora-balt-turret-piow", 0.55, 3020104,
@@ -59,6 +63,40 @@ EFFECTS = [
            "One enormous royal tax warship core finally rupturing, layered deep hull breaks, brass seal shatters and engine power collapses, decisive short dry boss defeat sound", 6800),
 ]
 
+PLAYER_CHIRPS = {
+    "stora-balt-player-piow-a": (1120.0, 390.0),
+    "stora-balt-player-piow-b": (1320.0, 465.0),
+}
+
+
+def synthesize_player_piow(path: Path, duration: float, start_hz: float, end_hz: float) -> None:
+    sample_rate = 48_000
+    frames = round(duration * sample_rate)
+    phase = 0.0
+    samples: list[float] = []
+    for index in range(frames):
+        t = index / sample_rate
+        progress = index / max(1, frames - 1)
+        frequency = end_hz + (start_hz - end_hz) * math.exp(-4.2 * progress)
+        phase += math.tau * frequency / sample_rate
+        attack = min(1.0, t / 0.004)
+        release = max(0.0, 1.0 - progress) ** 2.35
+        envelope = attack * release
+        tone = math.sin(phase) * 0.88 + math.sin(phase * 2.0 + 0.18) * 0.09
+        samples.append(math.tanh(tone * 1.08) * envelope)
+
+    peak = max(abs(sample) for sample in samples)
+    scale = 0.68 / max(peak, 1e-9)
+    with wave.open(str(path), "wb") as output:
+        output.setnchannels(2)
+        output.setsampwidth(2)
+        output.setframerate(sample_rate)
+        pcm = bytearray()
+        for sample in samples:
+            value = max(-32768, min(32767, round(sample * scale * 32767)))
+            pcm.extend(struct.pack("<hh", value, value))
+        output.writeframes(pcm)
+
 
 def main() -> None:
     parser = argparse.ArgumentParser()
@@ -67,23 +105,37 @@ def main() -> None:
     selected = [effect for effect in EFFECTS if not args.only or effect.name in args.only]
     RAW.mkdir(parents=True, exist_ok=True)
     ROOT.mkdir(parents=True, exist_ok=True)
-    print("Loading Stable Audio 3 Small-SFX once...")
-    model = StableAudioModel.from_pretrained("small-sfx", device="cuda", model_half=True)
+    stable_effects = [effect for effect in selected if effect.name not in PLAYER_CHIRPS]
+    model = None
+    torchaudio = None
+    if stable_effects:
+        import torchaudio as torchaudio_module
+        from stable_audio_3 import StableAudioModel
+
+        torchaudio = torchaudio_module
+        print("Loading Stable Audio 3 Small-SFX once...")
+        model = StableAudioModel.from_pretrained("small-sfx", device="cuda", model_half=True)
     for effect in selected:
-        raw = RAW / f"{effect.name}-stable-audio3.wav"
+        procedural = effect.name in PLAYER_CHIRPS
+        raw = RAW / f"{effect.name}-{'procedural' if procedural else 'stable-audio3'}.wav"
         runtime = ROOT / f"{effect.name}.wav"
-        print(f"Generating {effect.name} seed={effect.seed} duration={effect.duration:.2f}s")
-        audio = model.generate(
-            prompt=effect.prompt,
-            negative_prompt=NEGATIVE,
-            duration=effect.duration,
-            steps=8,
-            cfg_scale=1.0,
-            seed=effect.seed,
-            batch_size=1,
-            sample_size=model.model_config["sample_size"],
-        )
-        torchaudio.save(raw, audio[0].cpu(), model.model.sample_rate)
+        if procedural:
+            print(f"Synthesizing {effect.name} duration={effect.duration:.2f}s")
+            synthesize_player_piow(raw, effect.duration, *PLAYER_CHIRPS[effect.name])
+        else:
+            print(f"Generating {effect.name} seed={effect.seed} duration={effect.duration:.2f}s")
+            assert model is not None and torchaudio is not None
+            audio = model.generate(
+                prompt=effect.prompt,
+                negative_prompt=NEGATIVE,
+                duration=effect.duration,
+                steps=8,
+                cfg_scale=1.0,
+                seed=effect.seed,
+                batch_size=1,
+                sample_size=model.model_config["sample_size"],
+            )
+            torchaudio.save(raw, audio[0].cpu(), model.model.sample_rate)
         fade_start = max(0.0, effect.duration - 0.12)
         subprocess.run([
             "ffmpeg", "-y", "-loglevel", "error", "-i", str(raw),
