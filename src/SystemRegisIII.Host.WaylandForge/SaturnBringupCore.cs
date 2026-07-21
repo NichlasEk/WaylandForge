@@ -178,6 +178,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
                 else if (_instructionIndex > 0 && _instructionIndex % VBlankIntervalInstructions == vblankOutOffset)
                 {
                     runtime.Scu.RaiseVBlankOut();
+                    runtime.SystemMap.NotifyVBlankOut();
                     _vblankOutCount++;
                 }
 
