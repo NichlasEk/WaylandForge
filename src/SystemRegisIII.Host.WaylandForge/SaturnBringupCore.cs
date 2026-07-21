@@ -171,6 +171,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
                 {
                     TryRenderVdp1Frame(runtime);
                     runtime.Scu.RaiseVBlankIn();
+                    runtime.SystemMap.NotifyVBlankIn();
                     runtime.Smpc.NotifyVBlankIn();
                     _vblankInCount++;
                 }
@@ -351,6 +352,10 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
         else if (runtime.Scu.HasPendingDma0End && runtime.Master.RequestInterrupt(5, 0x4B))
         {
             runtime.Scu.AcknowledgeDma0End();
+        }
+        else if (runtime.Scu.HasPendingVdp1DrawEnd && runtime.Master.RequestInterrupt(2, 0x4D))
+        {
+            runtime.Scu.AcknowledgeVdp1DrawEnd();
         }
 
         return false;
