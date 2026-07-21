@@ -361,9 +361,11 @@ Landat kungaboss-pass:
 
 Landat ljudeffekt-pass:
 
-- 23 seedlåsta Small-SFX-effekter ger ringportar, sjöbossar, landning, Holmen, materia, legender, markbossar och Codexkammaren skilda ljudfamiljer;
-- älglegenden använder en tung fysisk laddning av hov, läder och plåtpansar plus ett kort separat hovnedslag i stället för återbrukade laserljud;
-- `generate_copenhagen_sfx.py` bevarar prompt, seed, rå 44,1 kHz-master och bygger normaliserade 48 kHz stereo PCM16-filer för runtime;
+- ljudsaneringen 2026-07-21 inventerade 23 nivåegna Small-SFX-filer plus ärvda generiska och äldre nivåljud. Samtliga 23 aktiva masters är nu ersatta av korta brusfria procedurljud och åtta nya nivåegna filer täcker sjösalva, skrovträff, strukturbristning, signal, svärd och silvermagi;
+- totalt 31 `copenhagen-*.wav` ger ringportar, sjöbossar, Frederik Nulls kedjor och registerblad, landning, Holmen, materia, legender, markbossar och Codexkammaren skilda ljudfamiljer. Spelarens redan sanerade permanenta vapensats återbrukas separat;
+- älglegenden använder en tung tonal laddning och ett kort separat hovnedslag i stället för återbrukade laserljud;
+- `generate_copenhagen_sfx.py` använder bara standardbiblioteket och bygger deterministiskt 48 kHz stereo PCM16 utan modell, GPU, brusgenerator eller spektralanalys. Nya `raw/*-procedural.wav` bevarar de aktiva mastrarna; äldre Small-SFX-råfiler ligger kvar som proveniens men används inte av runtime;
+- inga generiska `TwinCannon`, `Broadside`, `Deploy`, `EnemyExplosion`, `HullHit` eller ljud från äldre banor återstår i den aktiva Bana 7-simuleringen;
 - effekterna triggas endast av befintliga deterministiska stateövergångar och ändrar aldrig simulation, träffytor eller RNG.
 
 Landat postgame-pass:

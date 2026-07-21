@@ -934,7 +934,7 @@ internal sealed class StormaktGame
                 _cooldown = 6;
                 if (snapphaneRescueChanneling) _cooldown *= 2;
                 _heat = Math.Min(120, _heat + 7);
-                _audio?.Trigger(_levelId is 0 or 1 or 2 or 4 or 5
+                _audio?.Trigger(_levelId is 0 or 1 or 2 or 4 or 5 or 6
                     ? ((_missionFrame / 6 & 1) == 0 ? StormaktSound.StoraBaltPlayerPiowA : StormaktSound.StoraBaltPlayerPiowB)
                     : StormaktSound.TwinCannon);
             }
@@ -968,7 +968,7 @@ internal sealed class StormaktGame
                 _shots.Add(new Shot(_shipX + 11, _shipY - 5, 2, -5, 0xff7fc7ff, 5));
                 _altCooldown = 18;
                 _heat = Math.Min(120, _heat + 15);
-                _audio?.Trigger(_levelId is 4 or 5 ? StormaktSound.TitheStandardBroadside : StormaktSound.Broadside);
+                _audio?.Trigger(_levelId is 4 or 5 or 6 ? StormaktSound.TitheStandardBroadside : StormaktSound.Broadside);
             }
         }
 
@@ -1478,9 +1478,11 @@ internal sealed class StormaktGame
         if (levelId is 4 or 5 or 6)
         {
             _activeLoadout = new StormaktLoadout();
+            bool inheritedCampaignKit = false;
             if (!fresh && TryLoadCampaignSave(out StormaktCampaignSave savedCampaign))
             {
                 _activeLoadout.Apply(savedCampaign);
+                inheritedCampaignKit = true;
                 if (_snapphaneWorld is SnapphaneWorldState snapphane)
                 {
                     snapphane.IncomingFreedShips = Math.Max(0, savedCampaign.FreedShips);
@@ -1494,6 +1496,13 @@ internal sealed class StormaktGame
                     copenhagen.SnapphaneAllies = Math.Max(0, savedCampaign.SnapphaneAllies);
                     copenhagen.SorenOathComplete = savedCampaign.SorenOathComplete;
                 }
+            }
+            if (levelId == 5 && !inheritedCampaignKit && _loadoutTestKit is null)
+            {
+                // A menu start has not passed through Rigsregnskabet's loadout choice.
+                // Give it the level's signature mine-turning tool while keeping inherited
+                // campaign choices and the complete loadout fixture matrix untouched.
+                _activeLoadout.BroadsideModule = TitheBroadsideModule.MagnetBroadside;
             }
             if (levelId == 5 && _loadoutTestKit is int testKit)
             {
@@ -1524,6 +1533,7 @@ internal sealed class StormaktGame
         {
             4 => StormaktSound.TitheArchiveCue,
             5 => StormaktSound.SnapphaneSignalCue,
+            6 => StormaktSound.CopenhagenSignalCue,
             _ => StormaktSound.Deploy,
         });
     }
@@ -6015,7 +6025,7 @@ internal sealed class StormaktGame
                 Health = 140,
             };
             _enemies.Clear();
-            _audio?.Trigger(StormaktSound.SkanskaSorenArrival);
+            _audio?.Trigger(StormaktSound.CopenhagenSignalCue);
         }
     }
 
@@ -6040,7 +6050,7 @@ internal sealed class StormaktGame
             _enemyShots.Clear();
             ActivateBossRadio(CopenhagenGateRadio);
             _audio?.SwitchMusic(StormaktMusicTrack.CopenhagenRing);
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.CopenhagenSignalCue);
         }
 
         if (!state.GateActive)
@@ -6119,7 +6129,7 @@ internal sealed class StormaktGame
             _audio?.Trigger(StormaktSound.CopenhagenRoyalArmorBreak);
         }
         if (state.GateFallAge is 24 or 52 or 86)
-            _audio?.Trigger(StormaktSound.EnemyExplosion);
+            _audio?.Trigger(StormaktSound.CopenhagenStructureBreak);
         if (state.GateFallAge < 240 || _bossRadioCard is not null) return;
         BeginCopenhagenAdmiralty(state);
     }
@@ -6156,14 +6166,14 @@ internal sealed class StormaktGame
             _shots.Clear();
             int deathAge = state.AdmiraltyDeathAge++;
             if (deathAge is 24 or 58 or 96 or 144)
-                _audio?.Trigger(StormaktSound.EnemyExplosion);
+                _audio?.Trigger(StormaktSound.CopenhagenStructureBreak);
             if (deathAge == 1)
             {
                 _enemyShots.Clear();
                 _shots.Clear();
                 _score += 3_200;
                 ActivateBossRadio(CopenhagenAdmiraltyFallRadio);
-                _audio?.Trigger(StormaktSound.Broadside);
+                _audio?.Trigger(StormaktSound.CopenhagenNavalVolley);
             }
             if (deathAge < 240 || _bossRadioCard is not null) return;
             BeginCopenhagenFrederik(state);
@@ -6212,7 +6222,7 @@ internal sealed class StormaktGame
                 {
                     state.HourArmed[hitHour] = false;
                     _score += 180;
-                    _audio?.Trigger(StormaktSound.OresundSwitchBreak);
+                    _audio?.Trigger(StormaktSound.CopenhagenCircuitOpen);
                 }
                 continue;
             }
@@ -6308,10 +6318,10 @@ internal sealed class StormaktGame
                 state.FrederikChains.Clear();
                 _score += 6_000;
                 ActivateBossRadio(CopenhagenFrederikFallRadio);
-                _audio?.Trigger(StormaktSound.Broadside);
+                _audio?.Trigger(StormaktSound.CopenhagenNavalVolley);
             }
             if (deathAge is 28 or 61 or 103 or 158 or 220)
-                _audio?.Trigger(StormaktSound.EnemyExplosion);
+                _audio?.Trigger(StormaktSound.CopenhagenStructureBreak);
             if (deathAge < 280 || _bossRadioCard is not null) return;
             BeginCopenhagenEye(state);
             return;
@@ -6403,7 +6413,7 @@ internal sealed class StormaktGame
                         if (state.FrederikRepairHealth[hitNode] == 0)
                         {
                             _score += 300;
-                            _audio?.Trigger(StormaktSound.TitheRegisterSwitch);
+                            _audio?.Trigger(StormaktSound.CopenhagenCircuitOpen);
                         }
                     }
                     else
@@ -6481,7 +6491,7 @@ internal sealed class StormaktGame
             int ceiling = state.FrederikTestFixture ? 120 : CopenhagenFrederikPhaseTwoHealth;
             state.FrederikHealth = Math.Min(ceiling, state.FrederikHealth + heal);
             state.FrederikRepairFlash = 45;
-            _audio?.Trigger(StormaktSound.TitheUpgradeInstall);
+            _audio?.Trigger(StormaktSound.CopenhagenMaterialRewrite);
         }
         if (cycle is 72 or 84 or 96)
         {
@@ -6607,10 +6617,10 @@ internal sealed class StormaktGame
                 state.EyeWalls.Clear();
                 _score += 7_500;
                 ActivateBossRadio(CopenhagenEyeFallRadio);
-                _audio?.Trigger(StormaktSound.Broadside);
+                _audio?.Trigger(StormaktSound.CopenhagenNavalVolley);
             }
             if (deathAge is 26 or 63 or 108 or 171 or 236)
-                _audio?.Trigger(StormaktSound.EnemyExplosion);
+                _audio?.Trigger(StormaktSound.CopenhagenStructureBreak);
             if (deathAge < 280 || _bossRadioCard is not null) return;
             BeginCopenhagenDannebrog(state);
             return;
@@ -6639,7 +6649,7 @@ internal sealed class StormaktGame
             state.EyeLensHealth[0] = 0;
             _score += 240;
             ActivateBossRadio(CopenhagenEyeSorenRadio);
-            _audio?.Trigger(StormaktSound.OresundSwitchBreak);
+            _audio?.Trigger(StormaktSound.CopenhagenCircuitOpen);
         }
         if (state.EyePhase == 2 && state.EyeLensHealth.All(health => health <= 0))
         {
@@ -6702,7 +6712,7 @@ internal sealed class StormaktGame
                 if (state.EyeLensHealth[hitLens] == 0)
                 {
                     _score += 360;
-                    _audio?.Trigger(StormaktSound.OresundCrownCoreBreak);
+                    _audio?.Trigger(StormaktSound.CopenhagenRoyalArmorBreak);
                 }
                 continue;
             }
@@ -6821,9 +6831,9 @@ internal sealed class StormaktGame
                 _enemyShots.Clear();
                 _score += 4_500;
                 ActivateBossRadio(CopenhagenDannebrogFallRadio);
-                _audio?.Trigger(StormaktSound.Broadside);
+                _audio?.Trigger(StormaktSound.CopenhagenNavalVolley);
             }
-            if (deathAge is 34 or 82 or 138) _audio?.Trigger(StormaktSound.EnemyExplosion);
+            if (deathAge is 34 or 82 or 138) _audio?.Trigger(StormaktSound.CopenhagenStructureBreak);
             if (deathAge < 240 || _bossRadioCard is not null) return;
             BeginCopenhagenDuo(state);
             return;
@@ -6914,7 +6924,7 @@ internal sealed class StormaktGame
                 state.DannebrogEscapeNode = hitNode;
                 state.DannebrogBreakAge = state.DannebrogFormationAge;
             }
-            _audio?.Trigger(StormaktSound.OresundSwitchBreak);
+            _audio?.Trigger(StormaktSound.CopenhagenCircuitOpen);
         }
     }
 
@@ -7003,10 +7013,10 @@ internal sealed class StormaktGame
                 state.DuoShieldWall = null;
                 _score += 8_000;
                 ActivateBossRadio(CopenhagenDuoFallRadio);
-                _audio?.Trigger(StormaktSound.Broadside);
+                _audio?.Trigger(StormaktSound.CopenhagenNavalVolley);
             }
             if (deathAge is 28 or 66 or 112 or 174 or 226)
-                _audio?.Trigger(StormaktSound.EnemyExplosion);
+                _audio?.Trigger(StormaktSound.CopenhagenStructureBreak);
             if (deathAge < 270 || _bossRadioCard is not null) return;
             BeginCopenhagenSuperfrigate(state);
             return;
@@ -7023,7 +7033,7 @@ internal sealed class StormaktGame
                 int supportNode = (wall.GapIndex + 2) % wall.Health.Length;
                 wall.Health[supportNode] = 0;
                 _score += 180;
-                _audio?.Trigger(StormaktSound.OresundSwitchBreak);
+                _audio?.Trigger(StormaktSound.CopenhagenCircuitOpen);
             }
             if (wall.Age > 250) state.DuoShieldWall = null;
         }
@@ -7075,7 +7085,7 @@ internal sealed class StormaktGame
                 state.DuoTurretHealth[turret] = Math.Max(0, state.DuoTurretHealth[turret] - 18);
             }
             state.DuoRepairFlash = 30;
-            _audio?.Trigger(StormaktSound.TwinCannon);
+            _audio?.Trigger(StormaktSound.CopenhagenNavalVolley);
         }
         if (state.DuoCycleAge >= 300) state.DuoCycleAge = 0;
     }
@@ -7118,7 +7128,7 @@ internal sealed class StormaktGame
                     if (state.DuoTurretHealth[turret] == 0)
                     {
                         _score += 420;
-                        _audio?.Trigger(StormaktSound.EnemyExplosion);
+                        _audio?.Trigger(StormaktSound.CopenhagenStructureBreak);
                     }
                     break;
                 }
@@ -7152,7 +7162,7 @@ internal sealed class StormaktGame
             if (wall.Health[node] == 0)
             {
                 _score += 150;
-                _audio?.Trigger(StormaktSound.OresundSwitchBreak);
+                _audio?.Trigger(StormaktSound.CopenhagenCircuitOpen);
             }
             return true;
         }
@@ -7190,7 +7200,7 @@ internal sealed class StormaktGame
                 _enemyShots.Add(new EnemyShot(turretX, turretY, dx / length * 2.25, dy / length * 2.25, 2));
             }
         }
-        _audio?.Trigger(StormaktSound.Broadside);
+        _audio?.Trigger(StormaktSound.CopenhagenNavalVolley);
     }
 
     private void StepCopenhagenDuoRepair(CopenhagenWorldState state)
@@ -7205,7 +7215,7 @@ internal sealed class StormaktGame
             state.DuoTurretHealth[turret] = Math.Max(1, maximum / 2);
             state.DuoRepairFlash = 75;
             state.DuoRepairTurret = turret;
-            _audio?.Trigger(StormaktSound.TitheUpgradeInstall);
+            _audio?.Trigger(StormaktSound.CopenhagenMaterialRewrite);
             return;
         }
     }
@@ -7219,7 +7229,7 @@ internal sealed class StormaktGame
         if (ship == 1) state.DuoElefantenChargeAge = 0;
         _score += 2_800;
         _enemyShots.Clear();
-        _audio?.Trigger(StormaktSound.EnemyExplosion);
+        _audio?.Trigger(StormaktSound.CopenhagenStructureBreak);
         if (state.DuoHealth.All(health => health <= 0)) state.DuoDeathAge = 1;
     }
 
@@ -7294,10 +7304,10 @@ internal sealed class StormaktGame
                 state.SuperDrones.Clear();
                 _score += 15_000;
                 ActivateBossRadio(CopenhagenSuperFallRadio);
-                _audio?.Trigger(StormaktSound.Broadside);
+                _audio?.Trigger(StormaktSound.CopenhagenNavalVolley);
             }
             if (deathAge is 22 or 48 or 79 or 116 or 158 or 207 or 261)
-                _audio?.Trigger(StormaktSound.EnemyExplosion);
+                _audio?.Trigger(StormaktSound.CopenhagenStructureBreak);
             if (deathAge < 320 || _bossRadioCard is not null) return;
             BeginCopenhagenLanding(state);
             return;
@@ -7330,7 +7340,7 @@ internal sealed class StormaktGame
             for (int drone = -1; drone <= 1; drone++)
                 state.SuperDrones.Add(new CopenhagenRoyalDrone(centerX + drone * 18, centerY + 28,
                     drone * 0.32, 0.72, state.SuperTestFixture ? 6 : 24, state.SuperDroneSerial++));
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.CopenhagenSignalCue);
         }
         if (state.SuperPhaseAge % 92 == 0)
         {
@@ -7462,7 +7472,7 @@ internal sealed class StormaktGame
         {
             state.SuperSupportShown = true;
             state.SuperSupportFlash = 90;
-            _audio?.Trigger(StormaktSound.TwinCannon);
+            _audio?.Trigger(StormaktSound.CopenhagenNavalVolley);
         }
         state.SuperSupportFlash = Math.Max(0, state.SuperSupportFlash - 1);
         if (state.SuperSectionHealth[3] > 0) return;
@@ -7527,7 +7537,7 @@ internal sealed class StormaktGame
                 {
                     state.SuperDrones.Remove(drone);
                     _score += 120;
-                    _audio?.Trigger(StormaktSound.EnemyExplosion);
+                    _audio?.Trigger(StormaktSound.CopenhagenStructureBreak);
                 }
                 continue;
             }
@@ -7599,7 +7609,7 @@ internal sealed class StormaktGame
             double length = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
             _enemyShots.Add(new EnemyShot(x, y, dx / length * 2.3, dy / length * 2.3, 2));
         }
-        _audio?.Trigger(StormaktSound.Broadside);
+        _audio?.Trigger(StormaktSound.CopenhagenNavalVolley);
     }
 
     private bool CopenhagenSuperShipInsideQuadrant(int quadrant)
@@ -7908,7 +7918,7 @@ internal sealed class StormaktGame
             ground.Potions--;
             ground.Health = Math.Min(ground.MaxHealth, ground.Health + 45);
             ground.PotionFlash = 30;
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.CopenhagenSignalCue);
         }
         StepCopenhagenGroundEnemies(ground);
         if (ground.Room == 1) StepCopenhagenArsenalCannon(ground);
@@ -7956,7 +7966,7 @@ internal sealed class StormaktGame
             ground.MarginalSelection = 0;
             ground.ChoicePointerSeen = false;
             ground.HasTarget = false;
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.CopenhagenSignalCue);
         }
         else if (ground.Room == 0 && ground.HeartPortOpen && atHeart &&
             ((buttons & Up) != 0 || Pressed(buttons, Fire) || pointerAttack))
@@ -7974,7 +7984,7 @@ internal sealed class StormaktGame
             ground.MarginalSelection = ground.ActiveMarginal == CopenhagenMarginalLaw.SilverIsBlade ? 1 : 0;
             ground.ChoicePointerSeen = false;
             ground.HasTarget = false;
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.CopenhagenSignalCue);
         }
         else if (ground.Room == 2 && ground.DoorReady && atHeart &&
             ((buttons & Fire) != 0 || pointerAttack))
@@ -7998,7 +8008,7 @@ internal sealed class StormaktGame
             ground.LocalLawSelection = Math.Max(0, (int)ground.LocalLaw - 1);
             ground.ChoicePointerSeen = false;
             ground.HasTarget = false;
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.CopenhagenSignalCue);
         }
         else if (ground.Room == 5 && ground.DoorReady && atHeart &&
             ((buttons & Fire) != 0 || pointerAttack))
@@ -8012,7 +8022,7 @@ internal sealed class StormaktGame
             ground.LocalLawSelection = Math.Max(0, (int)ground.LocalLaw - 1);
             ground.ChoicePointerSeen = false;
             ground.HasTarget = false;
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.CopenhagenSignalCue);
         }
         else if (ground.Room == 6 && ground.DoorReady && atHeart &&
             ((buttons & Fire) != 0 || pointerAttack))
@@ -8043,11 +8053,11 @@ internal sealed class StormaktGame
             {
                 enemy.DeathAge = 1;
                 _score += 320;
-                _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+                _audio?.Trigger(StormaktSound.CopenhagenSilverShatter);
             }
             else
             {
-                _audio?.Trigger(StormaktSound.DungeonSwordHit);
+                _audio?.Trigger(StormaktSound.CopenhagenSwordHit);
             }
         }
         if (ground.Room == 1 && ground.ArsenalCannonHealth > 0)
@@ -8062,7 +8072,7 @@ internal sealed class StormaktGame
                 ground.ArsenalCannonHealth = Math.Max(0, ground.ArsenalCannonHealth - 18);
                 ground.ArsenalCannonHitFlash = 7;
                 _audio?.Trigger(ground.ArsenalCannonHealth == 0
-                    ? StormaktSound.DungeonSilverShatter : StormaktSound.DungeonSwordHit);
+                    ? StormaktSound.CopenhagenSilverShatter : StormaktSound.CopenhagenSwordHit);
                 if (ground.ArsenalCannonHealth == 0) _score += 700;
             }
         }
@@ -8145,7 +8155,7 @@ internal sealed class StormaktGame
                 if (targetWord >= 0)
                 {
                     DamageCopenhagenWrathWord(ground, targetWord, damage);
-                    _audio?.Trigger(StormaktSound.DungeonSwordSlash);
+                    _audio?.Trigger(StormaktSound.CopenhagenSwordSlash);
                     return;
                 }
             }
@@ -8160,7 +8170,7 @@ internal sealed class StormaktGame
                     DamageCopenhagenWrath(ground, damage);
             }
         }
-        _audio?.Trigger(StormaktSound.DungeonSwordSlash);
+        _audio?.Trigger(StormaktSound.CopenhagenSwordSlash);
     }
 
     private void StepCopenhagenMarginalChoice(CopenhagenGroundState ground, uint buttons, RtsPointer pointer)
@@ -8168,12 +8178,12 @@ internal sealed class StormaktGame
         if (Pressed(buttons, Left) || Pressed(buttons, Up))
         {
             ground.MarginalSelection = 0;
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.CopenhagenSignalCue);
         }
         if (Pressed(buttons, Right) || Pressed(buttons, Down))
         {
             ground.MarginalSelection = 1;
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.CopenhagenSignalCue);
         }
         bool pointerMoved = ground.ChoicePointerSeen &&
             (pointer.X != ground.ChoicePointerX || pointer.Y != ground.ChoicePointerY);
@@ -8185,7 +8195,7 @@ internal sealed class StormaktGame
         if (Pressed(buttons, AltFire))
         {
             ground.MarginalChoosing = false;
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.CopenhagenSignalCue);
             return;
         }
         bool pointerCompile = pointer.Inside && (pointer.Buttons & 1) != 0;
@@ -8238,7 +8248,7 @@ internal sealed class StormaktGame
             ground.HeartPortOpen = true;
             DamageCopenhagenGround(ground);
             ActivateBossRadio(CopenhagenMarginalFaultRadio);
-            _audio?.Trigger(StormaktSound.OresundTrainCrash);
+            _audio?.Trigger(StormaktSound.CopenhagenStructureBreak);
         }
         if (ground.MarginalCompileAge < 128) return;
         ground.MarginalCompileAge = 0;
@@ -8295,7 +8305,7 @@ internal sealed class StormaktGame
         (double cannonX, double cannonY) = CopenhagenArsenalCannonPosition();
         if (Math.Abs(ground.KarlX - cannonX) < 17 && ground.KarlY > cannonY)
             DamageCopenhagenGround(ground);
-        _audio?.Trigger(StormaktSound.Broadside);
+        _audio?.Trigger(StormaktSound.CopenhagenNavalVolley);
     }
 
     private void BeginCopenhagenRosenborgRoom(CopenhagenGroundState ground)
@@ -8363,9 +8373,9 @@ internal sealed class StormaktGame
             {
                 target.DeathAge = 1;
                 _score += 320;
-                _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+                _audio?.Trigger(StormaktSound.CopenhagenSilverShatter);
             }
-            else _audio?.Trigger(StormaktSound.DungeonSwordHit);
+            else _audio?.Trigger(StormaktSound.CopenhagenSwordHit);
             return;
         }
 
@@ -8437,7 +8447,7 @@ internal sealed class StormaktGame
         (double coreX, double coreY) = CopenhagenRosenborgCorePosition();
         if (Math.Abs(ground.KarlX - coreX) < 23 || Math.Abs(ground.KarlY - coreY) < 17)
             DamageCopenhagenGround(ground);
-        _audio?.Trigger(StormaktSound.DungeonSilverWave);
+        _audio?.Trigger(StormaktSound.CopenhagenSilverWave);
     }
 
     private void DamageCopenhagenRosenborgCore(CopenhagenGroundState ground, int damage)
@@ -8448,9 +8458,9 @@ internal sealed class StormaktGame
         if (ground.RosenborgCoreHealth == 0)
         {
             _score += 900;
-            _audio?.Trigger(StormaktSound.DungeonSilverShatter);
+            _audio?.Trigger(StormaktSound.CopenhagenSilverShatter);
         }
-        else _audio?.Trigger(StormaktSound.DungeonSwordHit);
+        else _audio?.Trigger(StormaktSound.CopenhagenSwordHit);
     }
 
     private void BeginCopenhagenMemoryMachineRoom(CopenhagenGroundState ground)
@@ -8508,12 +8518,12 @@ internal sealed class StormaktGame
         if (Pressed(buttons, Left) || Pressed(buttons, Up))
         {
             ground.LegendSelection = 0;
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.CopenhagenSignalCue);
         }
         if (Pressed(buttons, Right) || Pressed(buttons, Down))
         {
             ground.LegendSelection = 1;
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.CopenhagenSignalCue);
         }
         bool pointerMoved = ground.ChoicePointerSeen &&
             (pointer.X != ground.ChoicePointerX || pointer.Y != ground.ChoicePointerY);
@@ -8784,7 +8794,7 @@ internal sealed class StormaktGame
             _score += 3_600;
             _audio?.Trigger(StormaktSound.CopenhagenRoyalArmorBreak);
         }
-        else _audio?.Trigger(StormaktSound.DungeonSwordHit);
+        else _audio?.Trigger(StormaktSound.CopenhagenSwordHit);
     }
 
     private void BeginCopenhagenKorrektoriusRoom(CopenhagenGroundState ground)
@@ -8836,12 +8846,12 @@ internal sealed class StormaktGame
         if (Pressed(buttons, Left) || Pressed(buttons, Up))
         {
             ground.LocalLawSelection = (ground.LocalLawSelection + choices - 1) % choices;
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.CopenhagenSignalCue);
         }
         if (Pressed(buttons, Right) || Pressed(buttons, Down))
         {
             ground.LocalLawSelection = (ground.LocalLawSelection + 1) % choices;
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.CopenhagenSignalCue);
         }
         bool pointerMoved = ground.ChoicePointerSeen &&
             (pointer.X != ground.ChoicePointerX || pointer.Y != ground.ChoicePointerY);
@@ -8853,7 +8863,7 @@ internal sealed class StormaktGame
         if (Pressed(buttons, AltFire) && ground.LocalLaw != CopenhagenLocalLaw.None)
         {
             ground.LocalLawChoosing = false;
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.CopenhagenSignalCue);
             return;
         }
         bool pointerCompile = pointer.Inside && (pointer.Buttons & 1) != 0;
@@ -8917,7 +8927,7 @@ internal sealed class StormaktGame
                 if (Math.Abs(ground.KarlX - ground.KorrektoriusTargetX) < 18 ||
                     Math.Abs(ground.KarlY - ground.KorrektoriusTargetY) < 15)
                     DamageCopenhagenGround(ground);
-                _audio?.Trigger(StormaktSound.Broadside);
+                _audio?.Trigger(StormaktSound.CopenhagenNavalVolley);
             }
             return;
         }
@@ -8948,7 +8958,7 @@ internal sealed class StormaktGame
         {
             ground.KorrektoriusCorruption = CopenhagenCorruption.None;
             ground.KorrektoriusCorruptionAge = 0;
-            _audio?.Trigger(StormaktSound.DungeonSilverWave);
+            _audio?.Trigger(StormaktSound.CopenhagenSilverWave);
             return;
         }
 
@@ -8988,7 +8998,7 @@ internal sealed class StormaktGame
                 DamageCopenhagenKorrektorius(ground, 18);
             _audio?.Trigger(StormaktSound.CopenhagenRoyalArmorBreak);
         }
-        else _audio?.Trigger(StormaktSound.DungeonSwordHit);
+        else _audio?.Trigger(StormaktSound.CopenhagenSwordHit);
     }
 
     private void DamageCopenhagenKorrektorius(CopenhagenGroundState ground, int damage)
@@ -9003,7 +9013,7 @@ internal sealed class StormaktGame
             _score += 4_800;
             _audio?.Trigger(StormaktSound.CopenhagenRoyalArmorBreak);
         }
-        else _audio?.Trigger(StormaktSound.DungeonSwordHit);
+        else _audio?.Trigger(StormaktSound.CopenhagenSwordHit);
     }
 
     private void BeginCopenhagenWrathRoom(CopenhagenGroundState ground)
@@ -9300,7 +9310,7 @@ internal sealed class StormaktGame
             _score += 720;
             _audio?.Trigger(StormaktSound.CopenhagenWordReclaim);
         }
-        else _audio?.Trigger(StormaktSound.DungeonSwordHit);
+        else _audio?.Trigger(StormaktSound.CopenhagenSwordHit);
     }
 
     private void DamageCopenhagenWrath(CopenhagenGroundState ground, int damage)
@@ -9313,7 +9323,7 @@ internal sealed class StormaktGame
             _score += 7_200;
             _audio?.Trigger(StormaktSound.CopenhagenRoyalArmorBreak);
         }
-        else _audio?.Trigger(StormaktSound.DungeonSwordHit);
+        else _audio?.Trigger(StormaktSound.CopenhagenSwordHit);
     }
 
     private void StepCopenhagenGroundEnemies(CopenhagenGroundState ground)
@@ -9366,7 +9376,7 @@ internal sealed class StormaktGame
         ground.HitFlash = 12;
         if (_developerMode && _levelId == 6) return;
         ground.Health = Math.Max(0, ground.Health - 20);
-        _audio?.Trigger(StormaktSound.HullHit);
+        _audio?.Trigger(StormaktSound.CopenhagenHullHit);
         if (ground.Health == 0) ground.Dead = true;
     }
 
@@ -9397,7 +9407,7 @@ internal sealed class StormaktGame
             {
                 state.DestroyedOrder.Add(hitNode);
                 _score += 450;
-                _audio?.Trigger(StormaktSound.EnemyExplosion);
+                _audio?.Trigger(StormaktSound.CopenhagenStructureBreak);
             }
         }
     }
@@ -9417,7 +9427,7 @@ internal sealed class StormaktGame
                 double angle = baseAngle + ray * Math.PI / 2.0;
                 _enemyShots.Add(new EnemyShot(x, y, Math.Cos(angle) * 1.75, Math.Sin(angle) * 1.75, 3));
             }
-            _audio?.Trigger(StormaktSound.TwinCannon);
+            _audio?.Trigger(StormaktSound.CopenhagenNavalVolley);
         }
 
         if (state.GateHealth[0] > 0 && attackAge % 180 == 36 && state.BarrierAge == 0)
@@ -9427,7 +9437,7 @@ internal sealed class StormaktGame
             int span = Math.Max(72, _width - 150);
             state.BarrierGapX = 75 + Math.Abs((attackAge * 37 + state.DestroyedOrder.Count * 53) % span);
             state.BarrierFlash = 12;
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.CopenhagenSignalCue);
         }
 
         if (state.GateHealth[2] > 0 && attackAge > 0 && attackAge % 150 == 0)
@@ -9441,7 +9451,7 @@ internal sealed class StormaktGame
                 state.GateHealth[target] = Math.Min(CopenhagenGateNodeMaxHealth, state.GateHealth[target] + 18);
                 state.RepairTarget = target;
                 state.RepairFlash = 30;
-                _audio?.Trigger(StormaktSound.TitheUpgradeInstall);
+                _audio?.Trigger(StormaktSound.CopenhagenMaterialRewrite);
             }
         }
     }
@@ -12108,6 +12118,7 @@ internal sealed class StormaktGame
             {
                 4 => StormaktSound.TitheHullHit,
                 5 => StormaktSound.SnapphaneHullHit,
+                6 => StormaktSound.CopenhagenHullHit,
                 _ => StormaktSound.HullHit,
             });
             return;
@@ -12128,6 +12139,7 @@ internal sealed class StormaktGame
         {
             4 => StormaktSound.TitheHullHit,
             5 => StormaktSound.SnapphaneHullHit,
+            6 => StormaktSound.CopenhagenHullHit,
             _ => StormaktSound.HullHit,
         });
         if (_lives <= 0)
