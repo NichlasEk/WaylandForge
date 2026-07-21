@@ -976,6 +976,7 @@ def append_oresund_section_machinery(entries: list[tuple[str, Image.Image]], sou
         ("oresund_laser_relay", 0, 1, (34, 38)),
         ("oresund_laser_relay_charged", 1, 1, (34, 38)),
     ]
+    sprites: dict[str, Image.Image] = {}
     for name, column, row, target in definitions:
         cell = source.crop((column * source.width // 2, row * source.height // 2,
                             (column + 1) * source.width // 2,
@@ -983,6 +984,13 @@ def append_oresund_section_machinery(entries: list[tuple[str, Image.Image]], sou
         sprite = split_alpha_components(cell, 1)[0]
         sprite.thumbnail(target, Image.Resampling.LANCZOS)
         entries.append((name, sprite))
+        sprites[name] = sprite
+    broken = sprites["oresund_laser_relay"].copy()
+    draw = ImageDraw.Draw(broken)
+    draw.line((3, broken.height - 5, broken.width - 4, 4), fill=(49, 31, 30, 245), width=3)
+    draw.line((broken.width // 2 - 5, broken.height // 2,
+               broken.width // 2 + 6, broken.height // 2 - 4), fill=(255, 138, 52, 235), width=2)
+    entries.append(("oresund_laser_relay_broken", broken))
 
 
 def append_oresund_crown_core(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
@@ -1035,6 +1043,43 @@ def append_oresund_laser_beams(entries: list[tuple[str, Image.Image]], source: I
         sprite = split_alpha_components(cell, 1)[0]
         sprite.thumbnail(target, Image.Resampling.LANCZOS)
         entries.append((name, sprite))
+
+
+def append_oresund_polish_effects(entries: list[tuple[str, Image.Image]]) -> None:
+    strike = Image.new("RGBA", (17, 13), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(strike)
+    draw.ellipse((1, 4, 15, 8), fill=(135, 88, 58, 150))
+    draw.ellipse((4, 2, 12, 10), fill=(214, 178, 94, 220))
+    draw.ellipse((6, 4, 10, 8), fill=(255, 229, 153, 255))
+    draw.point((8, 1), fill=(101, 197, 138, 210))
+    draw.point((8, 11), fill=(101, 197, 138, 210))
+    entries.append(("oresund_copper_strike", strike))
+
+    for index, radius in enumerate((5, 9, 13)):
+        burst = Image.new("RGBA", (31, 31), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(burst)
+        center = 15
+        draw.ellipse((center - radius, center - radius, center + radius, center + radius),
+                     fill=(79, 106, 119, 125))
+        middle = max(2, radius * 2 // 3)
+        draw.ellipse((center - middle, center - middle, center + middle, center + middle),
+                     fill=(179, 74, 48, 220))
+        core = max(1, radius // 3)
+        draw.ellipse((center - core, center - core, center + core, center + core),
+                     fill=(255, 174, 75, 255))
+        for dx, dy in ((-radius - 2, -2), (radius + 2, 1), (-2, radius + 2), (2, -radius - 2)):
+            draw.line((center, center, center + dx, center + dy), fill=(214, 178, 94, 205), width=1)
+        entries.append((f"oresund_machine_burst_{index}", burst))
+
+    for index, radius in enumerate((10, 18, 27)):
+        ring = Image.new("RGBA", (61, 61), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(ring)
+        center = 30
+        for start, end in ((8, 76), (98, 158), (188, 252), (278, 344)):
+            draw.arc((center - radius, center - radius, center + radius, center + radius),
+                     start=start + index * 7, end=end + index * 7,
+                     fill=(255, 138, 52, 235 - index * 35), width=2)
+        entries.append((f"oresund_debris_ring_{index}", ring))
 
 
 def append_rigsregnskabet(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
@@ -1969,6 +2014,7 @@ def build(
     append_oresund_train_coupling(entries, oresund_train_coupling_source)
     append_oresund_boss_effects(entries, oresund_boss_effects_source)
     append_oresund_laser_beams(entries, oresund_laser_beams_source)
+    append_oresund_polish_effects(entries)
     entries.append(("stora_balt_background", mirrored_background(background_source, 320, 700)))
     entries.append(("stora_balt_background_wide", mirrored_background(background_source, 400, 875)))
     entries.append(("skanska_background", mirrored_background(skanska_background_source, 320, 700)))

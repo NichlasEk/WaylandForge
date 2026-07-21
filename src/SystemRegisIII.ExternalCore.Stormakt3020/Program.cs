@@ -934,7 +934,7 @@ internal sealed class StormaktGame
                 _cooldown = 6;
                 if (snapphaneRescueChanneling) _cooldown *= 2;
                 _heat = Math.Min(120, _heat + 7);
-                _audio?.Trigger(_levelId is 0 or 1
+                _audio?.Trigger(_levelId is 0 or 1 or 2
                     ? ((_missionFrame / 6 & 1) == 0 ? StormaktSound.StoraBaltPlayerPiowA : StormaktSound.StoraBaltPlayerPiowB)
                     : StormaktSound.TwinCannon);
             }
@@ -11486,7 +11486,7 @@ internal sealed class StormaktGame
         _enemyShots.Clear();
         _shots.Clear();
         _audio?.SwitchMusic(StormaktMusicTrack.Boss);
-        _audio?.Trigger(StormaktSound.Deploy);
+        _audio?.Trigger(StormaktSound.OresundFortressArrival);
     }
 
     private void StepOresundBridgeSection()
@@ -11654,7 +11654,7 @@ internal sealed class StormaktGame
                     section.Notice = "KLAFF ÖPPNAD";
                     section.NoticeAge = 90;
                     _score += 200;
-                    _audio?.Trigger(StormaktSound.Deploy);
+                    _audio?.Trigger(StormaktSound.OresundSwitchBreak);
                     return;
                 }
                 continue;
@@ -11741,7 +11741,7 @@ internal sealed class StormaktGame
                     section.Notice = "HUVUDKOPPLING BRUTEN";
                     section.NoticeAge = 90;
                     _score += 100;
-                    _audio?.Trigger(StormaktSound.Broadside);
+                    _audio?.Trigger(StormaktSound.OresundCouplingBreak);
                 }
                 continue;
             }
@@ -11757,7 +11757,7 @@ internal sealed class StormaktGame
                     section.Notice = "VÄXEL MOT BUFFERT";
                     section.NoticeAge = 100;
                     _score += 150;
-                    _audio?.Trigger(StormaktSound.Deploy);
+                    _audio?.Trigger(StormaktSound.OresundSwitchBreak);
                 }
                 continue;
             }
@@ -11805,7 +11805,7 @@ internal sealed class StormaktGame
         section.LastEvent = eventName;
         _score += score;
         if (outcome != BridgeSectionOutcome.TrainCrashed)
-            _audio?.Trigger(StormaktSound.EnemyExplosion);
+            _audio?.Trigger(StormaktSound.OresundFortressBreach);
     }
 
     private void ResolveOresundBridgeShots(BridgeSectionState section)
@@ -11844,7 +11844,7 @@ internal sealed class StormaktGame
                     section.Notice = "KOPPLING BRUTEN";
                     section.NoticeAge = 90;
                     _score += 100;
-                    _audio?.Trigger(StormaktSound.Broadside);
+                    _audio?.Trigger(StormaktSound.OresundCouplingBreak);
                 }
                 continue;
             }
@@ -11877,7 +11877,7 @@ internal sealed class StormaktGame
         section.NoticeAge = 120;
         _score += score;
         _audio?.Trigger(outcome == BridgeSectionOutcome.SafeReroute
-            ? StormaktSound.OresundSwitchBreak : StormaktSound.EnemyExplosion);
+            ? StormaktSound.OresundSwitchBreak : StormaktSound.OresundFortressBreach);
     }
 
     private void StepShots()
@@ -12216,7 +12216,7 @@ internal sealed class StormaktGame
             if (intervention.Age == 180)
             {
                 intervention.ShotFired = true;
-                _audio?.Trigger(StormaktSound.Broadside);
+                _audio?.Trigger(StormaktSound.OresundSorenStrike);
             }
             if (intervention.Age == 210)
             {
@@ -12232,7 +12232,7 @@ internal sealed class StormaktGame
                     };
                     resultSection.NoticeAge = 100;
                 }
-                _audio?.Trigger(StormaktSound.EnemyExplosion);
+                _audio?.Trigger(StormaktSound.OresundFortressBreach);
             }
         }
         else
@@ -12638,7 +12638,8 @@ internal sealed class StormaktGame
             boss.LeftX -= separationSpeed;
             boss.RightX += separationSpeed;
             boss.Y += boss.PhaseAge < 120 ? 0.04 : 0.12;
-            if (boss.PhaseAge % 38 == 1) _audio?.Trigger(StormaktSound.EnemyExplosion);
+            if (boss.PhaseAge is 48 or 120 or 195 or 270)
+                _audio?.Trigger(StormaktSound.OresundFortressBreach);
             if (boss.PhaseAge >= 330)
             {
                 _oresundBoss = null;
@@ -12688,7 +12689,7 @@ internal sealed class StormaktGame
                 {
                     boss.CrossLockBroken = true;
                     boss.LastEvent = "SOREN BREAKS CROSSLOCK";
-                    _audio?.Trigger(StormaktSound.Broadside);
+                    _audio?.Trigger(StormaktSound.OresundSorenStrike);
                 }
             }
         }
@@ -12751,7 +12752,7 @@ internal sealed class StormaktGame
                     boss.LeftIntegrity = 0;
                     boss.LastEvent = "HELSINGOR DISABLED";
                     _score += 1_500;
-                    _audio?.Trigger(StormaktSound.EnemyExplosion);
+                    _audio?.Trigger(StormaktSound.OresundFortressBreach);
                 }
             }
             else
@@ -12762,7 +12763,7 @@ internal sealed class StormaktGame
                     boss.RightIntegrity = 0;
                     boss.LastEvent = "HELSINGBORG DISABLED";
                     _score += 1_500;
-                    _audio?.Trigger(StormaktSound.EnemyExplosion);
+                    _audio?.Trigger(StormaktSound.OresundFortressBreach);
                 }
             }
             boss.Health -= shot.Power;
@@ -12839,7 +12840,7 @@ internal sealed class StormaktGame
             _enemyShots.Add(new EnemyShot(coreX, coreY,
                 Math.Cos(angle) * 1.82, Math.Sin(angle) * 1.82, 4));
         }
-        _audio?.Trigger(StormaktSound.Broadside);
+        _audio?.Trigger(StormaktSound.OresundCrownPulse);
     }
 
     private void BeginOresundBossDeath(OresundFortressBossState boss)
@@ -13251,7 +13252,14 @@ internal sealed class StormaktGame
                 7 => StormaktSound.SkanskaConvoyPulse,
                 _ => StormaktSound.SkanskaIronPulse,
             },
-            2 when kind == 2 => StormaktSound.OresundGuardShot,
+            2 => kind switch
+            {
+                3 when _oresundBoss is not null => StormaktSound.OresundFortressPulse,
+                3 => StormaktSound.OresundRailPulse,
+                4 => StormaktSound.OresundFortressPulse,
+                2 or 7 => StormaktSound.OresundGuardShot,
+                _ => StormaktSound.OresundGuardShot,
+            },
             _ => StormaktSound.TwinCannon,
         };
         _audio?.Trigger(sound);
@@ -15934,8 +15942,14 @@ internal sealed class StormaktGame
                 DrawRect(frame, section.TrainX - 35, frontY - 24, 70, 48, 0xff282326);
                 DrawLine(frame, section.TrainX - 35, frontY + 20, section.TrainX + 34, frontY - 18, 0xffff8a34);
             }
-            int sparks = Math.Min(28, 6 + section.TrainCrashAge / 2);
-            DrawCircleOutline(frame, section.TrainX, frontY, sparks, 0xffff8a34);
+            int ringIndex = Math.Min(2, section.TrainCrashAge / 18);
+            if (_sprites?.TryGet($"oresund_debris_ring_{ringIndex}", out Sprite debrisRing) == true)
+            {
+                int ringSize = Math.Min(61, 22 + section.TrainCrashAge);
+                DrawSpriteScaledAlpha(frame, debrisRing, section.TrainX - ringSize / 2,
+                    frontY - ringSize / 2, ringSize, ringSize,
+                    (uint)Math.Max(72, 255 - section.TrainCrashAge * 3));
+            }
             return;
         }
 
@@ -16088,16 +16102,17 @@ internal sealed class StormaktGame
         if (intervention.TargetDestroyed)
         {
             if (intervention.Target == OresundSorenTarget.LaserRelay &&
-                _sprites?.TryGet("oresund_laser_relay_charged", out Sprite brokenRelay) == true)
+                _sprites?.TryGet("oresund_laser_relay_broken", out Sprite brokenRelay) == true)
             {
                 DrawSprite(frame, brokenRelay, targetX - brokenRelay.Width / 2,
                     targetY - brokenRelay.Height / 2);
             }
             else if (intervention.Age < 270)
             {
-                int blast = 8 + (intervention.Age / 4 & 5);
-                FillCircle(frame, targetX, targetY, blast, 0xffb33b2e);
-                FillCircle(frame, targetX, targetY, Math.Max(3, blast - 5), 0xffff8a34);
+                int burstIndex = Math.Min(2, Math.Max(0, intervention.Age - 210) / 20);
+                if (_sprites?.TryGet($"oresund_machine_burst_{burstIndex}", out Sprite burst) == true)
+                    DrawSpriteAlpha(frame, burst, targetX - burst.Width / 2,
+                        targetY - burst.Height / 2, (uint)Math.Max(80, 255 - (intervention.Age - 210) * 3));
             }
             else
             {
@@ -16107,13 +16122,17 @@ internal sealed class StormaktGame
                     DrawSprite(frame, disabledControl, targetX - disabledControl.Width / 2,
                         targetY - disabledControl.Height / 2);
                 }
+                else if (intervention.Target == OresundSorenTarget.RearCannon &&
+                    _sprites?.TryGet("oresund_train_wreck", out Sprite targetWreck) == true)
+                {
+                    DrawSpriteScaled(frame, targetWreck, targetX - 27, targetY - 24, 54, 48);
+                }
                 else
                 {
                     DrawRect(frame, targetX - 13, targetY - 8, 27, 16, 0xff201d1d);
                     FillCircle(frame, targetX + 4, targetY - 2, 3, 0xff8f3929);
                 }
             }
-            DrawLine(frame, targetX - 14, targetY + 10, targetX + 13, targetY - 9, 0xff3b2928);
         }
         else
         {
@@ -16161,8 +16180,11 @@ internal sealed class StormaktGame
             double t = Math.Clamp((intervention.Age - 180) / 30.0, 0.0, 1.0);
             int shotX = (int)Math.Round(intervention.X + (targetX - intervention.X) * t);
             int shotY = (int)Math.Round(intervention.Y + (targetY - intervention.Y) * t);
-            DrawLine(frame, x, y, shotX, shotY, 0xff87583a);
-            FillCircle(frame, shotX, shotY, 3, 0xffffd66b);
+            if (_sprites?.TryGet("oresund_copper_strike", out Sprite strike) == true)
+                DrawSpriteAlpha(frame, strike, shotX - strike.Width / 2,
+                    shotY - strike.Height / 2, 245);
+            else
+                FillCircle(frame, shotX, shotY, 3, 0xffffd66b);
         }
 
         if (_developerMode)
@@ -16740,8 +16762,11 @@ internal sealed class StormaktGame
                 double t = Math.Min(1.0, boss.SorenStrikeAge / 45.0);
                 int shotX = (int)Math.Round(-18 + (coreX + 18) * t);
                 int shotY = 61 + (int)Math.Round((coreY - 61) * t);
-                DrawLine(frame, -4, 61, shotX, shotY, 0xff87583a);
-                FillCircle(frame, shotX, shotY, 3, 0xffffd66b);
+                if (_sprites?.TryGet("oresund_copper_strike", out Sprite strike) == true)
+                    DrawSpriteAlpha(frame, strike, shotX - strike.Width / 2,
+                        shotY - strike.Height / 2, 245);
+                else
+                    FillCircle(frame, shotX, shotY, 3, 0xffffd66b);
             }
         }
 

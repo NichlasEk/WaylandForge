@@ -1,5 +1,12 @@
 # Öresund Stable Audio 3 SFX v1
 
+> Runtimepolish 2026-07-21: den aktiva 16-ljudssviten regenereras av
+> `tools/stormakt3020/generate_oresund_polish_sfx.py` med seeds
+> `3030301`-`3030316`. Snabba projektiler, Sörens kopparträff, växelbrott och
+> tågrullning är rena procedurljud; Stable Audio används endast för nio
+> engångshändelser. Informationen nedan beskriver den äldre v1-generationen
+> och behålls som provenance för råfilerna.
+
 Model: local `stabilityai/stable-audio-3-small-sfx`
 Runtime target: PCM16 stereo, 48 kHz.
 

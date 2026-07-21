@@ -1,6 +1,6 @@
 # Bana 3 - Öresunds järnkrona
 
-Status: checkpoints 1-6 landed 2026-07-15. The public `STRID` row starts a deterministic level-id 2 battle containing the systemic bridge section, physical flap pair, armored-train pass, Sören's state-reactive intervention and the complete Helsingör/Helsingborg boss.
+Status: checkpoints 1-6 and the first complete graphics/audio polish pass are landed. The public `STRID` row starts a deterministic level-id 2 battle containing the systemic bridge section, physical flap pair, armored-train pass, Sören's state-reactive intervention and the complete Helsingör/Helsingborg boss.
 
 ## Dramatiskt löfte
 
@@ -292,6 +292,16 @@ Alla Öresunds farliga strålar använder nu en sammanhängande trebildsfamilj f
 Resultatkortets gamla kodritade triangel är ersatt av den brutna kronkärnan och ritas inte under en pågående radioreplik. Representativa spår upprepades två gånger med identisk slutbild i båda upplösningarna, inklusive bossens sköldfas, kollaps och resultatkort.
 
 Musiken är Öresundsspecifik: normaldelen använder för närvarande `oresund-i-brand-v1.wav` som nivåns prototyploop och bossen byter till `kronans-sista-salva-loop-v2.wav`.
+
+## Grafik- och ljudpolish - 2026-07-21
+
+Öresund har nu en regenererbar svit med 16 nivåegna effekter. De ofta upprepade brovakts-, räls-, fästnings- och kronpulserna är rena korta syntljud med fallande tonhöjd. Sörens kopparträff, växelbrottet och tågets låga hjulrytm är också deterministiskt syntetiserade. Stable Audio används endast till separerade engångshändelser: laserrelä, klaffmotor, tågkrasch, fästningslåsning, kärnans öppning/brott, kopplingsbrott, bossankomst och rustningsbräsch. Karls kanon använder samma rena dubbel-piow som på de två föregående banorna.
+
+Alla runtimefiler är 48 kHz stereo PCM16 och byggs av `tools/stormakt3020/generate_oresund_polish_sfx.py` med seeds `3030301`-`3030316`. De fem repeterande projektilfamiljerna ligger omkring 230-440 Hz i nollgenomgångsfrekvens; tågrullningen ligger omkring 74 Hz. De ersätter de gamla långa, hårt limiterade klippen som kunde låta som motor eller såg när de staplades.
+
+Sörens båda ingrepp använder nu ett packat kopparskott i stället för linje/cirkel. Ett förstört laserrelä och ett förstört reservkanonmål har riktiga slutstates, tågets kodritade kraschring är en trestegs alfaring och maskinträffar använder en trestegs burstfamilj. Den tunna lasertelegraphen, elkablarna och spårväxellinjen förblir avsiktligt kodritade säkerhetsmarkörer.
+
+Åtta neutrala 400x280-kontrollrutor behöll sina tidigare fulla SHA-256-hashar. Ett komplett invincible-stridsspår nådde `JÄRNKRONAN BRUTEN / MOT SILVERKROPPEN` två gånger med wide-hash `d151617308e94673f8259b48f63c304ec78807d72b218d469ba51d8f5424232f`; motsvarande legacy-spår gav `3d00b8651ceab4258b805151b06e88ad53dfcae037552a1245f89c666bc2e62e`. Runtime laddade 99 effekter utan fallback.
 
 ## Acceptanskriterier
 
