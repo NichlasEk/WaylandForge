@@ -210,6 +210,39 @@ def append_stora_balt_effects(entries: list[tuple[str, Image.Image]]) -> None:
         entries.append((f"stora_balt_burst_{index}", burst))
 
 
+def append_skanska_effects(entries: list[tuple[str, Image.Image]]) -> None:
+    warning = Image.new("RGBA", (17, 17), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(warning)
+    green = (101, 197, 138, 235)
+    copper = (166, 107, 63, 245)
+    draw.line((1, 5, 1, 1, 5, 1), fill=green, width=2)
+    draw.line((11, 1, 15, 1, 15, 5), fill=green, width=2)
+    draw.line((1, 11, 1, 15, 5, 15), fill=copper, width=2)
+    draw.line((11, 15, 15, 15, 15, 11), fill=copper, width=2)
+    draw.line((8, 3, 8, 13), fill=(189, 248, 216, 210), width=1)
+    draw.rectangle((7, 7, 9, 9), fill=(255, 214, 107, 255))
+    entries.append(("skanska_spear_warning", warning))
+
+    for family, colors, sizes in [
+        ("skanska_ember_burst", ((47, 118, 80, 150), (101, 197, 138, 230), (255, 196, 107, 255)), (5, 8, 11)),
+        ("skanska_iron_burst", ((49, 54, 56, 190), (166, 107, 63, 235), (255, 138, 74, 255)), (6, 10, 14)),
+    ]:
+        for index, radius in enumerate(sizes):
+            burst = Image.new("RGBA", (31, 31), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(burst)
+            center = 15
+            outer, middle, core = colors
+            draw.ellipse((center - radius, center - radius, center + radius, center + radius), fill=outer)
+            inner = max(2, radius * 2 // 3)
+            draw.ellipse((center - inner, center - inner, center + inner, center + inner), fill=middle)
+            core_radius = max(1, radius // 3)
+            draw.ellipse((center - core_radius, center - core_radius,
+                          center + core_radius, center + core_radius), fill=core)
+            for dx, dy in ((0, -radius - 2), (radius + 2, 0), (0, radius + 2), (-radius - 2, 0)):
+                draw.point((center + dx, center + dy), fill=core)
+            entries.append((f"{family}_{index}", burst))
+
+
 def append_two_frame_portrait(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
     half = source.width // 2
     for name, crop in [
@@ -1926,6 +1959,7 @@ def build(
     append_sprites(entries, environment_source, ENVIRONMENT_SPRITES)
     append_sprites(entries, combat_detail_source, COMBAT_DETAIL_SPRITES)
     append_stora_balt_effects(entries)
+    append_skanska_effects(entries)
     append_oresund_props(entries, oresund_props_source)
     append_oresund_armored_train(entries, oresund_armored_train_source)
     append_oresund_twin_fortress(entries, oresund_twin_fortress_source)

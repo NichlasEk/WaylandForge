@@ -1,6 +1,16 @@
 # Bana 2 - Skånska skuggor
 
-Status: first complete deterministic gameplay pass is public and marked `STRID`. Remaining work is polish, not a campaign-progression blocker. The shared technical spine is maintained in `docs/stormakt3020-level-hook-map.md`; keep that map synchronized as level hooks land.
+Status: complete deterministic gameplay pass and first graphics/audio polish pass are public and marked `STRID`. Remaining work is balance and later campaign integration, not a progression blocker. The shared technical spine is maintained in `docs/stormakt3020-level-hook-map.md`; keep that map synchronized as level hooks land.
+
+## Grafik- och ljudpolish - 2026-07-21
+
+Bana 2 har nu en egen svit med 16 effekter. Sex ofta upprepade vapenljud - dimpuls, kopparsalva, konvojpuls, järnpuls, borrpuls och glödpuls - är korta deterministiska syntpulser med fallande tonhöjd. De använder inte modellgenererat brus och kan därför inte staplas till det tidigare motorsågsljudet. Karl CCLV återanvänder samma två rena spelar-piows som på Bana 1 eftersom skeppets kanon är densamma.
+
+Tio fasta Stable Audio 3-klipp ger engångshändelserna egen identitet: signalfyrens brott, Sörens ankomst och reträtt, Glimminges varning, järnkorparnas start, järnväggen, kristallspjutets varning, fasbrottet, brandläget och bossdöden. Alla runtimefiler är 48 kHz stereo PCM16, tonade i slutet och regenererbara med `tools/stormakt3020/generate_skanska_sfx.py` och fasta seeds `3020201`-`3020216`.
+
+Den grafiska passagen ersätter det sista enkla spjutkorset med en packad koppar/grön alfamarkör, gör Sörens två radarekon genomskinliga och lägger trestegs packade glöd- respektive järnbrott över Glimminges brand- och dödsövergångar. Sju nya små RGBA-effekter byggs deterministiskt in i WFSA-paketet av `tools/stormakt3020/build_assets.py`; den långa vertikala spjutlinjen är kvar som säkerhetstelegraf.
+
+Åtta neutrala kontrollrutor behöll sina tidigare pixelhashar i både 400x280 och 320x224. Ett komplett invincible testpass med kontinuerlig eld nådde resultatkortet två gånger med samma wide-hash `c0b40317e42237975af95d1482c81de62c9428cc44f9edf1f621dc56dea47285`; motsvarande legacy-slutbild gav `598896bd2f1964ff1f454b5271916180ae9939b686cd4c7d0b3cbdd0abf6ccf0`. Runtime laddade 92 effekter utan fallback.
 
 The generated starless black-forest mining plate is active in both 400x280 and 320x224 paths. Code-drawn crystal-tree scenery now appears only as a missing-WFSA fallback.
 

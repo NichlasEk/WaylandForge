@@ -934,7 +934,7 @@ internal sealed class StormaktGame
                 _cooldown = 6;
                 if (snapphaneRescueChanneling) _cooldown *= 2;
                 _heat = Math.Min(120, _heat + 7);
-                _audio?.Trigger(_levelId == 0
+                _audio?.Trigger(_levelId is 0 or 1
                     ? ((_missionFrame / 6 & 1) == 0 ? StormaktSound.StoraBaltPlayerPiowA : StormaktSound.StoraBaltPlayerPiowB)
                     : StormaktSound.TwinCannon);
             }
@@ -6010,7 +6010,7 @@ internal sealed class StormaktGame
                 Health = 140,
             };
             _enemies.Clear();
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.SkanskaSorenArrival);
         }
     }
 
@@ -12010,7 +12010,8 @@ internal sealed class StormaktGame
                     DisableLinkedTurret(target.Group);
                 }
                 _groundTargets.RemoveAt(index);
-                _audio?.Trigger(StormaktSound.EnemyExplosion);
+                _audio?.Trigger(target.Type == GroundTargetType.SignalBeacon
+                    ? StormaktSound.SkanskaSignalBreak : StormaktSound.EnemyExplosion);
                 continue;
             }
             if (target.Y > _height + 42)
@@ -12105,7 +12106,7 @@ internal sealed class StormaktGame
                 };
                 _enemyShots.Clear();
                 _audio?.SwitchMusic(StormaktMusicTrack.Boss);
-                _audio?.Trigger(StormaktSound.Deploy);
+                _audio?.Trigger(StormaktSound.SkanskaGlimmingeWarning);
             }
             return;
         }
@@ -12185,7 +12186,7 @@ internal sealed class StormaktGame
             rival.Interrupted = true;
             rival.InterruptAge = 0;
             _enemyShots.Clear();
-            _audio?.Trigger(StormaktSound.Broadside);
+            _audio?.Trigger(StormaktSound.SkanskaSorenDisengage);
         }
     }
 
@@ -12259,7 +12260,8 @@ internal sealed class StormaktGame
         {
             if (boss.PhaseAge is 1 or 35 or 70 or 110 or 155 or 210 or 270)
             {
-                _audio?.Trigger(boss.PhaseAge >= 155 ? StormaktSound.Broadside : StormaktSound.EnemyExplosion);
+                _audio?.Trigger(boss.PhaseAge >= 155
+                    ? StormaktSound.SkanskaGlimmingeWall : StormaktSound.EnemyExplosion);
             }
             if (boss.PhaseAge >= 300)
             {
@@ -12314,6 +12316,7 @@ internal sealed class StormaktGame
                 if (boss.Phase == 2 && previousHealth > GlimmingeBurningHealth && boss.Health <= GlimmingeBurningHealth)
                 {
                     boss.BurningTransitionAge = 1;
+                    _audio?.Trigger(StormaktSound.SkanskaGlimmingeBurning);
                 }
                 if (boss.Phase == 1 && boss.Health <= GlimmingePhaseTwoHealth)
                 {
@@ -12323,7 +12326,7 @@ internal sealed class StormaktGame
                     boss.PhaseTransitionX = boss.X;
                     _enemyShots.Clear();
                     ActivateBossRadio(BirgittePhaseTwoRadio);
-                    _audio?.Trigger(StormaktSound.Broadside);
+                    _audio?.Trigger(StormaktSound.SkanskaGlimmingePhaseBreak);
                 }
                 else if (boss.Phase == 2 && boss.Health <= 0)
                 {
@@ -12336,7 +12339,7 @@ internal sealed class StormaktGame
                     _enemies.Clear();
                     _crystalSpears.Clear();
                     ActivateBossRadio(BirgitteDeathRadio);
-                    _audio?.Trigger(StormaktSound.Broadside);
+                    _audio?.Trigger(StormaktSound.SkanskaGlimmingeDeath);
                     break;
                 }
             }
@@ -12365,6 +12368,7 @@ internal sealed class StormaktGame
                 int span = Math.Max(1, _width - 96);
                 int spearX = 48 + ((boss.PhaseAge / spearInterval * 97 + 41) % span);
                 _crystalSpears.Add(new CrystalSpear(spearX, 0));
+                _audio?.Trigger(StormaktSound.SkanskaSpearWarning);
             }
             if (burningStage && boss.PhaseAge % 72 == 12)
             {
@@ -12397,7 +12401,7 @@ internal sealed class StormaktGame
                 spread,
                 false));
         }
-        _audio?.Trigger(StormaktSound.Deploy);
+        _audio?.Trigger(StormaktSound.SkanskaRavenDeploy);
     }
 
     private void FireGlimmingeWall(GlimmingeState boss)
@@ -12412,7 +12416,7 @@ internal sealed class StormaktGame
             double x = 28 + column * ((_width - 56) / 6.0);
             _enemyShots.Add(new EnemyShot(x, boss.Y + 24, 0, 1.65, 6));
         }
-        _audio?.Trigger(StormaktSound.Broadside);
+        _audio?.Trigger(StormaktSound.SkanskaGlimmingeWall);
     }
 
     private void FireGlimmingeEmbers(GlimmingeState boss)
@@ -12424,7 +12428,7 @@ internal sealed class StormaktGame
             double angle = Math.PI / 8.0 + index * Math.PI / 4.0;
             _enemyShots.Add(new EnemyShot(x, y, Math.Cos(angle) * 1.45, Math.Sin(angle) * 1.45, 4));
         }
-        _audio?.Trigger(StormaktSound.EnemyExplosion);
+        _audio?.Trigger(StormaktSound.SkanskaEmberPulse);
     }
 
     private void StepCrystalSpears()
@@ -13235,9 +13239,22 @@ internal sealed class StormaktGame
         double dy = _shipY - y;
         double length = Math.Max(1.0, Math.Sqrt(dx * dx + dy * dy));
         _enemyShots.Add(new EnemyShot(x, y, dx / length * speed, dy / length * speed, kind));
-        _audio?.Trigger(_levelId == 0
-            ? StormaktSound.StoraBaltEnemyPiow
-            : _levelId == 2 && kind == 2 ? StormaktSound.OresundGuardShot : StormaktSound.TwinCannon);
+        StormaktSound sound = _levelId switch
+        {
+            0 => StormaktSound.StoraBaltEnemyPiow,
+            1 => kind switch
+            {
+                3 => StormaktSound.SkanskaCopperPulse,
+                4 => StormaktSound.SkanskaDrillPulse,
+                5 => StormaktSound.SkanskaMistPulse,
+                6 => StormaktSound.SkanskaIronPulse,
+                7 => StormaktSound.SkanskaConvoyPulse,
+                _ => StormaktSound.SkanskaIronPulse,
+            },
+            2 when kind == 2 => StormaktSound.OresundGuardShot,
+            _ => StormaktSound.TwinCannon,
+        };
+        _audio?.Trigger(sound);
     }
 
     private void SpawnGroundEncounters()
@@ -16373,7 +16390,8 @@ internal sealed class StormaktGame
     {
         if (_sprites?.TryGet("soren_radar_decoy", out Sprite decoy) == true)
         {
-            DrawSprite(frame, decoy, x - decoy.Width / 2, y - decoy.Height / 2);
+            uint opacity = (uint)(((phase / 5) & 1) == 0 ? 108 : 154);
+            DrawSpriteAlpha(frame, decoy, x - decoy.Width / 2, y - decoy.Height / 2, opacity);
             return;
         }
         uint signal = (phase / 5 & 1) == 0 ? 0xff2f7650 : 0xff315f47;
@@ -16452,6 +16470,7 @@ internal sealed class StormaktGame
                 DrawGlimmingeDrill(frame, x - 43, y + 29, -1, boss.PhaseAge, crystal, drillAlpha);
                 DrawGlimmingeDrill(frame, x + 43, y + 29, 1, boss.PhaseAge, crystal, drillAlpha);
             }
+            DrawGlimmingePackedEffects(frame, boss, x, y);
             return;
         }
 
@@ -16493,6 +16512,36 @@ internal sealed class StormaktGame
         }
     }
 
+    private void DrawGlimmingePackedEffects(uint[] frame, GlimmingeState boss, int x, int y)
+    {
+        if (boss.Phase == 2 && boss.BurningTransitionAge is > 0 and < 60)
+        {
+            int age = boss.BurningTransitionAge;
+            string emberName = $"skanska_ember_burst_{Math.Min(2, age / 20)}";
+            if (_sprites?.TryGet(emberName, out Sprite ember) == true)
+            {
+                uint opacity = (uint)Math.Clamp(255 - Math.Max(0, age - 38) * 9, 64, 255);
+                DrawSpriteAlpha(frame, ember, x - ember.Width / 2, y + 5 - ember.Height / 2, opacity);
+            }
+        }
+        if (boss.Phase != 3) return;
+        (int X, int Y, int Start)[] blasts =
+        [
+            (-36, 8, 0), (31, -10, 35), (0, 3, 70), (-19, -18, 110),
+            (25, 17, 155), (0, 7, 210), (-43, 11, 270),
+        ];
+        foreach ((int offsetX, int offsetY, int start) in blasts)
+        {
+            int age = boss.PhaseAge - start;
+            if (age < 0 || age >= 42) continue;
+            string burstName = $"skanska_iron_burst_{Math.Min(2, age / 14)}";
+            if (_sprites?.TryGet(burstName, out Sprite burst) != true) continue;
+            uint opacity = (uint)Math.Clamp(255 - Math.Max(0, age - 28) * 17, 68, 255);
+            DrawSpriteAlpha(frame, burst, x + offsetX - burst.Width / 2,
+                y + offsetY - burst.Height / 2, opacity);
+        }
+    }
+
     private void DrawGlimmingeDrill(uint[] frame, int x, int y, int direction, int age, uint crystal, uint alpha = 255)
     {
         if (_sprites?.TryGet("glimminge_drill_turret", out Sprite drill) == true)
@@ -16530,7 +16579,11 @@ internal sealed class StormaktGame
             {
                 uint warning = (spear.Age / 5 & 1) == 0 ? 0xff65c58a : 0xffa66b3f;
                 DrawLine(frame, spear.X, 18, spear.X, _height - 14, warning);
-                DrawLine(frame, spear.X - 8, _height - 23, spear.X + 8, _height - 23, warning);
+                if (_sprites?.TryGet("skanska_spear_warning", out Sprite marker) == true)
+                    DrawSpriteAlpha(frame, marker, spear.X - marker.Width / 2,
+                        _height - 23 - marker.Height / 2, (uint)(145 + spear.Age % 10 * 10));
+                else
+                    DrawLine(frame, spear.X - 8, _height - 23, spear.X + 8, _height - 23, warning);
                 continue;
             }
             int y = 18 + (spear.Age - 48) * 5;
