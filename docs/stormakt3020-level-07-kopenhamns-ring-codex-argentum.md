@@ -359,6 +359,13 @@ Landat kungaboss-pass:
 - `copenhagen-christian-wrath-v1-source.png` ger Christian fyra anspråksfaser, exponerad, träffad och fallen kropp samt ett separat kedjeankare;
 - runtime väljer fas- och sårbarhetssprite från verkligt bossstate, medan hitboxar, lagar, minnen och varningsytor förblir deterministiska.
 
+Landat Marginalfogde-pass:
+
+- `copenhagen-korrektorius-radio-v1-source.png` ger Korrektorius en egen neutral/talande radioidentitet med silverhalvmask och mekanisk pennhalo i stället för Frederik Nulls porträtt;
+- `copenhagen-korrektorius-v1-source.png` ger honom skyddad, skrivande, korrumperande, exponerad, träffad och fallen helkroppsform plus egna hela och brutna korrekturpennor i stället för Silverkroppens fogde;
+- `copenhagen-korrektorius-v1.prompt.md` bevarar båda built-in-prompterna och referensrollerna; de alpha-rensade produktionsbilderna packas reproducerbart av `build_assets.py`;
+- runtime väljer bild från verklig pennstatus, varningscykel, korruption, träff och död. Rörelse, träffytor, lagtext och telegraphgeometri förblir kodägda och har kvar fallback.
+
 Landat ljudeffekt-pass:
 
 - ljudsaneringen 2026-07-21 inventerade 23 nivåegna Small-SFX-filer plus ärvda generiska och äldre nivåljud. Samtliga 23 aktiva masters är nu ersatta av korta brusfria procedurljud och åtta nya nivåegna filer täcker sjösalva, skrovträff, strukturbristning, signal, svärd och silvermagi;

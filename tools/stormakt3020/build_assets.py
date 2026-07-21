@@ -1512,6 +1512,40 @@ def append_copenhagen_royal_ground_bosses(
             entries.append((name, sprite))
 
 
+def append_copenhagen_korrektorius(
+    entries: list[tuple[str, Image.Image]], source: Image.Image, portrait_source: Image.Image
+) -> None:
+    definitions = [
+        ("cph_korrektorius_idle", 0, 0, (66, 86)),
+        ("cph_korrektorius_cast", 1, 0, (76, 86)),
+        ("cph_korrektorius_corrupt", 2, 0, (82, 86)),
+        ("cph_korrektorius_exposed", 3, 0, (74, 86)),
+        ("cph_korrektorius_hit", 0, 1, (76, 86)),
+        ("cph_korrektorius_fallen", 1, 1, (96, 56)),
+        ("cph_korrektorius_pen", 2, 1, (30, 58)),
+        ("cph_korrektorius_pen_broken", 3, 1, (34, 54)),
+    ]
+    for name, column, row, target in definitions:
+        left = column * source.width // 4
+        top = row * source.height // 2
+        right = (column + 1) * source.width // 4
+        bottom = (row + 1) * source.height // 2
+        sprite = trim_alpha(source.crop((left, top, right, bottom)).convert("RGBA"))
+        sprite.thumbnail(target, Image.Resampling.LANCZOS)
+        entries.append((name, sprite))
+
+    half = portrait_source.width // 2
+    for state, crop in (
+        ("neutral", (0, 0, half, portrait_source.height)),
+        ("speak", (half, 0, portrait_source.width, portrait_source.height)),
+    ):
+        portrait = trim_alpha(portrait_source.crop(crop).convert("RGBA"))
+        portrait.thumbnail((38, 38), Image.Resampling.LANCZOS)
+        canvas = Image.new("RGBA", (38, 38), (0, 0, 0, 0))
+        canvas.alpha_composite(portrait, ((38 - portrait.width) // 2, 38 - portrait.height))
+        entries.append((f"portrait_korrektorius_{state}", canvas))
+
+
 def append_copenhagen_ring_assets(entries: list[tuple[str, Image.Image]], source: Image.Image) -> None:
     definitions = [
         ("copenhagen_gate_ring", 0, 0, (150, 150)),
@@ -1737,6 +1771,8 @@ def build(
     copenhagen_codex_input_path: Path,
     copenhagen_saga_king_input_path: Path,
     copenhagen_christian_wrath_input_path: Path,
+    copenhagen_korrektorius_input_path: Path,
+    copenhagen_korrektorius_portrait_input_path: Path,
     rts_road_input_path: Path,
     dungeon_karl_input_path: Path,
     dungeon_mine_input_path: Path,
@@ -1842,6 +1878,9 @@ def build(
     copenhagen_codex_source = Image.open(copenhagen_codex_input_path).convert("RGBA")
     copenhagen_saga_king_source = Image.open(copenhagen_saga_king_input_path).convert("RGBA")
     copenhagen_christian_wrath_source = Image.open(copenhagen_christian_wrath_input_path).convert("RGBA")
+    copenhagen_korrektorius_source = Image.open(copenhagen_korrektorius_input_path).convert("RGBA")
+    copenhagen_korrektorius_portrait_source = Image.open(
+        copenhagen_korrektorius_portrait_input_path).convert("RGBA")
     rts_road_source = Image.open(rts_road_input_path).convert("RGBA")
     dungeon_karl_source = Image.open(dungeon_karl_input_path).convert("RGBA")
     dungeon_mine_source = Image.open(dungeon_mine_input_path).convert("RGBA")
@@ -1977,6 +2016,8 @@ def build(
     append_copenhagen_codex_assets(entries, copenhagen_codex_source)
     append_copenhagen_royal_ground_bosses(
         entries, copenhagen_saga_king_source, copenhagen_christian_wrath_source)
+    append_copenhagen_korrektorius(
+        entries, copenhagen_korrektorius_source, copenhagen_korrektorius_portrait_source)
     append_rts_frontier_road(entries, rts_road_source)
     append_dungeon_assets(entries, dungeon_karl_source, dungeon_mine_source)
     append_dungeon_loot(entries, dungeon_loot_source)
@@ -2236,6 +2277,8 @@ def main() -> None:
     parser.add_argument("--copenhagen-codex-input", type=Path, default=Path("assets/stormakt3020/copenhagen-codex-v1.png"))
     parser.add_argument("--copenhagen-saga-king-input", type=Path, default=Path("assets/stormakt3020/copenhagen-saga-king-v1.png"))
     parser.add_argument("--copenhagen-christian-wrath-input", type=Path, default=Path("assets/stormakt3020/copenhagen-christian-wrath-v1.png"))
+    parser.add_argument("--copenhagen-korrektorius-input", type=Path, default=Path("assets/stormakt3020/copenhagen-korrektorius-v1.png"))
+    parser.add_argument("--copenhagen-korrektorius-portrait-input", type=Path, default=Path("assets/stormakt3020/copenhagen-korrektorius-radio-v1.png"))
     parser.add_argument("--rts-road-input", type=Path, default=Path("assets/stormakt3020/rts-danish-frontier-road-v1.png"))
     parser.add_argument("--dungeon-karl-input", type=Path, default=Path("assets/stormakt3020/dungeon-karl-v1.png"))
     parser.add_argument("--dungeon-mine-input", type=Path, default=Path("assets/stormakt3020/dungeon-gruva1-environment-v1.png"))
@@ -2346,6 +2389,8 @@ def main() -> None:
         args.copenhagen_codex_input,
         args.copenhagen_saga_king_input,
         args.copenhagen_christian_wrath_input,
+        args.copenhagen_korrektorius_input,
+        args.copenhagen_korrektorius_portrait_input,
         args.rts_road_input,
         args.dungeon_karl_input,
         args.dungeon_mine_input,

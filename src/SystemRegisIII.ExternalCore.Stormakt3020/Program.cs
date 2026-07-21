@@ -667,7 +667,7 @@ internal sealed class StormaktGame
     private static readonly RadioCard CopenhagenSagaKingClearRadio =
         new(0, 300, false, "KARL CCLV", "SAGAN HAR TYSTNAT", "MARGINALFOGDEN VÄNTAR", StormaktVoice.CopenhagenSagaKingClear, "portrait_karl");
     private static readonly RadioCard CopenhagenKorrektoriusRadio =
-        new(0, 330, false, "KORREKTORIUS", "JAG RÄTTAR EJ VÄRLDEN", "JAG RÄTTAR MENINGEN", StormaktVoice.CopenhagenKorrektorius, "portrait_frederik");
+        new(0, 330, false, "KORREKTORIUS", "JAG RÄTTAR EJ VÄRLDEN", "JAG RÄTTAR MENINGEN", StormaktVoice.CopenhagenKorrektorius, "portrait_korrektorius");
     private static readonly RadioCard CopenhagenKorrektoriusClearRadio =
         new(0, 300, false, "KARL CCLV", "PENNORNA HAR TYSTNAT", "CHRISTIANS VREDE VÄNTAR", StormaktVoice.CopenhagenKorrektoriusClear, "portrait_karl");
     private static readonly RadioCard CopenhagenWrathRadio =
@@ -19563,7 +19563,7 @@ internal sealed class StormaktGame
             int y = (int)Math.Round(penYD);
             if (ground.KorrektoriusPenHealth[pen] <= 0)
             {
-                if (_sprites?.TryGet("cph_pen_broken", out Sprite brokenPen) == true)
+                if (_sprites?.TryGet("cph_korrektorius_pen_broken", out Sprite brokenPen) == true)
                     DrawSprite(frame, brokenPen, x - brokenPen.Width / 2, y - brokenPen.Height / 2);
                 else
                 {
@@ -19578,7 +19578,7 @@ internal sealed class StormaktGame
             uint penColor = ground.KorrektoriusPenHitFlash[pen] > 0 ? 0xffffffff :
                 pen == ground.KorrektoriusActivePen ? 0xffff8a4a : 0xffb7c7d6;
             DrawLine(frame, x, y, tipX, tipY, penColor);
-            if (_sprites?.TryGet("cph_pen", out Sprite penSprite) == true)
+            if (_sprites?.TryGet("cph_korrektorius_pen", out Sprite penSprite) == true)
             {
                 DrawSprite(frame, penSprite, x - penSprite.Width / 2, y - penSprite.Height / 2);
                 if (pen == ground.KorrektoriusActivePen) DrawCircleOutline(frame, x, y, 15, penColor);
@@ -19596,11 +19596,24 @@ internal sealed class StormaktGame
         int bossX = (int)Math.Round(bossXD);
         int bossY = (int)Math.Round(bossYD);
         bool exposed = ground.KorrektoriusPenHealth.All(health => health <= 0);
-        if (_sprites?.TryGet("dk_silver_fogde_idle", out Sprite fogde) == true)
+        string korrektoriusSprite = ground.KorrektoriusHealth <= 0
+            ? "cph_korrektorius_fallen"
+            : ground.KorrektoriusHitFlash > 0
+                ? "cph_korrektorius_hit"
+                : exposed
+                    ? "cph_korrektorius_exposed"
+                    : ground.KorrektoriusCorruptionAge > 0
+                        ? "cph_korrektorius_corrupt"
+                        : warning
+                            ? "cph_korrektorius_cast"
+                            : "cph_korrektorius_idle";
+        if (_sprites?.TryGet(korrektoriusSprite, out Sprite korrektorius) == true)
         {
             if (ground.KorrektoriusHealth <= 0)
-                DrawSpriteScaledAlpha(frame, fogde, bossX - 31, bossY - 28, 62, 70, 120);
-            else DrawSpriteScaled(frame, fogde, bossX - 31, bossY - 48, 62, 70);
+                DrawSpriteAlpha(frame, korrektorius, bossX - korrektorius.Width / 2,
+                    bossY - korrektorius.Height / 2, 180);
+            else DrawSprite(frame, korrektorius, bossX - korrektorius.Width / 2,
+                bossY + 22 - korrektorius.Height);
         }
         else
         {
