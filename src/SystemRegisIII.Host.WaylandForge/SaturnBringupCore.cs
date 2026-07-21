@@ -129,6 +129,8 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
                 });
             var masterInternalBus = new SaturnCpu.Sh2InternalRegisterBus(systemMap.Bus, SaturnCpu.Sh2CpuRole.Master);
             var slaveInternalBus = new SaturnCpu.Sh2InternalRegisterBus(systemMap.Bus, SaturnCpu.Sh2CpuRole.Slave);
+            systemMap.MasterFrtInputCapture.Triggered += masterInternalBus.TriggerFrtInputCapture;
+            systemMap.SlaveFrtInputCapture.Triggered += slaveInternalBus.TriggerFrtInputCapture;
             var master = new SaturnCpu.Sh2Cpu("Master SH-2", masterInternalBus, resetVectorAddress: 0x0000_0000);
             var slave = new SaturnCpu.Sh2Cpu("Slave SH-2", slaveInternalBus, resetVectorAddress: 0x0000_0008);
             master.Reset();
