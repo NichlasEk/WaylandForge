@@ -934,7 +934,7 @@ internal sealed class StormaktGame
                 _cooldown = 6;
                 if (snapphaneRescueChanneling) _cooldown *= 2;
                 _heat = Math.Min(120, _heat + 7);
-                _audio?.Trigger(_levelId is 0 or 1 or 2
+                _audio?.Trigger(_levelId is 0 or 1 or 2 or 4
                     ? ((_missionFrame / 6 & 1) == 0 ? StormaktSound.StoraBaltPlayerPiowA : StormaktSound.StoraBaltPlayerPiowB)
                     : StormaktSound.TwinCannon);
             }
@@ -968,7 +968,7 @@ internal sealed class StormaktGame
                 _shots.Add(new Shot(_shipX + 11, _shipY - 5, 2, -5, 0xff7fc7ff, 5));
                 _altCooldown = 18;
                 _heat = Math.Min(120, _heat + 15);
-                _audio?.Trigger(StormaktSound.Broadside);
+                _audio?.Trigger(_levelId == 4 ? StormaktSound.TitheStandardBroadside : StormaktSound.Broadside);
             }
         }
 
@@ -1520,7 +1520,7 @@ internal sealed class StormaktGame
         _inSilverkroppenSelect = false;
         _inCopenhagenSelect = false;
         _inCodexWarSelect = false;
-        _audio?.Trigger(StormaktSound.Deploy);
+        _audio?.Trigger(_levelId == 4 ? StormaktSound.TitheArchiveCue : StormaktSound.Deploy);
     }
 
     private StormaktMusicTrack CurrentCopenhagenMusicTrack()
@@ -10877,7 +10877,7 @@ internal sealed class StormaktGame
             _shots.Clear();
             _enemyShots.Clear();
             _enemies.Clear();
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.TitheArchiveCue);
         }
         if (state.UpgradeInstalled)
         {
@@ -10912,7 +10912,7 @@ internal sealed class StormaktGame
             };
             ActivateBossRadio(RigsregnskabetIntroRadio);
             _audio?.SwitchMusic(StormaktMusicTrack.TitheBoss);
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.TitheArchiveCue);
         }
         if (state.Boss is not TitheBossState boss) return;
 
@@ -10921,7 +10921,7 @@ internal sealed class StormaktGame
         if (boss.Phase == 4)
         {
             boss.Y += 0.12;
-            if (boss.PhaseAge % 32 == 1) _audio?.Trigger(StormaktSound.EnemyExplosion);
+            if (boss.PhaseAge % 32 == 1) _audio?.Trigger(StormaktSound.TitheStructureBreak);
             if (boss.PhaseAge >= 480 && _bossRadioCard is null)
             {
                 state.Boss = null;
@@ -11032,7 +11032,7 @@ internal sealed class StormaktGame
             state.SealWalls.Clear();
             _score += 8_000;
             ActivateBossRadio(RigsregnskabetDeathRadio);
-            _audio?.Trigger(StormaktSound.EnemyExplosion);
+            _audio?.Trigger(StormaktSound.TitheStructureBreak);
         }
 
         if (boss.Age <= 170) return;
@@ -11061,7 +11061,7 @@ internal sealed class StormaktGame
             double vx = (index - (count - 1) / 2.0) * 0.75;
             _enemyShots.Add(new EnemyShot(x, y, vx, 2.0 + Math.Abs(vx) * 0.18, kind));
         }
-        _audio?.Trigger(StormaktSound.TwinCannon);
+        _audio?.Trigger(StormaktSound.TitheEnemyPulse);
     }
 
     private void StepTitheInterestWorks(TitheWorldState state)
@@ -11101,7 +11101,7 @@ internal sealed class StormaktGame
                 {
                     wall.Health[segment] = 0;
                     _score += 110;
-                    _audio?.Trigger(StormaktSound.EnemyExplosion);
+                    _audio?.Trigger(StormaktSound.TitheStructureBreak);
                 }
             }
             if (!wall.HitPlayer && Math.Abs(_shipY - wall.Y) < 9)
@@ -11135,7 +11135,7 @@ internal sealed class StormaktGame
             _shots.Clear();
             _enemyShots.Clear();
             _enemies.Clear();
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.TitheArchiveCue);
         }
         if (state.Age == 4_650 && !state.ShipUpgradeOffered)
         {
@@ -11147,7 +11147,7 @@ internal sealed class StormaktGame
             _shots.Clear();
             _enemyShots.Clear();
             _enemies.Clear();
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.TitheArchiveCue);
         }
     }
 
@@ -11179,7 +11179,7 @@ internal sealed class StormaktGame
         {
             state.RouteChoiceActive = true;
             state.RouteNoticeAge = 0;
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.TitheArchiveCue);
         }
         if (state.RouteChoiceActive && state.Age == 2_380)
         {
@@ -11270,7 +11270,7 @@ internal sealed class StormaktGame
                     _enemies.RemoveAt(enemyIndex);
                     state.Mines.RemoveAt(index);
                     _score += 650;
-                    _audio?.Trigger(StormaktSound.EnemyExplosion);
+                    _audio?.Trigger(StormaktSound.TitheStructureBreak);
                     goto NextMine;
                 }
             }
@@ -11304,7 +11304,7 @@ internal sealed class StormaktGame
                     mine.Vx = Math.Clamp((mine.X - _shipX) * 0.035, -2.6, 2.6);
                     mine.Vy = -2.7;
                     _score += 120;
-                    _audio?.Trigger(StormaktSound.Broadside);
+                    _audio?.Trigger(StormaktSound.TitheMagnetBroadside);
                 }
                 else
                 {
@@ -11340,12 +11340,12 @@ internal sealed class StormaktGame
         if (Pressed(buttons, Left) || Pressed(buttons, Right))
         {
             state.UpgradeSelection = 1 - state.UpgradeSelection;
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.TitheArchiveCue);
         }
         if (Pressed(buttons, AltFire))
         {
             state.ShowUpgradeDetails = !state.ShowUpgradeDetails;
-            _audio?.Trigger(StormaktSound.Deploy);
+            _audio?.Trigger(StormaktSound.TitheArchiveCue);
         }
         if (Pressed(buttons, Fire) || Pressed(buttons, Start))
         {
@@ -12069,7 +12069,7 @@ internal sealed class StormaktGame
             armor.ArmorCharge--;
             _heat = Math.Max(_heat, 90);
             _invulnerabilityFrames = 90;
-            _audio?.Trigger(StormaktSound.HullHit);
+            _audio?.Trigger(_levelId == 4 ? StormaktSound.TitheHullHit : StormaktSound.HullHit);
             return;
         }
         if (_invincibleTestMode)
@@ -12084,7 +12084,7 @@ internal sealed class StormaktGame
         _lives--;
         _heat = 120;
         _invulnerabilityFrames = 90;
-        _audio?.Trigger(StormaktSound.HullHit);
+        _audio?.Trigger(_levelId == 4 ? StormaktSound.TitheHullHit : StormaktSound.HullHit);
         if (_lives <= 0)
         {
             _gameOver = true;
@@ -13138,7 +13138,7 @@ internal sealed class StormaktGame
                     {
                         _score += enemy.Radius * 10;
                         _enemies.RemoveAt(i);
-                        _audio?.Trigger(StormaktSound.EnemyExplosion);
+                        _audio?.Trigger(_levelId == 4 ? StormaktSound.TitheStructureBreak : StormaktSound.EnemyExplosion);
                         removed = true;
                     }
                     break;
