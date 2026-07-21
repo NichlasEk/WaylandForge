@@ -73,6 +73,21 @@ CHIRPS = {
     "skanska-ember-pulse": (840.0, 280.0, 0.07),
 }
 
+TONAL_EVENTS = {
+    "skanska-glimminge-warning": [(0.00, 180.0, 10.0, 1.00), (0.18, 135.0, 9.0, 0.82), (0.40, 95.0, 7.0, 0.68)],
+    "skanska-raven-deploy": [(0.00, 420.0, 22.0, 0.72), (0.11, 330.0, 20.0, 0.64), (0.23, 245.0, 18.0, 0.48)],
+    "skanska-glimminge-wall": [(0.00, 220.0, 20.0, 0.85), (0.08, 190.0, 19.0, 0.78),
+                                (0.16, 165.0, 18.0, 0.72), (0.24, 145.0, 17.0, 0.66),
+                                (0.32, 125.0, 16.0, 0.60)],
+    "skanska-spear-warning": [(0.00, 660.0, 18.0, 0.56), (0.13, 440.0, 16.0, 0.52), (0.27, 330.0, 15.0, 0.42)],
+    "skanska-glimminge-phase-break": [(0.00, 150.0, 10.0, 0.90), (0.20, 112.0, 9.0, 0.82),
+                                       (0.45, 84.0, 8.0, 0.74), (0.72, 63.0, 7.0, 0.62)],
+    "skanska-glimminge-burning": [(0.00, 360.0, 12.0, 0.62), (0.12, 240.0, 10.0, 0.70),
+                                   (0.30, 130.0, 8.0, 0.76), (0.52, 82.0, 7.0, 0.58)],
+    "skanska-glimminge-death": [(0.00, 140.0, 8.0, 0.95), (0.26, 105.0, 7.0, 0.86),
+                                 (0.58, 78.0, 6.0, 0.78), (0.94, 55.0, 5.0, 0.68)],
+}
+
 
 def synthesize_chirp(path: Path, duration: float, start_hz: float, end_hz: float, harmonic: float) -> None:
     sample_rate = 48_000
@@ -99,6 +114,36 @@ def synthesize_chirp(path: Path, duration: float, start_hz: float, end_hz: float
         output.writeframes(pcm)
 
 
+def synthesize_tonal_event(path: Path, duration: float,
+                           tones: list[tuple[float, float, float, float]]) -> None:
+    sample_rate = 48_000
+    frames = round(duration * sample_rate)
+    samples: list[float] = []
+    for index in range(frames):
+        t = index / sample_rate
+        sample = 0.0
+        for delay, frequency, decay, strength in tones:
+            local = t - delay
+            if local < 0.0:
+                continue
+            attack = min(1.0, local / 0.006)
+            fundamental = math.sin(math.tau * frequency * local)
+            harmonic = math.sin(math.tau * frequency * 1.5 * local + 0.25) * 0.12
+            sample += (fundamental + harmonic) * math.exp(-decay * local) * attack * strength
+        progress = index / max(1, frames - 1)
+        samples.append(math.tanh(sample * 0.88) * max(0.0, 1.0 - progress) ** 0.45)
+    scale = 0.58 / max(max(abs(sample) for sample in samples), 1e-9)
+    with wave.open(str(path), "wb") as output:
+        output.setnchannels(2)
+        output.setsampwidth(2)
+        output.setframerate(sample_rate)
+        pcm = bytearray()
+        for sample in samples:
+            value = max(-32768, min(32767, round(sample * scale * 32767)))
+            pcm.extend(struct.pack("<hh", value, value))
+        output.writeframes(pcm)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--only", action="append", choices=[effect.name for effect in EFFECTS])
@@ -107,7 +152,8 @@ def main() -> None:
     ROOT.mkdir(parents=True, exist_ok=True)
     RAW.mkdir(parents=True, exist_ok=True)
 
-    stable_effects = [effect for effect in selected if effect.name not in CHIRPS]
+    procedural_names = set(CHIRPS) | set(TONAL_EVENTS)
+    stable_effects = [effect for effect in selected if effect.name not in procedural_names]
     model = None
     torchaudio = None
     if stable_effects:
@@ -119,12 +165,15 @@ def main() -> None:
         model = StableAudioModel.from_pretrained("small-sfx", device="cuda", model_half=True)
 
     for effect in selected:
-        procedural = effect.name in CHIRPS
+        procedural = effect.name in procedural_names
         raw = RAW / f"{effect.name}-{'procedural' if procedural else 'stable-audio3'}.wav"
         runtime = ROOT / f"{effect.name}.wav"
         if procedural:
             print(f"Synthesizing {effect.name} duration={effect.duration:.2f}s")
-            synthesize_chirp(raw, effect.duration, *CHIRPS[effect.name])
+            if effect.name in CHIRPS:
+                synthesize_chirp(raw, effect.duration, *CHIRPS[effect.name])
+            else:
+                synthesize_tonal_event(raw, effect.duration, TONAL_EVENTS[effect.name])
         else:
             print(f"Generating {effect.name} seed={effect.seed} duration={effect.duration:.2f}s")
             assert model is not None and torchaudio is not None
