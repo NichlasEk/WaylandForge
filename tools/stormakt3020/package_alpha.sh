@@ -37,6 +37,7 @@ rm -rf "$STAGE_DIR"
 mkdir -p "$STAGE_DIR/waylandforge-host" "$STAGE_DIR/stormakt-core" \
     "$STAGE_DIR/config" "$STAGE_DIR/assets/stormakt3020/music" \
     "$STAGE_DIR/assets/stormakt3020/sfx" "$STAGE_DIR/assets/stormakt3020/radio/voices" \
+    "$STAGE_DIR/assets/stormakt3020/video" \
     "$STAGE_DIR/lib" "$STAGE_DIR/licenses/opusfile" "$STAGE_DIR/licenses/opus" \
     "$STAGE_DIR/licenses/libogg"
 
@@ -50,8 +51,13 @@ cp "$ROOT_DIR/src/SystemRegisIII.Host.WaylandForge/bin/Release/net10.0/libwaylan
 cp "$ROOT_DIR/config/waylandforge.ui.toml" "$STAGE_DIR/config/waylandforge.ui.toml"
 cp "$ROOT_DIR/tools/stormakt3020/alpha-config.toml" "$STAGE_DIR/config/waylandforge.ui.local.toml"
 cp "$ROOT_DIR/tools/stormakt3020/alpha-launcher.sh" "$STAGE_DIR/start-stormakt-3020.sh"
+cp "$ROOT_DIR/tools/stormakt3020/play-intro.sh" "$STAGE_DIR/play-stormakt-intro.sh"
 cp "$ROOT_DIR/tools/waylandforge-audiod/waylandforge-audiod" "$STAGE_DIR/"
 cp "$ROOT_DIR/assets/stormakt3020/stormakt3020.wfsa" "$STAGE_DIR/assets/stormakt3020/"
+cp "$ROOT_DIR/assets/stormakt3020/video/stormakt-3020-algkriget-intro-v1.mp4" \
+    "$STAGE_DIR/assets/stormakt3020/video/"
+cp "$ROOT_DIR/assets/stormakt3020/video/intro-input.conf" \
+    "$STAGE_DIR/assets/stormakt3020/video/"
 encode_opus "$ROOT_DIR/assets/stormakt3020/stormakt-over-oresund-v1.wav" \
     "$STAGE_DIR/assets/stormakt3020/stormakt-over-oresund-v1.opus" 128k 2
 music_files=(
@@ -98,7 +104,8 @@ cp /usr/share/licenses/opusfile/LICENSE "$STAGE_DIR/licenses/opusfile/"
 cp /usr/share/licenses/opus/COPYING "$STAGE_DIR/licenses/opus/"
 cp /usr/share/licenses/libogg/COPYING "$STAGE_DIR/licenses/libogg/"
 cp "$ROOT_DIR/docs/stormakt3020-alpha-release.md" "$STAGE_DIR/README.md"
-chmod +x "$STAGE_DIR/start-stormakt-3020.sh" "$STAGE_DIR/waylandforge-audiod"
+chmod +x "$STAGE_DIR/start-stormakt-3020.sh" "$STAGE_DIR/play-stormakt-intro.sh" \
+    "$STAGE_DIR/waylandforge-audiod"
 
 printf '%s\n' "$VERSION" > "$STAGE_DIR/VERSION"
 (cd "$STAGE_DIR" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)

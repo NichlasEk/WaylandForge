@@ -154,6 +154,10 @@ if ! audio_ping; then
     exit 1
 fi
 
+if [ "${WAYLANDFORGE_START_STORMAKT:-0}" = "1" ]; then
+    "$ROOT_DIR/tools/stormakt3020/play-intro.sh" "$ROOT_DIR"
+fi
+
 dotnet "$HOST_DLL" &
 HOST_PID="$!"
 wait "$HOST_PID"

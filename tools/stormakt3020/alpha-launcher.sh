@@ -14,6 +14,10 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 cd "$ROOT_DIR"
+if [ -x ./play-stormakt-intro.sh ]; then
+    ./play-stormakt-intro.sh "$ROOT_DIR"
+fi
+
 if [ -x ./waylandforge-audiod ]; then
     ./waylandforge-audiod &
     AUDIO_PID="$!"
