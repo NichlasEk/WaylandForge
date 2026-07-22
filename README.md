@@ -115,37 +115,37 @@ When `EXT` is enabled, the debug panel shows process status, the selected comman
 For a first OpenTyrian lifecycle probe, build OpenTyrian without networking and point the external core at the process probe:
 
 ```sh
-cd /home/nichlas/opentyrian
+cd /home/user/opentyrian
 make WITH_NETWORK=false
 ```
 
 ```toml
 [external_core]
 command = "dotnet"
-args = "src/SystemRegisIII.ExternalCore.ProcessProbe/bin/Debug/net8.0/SystemRegisIII.ExternalCore.ProcessProbe.dll --target /usr/bin/env --cwd /home/nichlas/opentyrian -- SDL_VIDEODRIVER=dummy /home/nichlas/opentyrian/opentyrian"
-working_directory = "/home/nichlas/WaylandForge"
+args = "src/SystemRegisIII.ExternalCore.ProcessProbe/bin/Debug/net8.0/SystemRegisIII.ExternalCore.ProcessProbe.dll --target /usr/bin/env --cwd /home/user/opentyrian -- SDL_VIDEODRIVER=dummy /home/user/opentyrian/opentyrian"
+working_directory = "/home/user/WaylandForge"
 ```
 
 The probe does not capture OpenTyrian video yet. It starts the target as a separate process, relays its stdout/stderr to WaylandForge, and renders a simple status framebuffer over the same `WFEX` protocol. The `SDL_VIDEODRIVER=dummy` example avoids opening a separate SDL window during lifecycle testing.
 
-The local `/home/nichlas/opentyrian` checkout also has an opt-in `OPENTYRIAN_WFEX_PATH` exporter patch. It writes real OpenTyrian `JE_showVGA()` frames as `WFEX` records to a file or FIFO:
+The local `/home/user/opentyrian` checkout also has an opt-in `OPENTYRIAN_WFEX_PATH` exporter patch. It writes real OpenTyrian `JE_showVGA()` frames as `WFEX` records to a file or FIFO:
 
 ```sh
-cd /home/nichlas/opentyrian
+cd /home/user/opentyrian
 SDL_VIDEODRIVER=dummy OPENTYRIAN_WFEX_PATH=/tmp/opentyrian.wfex OPENTYRIAN_WFEX_MAX_FRAMES=2 ./opentyrian
 ```
 
 That requires the Tyrian 2.1 freeware data files in OpenTyrian's expected data path. Without them, OpenTyrian exits before the first game frame and reports the missing files through stderr.
-For this local setup, the downloaded freeware data lives in `/home/nichlas/opentyrian/data`, which is ignored by the OpenTyrian checkout.
+For this local setup, the downloaded freeware data lives in `/home/user/opentyrian/data`, which is ignored by the OpenTyrian checkout.
 
 To show those exported frames in WaylandForge, switch the external core to file-reader mode:
 
 ```toml
 [external_core]
 mode = "wfcore_socket" # stdio | wfex_file | wfcore_socket
-command = "/home/nichlas/WaylandForge/local/opentyrian-wfcore/opentyrian"
+command = "/home/user/WaylandForge/local/opentyrian-wfcore/opentyrian"
 args = ""
-working_directory = "/home/nichlas/WaylandForge/local/opentyrian-wfcore"
+working_directory = "/home/user/WaylandForge/local/opentyrian-wfcore"
 env = "OPENTYRIAN_WFCORE=1;SDL_VIDEODRIVER=dummy"
 wfex_path = "/tmp/waylandforge-opentyrian.wfex"
 socket_path = "/tmp/waylandforge-wfcore.sock"
@@ -160,9 +160,9 @@ Then run WaylandForge and press `EXT`. The host starts the local ignored OpenTyr
 ```toml
 [external_core2]
 mode = "wfcore_socket"
-command = "/home/nichlas/WaylandForge/local/raptor/build/bin/raptor"
+command = "/home/user/WaylandForge/local/raptor/build/bin/raptor"
 args = ""
-working_directory = "/home/nichlas/WaylandForge/local/raptor"
+working_directory = "/home/user/WaylandForge/local/raptor"
 env = "RAPTOR_WFCORE=1;SDL_VIDEODRIVER=dummy"
 wfex_path = "/tmp/waylandforge-raptor.wfex"
 socket_path = "/tmp/waylandforge-raptor.sock"
