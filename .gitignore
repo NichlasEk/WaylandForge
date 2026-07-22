@@ -11,3 +11,4 @@ core
 config/waylandforge.ui.local.toml
 
 local/
+dist/

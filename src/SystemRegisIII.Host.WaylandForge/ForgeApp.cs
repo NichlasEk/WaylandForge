@@ -24,6 +24,8 @@ internal sealed unsafe class ForgeApp : IDisposable
     private readonly ExternalProcessCore _externalCore;
     private readonly ExternalProcessCore _externalCore2;
     private readonly ExternalProcessCore _externalCore3;
+    private readonly bool _stormaktAlphaMode = string.Equals(
+        Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_ALPHA"), "1", StringComparison.Ordinal);
     private ISystemCore _core;
     private readonly ForgeInputSource _inputSource = new();
     private readonly WayControlInput _wayControlInput = new();
@@ -89,6 +91,11 @@ internal sealed unsafe class ForgeApp : IDisposable
         _externalCore3 = new ExternalProcessCore(_config.ExternalCore3, ResolveExternalDummyCorePath());
         _core = _saturnCore;
         ApplyConfig();
+        if (string.Equals(Environment.GetEnvironmentVariable("WAYLANDFORGE_START_STORMAKT"), "1",
+            StringComparison.Ordinal))
+        {
+            ToggleExternalCore3();
+        }
     }
 
     public uint Render(uint* pixels, int width, int height, int stridePixels, ulong frameIndex, ForgeInput input, PointerState pointer, TextInputEvent textInput, ScrollInputEvent scrollInput)
@@ -317,26 +324,30 @@ internal sealed unsafe class ForgeApp : IDisposable
             NextTheme();
         }
 
-        row = row.Next(42, out RectI extRect);
-        if (_ui.Button(new UiId("toolbar.ext"), extRect, "EXT", ReferenceEquals(_core, _externalCore)).Clicked)
+        if (!_stormaktAlphaMode)
         {
-            ToggleExternalCore();
-        }
+            row = row.Next(42, out RectI extRect);
+            if (_ui.Button(new UiId("toolbar.ext"), extRect, "EXT", ReferenceEquals(_core, _externalCore)).Clicked)
+            {
+                ToggleExternalCore();
+            }
 
-        row = row.Next(50, out RectI ext2Rect);
-        if (_ui.Button(new UiId("toolbar.ext2"), ext2Rect, "EXT2", ReferenceEquals(_core, _externalCore2)).Clicked)
-        {
-            ToggleExternalCore2();
-        }
+            row = row.Next(50, out RectI ext2Rect);
+            if (_ui.Button(new UiId("toolbar.ext2"), ext2Rect, "EXT2", ReferenceEquals(_core, _externalCore2)).Clicked)
+            {
+                ToggleExternalCore2();
+            }
 
-        row = row.Next(50, out RectI ext3Rect);
-        if (_ui.Button(new UiId("toolbar.ext3"), ext3Rect, "EXT3", ReferenceEquals(_core, _externalCore3)).Clicked)
-        {
-            ToggleExternalCore3();
+            row = row.Next(50, out RectI ext3Rect);
+            if (_ui.Button(new UiId("toolbar.ext3"), ext3Rect, "EXT3", ReferenceEquals(_core, _externalCore3)).Clicked)
+            {
+                ToggleExternalCore3();
+            }
         }
 
         row = row.Next(50, out RectI coreRect);
-        if (_ui.Button(new UiId("toolbar.core"), coreRect, "CORE", _viewportWindow.IsOpen).Clicked)
+        string coreLabel = _stormaktAlphaMode ? "SPEL" : "CORE";
+        if (_ui.Button(new UiId("toolbar.core"), coreRect, coreLabel, _viewportWindow.IsOpen).Clicked)
         {
             ToggleWindow(AppWindow.Viewport);
         }

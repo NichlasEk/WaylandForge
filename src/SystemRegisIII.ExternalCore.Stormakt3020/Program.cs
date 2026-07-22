@@ -328,9 +328,9 @@ internal sealed class StormaktGame
 
     private readonly int _width;
     private readonly int _height;
-    private readonly bool _invincibleTestMode = string.Equals(
+    private bool _invincibleTestMode = string.Equals(
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_INVINCIBLE"), "1", StringComparison.Ordinal);
-    private readonly bool _developerMode = string.Equals(
+    private bool _developerMode = string.Equals(
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_DEVELOPER_MODE"), "1", StringComparison.Ordinal);
     private readonly bool _rtsEvacuationTestMode = string.Equals(
         Environment.GetEnvironmentVariable("WAYLANDFORGE_STORMAKT_RTS_EVAC_TEST"), "1", StringComparison.Ordinal);
@@ -1602,19 +1602,36 @@ internal sealed class StormaktGame
 
     private void StepLevelSelect(uint buttons)
     {
+        int menuEntries = CampaignNames.Length + 2;
         bool warResumed = TryLoadCampaignSave(out StormaktCampaignSave campaign) && campaign.WarResumed;
         if (Pressed(buttons, Up))
         {
-            _levelSelection = (_levelSelection + CampaignNames.Length - 1) % CampaignNames.Length;
+            _levelSelection = (_levelSelection + menuEntries - 1) % menuEntries;
             _audio?.Trigger(StormaktSound.Deploy);
         }
         if (Pressed(buttons, Down))
         {
-            _levelSelection = (_levelSelection + 1) % CampaignNames.Length;
+            _levelSelection = (_levelSelection + 1) % menuEntries;
             _audio?.Trigger(StormaktSound.Deploy);
         }
         if (Pressed(buttons, Start))
         {
+            if (_levelSelection == CampaignNames.Length)
+            {
+                _developerMode = !_developerMode;
+                _lockedLevelNoticeFrames = 0;
+                _audio?.Trigger(StormaktSound.Deploy);
+                _previousButtons = buttons;
+                return;
+            }
+            if (_levelSelection == CampaignNames.Length + 1)
+            {
+                _invincibleTestMode = !_invincibleTestMode;
+                _lockedLevelNoticeFrames = 0;
+                _audio?.Trigger(StormaktSound.Deploy);
+                _previousButtons = buttons;
+                return;
+            }
             if (_levelSelection == 7 && warResumed)
             {
                 _inLevelSelect = false;
@@ -9366,6 +9383,11 @@ internal sealed class StormaktGame
 
     private void DamageCopenhagenGround(CopenhagenGroundState ground)
     {
+        if (_invincibleTestMode)
+        {
+            ground.HitFlash = 6;
+            return;
+        }
         if (ground.Room >= 2 && ground.ActiveMarginal == CopenhagenMarginalLaw.SilverIsShield &&
             ground.MaterialShieldCooldown == 0)
         {
@@ -9374,7 +9396,6 @@ internal sealed class StormaktGame
             return;
         }
         ground.HitFlash = 12;
-        if (_developerMode && _levelId == 6) return;
         ground.Health = Math.Max(0, ground.Health - 20);
         _audio?.Trigger(StormaktSound.CopenhagenHullHit);
         if (ground.Health == 0) ground.Dead = true;
@@ -12103,7 +12124,7 @@ internal sealed class StormaktGame
 
     private void DamageShip()
     {
-        if (_developerMode && _levelId is 5 or 6)
+        if (_invincibleTestMode)
         {
             _heat = Math.Max(_heat, 40);
             _invulnerabilityFrames = Math.Max(_invulnerabilityFrames, 8);
@@ -12121,11 +12142,6 @@ internal sealed class StormaktGame
                 6 => StormaktSound.CopenhagenHullHit,
                 _ => StormaktSound.HullHit,
             });
-            return;
-        }
-        if (_invincibleTestMode)
-        {
-            _heat = Math.Max(_heat, 40);
             return;
         }
         if (_invulnerabilityFrames > 0)
@@ -17510,7 +17526,7 @@ internal sealed class StormaktGame
         DrawText(frame, _width - 116, 5, "POÄNG " + _score.ToString("000000"), 0xff7fc7ff);
         DrawText(frame, 6, _height - 9, "LIV " + _lives, 0xffff6b7f);
         DrawText(frame, (_width - 114) / 2, _height - 9, "Z ELD  X BREDSIDA", 0xffb7c7d6);
-        if (_developerMode && _levelId is 5 or 6)
+        if (_invincibleTestMode)
             DrawText(frame, 6, 18, "DEVSKÖLD", 0xff77e6a0);
         int heatX = _width - 52;
         DrawRect(frame, heatX, _height - 8, 44, 4, 0xff2a3440);
@@ -20123,7 +20139,7 @@ internal sealed class StormaktGame
         DrawText(frame, 6, _height - 9, ground.Room == 7
             ? ground.CodexOpened ? "PROTOKOLL LÅST · INGET SVAR" : "NÄRMA DIG CODEXEN"
             : "Z HUGG  RMB GÅ  Q BRYG", 0xffb7c7d6);
-        if (_developerMode && _levelId == 6)
+        if (_invincibleTestMode)
             DrawText(frame, 6, 19, "DEVSKÖLD", 0xff77e6a0);
         if (ground.Room == 3 && ground.ActiveLegend != CopenhagenLegend.None)
         {
@@ -21908,7 +21924,7 @@ internal sealed class StormaktGame
         int panelTop = legacy ? 67 : 103;
         int panelBottom = _height - 12;
         int listY = legacy ? 77 : 116;
-        int rowHeight = legacy ? 15 : 17;
+        int rowHeight = legacy ? 12 : 14;
         string logoName = legacy ? "stormakt_logo_legacy" : "stormakt_logo_wide";
         if (_sprites?.TryGet(logoName, out Sprite logo) == true)
         {
@@ -21937,7 +21953,14 @@ internal sealed class StormaktGame
                 rowHeight - 2, index, $"{index + 1}  {CampaignNames[index]}", status);
         }
 
+        int toggleY = listY + CampaignNames.Length * rowHeight;
+        DrawLevelOption(frame, panelX + 12, toggleY, panelWidth - 24,
+            rowHeight - 2, CampaignNames.Length, "DEVLÄGE", _developerMode ? "PÅ" : "AV");
+        DrawLevelOption(frame, panelX + 12, toggleY + rowHeight, panelWidth - 24,
+            rowHeight - 2, CampaignNames.Length + 1, "DEVSKÖLD", _invincibleTestMode ? "PÅ" : "AV");
+
         string footer = _lockedLevelNoticeFrames > 0 ? "FÄLTTÅGET ÄR LÅST" :
+            _levelSelection >= CampaignNames.Length ? "START VÄXLA  STANDARD AV" :
             _levelSelection == 3 && File.Exists(DungeonSavePath("autosave")) ? "START FORTSÄTT  SLOW+START NYTT" :
             _levelSelection == 4 && File.Exists(DungeonSavePath("campaign")) ? "START KIT  SLOW+START STANDARD" :
             _developerMode && _levelSelection == 6 ? "START VÄLJ DEL" :
@@ -21960,7 +21983,8 @@ internal sealed class StormaktGame
         DrawRect(frame, x + 5, y + 4, 3, Math.Max(3, height - 8), selected ? 0xffffd66b : 0xff293d4b);
         int textY = y + (height - 7) / 2;
         DrawText(frame, x + 14, textY, title, selected ? 0xffffffff : 0xff91a7b5);
-        uint statusColor = status == "LÅST" ? 0xff697680 : status == "DEV" ? 0xff65c58a : 0xff7fc7ff;
+        uint statusColor = status is "LÅST" or "AV" ? 0xff697680 :
+            status is "DEV" or "PÅ" ? 0xff65c58a : 0xff7fc7ff;
         DrawText(frame, x + width - status.Length * 6 - 8, textY, status, statusColor);
     }
 
