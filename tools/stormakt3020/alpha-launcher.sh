@@ -25,4 +25,5 @@ fi
 
 export WAYLANDFORGE_START_STORMAKT=1
 export WAYLANDFORGE_STORMAKT_ALPHA=1
+export LD_LIBRARY_PATH="$ROOT_DIR/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 ./waylandforge-host/SystemRegisIII.Host.WaylandForge

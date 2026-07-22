@@ -10,6 +10,15 @@ ARCHIVE_PATH="$DIST_DIR/$PACKAGE_NAME.tar.gz"
 HOST_PROJECT="$ROOT_DIR/src/SystemRegisIII.Host.WaylandForge/SystemRegisIII.Host.WaylandForge.csproj"
 CORE_PROJECT="$ROOT_DIR/src/SystemRegisIII.ExternalCore.Stormakt3020/SystemRegisIII.ExternalCore.Stormakt3020.csproj"
 
+encode_opus() {
+    local source_path="$1"
+    local output_path="$2"
+    local bitrate="$3"
+    local channels="$4"
+    ffmpeg -hide_banner -loglevel error -y -i "$source_path" -vn -ar 48000 -ac "$channels" \
+        -c:a libopus -b:a "$bitrate" -vbr on -compression_level 10 "$output_path"
+}
+
 publish_project() {
     local project="$1"
     local output="$2"
@@ -27,7 +36,9 @@ publish_project() {
 rm -rf "$STAGE_DIR"
 mkdir -p "$STAGE_DIR/waylandforge-host" "$STAGE_DIR/stormakt-core" \
     "$STAGE_DIR/config" "$STAGE_DIR/assets/stormakt3020/music" \
-    "$STAGE_DIR/assets/stormakt3020/sfx" "$STAGE_DIR/assets/stormakt3020/radio/voices"
+    "$STAGE_DIR/assets/stormakt3020/sfx" "$STAGE_DIR/assets/stormakt3020/radio/voices" \
+    "$STAGE_DIR/lib" "$STAGE_DIR/licenses/opusfile" "$STAGE_DIR/licenses/opus" \
+    "$STAGE_DIR/licenses/libogg"
 
 make -C "$ROOT_DIR/tools/waylandforge-audiod"
 dotnet restore "$HOST_PROJECT" -r linux-x64 --disable-parallel -v minimal
@@ -41,7 +52,8 @@ cp "$ROOT_DIR/tools/stormakt3020/alpha-config.toml" "$STAGE_DIR/config/waylandfo
 cp "$ROOT_DIR/tools/stormakt3020/alpha-launcher.sh" "$STAGE_DIR/start-stormakt-3020.sh"
 cp "$ROOT_DIR/tools/waylandforge-audiod/waylandforge-audiod" "$STAGE_DIR/"
 cp "$ROOT_DIR/assets/stormakt3020/stormakt3020.wfsa" "$STAGE_DIR/assets/stormakt3020/"
-cp "$ROOT_DIR/assets/stormakt3020/stormakt-over-oresund-v1.wav" "$STAGE_DIR/assets/stormakt3020/"
+encode_opus "$ROOT_DIR/assets/stormakt3020/stormakt-over-oresund-v1.wav" \
+    "$STAGE_DIR/assets/stormakt3020/stormakt-over-oresund-v1.opus" 128k 2
 music_files=(
     tre-kronors-jarnmarsch-loop-v1.wav
     skanska-skuggor-loop-v1.wav
@@ -68,10 +80,23 @@ music_files=(
     kopenhamn-silvergryning-loop-v1.wav
 )
 for music_file in "${music_files[@]}"; do
-    cp "$ROOT_DIR/assets/stormakt3020/music/$music_file" "$STAGE_DIR/assets/stormakt3020/music/"
+    encode_opus "$ROOT_DIR/assets/stormakt3020/music/$music_file" \
+        "$STAGE_DIR/assets/stormakt3020/music/${music_file%.wav}.opus" 128k 2
 done
-cp "$ROOT_DIR/assets/stormakt3020/sfx/"*.wav "$STAGE_DIR/assets/stormakt3020/sfx/"
-cp "$ROOT_DIR/assets/stormakt3020/radio/voices/"*.wav "$STAGE_DIR/assets/stormakt3020/radio/voices/"
+for sfx_file in "$ROOT_DIR/assets/stormakt3020/sfx/"*.wav; do
+    sfx_name="$(basename "$sfx_file" .wav)"
+    encode_opus "$sfx_file" "$STAGE_DIR/assets/stormakt3020/sfx/$sfx_name.opus" 96k 2
+done
+for voice_file in "$ROOT_DIR/assets/stormakt3020/radio/voices/"*.wav; do
+    voice_name="$(basename "$voice_file" .wav)"
+    encode_opus "$voice_file" "$STAGE_DIR/assets/stormakt3020/radio/voices/$voice_name.opus" 48k 1
+done
+cp -L /usr/lib/libopusfile.so.0 "$STAGE_DIR/lib/"
+cp -L /usr/lib/libopus.so.0 "$STAGE_DIR/lib/"
+cp -L /usr/lib/libogg.so.0 "$STAGE_DIR/lib/"
+cp /usr/share/licenses/opusfile/LICENSE "$STAGE_DIR/licenses/opusfile/"
+cp /usr/share/licenses/opus/COPYING "$STAGE_DIR/licenses/opus/"
+cp /usr/share/licenses/libogg/COPYING "$STAGE_DIR/licenses/libogg/"
 cp "$ROOT_DIR/docs/stormakt3020-alpha-release.md" "$STAGE_DIR/README.md"
 chmod +x "$STAGE_DIR/start-stormakt-3020.sh" "$STAGE_DIR/waylandforge-audiod"
 

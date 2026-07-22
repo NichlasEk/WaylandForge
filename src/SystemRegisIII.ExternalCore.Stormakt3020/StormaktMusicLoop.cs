@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 
 internal sealed class StormaktMusicLoop : IDisposable
@@ -145,8 +146,9 @@ internal sealed class StormaktMusicLoop : IDisposable
             ]
             : [overridePath];
 
-        foreach (string path in paths)
+        foreach (string candidatePath in paths)
         {
+            string path = ResolveAudioPath(candidatePath);
             if (!File.Exists(path))
             {
                 continue;
@@ -154,41 +156,41 @@ internal sealed class StormaktMusicLoop : IDisposable
 
             try
             {
-                float[] samples = LoadPcm16StereoWav(path);
+                float[] samples = LoadStereoAudio(path);
                 string musicDirectory = Path.Combine(Path.GetDirectoryName(path)!, "music");
-                string ironMarchPath = Path.Combine(musicDirectory, "tre-kronors-jarnmarsch-loop-v1.wav");
-                string originalMenuPath = Path.Combine(musicDirectory, "marsch-mot-kopenhamn-v1.wav");
+                string ironMarchPath = ResolveAudioPath(Path.Combine(musicDirectory, "tre-kronors-jarnmarsch-loop-v1.wav"));
+                string originalMenuPath = ResolveAudioPath(Path.Combine(musicDirectory, "marsch-mot-kopenhamn-v1.wav"));
                 string menuPath = File.Exists(ironMarchPath) ? ironMarchPath : originalMenuPath;
-                float[]? menuSamples = File.Exists(menuPath) ? LoadPcm16StereoWav(menuPath) : null;
-                string skanskaPath = Path.Combine(musicDirectory, "skanska-skuggor-loop-v1.wav");
-                float[]? skanskaSamples = File.Exists(skanskaPath) ? LoadPcm16StereoWav(skanskaPath) : null;
-                string finalOresundPath = Path.Combine(musicDirectory, "oresunds-jarnkrona-loop-v1.wav");
-                string prototypeOresundPath = Path.Combine(musicDirectory, "oresund-i-brand-v1.wav");
+                float[]? menuSamples = File.Exists(menuPath) ? LoadStereoAudio(menuPath) : null;
+                string skanskaPath = ResolveAudioPath(Path.Combine(musicDirectory, "skanska-skuggor-loop-v1.wav"));
+                float[]? skanskaSamples = File.Exists(skanskaPath) ? LoadStereoAudio(skanskaPath) : null;
+                string finalOresundPath = ResolveAudioPath(Path.Combine(musicDirectory, "oresunds-jarnkrona-loop-v1.wav"));
+                string prototypeOresundPath = ResolveAudioPath(Path.Combine(musicDirectory, "oresund-i-brand-v1.wav"));
                 string oresundPath = File.Exists(finalOresundPath) ? finalOresundPath : prototypeOresundPath;
                 bool hasOresundScore = File.Exists(oresundPath);
-                float[] oresundSamples = hasOresundScore ? LoadPcm16StereoWav(oresundPath) : samples;
-                string rtsPath = Path.Combine(musicDirectory, "silverkroppen-faltmarsch-loop-v1.wav");
-                float[]? rtsSamples = File.Exists(rtsPath) ? LoadPcm16StereoWav(rtsPath) : null;
-                string dungeonPath = Path.Combine(musicDirectory, "lemminkainen-gruva1-v1.wav");
-                float[]? dungeonSamples = File.Exists(dungeonPath) ? LoadPcm16StereoWav(dungeonPath) : null;
-                string loopedBossPath = Path.Combine(musicDirectory, "kronans-sista-salva-loop-v2.wav");
-                string originalBossPath = Path.Combine(musicDirectory, "kronans-sista-salva-v1.wav");
+                float[] oresundSamples = hasOresundScore ? LoadStereoAudio(oresundPath) : samples;
+                string rtsPath = ResolveAudioPath(Path.Combine(musicDirectory, "silverkroppen-faltmarsch-loop-v1.wav"));
+                float[]? rtsSamples = File.Exists(rtsPath) ? LoadStereoAudio(rtsPath) : null;
+                string dungeonPath = ResolveAudioPath(Path.Combine(musicDirectory, "lemminkainen-gruva1-v1.wav"));
+                float[]? dungeonSamples = File.Exists(dungeonPath) ? LoadStereoAudio(dungeonPath) : null;
+                string loopedBossPath = ResolveAudioPath(Path.Combine(musicDirectory, "kronans-sista-salva-loop-v2.wav"));
+                string originalBossPath = ResolveAudioPath(Path.Combine(musicDirectory, "kronans-sista-salva-v1.wav"));
                 string bossPath = File.Exists(loopedBossPath) ? loopedBossPath : originalBossPath;
-                float[]? bossSamples = File.Exists(bossPath) ? LoadPcm16StereoWav(bossPath) : null;
-                string titheBossPath = Path.Combine(musicDirectory, "rigsregnskabet-boss-loop-v1.wav");
-                float[]? titheBossSamples = File.Exists(titheBossPath) ? LoadPcm16StereoWav(titheBossPath) : bossSamples;
-                string escapePath = Path.Combine(musicDirectory, "lemminkainen-flykt-v1.wav");
-                float[]? escapeSamples = File.Exists(escapePath) ? LoadPcm16StereoWav(escapePath) : null;
-                string reliefPath = Path.Combine(musicDirectory, "lemminkainen-lattnad-v1.wav");
-                float[]? reliefSamples = File.Exists(reliefPath) ? LoadPcm16StereoWav(reliefPath) : null;
-                string snapphanePath = Path.Combine(musicDirectory, "snapphanens-jakt-loop-v1.wav");
-                float[] snapphaneSamples = File.Exists(snapphanePath) ? LoadPcm16StereoWav(snapphanePath) : samples;
-                string redHoundsBossPath = Path.Combine(musicDirectory, "rode-hunde-drev-loop-v1.wav");
-                float[] redHoundsBossSamples = File.Exists(redHoundsBossPath) ? LoadPcm16StereoWav(redHoundsBossPath) : bossSamples ?? samples;
-                string snapphaneVictoryPath = Path.Combine(musicDirectory, "snapphanens-ed-seger-loop-v1.wav");
-                float[] snapphaneVictorySamples = File.Exists(snapphaneVictoryPath) ? LoadPcm16StereoWav(snapphaneVictoryPath) : reliefSamples ?? snapphaneSamples;
-                string codexPath = Path.Combine(musicDirectory, "codex-argentum-clock-loop-v1.wav");
-                float[] codexSamples = File.Exists(codexPath) ? LoadPcm16StereoWav(codexPath) : dungeonSamples ?? reliefSamples ?? samples;
+                float[]? bossSamples = File.Exists(bossPath) ? LoadStereoAudio(bossPath) : null;
+                string titheBossPath = ResolveAudioPath(Path.Combine(musicDirectory, "rigsregnskabet-boss-loop-v1.wav"));
+                float[]? titheBossSamples = File.Exists(titheBossPath) ? LoadStereoAudio(titheBossPath) : bossSamples;
+                string escapePath = ResolveAudioPath(Path.Combine(musicDirectory, "lemminkainen-flykt-v1.wav"));
+                float[]? escapeSamples = File.Exists(escapePath) ? LoadStereoAudio(escapePath) : null;
+                string reliefPath = ResolveAudioPath(Path.Combine(musicDirectory, "lemminkainen-lattnad-v1.wav"));
+                float[]? reliefSamples = File.Exists(reliefPath) ? LoadStereoAudio(reliefPath) : null;
+                string snapphanePath = ResolveAudioPath(Path.Combine(musicDirectory, "snapphanens-jakt-loop-v1.wav"));
+                float[] snapphaneSamples = File.Exists(snapphanePath) ? LoadStereoAudio(snapphanePath) : samples;
+                string redHoundsBossPath = ResolveAudioPath(Path.Combine(musicDirectory, "rode-hunde-drev-loop-v1.wav"));
+                float[] redHoundsBossSamples = File.Exists(redHoundsBossPath) ? LoadStereoAudio(redHoundsBossPath) : bossSamples ?? samples;
+                string snapphaneVictoryPath = ResolveAudioPath(Path.Combine(musicDirectory, "snapphanens-ed-seger-loop-v1.wav"));
+                float[] snapphaneVictorySamples = File.Exists(snapphaneVictoryPath) ? LoadStereoAudio(snapphaneVictoryPath) : reliefSamples ?? snapphaneSamples;
+                string codexPath = ResolveAudioPath(Path.Combine(musicDirectory, "codex-argentum-clock-loop-v1.wav"));
+                float[] codexSamples = File.Exists(codexPath) ? LoadStereoAudio(codexPath) : dungeonSamples ?? reliefSamples ?? samples;
                 float[] copenhagenRingSamples = LoadMusicOrFallback(musicDirectory, "kopenhamns-ring-loop-v1.wav", samples);
                 float[] copenhagenFrederikSamples = LoadMusicOrFallback(musicDirectory, "frederik-null-loop-v1.wav", bossSamples ?? copenhagenRingSamples);
                 float[] copenhagenEyeSamples = LoadMusicOrFallback(musicDirectory, "oresunds-oje-loop-v1.wav", bossSamples ?? copenhagenRingSamples);
@@ -223,13 +225,16 @@ internal sealed class StormaktMusicLoop : IDisposable
                     ? $"ready ({snapphaneVictorySamples.Length / Channels / SampleRate}s)" : "relief fallback";
                 string codexDescription = File.Exists(codexPath)
                     ? $"ready ({codexSamples.Length / Channels / SampleRate}s)" : "dungeon fallback";
-                int copenhagenTracks = Directory.EnumerateFiles(musicDirectory, "*-loop-v1.wav")
-                    .Count(candidate => Path.GetFileName(candidate) is "kopenhamns-ring-loop-v1.wav" or
-                        "frederik-null-loop-v1.wav" or "oresunds-oje-loop-v1.wav" or
-                        "kungliga-armadan-loop-v1.wav" or "christians-superfregatt-loop-v1.wav" or
-                        "kopenhamn-landning-loop-v1.wav" or "holmen-under-staden-loop-v1.wav" or
-                        "argentum-legender-loop-v1.wav" or "konung-christians-vrede-loop-v1.wav" or
-                        "kopenhamn-silvergryning-loop-v1.wav");
+                string[] copenhagenTrackNames =
+                [
+                    "kopenhamns-ring-loop-v1.wav", "frederik-null-loop-v1.wav", "oresunds-oje-loop-v1.wav",
+                    "kungliga-armadan-loop-v1.wav", "christians-superfregatt-loop-v1.wav",
+                    "kopenhamn-landning-loop-v1.wav", "holmen-under-staden-loop-v1.wav",
+                    "argentum-legender-loop-v1.wav", "konung-christians-vrede-loop-v1.wav",
+                    "kopenhamn-silvergryning-loop-v1.wav",
+                ];
+                int copenhagenTracks = copenhagenTrackNames.Count(name =>
+                    File.Exists(ResolveAudioPath(Path.Combine(musicDirectory, name))));
                 Console.Error.WriteLine($"Stormakt audio: loaded {Path.GetFileName(path)} ({samples.Length / Channels / SampleRate}s), " +
                     $"menu march={menuDescription}, Skanska score={skanskaDescription}, Oresund score={oresundDescription}, RTS score={rtsDescription}, dungeon score={dungeonDescription}, boss score={bossDescription}, Tithe boss={titheBossDescription}, " +
                     $"escape score={escapeDescription}, relief score={reliefDescription}, Snapphane chase={snapphaneDescription}, Red Hounds boss={redHoundsBossDescription}, Snapphane victory={snapphaneVictoryDescription}, Copenhagen suite={copenhagenTracks}/10, Codex clock={codexDescription}, " +
@@ -786,10 +791,10 @@ internal sealed class StormaktMusicLoop : IDisposable
         Dictionary<StormaktSound, LoadedEffect> effects = [];
         foreach ((StormaktSound sound, string file, float gain) in entries)
         {
-            string path = Path.Combine(sfxDirectory, file);
+            string path = ResolveAudioPath(Path.Combine(sfxDirectory, file));
             if (File.Exists(path))
             {
-                effects[sound] = new LoadedEffect(LoadPcm16StereoWav(path), gain);
+                effects[sound] = new LoadedEffect(LoadStereoAudio(path), gain);
             }
         }
         return effects;
@@ -947,13 +952,64 @@ internal sealed class StormaktMusicLoop : IDisposable
         Dictionary<StormaktVoice, LoadedEffect> voices = [];
         foreach ((StormaktVoice voice, string file, float gain) in entries)
         {
-            string path = Path.Combine(voiceDirectory, file);
+            string path = ResolveAudioPath(Path.Combine(voiceDirectory, file));
             if (File.Exists(path))
             {
-                voices[voice] = new LoadedEffect(LoadPcm16StereoWav(path), gain);
+                voices[voice] = new LoadedEffect(LoadStereoAudio(path), gain);
             }
         }
         return voices;
+    }
+
+    private static string ResolveAudioPath(string wavPath)
+    {
+        string opusPath = Path.ChangeExtension(wavPath, ".opus");
+        return File.Exists(opusPath) ? opusPath : wavPath;
+    }
+
+    private static float[] LoadStereoAudio(string path) =>
+        string.Equals(Path.GetExtension(path), ".opus", StringComparison.OrdinalIgnoreCase)
+            ? LoadOggOpus(path)
+            : LoadPcm16StereoWav(path);
+
+    private static float[] LoadOggOpus(string path)
+    {
+        IntPtr opusFile = OpusFileNative.OpenFile(path, out int error);
+        if (opusFile == IntPtr.Zero)
+        {
+            throw new InvalidDataException($"could not open Ogg Opus audio ({error})");
+        }
+
+        try
+        {
+            long frames = OpusFileNative.PcmTotal(opusFile, -1);
+            if (frames <= 0 || frames > int.MaxValue / Channels)
+            {
+                throw new InvalidDataException("Ogg Opus audio has an invalid duration");
+            }
+
+            float[] samples = new float[checked((int)frames * Channels)];
+            float[] buffer = new float[PacketFrames * Channels * 4];
+            int sampleOffset = 0;
+            while (sampleOffset < samples.Length)
+            {
+                int readFrames = OpusFileNative.ReadFloatStereo(opusFile, buffer, buffer.Length);
+                if (readFrames == 0) break;
+                if (readFrames < 0)
+                    throw new InvalidDataException($"Ogg Opus decode failed ({readFrames})");
+                int readSamples = checked(readFrames * Channels);
+                int copySamples = Math.Min(readSamples, samples.Length - sampleOffset);
+                Array.Copy(buffer, 0, samples, sampleOffset, copySamples);
+                sampleOffset += copySamples;
+            }
+            if (sampleOffset != samples.Length)
+                throw new InvalidDataException("Ogg Opus audio ended before its declared duration");
+            return samples;
+        }
+        finally
+        {
+            OpusFileNative.Free(opusFile);
+        }
     }
 
     private static float[] LoadPcm16StereoWav(string path)
@@ -1018,8 +1074,25 @@ internal sealed class StormaktMusicLoop : IDisposable
 
     private static float[] LoadMusicOrFallback(string directory, string file, float[] fallback)
     {
-        string path = Path.Combine(directory, file);
-        return File.Exists(path) ? LoadPcm16StereoWav(path) : fallback;
+        string path = ResolveAudioPath(Path.Combine(directory, file));
+        return File.Exists(path) ? LoadStereoAudio(path) : fallback;
+    }
+
+    private static class OpusFileNative
+    {
+        private const string Library = "libopusfile.so.0";
+
+        [DllImport(Library, EntryPoint = "op_open_file", CharSet = CharSet.Ansi)]
+        internal static extern IntPtr OpenFile(string path, out int error);
+
+        [DllImport(Library, EntryPoint = "op_pcm_total")]
+        internal static extern long PcmTotal(IntPtr opusFile, int linkIndex);
+
+        [DllImport(Library, EntryPoint = "op_read_float_stereo")]
+        internal static extern int ReadFloatStereo(IntPtr opusFile, [Out] float[] pcm, int bufferSize);
+
+        [DllImport(Library, EntryPoint = "op_free")]
+        internal static extern void Free(IntPtr opusFile);
     }
 
     private sealed class ActiveEffect(LoadedEffect effect)

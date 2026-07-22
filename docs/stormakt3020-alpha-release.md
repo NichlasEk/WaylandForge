@@ -2,6 +2,8 @@
 
 Detta är en tidig Linux x64-testversion för Wayland. Den innehåller egen
 .NET-runtime, Stormakt-kärnan, spelassets och WaylandForges lilla ljuddaemon.
+Musik, radio och effekter distribueras som Ogg Opus; de fria Opus-, opusfile-
+och libogg-biblioteken samt deras licenstexter följer med i paketet.
 
 ## Start
 
