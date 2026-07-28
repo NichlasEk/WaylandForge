@@ -195,9 +195,13 @@ start = "enter,space"
 a = "z"
 b = "x"
 x = "a"
+l = "q"
+r = "w"
 ```
 
-Those names map to Wayland/Linux key codes today. Future gamepad support should feed the same action names instead of adding emulator-specific hardmapping.
+Those names map to Wayland/Linux key codes. WCP controller bindings use the
+same actions; the Saturn defaults expose all thirteen digital-pad controls,
+including `L`/`R` on the physical shoulder buttons.
 
 ## Audio Daemon Prototype
 

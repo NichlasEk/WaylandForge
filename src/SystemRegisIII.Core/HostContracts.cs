@@ -18,6 +18,8 @@ public enum SaturnButtons : uint
     Z = 1 << 11,
     DeveloperSave = 1 << 19,
     DeveloperLoad = 1 << 20,
+    L = 1 << 21,
+    R = 1 << 22,
 }
 
 public readonly record struct SaturnInputState(

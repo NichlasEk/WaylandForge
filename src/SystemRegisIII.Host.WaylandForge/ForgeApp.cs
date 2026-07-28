@@ -506,7 +506,7 @@ internal sealed unsafe class ForgeApp : IDisposable
                 DrawMetric(x, y, "SYNC", _lastSentAudioVolume == _config.Audio.Volume ? "OK" : "PENDING"); y += 18;
             }
 
-            if (_ui.Collapsible(new UiId("debug.input"), ref column, "INPUT", 216, out RectI inputSection))
+            if (_ui.Collapsible(new UiId("debug.input"), ref column, "INPUT", 232, out RectI inputSection))
             {
                 int x = inputSection.X;
                 int y = inputSection.Y;
@@ -525,7 +525,8 @@ internal sealed unsafe class ForgeApp : IDisposable
                 DrawInputLamp(x, y, "A", ForgeInput.A, inputProfile); y += 16;
                 DrawInputLamp(x, y, "B", ForgeInput.B, inputProfile); y += 16;
                 DrawInputLamp(x, y, "C", ForgeInput.C, inputProfile); y += 16;
-                DrawInputLamp(x, y, "X/Y/Z", ForgeInput.X | ForgeInput.Y | ForgeInput.Z, inputProfile);
+                DrawInputLamp(x, y, "X/Y/Z", ForgeInput.X | ForgeInput.Y | ForgeInput.Z, inputProfile); y += 16;
+                DrawInputLamp(x, y, "L/R", ForgeInput.L | ForgeInput.R, inputProfile);
             }
 
             if (_ui.Collapsible(new UiId("debug.style"), ref column, "STYLE", 136, out RectI styleSection))
@@ -3192,6 +3193,8 @@ internal sealed unsafe class ForgeApp : IDisposable
         new("x", "X", ForgeInput.X),
         new("y", "Y", ForgeInput.Y),
         new("z", "Z", ForgeInput.Z),
+        new("l", "L", ForgeInput.L),
+        new("r", "R", ForgeInput.R),
         new("developer_save", "DEV SAVE", ForgeInput.DeveloperSave),
         new("developer_load", "DEV LOAD", ForgeInput.DeveloperLoad),
         new("scale_fit", "SCALE FIT", ForgeInput.ScaleFit),

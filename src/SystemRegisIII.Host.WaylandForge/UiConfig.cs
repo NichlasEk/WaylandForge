@@ -626,6 +626,8 @@ internal sealed class UiInputConfig
         ["x"] = "a",
         ["y"] = "s",
         ["z"] = "d",
+        ["l"] = "q",
+        ["r"] = "w",
         ["developer_save"] = "f1",
         ["developer_load"] = "f2",
         ["scale_fit"] = "1",
@@ -647,10 +649,12 @@ internal sealed class UiInputConfig
         ["start"] = "start",
         ["a"] = "south",
         ["b"] = "east",
-        ["c"] = "rightshoulder,righttriggerbutton",
+        ["c"] = "righttriggerbutton,righttrigger",
         ["x"] = "west",
         ["y"] = "north",
-        ["z"] = "leftshoulder,lefttriggerbutton",
+        ["z"] = "lefttriggerbutton,lefttrigger",
+        ["l"] = "leftshoulder",
+        ["r"] = "rightshoulder",
     };
 }
 

@@ -19,7 +19,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
     private const int FrameWidth = 320;
     private const int FrameHeight = 224;
     private const int InstructionsPerHostFrame = 50_000;
-    private const int VBlankIntervalInstructions = 100_000;
+    private const int VBlankIntervalInstructions = 140_000;
 
     private readonly uint[] _frame = new uint[FrameWidth * FrameHeight];
     private readonly uint[] _vdp1Frame = new uint[FrameWidth * FrameHeight];
@@ -217,13 +217,16 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
     private void TryRenderVdp1Frame(SaturnRuntime runtime)
     {
         IReadOnlyList<SaturnVdp1.Vdp1Command> commands = ReadVdp1CommandChain(runtime.SystemMap.Vdp1Area.Snapshot.Span);
+        ReadOnlySpan<byte> vdp2Registers = runtime.SystemMap.Vdp2Registers.Snapshot.Span;
         uint[] vdp2Frame = SaturnVdp2.Vdp2TilemapRenderer.Render(
             runtime.SystemMap.Vdp2Vram.Snapshot.Span,
             runtime.SystemMap.Vdp2Cram.Snapshot.Span,
-            runtime.SystemMap.Vdp2Registers.Snapshot.Span,
+            vdp2Registers,
             FrameWidth,
             FrameHeight);
-        bool hasCompletePrimitives = commands.Any(static command => command.End) &&
+        bool vdp1Visible = HasVisibleVdp1Priority(vdp2Registers);
+        bool hasCompletePrimitives = vdp1Visible &&
+            commands.Any(static command => command.End) &&
             commands.Any(static command =>
                 !command.Skip && command.CommandCode <= 0x7 &&
                 (command.CommandCode >= 0x4 ||
@@ -243,6 +246,11 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
                 _hasVdp1Frame = true;
             }
         }
+        else if (!vdp1Visible)
+        {
+            Array.Clear(_vdp1Frame);
+            _hasVdp1Frame = false;
+        }
 
         vdp2Frame.AsSpan().CopyTo(_frame);
 
@@ -258,6 +266,26 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
         }
 
         _hasVideoFrame = _hasVdp1Frame || runtime.SystemMap.Vdp2Registers.WriteCount > 0;
+    }
+
+    private static bool HasVisibleVdp1Priority(ReadOnlySpan<byte> vdp2Registers)
+    {
+        const int spritePriorityStart = 0xF0;
+        const int spritePriorityEnd = 0xF8;
+        if (vdp2Registers.Length < spritePriorityEnd)
+        {
+            return false;
+        }
+
+        for (int offset = spritePriorityStart; offset < spritePriorityEnd; offset++)
+        {
+            if ((vdp2Registers[offset] & 0x07) != 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static IReadOnlyList<SaturnVdp1.Vdp1Command> ReadVdp1CommandChain(ReadOnlySpan<byte> vram)
@@ -584,6 +612,8 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
         if (buttons.HasFlag(HostCore.SaturnButtons.X)) state |= SaturnInput.SaturnInputState.X;
         if (buttons.HasFlag(HostCore.SaturnButtons.Y)) state |= SaturnInput.SaturnInputState.Y;
         if (buttons.HasFlag(HostCore.SaturnButtons.Z)) state |= SaturnInput.SaturnInputState.Z;
+        if (buttons.HasFlag(HostCore.SaturnButtons.L)) state |= SaturnInput.SaturnInputState.L;
+        if (buttons.HasFlag(HostCore.SaturnButtons.R)) state |= SaturnInput.SaturnInputState.R;
         return state;
     }
 

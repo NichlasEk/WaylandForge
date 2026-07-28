@@ -21,6 +21,8 @@ internal sealed class ForgeInputSource : IInputSource
             ForgeInput.X |
             ForgeInput.Y |
             ForgeInput.Z |
+            ForgeInput.L |
+            ForgeInput.R |
             ForgeInput.DeveloperSave |
             ForgeInput.DeveloperLoad;
 
