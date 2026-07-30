@@ -1,6 +1,7 @@
 extern alias SaturnEmulator;
 
 using System.Security.Cryptography;
+using System.Diagnostics;
 using HostCore = SystemRegisIII.Core;
 using SaturnBus = SaturnEmulator::SystemRegisIII.Core.Core.Bus;
 using SaturnCd = SaturnEmulator::SystemRegisIII.Core.Core.CdBlock;
@@ -52,6 +53,9 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
     private int _frameWidth = DefaultFrameWidth;
     private int _frameHeight = DefaultFrameHeight;
     private string _warmStateStatus = File.Exists(WarmStatePath) ? "READY" : "EMPTY";
+    private double _lastEmulationMilliseconds;
+    private double _lastVideoRenderMilliseconds;
+    private double _videoRenderMillisecondsThisFrame;
 
     public ulong FrameIndex => _frameIndex;
     public SaturnCoreStatus Status => CreateStatus();
@@ -61,6 +65,9 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
             ? "-"
             : $"M{FormatInstructionCount(_runtime.Master.DynarecInstructions)} "
                 + $"S{FormatInstructionCount(_runtime.Slave.DynarecInstructions)}";
+    public double EmulationMilliseconds =>
+        Math.Max(0, _lastEmulationMilliseconds - _lastVideoRenderMilliseconds);
+    public double VideoRenderMilliseconds => _lastVideoRenderMilliseconds;
 
     public void LoadDisc(string? path)
     {
@@ -87,6 +94,9 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
         _lastButtons = HostCore.SaturnButtons.None;
         _hasVideoFrame = false;
         _hasVdp1Frame = false;
+        _lastEmulationMilliseconds = 0;
+        _lastVideoRenderMilliseconds = 0;
+        _videoRenderMillisecondsThisFrame = 0;
         SetFrameGeometry(DefaultFrameWidth, DefaultFrameHeight);
         Array.Clear(_frame);
         Array.Clear(_vdp1Frame);
@@ -191,7 +201,11 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
         if (_runtime is not null && string.IsNullOrEmpty(_fault))
         {
             _runtime.Smpc.SetDigitalPadState(MapInput(_lastButtons));
+            _videoRenderMillisecondsThisFrame = 0;
+            long emulationStart = Stopwatch.GetTimestamp();
             StepRuntime();
+            _lastEmulationMilliseconds = Stopwatch.GetElapsedTime(emulationStart).TotalMilliseconds;
+            _lastVideoRenderMilliseconds = _videoRenderMillisecondsThisFrame;
         }
 
         if (!_hasVideoFrame)
@@ -411,58 +425,66 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
 
     private void TryRenderVdp1Frame(SaturnRuntime runtime)
     {
-        IReadOnlyList<SaturnVdp1.Vdp1Command> commands = ReadVdp1CommandChain(runtime.SystemMap.Vdp1Area.Snapshot.Span);
-        ReadOnlySpan<byte> vdp2Registers = runtime.SystemMap.Vdp2Registers.Snapshot.Span;
-        var (displayWidth, displayHeight) = SaturnVdp2.Vdp2TilemapRenderer.GetDisplaySize(vdp2Registers);
-        SetFrameGeometry(displayWidth, displayHeight);
-        uint[] vdp2Frame = SaturnVdp2.Vdp2TilemapRenderer.Render(
-            runtime.SystemMap.Vdp2Vram.Snapshot.Span,
-            runtime.SystemMap.Vdp2Cram.Snapshot.Span,
-            vdp2Registers,
-            _frameWidth,
-            _frameHeight);
-        bool vdp1Visible = HasVisibleVdp1Priority(vdp2Registers);
-        bool hasCompletePrimitives = vdp1Visible &&
-            commands.Any(static command => command.End) &&
-            commands.Any(static command =>
-                !command.Skip && command.CommandCode <= 0x7 &&
-                (command.CommandCode >= 0x4 ||
-                 (command.CharacterWidth > 0 && command.CharacterHeight > 0)));
-        if (hasCompletePrimitives)
+        long renderStart = Stopwatch.GetTimestamp();
+        try
         {
-            SaturnVdp1.Vdp1RenderResult rendered = SaturnVdp1.Vdp1SoftwareRenderer.Render(
-                runtime.SystemMap.Vdp1Area.Snapshot.Span,
+            IReadOnlyList<SaturnVdp1.Vdp1Command> commands = ReadVdp1CommandChain(runtime.SystemMap.Vdp1Area.Snapshot.Span);
+            ReadOnlySpan<byte> vdp2Registers = runtime.SystemMap.Vdp2Registers.Snapshot.Span;
+            var (displayWidth, displayHeight) = SaturnVdp2.Vdp2TilemapRenderer.GetDisplaySize(vdp2Registers);
+            SetFrameGeometry(displayWidth, displayHeight);
+            uint[] vdp2Frame = SaturnVdp2.Vdp2TilemapRenderer.Render(
+                runtime.SystemMap.Vdp2Vram.Snapshot.Span,
                 runtime.SystemMap.Vdp2Cram.Snapshot.Span,
-                commands,
-                _transparentRows,
+                vdp2Registers,
                 _frameWidth,
                 _frameHeight);
-            if (rendered.DrawnPixels > 0)
+            bool vdp1Visible = HasVisibleVdp1Priority(vdp2Registers);
+            bool hasCompletePrimitives = vdp1Visible &&
+                commands.Any(static command => command.End) &&
+                commands.Any(static command =>
+                    !command.Skip && command.CommandCode <= 0x7 &&
+                    (command.CommandCode >= 0x4 ||
+                     (command.CharacterWidth > 0 && command.CharacterHeight > 0)));
+            if (hasCompletePrimitives)
             {
-                rendered.Frame.BgraPixels.Span.CopyTo(_vdp1Frame);
-                _hasVdp1Frame = true;
-            }
-        }
-        else if (!vdp1Visible)
-        {
-            Array.Clear(_vdp1Frame);
-            _hasVdp1Frame = false;
-        }
-
-        vdp2Frame.AsSpan().CopyTo(_frame);
-
-        if (_hasVdp1Frame)
-        {
-            for (int i = 0; i < _frame.Length; i++)
-            {
-                if ((_vdp1Frame[i] & 0xFF00_0000u) != 0)
+                SaturnVdp1.Vdp1RenderResult rendered = SaturnVdp1.Vdp1SoftwareRenderer.Render(
+                    runtime.SystemMap.Vdp1Area.Snapshot.Span,
+                    runtime.SystemMap.Vdp2Cram.Snapshot.Span,
+                    commands,
+                    _transparentRows,
+                    _frameWidth,
+                    _frameHeight);
+                if (rendered.DrawnPixels > 0)
                 {
-                    _frame[i] = _vdp1Frame[i];
+                    rendered.Frame.BgraPixels.Span.CopyTo(_vdp1Frame);
+                    _hasVdp1Frame = true;
                 }
             }
-        }
+            else if (!vdp1Visible)
+            {
+                Array.Clear(_vdp1Frame);
+                _hasVdp1Frame = false;
+            }
 
-        _hasVideoFrame = _hasVdp1Frame || runtime.SystemMap.Vdp2Registers.WriteCount > 0;
+            vdp2Frame.AsSpan().CopyTo(_frame);
+
+            if (_hasVdp1Frame)
+            {
+                for (int i = 0; i < _frame.Length; i++)
+                {
+                    if ((_vdp1Frame[i] & 0xFF00_0000u) != 0)
+                    {
+                        _frame[i] = _vdp1Frame[i];
+                    }
+                }
+            }
+
+            _hasVideoFrame = _hasVdp1Frame || runtime.SystemMap.Vdp2Registers.WriteCount > 0;
+        }
+        finally
+        {
+            _videoRenderMillisecondsThisFrame += Stopwatch.GetElapsedTime(renderStart).TotalMilliseconds;
+        }
     }
 
     private void SetFrameGeometry(int width, int height)
