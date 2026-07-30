@@ -63,7 +63,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
     public string ExecutionAccelerationStatus =>
         _runtime is null
             ? "-"
-            : $"M{FormatInstructionCount(_runtime.Master.DynarecInstructions)} "
+            : $"FC M{FormatInstructionCount(_runtime.Master.DynarecInstructions)} "
                 + $"S{FormatInstructionCount(_runtime.Slave.DynarecInstructions)}";
     public double EmulationMilliseconds =>
         Math.Max(0, _lastEmulationMilliseconds - _lastVideoRenderMilliseconds);
@@ -251,6 +251,8 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
             systemMap.SlaveFrtInputCapture.Triggered += slaveInternalBus.TriggerFrtInputCapture;
             var master = new SaturnCpu.Sh2Cpu("Master SH-2", masterInternalBus, resetVectorAddress: 0x0000_0000);
             var slave = new SaturnCpu.Sh2Cpu("Slave SH-2", slaveInternalBus, resetVectorAddress: 0x0000_0008);
+            master.FastCacheMode = true;
+            slave.FastCacheMode = true;
             master.Reset();
             slave.Reset();
 
