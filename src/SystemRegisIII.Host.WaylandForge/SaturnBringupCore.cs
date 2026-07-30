@@ -370,10 +370,11 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
                 break;
             }
 
-            runtime.Master.StepPreparedPureInstruction();
+            runtime.Master.StepPreparedCachedInstruction();
+
             if (slaveEnabled)
             {
-                runtime.Slave.StepPreparedPureInstruction();
+                runtime.Slave.StepPreparedCachedInstruction();
             }
 
             executed++;
