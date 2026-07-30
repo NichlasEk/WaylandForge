@@ -160,6 +160,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
     {
         SaturnRuntime runtime = _runtime!;
         int vblankOutOffset = VBlankIntervalInstructions / 2;
+        int vblankPhase = (int)(_instructionIndex % VBlankIntervalInstructions);
 
         try
         {
@@ -170,7 +171,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
                     runtime.Scu.RaiseSmpc();
                 }
 
-                if (_instructionIndex > 0 && _instructionIndex % VBlankIntervalInstructions == 0)
+                if (_instructionIndex > 0 && vblankPhase == 0)
                 {
                     TryRenderVdp1Frame(runtime);
                     runtime.Scu.RaiseVBlankIn();
@@ -178,7 +179,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
                     runtime.Smpc.NotifyVBlankIn();
                     _vblankInCount++;
                 }
-                else if (_instructionIndex > 0 && _instructionIndex % VBlankIntervalInstructions == vblankOutOffset)
+                else if (_instructionIndex > 0 && vblankPhase == vblankOutOffset)
                 {
                     runtime.Scu.RaiseVBlankOut();
                     runtime.SystemMap.NotifyVBlankOut();
@@ -209,6 +210,11 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
 
                 runtime.SlaveWasEnabled = runtime.Smpc.SlaveSh2Enabled;
                 _instructionIndex++;
+                vblankPhase++;
+                if (vblankPhase == VBlankIntervalInstructions)
+                {
+                    vblankPhase = 0;
+                }
             }
         }
         catch (Exception ex)
