@@ -290,7 +290,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
                 {
                     runtime.Master.RequestNmi();
                 }
-                else if (DeliverPendingInterrupt(runtime))
+                else if (runtime.Scu.HasPendingInterrupt && DeliverPendingInterrupt(runtime))
                 {
                     _smpcInterruptCount++;
                 }
@@ -316,6 +316,8 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
                     vblankPhase = 0;
                 }
             }
+
+            runtime.SystemMap.CdBlock.FlushPendingMasterInstructions();
         }
         catch (Exception ex)
         {
