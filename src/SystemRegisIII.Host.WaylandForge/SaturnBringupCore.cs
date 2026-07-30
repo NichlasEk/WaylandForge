@@ -1,11 +1,13 @@
 extern alias SaturnEmulator;
 
+using System.Security.Cryptography;
 using HostCore = SystemRegisIII.Core;
 using SaturnBus = SaturnEmulator::SystemRegisIII.Core.Core.Bus;
 using SaturnCd = SaturnEmulator::SystemRegisIII.Core.Core.CdBlock;
 using SaturnCpu = SaturnEmulator::SystemRegisIII.Core.Core.Cpu.Sh2;
 using SaturnInput = SaturnEmulator::SystemRegisIII.Core.Host.Input;
 using SaturnMemory = SaturnEmulator::SystemRegisIII.Core.Core.Memory;
+using SaturnSave = SaturnEmulator::SystemRegisIII.Core.Core.SaveState;
 using SaturnScu = SaturnEmulator::SystemRegisIII.Core.Core.Scu;
 using SaturnSmpc = SaturnEmulator::SystemRegisIII.Core.Core.Smpc;
 using SaturnSystem = SaturnEmulator::SystemRegisIII.Core.Core;
@@ -20,6 +22,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
     private const int DefaultFrameHeight = 224;
     private const int InstructionsPerHostFrame = 50_000;
     private const int VBlankIntervalInstructions = 140_000;
+    private const string WarmStatePath = "/home/nichlas/WaylandForge/local/saturn/warm-state.sr3.gz";
 
     private uint[] _frame = new uint[DefaultFrameWidth * DefaultFrameHeight];
     private uint[] _vdp1Frame = new uint[DefaultFrameWidth * DefaultFrameHeight];
@@ -47,9 +50,11 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
     private bool _hasVdp1Frame;
     private int _frameWidth = DefaultFrameWidth;
     private int _frameHeight = DefaultFrameHeight;
+    private string _warmStateStatus = File.Exists(WarmStatePath) ? "READY" : "EMPTY";
 
     public ulong FrameIndex => _frameIndex;
     public SaturnCoreStatus Status => CreateStatus();
+    public string WarmStateStatus => _warmStateStatus;
 
     public void LoadDisc(string? path)
     {
@@ -82,6 +87,87 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
     }
 
     public void Dispose() => Reset();
+
+    public bool SaveWarmState()
+    {
+        EnsureRuntime();
+        if (_runtime is null || !string.IsNullOrEmpty(_fault))
+        {
+            _warmStateStatus = "SAVE UNAVAILABLE";
+            return false;
+        }
+
+        try
+        {
+            SaturnSave.SaturnWarmState state = SaturnSave.SaturnWarmStateManager.Capture(
+                _runtime.BiosIdentity,
+                _runtime.SystemMap,
+                _runtime.Master,
+                _runtime.Slave,
+                _instructionIndex);
+            Directory.CreateDirectory(Path.GetDirectoryName(WarmStatePath)!);
+            string temporaryPath = WarmStatePath + ".tmp";
+            using (FileStream destination = File.Create(temporaryPath))
+            {
+                SaturnSave.SaturnWarmStateManager.Save(destination, state);
+            }
+
+            File.Move(temporaryPath, WarmStatePath, overwrite: true);
+            _warmStateStatus = $"SAVED {_instructionIndex:N0}";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _warmStateStatus = $"SAVE {ex.GetType().Name}";
+            return false;
+        }
+    }
+
+    public bool LoadWarmState()
+    {
+        EnsureRuntime();
+        if (_runtime is null || !string.IsNullOrEmpty(_fault))
+        {
+            _warmStateStatus = "LOAD UNAVAILABLE";
+            return false;
+        }
+
+        if (!File.Exists(WarmStatePath))
+        {
+            _warmStateStatus = "EMPTY";
+            return false;
+        }
+
+        try
+        {
+            SaturnSave.SaturnWarmState state;
+            using (FileStream source = File.OpenRead(WarmStatePath))
+            {
+                state = SaturnSave.SaturnWarmStateManager.Load(source);
+            }
+
+            _instructionIndex = SaturnSave.SaturnWarmStateManager.Restore(
+                state,
+                _runtime.BiosIdentity,
+                _runtime.SystemMap,
+                _runtime.Master,
+                _runtime.Slave);
+            _runtime.SlaveWasEnabled = _runtime.Smpc.SlaveSh2Enabled;
+            RebuildHostTimingCounters();
+            _hasVideoFrame = false;
+            _hasVdp1Frame = false;
+            Array.Clear(_frame);
+            Array.Clear(_vdp1Frame);
+            TryRenderVdp1Frame(_runtime);
+            _warmStateStatus = $"LOADED {_instructionIndex:N0}";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _warmStateStatus = $"LOAD {ex.GetType().Name}";
+            return false;
+        }
+    }
 
     public void StepFrame(HostCore.IInputSource input, HostCore.IFrameSink frameSink)
     {
@@ -121,6 +207,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
         {
             byte[] biosBytes = File.ReadAllBytes(_biosPath);
             var bios = new SaturnMemory.BiosImage(Path.GetFileName(_biosPath), biosBytes);
+            string biosIdentity = $"{bios.Name}:{Convert.ToHexString(SHA256.HashData(biosBytes))}";
             discImage = OpenDiscImage(_discPath);
             var systemMap = SaturnSystem.SaturnSystemMap.CreateBringup(
                 bios,
@@ -141,6 +228,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
 
             _runtime = new SaturnRuntime(
                 bios.Name,
+                biosIdentity,
                 systemMap,
                 master,
                 slave,
@@ -154,6 +242,18 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
             discImage?.Dispose();
             _fault = ex.GetType().Name + ": " + ex.Message;
         }
+    }
+
+    private void RebuildHostTimingCounters()
+    {
+        int vblankOutOffset = VBlankIntervalInstructions / 2;
+        _vblankInCount = _instructionIndex <= 0
+            ? 0
+            : (_instructionIndex - 1) / VBlankIntervalInstructions;
+        _vblankOutCount = _instructionIndex <= vblankOutOffset
+            ? 0
+            : ((_instructionIndex - 1 - vblankOutOffset) / VBlankIntervalInstructions) + 1;
+        _smpcInterruptCount = 0;
     }
 
     private void StepRuntime()
@@ -692,6 +792,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
 
     private sealed record SaturnRuntime(
         string BiosName,
+        string BiosIdentity,
         SaturnSystem.SaturnSystemMap SystemMap,
         SaturnCpu.Sh2Cpu Master,
         SaturnCpu.Sh2Cpu Slave,

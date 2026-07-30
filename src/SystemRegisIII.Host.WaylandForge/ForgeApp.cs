@@ -376,6 +376,21 @@ internal sealed unsafe class ForgeApp : IDisposable
             ToggleWindow(AppWindow.Input);
         }
 
+        if (ReferenceEquals(_core, _saturnCore) && layout.Width >= 1160)
+        {
+            row = row.Next(50, out RectI saveRect);
+            if (_ui.Button(new UiId("toolbar.save"), saveRect, "SAVE").Clicked)
+            {
+                _saturnCore.SaveWarmState();
+            }
+
+            row = row.Next(50, out RectI loadRect);
+            if (_ui.Button(new UiId("toolbar.load"), loadRect, "LOAD").Clicked)
+            {
+                _saturnCore.LoadWarmState();
+            }
+        }
+
         DrawAudioVolume(layout);
     }
 
@@ -461,7 +476,7 @@ internal sealed unsafe class ForgeApp : IDisposable
 
             if (ReferenceEquals(_core, _saturnCore))
             {
-                if (_ui.Collapsible(new UiId("debug.saturn"), ref column, "CORE STATUS", 426, out RectI saturnSection))
+                if (_ui.Collapsible(new UiId("debug.saturn"), ref column, "CORE STATUS", 444, out RectI saturnSection))
                 {
                     DrawSaturnCoreStatus(saturnSection);
                 }
@@ -576,6 +591,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         DrawMetric(x, y, "FRAME", status.FrameIndex.ToString()); y += 18;
         DrawMetric(x, y, "INSTR", status.InstructionIndex.ToString()); y += 20;
         DrawMetric(x, y, "VIDEO", status.HasVideoFrame ? "VDP1" : "DIAG"); y += 20;
+        DrawMetric(x, y, "WARM", TruncateMiddle(_saturnCore.WarmStateStatus, 18)); y += 20;
 
         _ui.Text(x, y, "SH2", UiTextKind.Muted); y += 14;
         DrawMetric(x, y, "M PC", FormatHex(status.MasterPc, 8)); y += 18;
