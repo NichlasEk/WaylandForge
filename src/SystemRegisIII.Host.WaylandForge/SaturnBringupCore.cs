@@ -16,14 +16,14 @@ namespace SystemRegisIII.Host.WaylandForge;
 
 internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
 {
-    private const int FrameWidth = 320;
-    private const int FrameHeight = 224;
+    private const int DefaultFrameWidth = 320;
+    private const int DefaultFrameHeight = 224;
     private const int InstructionsPerHostFrame = 50_000;
     private const int VBlankIntervalInstructions = 140_000;
 
-    private readonly uint[] _frame = new uint[FrameWidth * FrameHeight];
-    private readonly uint[] _vdp1Frame = new uint[FrameWidth * FrameHeight];
-    private readonly uint[] _transparentRows = new uint[FrameHeight];
+    private uint[] _frame = new uint[DefaultFrameWidth * DefaultFrameHeight];
+    private uint[] _vdp1Frame = new uint[DefaultFrameWidth * DefaultFrameHeight];
+    private uint[] _transparentRows = new uint[DefaultFrameHeight];
     private readonly string[] _biosCandidates =
     [
         Environment.GetEnvironmentVariable("WAYLANDFORGE_SATURN_BIOS") ?? string.Empty,
@@ -45,6 +45,8 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
     private string? _discPath;
     private bool _hasVideoFrame;
     private bool _hasVdp1Frame;
+    private int _frameWidth = DefaultFrameWidth;
+    private int _frameHeight = DefaultFrameHeight;
 
     public ulong FrameIndex => _frameIndex;
     public SaturnCoreStatus Status => CreateStatus();
@@ -74,6 +76,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
         _lastButtons = HostCore.SaturnButtons.None;
         _hasVideoFrame = false;
         _hasVdp1Frame = false;
+        SetFrameGeometry(DefaultFrameWidth, DefaultFrameHeight);
         Array.Clear(_frame);
         Array.Clear(_vdp1Frame);
     }
@@ -95,7 +98,7 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
         {
             RenderDiagnosticFrame();
         }
-        frameSink.Present(_frame, FrameWidth, FrameHeight, FrameWidth);
+        frameSink.Present(_frame, _frameWidth, _frameHeight, _frameWidth);
         _frameIndex++;
     }
 
@@ -218,12 +221,14 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
     {
         IReadOnlyList<SaturnVdp1.Vdp1Command> commands = ReadVdp1CommandChain(runtime.SystemMap.Vdp1Area.Snapshot.Span);
         ReadOnlySpan<byte> vdp2Registers = runtime.SystemMap.Vdp2Registers.Snapshot.Span;
+        var (displayWidth, displayHeight) = SaturnVdp2.Vdp2TilemapRenderer.GetDisplaySize(vdp2Registers);
+        SetFrameGeometry(displayWidth, displayHeight);
         uint[] vdp2Frame = SaturnVdp2.Vdp2TilemapRenderer.Render(
             runtime.SystemMap.Vdp2Vram.Snapshot.Span,
             runtime.SystemMap.Vdp2Cram.Snapshot.Span,
             vdp2Registers,
-            FrameWidth,
-            FrameHeight);
+            _frameWidth,
+            _frameHeight);
         bool vdp1Visible = HasVisibleVdp1Priority(vdp2Registers);
         bool hasCompletePrimitives = vdp1Visible &&
             commands.Any(static command => command.End) &&
@@ -238,8 +243,8 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
                 runtime.SystemMap.Vdp2Cram.Snapshot.Span,
                 commands,
                 _transparentRows,
-                FrameWidth,
-                FrameHeight);
+                _frameWidth,
+                _frameHeight);
             if (rendered.DrawnPixels > 0)
             {
                 rendered.Frame.BgraPixels.Span.CopyTo(_vdp1Frame);
@@ -266,6 +271,21 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
         }
 
         _hasVideoFrame = _hasVdp1Frame || runtime.SystemMap.Vdp2Registers.WriteCount > 0;
+    }
+
+    private void SetFrameGeometry(int width, int height)
+    {
+        if (width == _frameWidth && height == _frameHeight)
+        {
+            return;
+        }
+
+        _frameWidth = width;
+        _frameHeight = height;
+        _frame = new uint[checked(width * height)];
+        _vdp1Frame = new uint[checked(width * height)];
+        _transparentRows = new uint[height];
+        _hasVdp1Frame = false;
     }
 
     private static bool HasVisibleVdp1Priority(ReadOnlySpan<byte> vdp2Registers)
@@ -524,11 +544,11 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
 
     private void FillBackground()
     {
-        for (int y = 0; y < FrameHeight; y++)
+        for (int y = 0; y < _frameHeight; y++)
         {
-            int row = y * FrameWidth;
-            uint g = (uint)(18 + (y * 32 / FrameHeight));
-            for (int x = 0; x < FrameWidth; x++)
+            int row = y * _frameWidth;
+            uint g = (uint)(18 + (y * 32 / _frameHeight));
+            for (int x = 0; x < _frameWidth; x++)
             {
                 uint pulse = (uint)(((x / 16) + (y / 14) + (int)(_frameIndex / 18)) & 1);
                 uint b = 28 + pulse * 14;
@@ -536,10 +556,10 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
             }
         }
 
-        int scan = (int)(_frameIndex % FrameHeight);
-        for (int x = 0; x < FrameWidth; x++)
+        int scan = (int)(_frameIndex % (ulong)_frameHeight);
+        for (int x = 0; x < _frameWidth; x++)
         {
-            _frame[(scan * FrameWidth) + x] = 0xff29465cu;
+            _frame[(scan * _frameWidth) + x] = 0xff29465cu;
         }
     }
 
@@ -574,23 +594,23 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
 
     private void PutPixel(int x, int y, uint color)
     {
-        if ((uint)x >= FrameWidth || (uint)y >= FrameHeight)
+        if ((uint)x >= (uint)_frameWidth || (uint)y >= (uint)_frameHeight)
         {
             return;
         }
 
-        _frame[(y * FrameWidth) + x] = color;
+        _frame[(y * _frameWidth) + x] = color;
     }
 
     private void FillRect(int x, int y, int width, int height, uint color)
     {
         int minY = Math.Max(0, y);
-        int maxY = Math.Min(FrameHeight, y + height);
+        int maxY = Math.Min(_frameHeight, y + height);
         int minX = Math.Max(0, x);
-        int maxX = Math.Min(FrameWidth, x + width);
+        int maxX = Math.Min(_frameWidth, x + width);
         for (int py = minY; py < maxY; py++)
         {
-            int row = py * FrameWidth;
+            int row = py * _frameWidth;
             for (int px = minX; px < maxX; px++)
             {
                 _frame[row + px] = color;
