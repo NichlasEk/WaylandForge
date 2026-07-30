@@ -476,7 +476,7 @@ internal sealed unsafe class ForgeApp : IDisposable
 
             if (ReferenceEquals(_core, _saturnCore))
             {
-                if (_ui.Collapsible(new UiId("debug.saturn"), ref column, "CORE STATUS", 444, out RectI saturnSection))
+                if (_ui.Collapsible(new UiId("debug.saturn"), ref column, "CORE STATUS", 464, out RectI saturnSection))
                 {
                     DrawSaturnCoreStatus(saturnSection);
                 }
@@ -592,6 +592,7 @@ internal sealed unsafe class ForgeApp : IDisposable
         DrawMetric(x, y, "INSTR", status.InstructionIndex.ToString()); y += 20;
         DrawMetric(x, y, "VIDEO", status.HasVideoFrame ? "VDP1" : "DIAG"); y += 20;
         DrawMetric(x, y, "WARM", TruncateMiddle(_saturnCore.WarmStateStatus, 18)); y += 20;
+        DrawMetric(x, y, "JIT", _saturnCore.ExecutionAccelerationStatus); y += 20;
 
         _ui.Text(x, y, "SH2", UiTextKind.Muted); y += 14;
         DrawMetric(x, y, "M PC", FormatHex(status.MasterPc, 8)); y += 18;

@@ -18,6 +18,7 @@ namespace SystemRegisIII.Host.WaylandForge;
 
 internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
 {
+    private const int MaxPureBlockInstructions = 32;
     private const int DefaultFrameWidth = 320;
     private const int DefaultFrameHeight = 224;
     private const int InstructionsPerHostFrame = 50_000;
@@ -55,6 +56,11 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
     public ulong FrameIndex => _frameIndex;
     public SaturnCoreStatus Status => CreateStatus();
     public string WarmStateStatus => _warmStateStatus;
+    public string ExecutionAccelerationStatus =>
+        _runtime is null
+            ? "-"
+            : $"M{FormatInstructionCount(_runtime.Master.DynarecInstructions)} "
+                + $"S{FormatInstructionCount(_runtime.Slave.DynarecInstructions)}";
 
     public void LoadDisc(string? path)
     {
@@ -87,6 +93,14 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
     }
 
     public void Dispose() => Reset();
+
+    private static string FormatInstructionCount(long count) =>
+        count switch
+        {
+            >= 1_000_000 => $"{count / 1_000_000d:F1}M",
+            >= 1_000 => $"{count / 1_000d:F1}K",
+            _ => count.ToString(),
+        };
 
     public bool SaveWarmState()
     {
@@ -294,6 +308,20 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
                 {
                     _smpcInterruptCount++;
                 }
+
+                int pureBlockLimit = Math.Min(
+                    InstructionsPerHostFrame - i,
+                    Math.Min(
+                        MaxPureBlockInstructions,
+                        InstructionsUntilVideoEvent(vblankPhase, vblankOutOffset)));
+                int pureInstructions = StepPureBlock(runtime, pureBlockLimit);
+                if (pureInstructions > 0)
+                {
+                    AdvanceRuntimeInstructions(runtime, pureInstructions, ref vblankPhase);
+                    i += pureInstructions - 1;
+                    continue;
+                }
+
                 runtime.Master.StepInstruction();
                 runtime.SystemMap.CdBlock.AdvanceMasterInstructions(1);
                 runtime.SystemMap.AdvanceVdp2MasterInstructions(1);
@@ -323,6 +351,61 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
         {
             _fault = ex.GetType().Name + ": " + ex.Message;
         }
+    }
+
+    private static int StepPureBlock(SaturnRuntime runtime, int instructionLimit)
+    {
+        if (!runtime.Smpc.SlaveSh2Enabled)
+        {
+            return runtime.Master.StepCachedPureBlock(instructionLimit);
+        }
+
+        int executed = 0;
+        while (executed < instructionLimit)
+        {
+            bool slaveEnabled = runtime.Smpc.SlaveSh2Enabled;
+            if (!runtime.Master.PreparePureInstruction()
+                || (slaveEnabled && !runtime.Slave.PreparePureInstruction()))
+            {
+                break;
+            }
+
+            runtime.Master.StepPreparedPureInstruction();
+            if (slaveEnabled)
+            {
+                runtime.Slave.StepPreparedPureInstruction();
+            }
+
+            executed++;
+        }
+
+        return executed;
+    }
+
+    private void AdvanceRuntimeInstructions(
+        SaturnRuntime runtime,
+        int instructionCount,
+        ref int vblankPhase)
+    {
+        runtime.SystemMap.CdBlock.AdvanceMasterInstructions(instructionCount);
+        runtime.SystemMap.AdvanceVdp2MasterInstructions(instructionCount);
+        runtime.SlaveWasEnabled = runtime.Smpc.SlaveSh2Enabled;
+        _instructionIndex += instructionCount;
+        vblankPhase += instructionCount;
+        if (vblankPhase >= VBlankIntervalInstructions)
+        {
+            vblankPhase -= VBlankIntervalInstructions;
+        }
+    }
+
+    private static int InstructionsUntilVideoEvent(int vblankPhase, int vblankOutOffset)
+    {
+        if (vblankPhase < vblankOutOffset)
+        {
+            return vblankOutOffset - vblankPhase;
+        }
+
+        return VBlankIntervalInstructions - vblankPhase;
     }
 
     private void TryRenderVdp1Frame(SaturnRuntime runtime)
