@@ -64,7 +64,8 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
         _runtime is null
             ? "-"
             : $"FC M{FormatInstructionCount(_runtime.Master.DynarecInstructions)} "
-                + $"S{FormatInstructionCount(_runtime.Slave.DynarecInstructions)}";
+                + $"S{FormatInstructionCount(_runtime.Slave.DynarecInstructions)} "
+                + $"P{FormatInstructionCount(_runtime.Slave.FastPollingInstructions)}";
     public double EmulationMilliseconds =>
         Math.Max(0, _lastEmulationMilliseconds - _lastVideoRenderMilliseconds);
     public double VideoRenderMilliseconds => _lastVideoRenderMilliseconds;
@@ -374,6 +375,19 @@ internal sealed class SaturnBringupCore : HostCore.ISystemCore, IDisposable
         if (!runtime.Smpc.SlaveSh2Enabled)
         {
             return runtime.Master.StepCachedPureBlock(instructionLimit);
+        }
+
+        if (runtime.Slave.CanFastForwardPollingLoop())
+        {
+            int masterInstructions = runtime.Master.StepCachedPureBlock(instructionLimit);
+            if (masterInstructions > 0
+                && !runtime.Slave.TryStepFastPollingLoop(masterInstructions))
+            {
+                throw new InvalidOperationException(
+                    "Validated slave polling loop changed inside a pure block.");
+            }
+
+            return masterInstructions;
         }
 
         int executed = 0;
